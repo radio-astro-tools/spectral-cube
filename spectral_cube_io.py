@@ -3,6 +3,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
 from spectral_cube import SpectralCube,SpectralCubeMask
+import wcs_manipulation
 
 def load_fits_cube(filename, extnum=0, dropdeg=True, **kwargs):
     """
@@ -43,6 +44,8 @@ def load_fits_cube(filename, extnum=0, dropdeg=True, **kwargs):
 
         # squeeze returns a view so this is OK
         data = data.squeeze()
+        for d in dropaxes:
+            wcs = wcs_manipulation.drop_axis(wcs, d)
 
     mask = SpectralCubeMask(wcs, np.logical_not(valid))
     cube = SpectralCube(data, wcs, mask, metadata=metadata)
