@@ -20,6 +20,7 @@ def cube_and_raw(filename):
     wcs = WCS(p)
 
     c = SpectralCube(d, wcs)
+    assert c._data.ndim == 4
     return c, d
 
 

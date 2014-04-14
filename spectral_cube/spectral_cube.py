@@ -102,18 +102,14 @@ class SpectralCube(object):
         Sets masked values to *fill*
         """
         if self._mask is None:
-            return self._data
+            return self._data[0]
 
-        return self._mask._filled(self._data, fill)
+        return self._mask._filled(self._data[0], fill)
 
     @property
     def data_unmasked(self):
         """
         Like data, but don't apply the mask
-        """
-
-    def data_filled(replacement):
-        """Behaves like .data but replaces masked values with `replacement`
         """
 
     def apply_mask(self, mask, inherit=True):
@@ -233,18 +229,25 @@ class SpectralCube(object):
 
 
 def _orient(data, wcs):
+    if data.ndim not in [3, 4]:
+        raise ValueError("Input array must be 3 or 4 dimensional")
 
-    axtypes = wcs.get_axis_types()
+    axtypes = wcs.get_axis_types()[::-1]  # reverse from wcs -> numpy convention
     types = [a['coordinate_type'] for a in axtypes]
     nums = [None if a['coordinate_type'] != 'celestial' else a['number']
             for a in axtypes]
 
-    t = [types.index('spectral'), nums.index(1), nums.index(0)]
-    t.extend(set(range(data.ndim)) - set(t))
-    t = [data.ndim - 1 - tt for tt in t]
+    if 'stokes' in types:
+        t = [types.index('stokes'),
+             types.index('spectral'),
+             nums.index(1), nums.index(0)]
+        result = data.transpose(t)
+    else:
+        t = [types.index('spectral'),
+             nums.index(1), nums.index(0)]
+        result = data.transpose(t)[np.newaxis]
 
-    # XXX does not handle stokes data properly
-    return np.squeeze(data.transpose(t)), wcs
+    return result, wcs
 
 
 # demo code
@@ -255,6 +258,6 @@ def test():
     x2 = SpectralCube()
     x.sum(axis='spectral')
     # optionally:
-    x.sum(axis=0) # where 0 is defined to be spectral
-    x.moment(3) # kurtosis?  moment assumes spectral
-    (x*x2).sum(axis='spatial1')
+    x.sum(axis=0)  # where 0 is defined to be spectral
+    x.moment(3)  # kurtosis?  moment assumes spectral
+    (x * x2).sum(axis='spatial1')
