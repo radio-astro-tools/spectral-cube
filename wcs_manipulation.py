@@ -35,6 +35,7 @@ def reindex_wcs(wcs, inds):
     outwcs.wcs.cunit = [wcs.wcs.cunit[i] for i in inds]
     outwcs.wcs.ctype = [wcs.wcs.ctype[i] for i in inds]
     outwcs.wcs.pc = pc[inds[:,None],inds[None,:]]
+    outwcs.wcs.velosys = wcs.wcs.velosys
 
     return outwcs
 
