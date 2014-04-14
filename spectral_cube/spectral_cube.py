@@ -61,7 +61,15 @@ class SpectralCube(object):
     def read(self, filename, format=None):
         pass
 
-    def write(self, filename, format=None):
+    def write(self, filename, format=None, includestokes=False):
+        if format == 'fits':
+            data = self._data
+            wcs = self._wcs
+            if not includestokes:
+                if data.shape[0] != 1:
+                    raise ValueError("Cannot drop stokes unless it's degenerate")
+                data = data[0,:,:,:]
+            #outhdu = fits.PrimaryHDU(data=data, header=
         pass
 
     def sum(self, axis=None):
