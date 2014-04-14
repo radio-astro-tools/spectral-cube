@@ -4,7 +4,7 @@ from astropy.wcs import WCS
 import numpy as np
 from spectral_cube import SpectralCube,SpectralCubeMask
 
-def load_fits_cube(filename, extnum=0, **kwargs):
+def load_fits_cube(filename, extnum=0, dropdeg=True, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
     
@@ -32,6 +32,17 @@ def load_fits_cube(filename, extnum=0, **kwargs):
     wcs = WCS(hdr)
 
     metadata = {'filename':filename, 'extension_number':extnum}
+
+    if dropdeg:
+        dropaxes = [ii for ii,dim in enumerate(data.shape) if dim==1]
+        ndeg = len(dropaxes)
+        if data.ndim - ndeg < 3:
+            raise ValueError("Data has fewer than 3 non-degenerate axes and is therefore not a cube.")
+        if ndeg > 0:
+            metadata['degenerate_axes'] = dropaxes
+
+        # squeeze returns a view so this is OK
+        data = data.squeeze()
 
     mask = SpectralCubeMask(wcs, np.logical_not(valid))
     cube = SpectralCube(data, wcs, mask, metadata=metadata)
