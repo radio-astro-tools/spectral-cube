@@ -10,7 +10,7 @@ HEADER_STR = "SIMPLE  =                    T / Written by IDL:  Fri Feb 20 13:46
 
 
 def transpose(d, h, axes):
-    d = d.transpose(axes)
+    d = d.transpose(np.argsort(axes))
     h2 = h.copy()
 
     for i in range(4):
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     h['NAXIS2'] = 3
     h['NAXIS3'] = 4
     h['NAXIS4'] = 1
-    d = np.random.random((2, 3, 4, 1))
+    d = np.random.random((1, 2, 3, 4))
 
     fits.writeto('advs.fits', d, h, clobber=True)
 
