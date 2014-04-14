@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractproperty
 
+from astropy import units as u
 import numpy as np
 import wcs_manipulation
 
@@ -150,7 +151,7 @@ class SpectralCube(object):
 
         # TODO: use world[...] once implemented
         iz, iy, ix = np.broadcast_arrays(np.arange(self.shape[0]), 0., 0.)
-        return self._wcs.all_pix2world(ix, iy, iz, 0)[2] * u.Unit(self._wcs.cunit[2])
+        return self._wcs.all_pix2world(ix, iy, iz, 0)[2] * u.Unit(self._wcs.wcs.cunit[2])
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -207,12 +208,19 @@ class SpectralCube(object):
 
         # Create WCS slab
         wcs_slab = self._wcs.copy()
-        wcs_slab.wcs.crpix[self._spectral_axis] -= ilo
+        wcs_slab.wcs.crpix[1] -= ilo
+
+        # Create mask slab
+        if self._mask is None:
+            mask_slab = None
+        else:
+            mask_slab = self._mask[:,ilo:ihi]
 
         # Create new spectral cube
-        slab_slice = [slice(ilo, ihi) if i == self._spectral_axis else slice(None) for i in range(self.ndim)]
-        slab = SpectralCube(self.data[slab_slice], wcs_slab,
-                            self.mask[slab_slice], metadata=self.metadata)
+        slab = SpectralCube(self._data[:,ilo:ihi], wcs_slab,
+                            mask=mask_slab, metadata=self.metadata)
+
+        return slab
 
     def world_spines(self):
         """
