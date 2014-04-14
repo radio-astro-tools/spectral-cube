@@ -30,7 +30,7 @@ def drop_axis(wcs, dropax):
     return reindex_wcs(wcs, inds)
 
 
-def add_axis_to_wcs(wcs, add_before_ind, ctype, cdelt):
+def add_stokes_axis_to_wcs(wcs, add_before_ind):
     """
     Add a new axis that is uncorrelated with any other axes
 
@@ -41,13 +41,36 @@ def add_axis_to_wcs(wcs, add_before_ind, ctype, cdelt):
     add_before_ind: int
         Index of the WCS to insert the new axis in front of.
         To add at the end, do add_before_ind = wcs.wcs.naxis
-    ctype: str
-        A valid ctype
-    cdelt: float
-        The cdelt value
     """
 
-    pass
+    naxin = wcs.wcs.naxis
+    naxout = naxin+1
+
+    inds = range(naxout)
+    inds.pop(add_before_ind)
+    inds = np.array(inds)
+
+    outwcs = WCS(naxis=naxout)
+    for par in wcs_parameters_to_preserve:
+        setattr(outwcs.wcs, par, getattr(wcs.wcs,par))
+
+    pc = np.zeros([naxout,naxout])
+    pc[inds[:,np.newaxis],inds[np.newaxis,:]] = wcs.wcs.get_pc()
+    pc[add_before_ind,add_before_ind] = 1
+
+    def insert_at_index(val, index, lst):
+        """ insert a value at index into a list """
+        return list(lst)[:index] + [val] + list(lst)[index:]
+
+    outwcs.wcs.crpix = insert_at_index(1, add_before_ind, wcs.wcs.crpix)
+    outwcs.wcs.cdelt = insert_at_index(1, add_before_ind, wcs.wcs.get_cdelt())
+    outwcs.wcs.crval = insert_at_index(1, add_before_ind, wcs.wcs.crval)
+    outwcs.wcs.cunit = insert_at_index("", add_before_ind, wcs.wcs.cunit)
+    outwcs.wcs.ctype = insert_at_index("STOKES", add_before_ind, wcs.wcs.ctype)
+    outwcs.wcs.cname = insert_at_index("STOKES", add_before_ind, wcs.wcs.cname)
+    outwcs.wcs.pc = pc
+
+    return outwcs
 
 
 def wcs_swapaxes(wcs, ax0, ax1):
@@ -102,7 +125,6 @@ def reindex_wcs(wcs, inds):
     outwcs.wcs.ctype = [wcs.wcs.ctype[i] for i in inds]
     outwcs.wcs.cname = [wcs.wcs.cname[i] for i in inds]
     outwcs.wcs.pc = pc[inds[:,None],inds[None,:]]
-    outwcs.wcs.velosys = wcs.wcs.velosys
 
     return outwcs
 
@@ -156,3 +178,10 @@ def test_wcs_swapping():
     assert np.all(swapped.wcs.get_pc().diagonal() == np.array([4,2,3,1]))
     swapped = wcs_swapaxes(wcs,2,3)
     assert np.all(swapped.wcs.get_pc().diagonal() == np.array([1,2,4,3]))
+
+def test_add_stokes():
+    wcs = WCS(naxis=3)
+    
+    for ii in range(4):
+        outwcs = add_stokes_axis_to_wcs(wcs,ii)
+        assert outwcs.wcs.naxis == 4
