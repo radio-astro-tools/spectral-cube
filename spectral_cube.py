@@ -1,9 +1,18 @@
+import numpy as np
+
 class SpectralCubeMask(object):
     
-    def __init__(self, wcs, mask):
+    def __init__(self, wcs, mask, include=True):
         self._wcs = wcs
-        self._mask = mask
+        self._includemask = mask if include else np.logical_not(mask)
         
+    @property
+    def include(self):
+        return self._includemask
+
+    @property
+    def exclude(self):
+        return np.logical_not(self._includemask)
 
 class SpectralCube(object):
     
@@ -48,6 +57,7 @@ class SpectralCube(object):
     @property
     def data_valid(self):
         """ Flat array of unmasked data values """
+        return self._data[self.mask.include]
     
     def chunked(self, chunksize=1000):
         """
@@ -139,10 +149,10 @@ class SpectralCube(object):
 
 # demo code
 def test():
-    x = Cube()
-    x2 = Cube()
+    x = SpectralCube()
+    x2 = SpectralCube()
     x.sum(axis='spectral')
     # optionally:
     x.sum(axis=0) # where 0 is defined to be spectral
     x.moment(3) # kurtosis?  moment assumes spectral
-    (x*x2).sum(axis='spatial1') 
+    (x*x2).sum(axis='spatial1')
