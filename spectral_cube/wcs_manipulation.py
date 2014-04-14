@@ -58,16 +58,16 @@ def add_stokes_axis_to_wcs(wcs, add_before_ind):
     pc[inds[:,np.newaxis],inds[np.newaxis,:]] = wcs.wcs.get_pc()
     pc[add_before_ind,add_before_ind] = 1
 
-    def insert_at_index(val, index, lst):
+    def append_to_end(val, lst):
         """ insert a value at index into a list """
-        return list(lst)[:index] + [val] + list(lst)[index:]
+        return list(lst) + [val]
 
-    outwcs.wcs.crpix = insert_at_index(1, add_before_ind, wcs.wcs.crpix)
-    outwcs.wcs.cdelt = insert_at_index(1, add_before_ind, wcs.wcs.get_cdelt())
-    outwcs.wcs.crval = insert_at_index(1, add_before_ind, wcs.wcs.crval)
-    outwcs.wcs.cunit = insert_at_index("", add_before_ind, wcs.wcs.cunit)
-    outwcs.wcs.ctype = insert_at_index("STOKES", add_before_ind, wcs.wcs.ctype)
-    outwcs.wcs.cname = insert_at_index("STOKES", add_before_ind, wcs.wcs.cname)
+    outwcs.wcs.crpix = append_to_end(1, wcs.wcs.crpix)
+    outwcs.wcs.cdelt = append_to_end(1, wcs.wcs.get_cdelt())
+    outwcs.wcs.crval = append_to_end(1, wcs.wcs.crval)
+    outwcs.wcs.cunit = append_to_end("", wcs.wcs.cunit)
+    outwcs.wcs.ctype = append_to_end("STOKES", wcs.wcs.ctype)
+    outwcs.wcs.cname = append_to_end("STOKES", wcs.wcs.cname)
     outwcs.wcs.pc = pc
 
     return outwcs

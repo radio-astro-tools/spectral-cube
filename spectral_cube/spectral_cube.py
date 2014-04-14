@@ -5,6 +5,7 @@ import numpy as np
 from astropy.io import fits
 
 from . import wcs_manipulation
+from .wcs_manipulation import add_stokes_axis_to_wcs
 
 __all__ = ['SpectralCube']
 
@@ -186,8 +187,8 @@ class SpectralCube(object):
         """
 
         # TODO: use world[...] once implemented
-        iz, iy, ix = np.broadcast_arrays(np.arange(self.shape[0]), 0., 0.)
-        return self._wcs.all_pix2world(ix, iy, iz, 0)[2] * u.Unit(self._wcs.wcs.cunit[2])
+        ist, iz, iy, ix = np.broadcast_arrays(0, np.arange(self.shape[1]), 0., 0.)
+        return self._wcs.all_pix2world(ix, iy, iz, ist, 0)[2] * u.Unit(self._wcs.wcs.cunit[2])
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -298,6 +299,11 @@ def _orient(data, wcs):
         t = [types.index('spectral'),
              nums.index(1), nums.index(0)]
         result = data.transpose(t)[np.newaxis]
+
+    # Update the WCS if needed
+    if not 'stokes' in types:
+        wcs = wcs.copy()
+        wcs = add_stokes_axis_to_wcs(wcs, 0)
 
     return result, wcs
 
