@@ -5,12 +5,26 @@ def drop_axis(wcs, dropax):
     """
     Drop the ax on axis dropax
     """
-    outwcs = WCS(naxis=2)
-
     inds = range(wcs.wcs.naxis)
     inds.pop(dropax)
     inds = np.array(inds)
 
+    return reindex_wcs(wcs, inds)
+
+
+def wcs_swapaxes(wcs, ax0, ax1):
+    """
+    Swap axes in a WCS
+    """
+    inds = range(wcs.wcs.naxis)
+    inds[ax0],inds[ax1] = inds[ax1],inds[ax0]
+    inds = np.array(inds)
+
+    return reindex_wcs(wcs, inds)
+
+
+def reindex_wcs(wcs, inds):
+    outwcs = WCS(naxis=len(inds))
 
     cdelt = wcs.wcs.get_cdelt()
     pc = wcs.wcs.get_pc()
@@ -23,3 +37,7 @@ def drop_axis(wcs, dropax):
     outwcs.wcs.pc = pc[inds[:,None],inds[None,:]]
 
     return outwcs
+
+
+def test_wcs_manipulation():
+    pass
