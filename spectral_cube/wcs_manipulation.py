@@ -32,14 +32,14 @@ def drop_axis(wcs, dropax):
 
 def add_stokes_axis_to_wcs(wcs, add_before_ind):
     """
-    Add a new axis that is uncorrelated with any other axes
+    Add a new Stokes axis that is uncorrelated with any other axes
 
     Parameters
     ----------
     wcs: astropy.wcs.WCS
         The WCS to add to
     add_before_ind: int
-        Index of the WCS to insert the new axis in front of.
+        Index of the WCS to insert the new Stokes axis in front of.
         To add at the end, do add_before_ind = wcs.wcs.naxis
     """
 
