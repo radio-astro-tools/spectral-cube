@@ -1,4 +1,5 @@
 import numpy as np
+import wcs_manipulation
 
 class SpectralCubeMask(object):
     
@@ -35,7 +36,7 @@ class SpectralCube(object):
 
         if specaxisnumber != 0:
             self._data = self._data.swapaxes(specaxisnumber, 0)
-            self._wcs
+            self._wcs = wcs_manipulation.wcs_swapaxes(self._wcs, specaxisnumber, 0)
 
     @property
     def shape(self):
