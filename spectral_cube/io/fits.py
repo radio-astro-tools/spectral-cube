@@ -32,21 +32,10 @@ def load_fits_cube(filename, extnum=0, **kwargs):
     hdr = hdulist[extnum].header
     wcs = WCS(hdr)
 
-    metadata = {'filename':filename, 'extension_number':extnum}
-
-    #if dropdeg:
-    #    dropaxes = [ii for ii,dim in enumerate(data.shape) if dim==1]
-    #    ndeg = len(dropaxes)
-    #    if data.ndim - ndeg < 3:
-    #        raise ValueError("Data has fewer than 3 non-degenerate axes and is therefore not a cube.")
-    #    if ndeg > 0:
-    #        metadata['degenerate_axes'] = dropaxes
-
-    #    # squeeze returns a view so this is OK
-    #    data = data.squeeze()
-    #    for d in dropaxes:
-    #        wcs = wcs_manipulation.drop_axis(wcs, d)
+    meta = {'filename': filename,
+            'extension_number': extnum}
 
     mask = SpectralCubeMask(np.logical_not(valid), wcs)
-    cube = SpectralCube(data, wcs, mask, metadata=metadata)
+    cube = SpectralCube(data, wcs, mask, meta=meta)
+
     return cube

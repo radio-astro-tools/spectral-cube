@@ -133,9 +133,9 @@ def load_casa_image(filename, skipdata=False,
     # close the ia tool
     ia.close()
 
-    metadata = {'filename':filename}
+    meta = {'filename':filename}
 
     mask = SpectralCubeMask(wcs, np.logical_not(valid))
-    cube = SpectralCube(data, wcs, mask, metadata=metadata)
+    cube = SpectralCube(data, wcs, mask, meta=meta)
 
     return cube

@@ -79,13 +79,13 @@ class SpectralCubeMask(MaskBase):
 
 class SpectralCube(object):
 
-    def __init__(self, data, wcs, mask=None, metadata=None):
+    def __init__(self, data, wcs, mask=None, meta=None):
         self._data, self._wcs = _orient(data, wcs)
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
         #assert mask._wcs == self._wcs
-        self.metadata = metadata or {}
+        self.meta = meta or {}
 
     def _oriented_wcs(self):
         raise NotImplementedError()
@@ -281,7 +281,7 @@ class SpectralCube(object):
 
         # Create new spectral cube
         slab = SpectralCube(self._data[:,ilo:ihi], wcs_slab,
-                            mask=mask_slab, metadata=self.metadata)
+                            mask=mask_slab, meta=self.meta)
 
         return slab
 
