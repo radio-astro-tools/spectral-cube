@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractproperty
 
 from astropy import units as u
 import numpy as np
+from astropy.io import fits
 
 from . import wcs_manipulation
 
@@ -77,8 +78,28 @@ class SpectralCube(object):
         else:
             raise ValueError("Format {0} not implemented".format(format))
 
-    def write(self, filename, format=None):
-        pass
+    def write(self, filename, format=None, includestokes=False, clobber=False):
+        if format == 'fits':
+            data = self._data
+            wcs = self._wcs
+            axtypes = wcs.get_axis_types()
+            stokesax = np.array([a['coordinate_type'] == 'stokes' for a in axtypes])
+            if not includestokes:
+                if data.shape[0] != 1:
+                    raise ValueError("Cannot drop stokes unless it's degenerate")
+                data = data[0,:,:,:]
+                if np.any(stokesax):
+                    drop = np.argmax(stokesax)
+                    wcs = wcs_manipulation.drop_axis(wcs, drop)
+            else:
+                if not np.any(stokesax):
+                    wcs = wcs_manipulation.add_stokes_axis_to_wcs(wcs, 0)
+
+            header = wcs.to_header()
+            outhdu = fits.PrimaryHDU(data=data, header=header)
+            outhdu.writeto(filename, clobber=clobber)
+        else:
+            raise NotImplementedError("Try FITS instead")
 
     def sum(self, axis=None):
         pass
