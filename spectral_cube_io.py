@@ -3,9 +3,8 @@ from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
 from spectral_cube import SpectralCube,SpectralCubeMask
-import wcs_manipulation
 
-def load_fits_cube(filename, extnum=0, dropdeg=True, **kwargs):
+def load_fits_cube(filename, extnum=0, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
     
@@ -34,18 +33,18 @@ def load_fits_cube(filename, extnum=0, dropdeg=True, **kwargs):
 
     metadata = {'filename':filename, 'extension_number':extnum}
 
-    if dropdeg:
-        dropaxes = [ii for ii,dim in enumerate(data.shape) if dim==1]
-        ndeg = len(dropaxes)
-        if data.ndim - ndeg < 3:
-            raise ValueError("Data has fewer than 3 non-degenerate axes and is therefore not a cube.")
-        if ndeg > 0:
-            metadata['degenerate_axes'] = dropaxes
+    #if dropdeg:
+    #    dropaxes = [ii for ii,dim in enumerate(data.shape) if dim==1]
+    #    ndeg = len(dropaxes)
+    #    if data.ndim - ndeg < 3:
+    #        raise ValueError("Data has fewer than 3 non-degenerate axes and is therefore not a cube.")
+    #    if ndeg > 0:
+    #        metadata['degenerate_axes'] = dropaxes
 
-        # squeeze returns a view so this is OK
-        data = data.squeeze()
-        for d in dropaxes:
-            wcs = wcs_manipulation.drop_axis(wcs, d)
+    #    # squeeze returns a view so this is OK
+    #    data = data.squeeze()
+    #    for d in dropaxes:
+    #        wcs = wcs_manipulation.drop_axis(wcs, d)
 
     mask = SpectralCubeMask(wcs, np.logical_not(valid))
     cube = SpectralCube(data, wcs, mask, metadata=metadata)
@@ -128,7 +127,7 @@ def wcs_casa2astropy(casa_wcs):
 try:
     from taskinit import ia
 
-    def from_casa_image(filename, dropdeg=True, skipdata=False,
+    def from_casa_image(filename, skipdata=False,
                         skipvalid=False, skipcs=False):
         """
         Load a cube (into memory?) from a CASA image. By default it will transpose
@@ -142,11 +141,11 @@ try:
 
         # read in the data
         if not skipdata:
-            data = ia.getchunk(dropdeg=dropdeg)
+            data = ia.getchunk()
 
         # CASA stores validity of data as a mask
         if not skipvalid:
-            valid = ia.getchunk(getmask=True, dropdeg=dropdeg)
+            valid = ia.getchunk(getmask=True)
 
         # transpose is dealt with within the cube object
             
