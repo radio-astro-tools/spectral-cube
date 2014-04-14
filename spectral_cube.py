@@ -40,7 +40,7 @@ class SpectralCube(object):
 
     @property
     def shape(self):
-        pass
+        return self._data.shape
 
     def read(self, filename, format=None):
         pass
