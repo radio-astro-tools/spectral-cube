@@ -59,45 +59,46 @@ class SpectralCube(object):
 
     def read(self, filename, format=None):
         pass
-        
+
     def write(self, filename, format=None):
         pass
-    
+
     def sum(self, axis=None):
         pass
-    
+
     def max(self, axis=None):
         pass
-    
+
     def min(self, axis=None):
         pass
-    
+
     def argmax(self, axis=None):
         pass
-    
+
     def argmin(self, axis=None):
         pass
-    
+
     def interpolate_slice(self):
         # Find a slice at an exact spectral value?
         pass
-    
+
     @property
     def data_valid(self):
         """ Flat array of unmasked data values """
         return self._data[self.mask.include]
-    
+
     def chunked(self, chunksize=1000):
         """
         Iterate over chunks of valid data
         """
         yield blah
 
+    @property
     def data(self):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
-        
+
         Sets masked values to NaN or 0 (whatever is more useful)
         """
         return self._oriented_data()
@@ -107,73 +108,108 @@ class SpectralCube(object):
         """
         Like data, but don't apply the mask
         """
-        
+
     def data_filled(replacement):
         """Behaves like .data but replaces masked values with `replacement`
         """
-        
+
+    def apply_mask(self, mask, inherit=True):
+        """
+        Return a new Cube object, that applies the input mask to the underlying data.
+
+        Handles any necessary logic to resample the mask
+
+        If inherit=True, the new Cube uses the union of the original and new mask
+
+        What type of object is `mask`? SpectralMask?
+        Not sure -- I guess it needs to have WCS. Conceptually maps onto a boolean ndarray
+            CubeMask? -> maybe SpectralCubeMask to be consistent with SpectralCube
+
+        """
+
+    def moment(self, order, wcs=False):
+        """
+        Determine the n'th moment along the spectral axis
+
+        If *wcs = True*, return the WCS describing the moment
+        """
+
     @property
     def spectral_axis(self):
         """
         A `~astropy.units.Quantity` array containing the central values of each channel
         """
+
         # TODO: use world[...] once implemented
         iz, iy, ix = np.broadcast_arrays(np.arange(self.shape[0]), 0., 0.)
         return self._wcs.all_pix2world(ix, iy, iz, 0)[2]
 
-    def apply_mask(self, mask, inherit=True):
+    def closest_spectral_channel(self, value, rest_frequency=None):
         """
-        Return a new Cube object, that applies the input mask to the underlying data.
-        
-        Handles any necessary logic to resample the mask
-        
-        If inherit=True, the new Cube uses the union of the original and new mask
-        
-        What type of object is `mask`? SpectralMask?
-        Not sure -- I guess it needs to have WCS. Conceptually maps onto a boolean ndarray
-            CubeMask? -> maybe SpectralCubeMask to be consistent with SpectralCube
-            
+        Find the index of the closest spectral channel to the specified
+        spectral coordinate.
         """
-        
-    def moment(self, order, wcs=False):
-        """
-        Determine the n'th moment along the spectral axis
-        
-        If *wcs = True*, return the WCS describing the moment
-        """
-    
-    def spectral_slab(self, low, high, restfreq=None):
+
+        # TODO: we have to not compute this every time
+        spectral_axis = self.spectral_axis
+
+        try:
+            value = value.to(spectral_axis.unit, equivalencies=u.spectral())
+        except u.UnitsError:
+            if rest_frequency is None:
+                raise u.UnitsError("{0} cannot be converted to {1} without a rest frequency".format(value.unit, spectral_axis.unit))
+            else:
+                try:
+                    value = value.to(spectral_axis.unit, equivalencies=u.doppler_radio(rest_frequency))
+                except u.UnitsError:
+                    raise u.UnitsError("{0} cannot be converted to {1}".format(value.unit, spectral_axis.unit))
+
+        # TODO: optimize the next line - just brute force for now
+        return np.argmin(np.abs(spectral_axis - value))
+
+    def spectral_slab(self, lo, hi, rest_frequency=None):
         """
         Need better name - extract a new cube between two spectral values
-    
+
         lo, hi can be quantitites, to "do the right thing" with regards
         to velocity/wavelength/frequency. restfreq might be needed for this
         """
-        spectral = self.spectral_axis
-        #if low.
-    
+
+        # Find range of values for spectral axis
+        ilo = self.closest_spectral_channel(lo, rest_frequency=rest_frequency)
+        ihi = self.closest_spectral_channel(hi, rest_frequency=rest_frequency)
+
+        # Create WCS slab
+        wcs_slab = self._wcs.copy()
+        wcs_slab.wcs.crpix[self._spectral_axis] -= ilo
+
+        # Create new spectral cube
+        slab_slice = [slice(ilo, ihi) if i == self._spectral_axis else slice(None) for i in range(self.ndim)]
+        slab = SpectralCube(self.data[slab_slice], wcs_slab,
+                            self.mask[slab_slice], metadata=self.metadata)
+
     def world_spines(self):
         """
         Returns a dict of 1D arrays, for the world coordinates
-        along each pixel axis. 
-        
+        along each pixel axis.
+
         Raises error if this operation is ill-posed (e.g. rotated world coordinates,
         strong distortions)
         """
-        
+
     @property
     def world(self):
         """
         Access the world coordinates for the cube, as if it was a Numpy array, so:
-        
+
         >>> cube.world[0,:,:]
-        
+
         returns a dictionary of 2-d arrays giving the coordinates in the first spectral slice.
-        
+
         This can be made to only compute the required values rather than compute everything then slice.
         """
 
-    
+
 
 # demo code
 def test():
