@@ -10,7 +10,7 @@ from spectral_cube import SpectralCube, SpectralCubeMask
 
 
 def path(filename):
-    return os.path.join('test_data', filename)
+    return os.path.join(os.path.dirname(__file__), 'data', filename)
 
 
 def cube_and_raw(filename):
