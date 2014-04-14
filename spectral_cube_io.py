@@ -90,6 +90,8 @@ def wcs_casa2astropy(casa_wcs):
     COORD_TYPE = {}
     COORD_TYPE['Right Ascension'] = "RA--"
     COORD_TYPE['Declination'] = "DEC-"
+    COORD_TYPE['Longitude'] = "GLON"
+    COORD_TYPE['Latitude'] = "GLAT"
     COORD_TYPE['Frequency'] = "FREQ"
     COORD_TYPE['Stokes'] = "STOKES"
 
@@ -110,9 +112,7 @@ def wcs_casa2astropy(casa_wcs):
     return wcs
 
 try:
-    #import casac
-    from tasks import ia
-    #from task_init import ia
+    from taskinit import ia
 
     def from_casa_image(filename, dropdeg=True, skipdata=False,
                         skipvalid=False, skipcs=False):

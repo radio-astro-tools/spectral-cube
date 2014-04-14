@@ -7,13 +7,14 @@ class SpectralCubeMask(object):
 
 class SpectralCube(object):
     
-    def __init__(self, data, wcs, mask):
+    def __init__(self, data, wcs, mask, metadata={}):
         self._wcs = wcs
         self._data = data
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
-        assert mask.wcs == self.wcs
+        assert mask._wcs == self._wcs
+        self.metadata = metadata
 
     @property
     def shape(self):
@@ -42,6 +43,7 @@ class SpectralCube(object):
     
     def interpolate_slice(self):
         # Find a slice at an exact spectral value?
+        pass
     
     @property
     def data_valid(self):
@@ -110,7 +112,7 @@ class SpectralCube(object):
         to velocity/wavelength/frequency. restfreq might be needed for this
         """
         spectral = self.spectral_axis
-        if low.
+        #if low.
     
     def world_spines(self):
         """
