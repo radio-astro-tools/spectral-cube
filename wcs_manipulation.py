@@ -4,6 +4,15 @@ from astropy.wcs import WCS
 def drop_axis(wcs, dropax):
     """
     Drop the ax on axis dropax
+
+    Remove an axis from the WCS
+    Parameters
+    ----------
+    wcs: astropy.wcs.WCS
+        The WCS with naxis to be chopped to naxis-1
+    dropax: int
+        The index of the WCS to drop, counting from 0 (i.e., python convention,
+        not FITS convention)
     """
     inds = range(wcs.wcs.naxis)
     inds.pop(dropax)
@@ -15,6 +24,15 @@ def drop_axis(wcs, dropax):
 def wcs_swapaxes(wcs, ax0, ax1):
     """
     Swap axes in a WCS
+
+    Parameters
+    ----------
+    wcs: astropy.wcs.WCS
+        The WCS to have its axes swapped
+    ax0: int
+    ax1: int
+        The indices of the WCS to be swapped, counting from 0 (i.e., python
+        convention, not FITS convention)
     """
     inds = range(wcs.wcs.naxis)
     inds[ax0],inds[ax1] = inds[ax1],inds[ax0]
@@ -24,6 +42,23 @@ def wcs_swapaxes(wcs, ax0, ax1):
 
 
 def reindex_wcs(wcs, inds):
+    """
+    Re-index a WCS given indices.  The number of axes may be reduced.
+
+    Parameters
+    ----------
+    wcs: astropy.wcs.WCS
+        The WCS to be manipulated
+    inds: np.array(dtype='int')
+        The indices of the array to keep in the output.
+        e.g. swapaxes: [0,2,1,3]
+        dropaxes: [0,1,3]
+    """
+    if not isinstance(inds, np.ndarray):
+        raise TypeError("Indices must be an ndarray")
+    if inds.dtype.kind != 'i':
+        raise TypeError('Indices must be integers')
+
     outwcs = WCS(naxis=len(inds))
 
     cdelt = wcs.wcs.get_cdelt()
