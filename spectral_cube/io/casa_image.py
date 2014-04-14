@@ -100,7 +100,7 @@ def load_casa_image(filename, skipdata=False,
         valid = ia.getchunk(getmask=True)
 
     # transpose is dealt with within the cube object
-        
+
     # read in coordinate system object
     casa_cs = ia.coordsys()
 
@@ -119,7 +119,7 @@ def load_casa_image(filename, skipdata=False,
     #            order.append(ax)
 
     #    self.casa_cs = ia.coordsys(order)
-        
+
         # This should work, but coordsys.reorder() has a bug
         # on the error checking. JIRA filed. Until then the
         # axes will be reversed from the original.
@@ -129,7 +129,7 @@ def load_casa_image(filename, skipdata=False,
         #    new_order = new_order[-1*np.arange(self.data.ndim)-1]
         #    print new_order
         #    self.casa_cs.reorder(new_order)
-    
+
     # close the ia tool
     ia.close()
 

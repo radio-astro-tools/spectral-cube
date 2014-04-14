@@ -8,7 +8,7 @@ from spectral_cube import SpectralCube,SpectralCubeMask
 def load_fits_cube(filename, extnum=0, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
-    
+
     Parameters
     ----------
     filename: str
@@ -47,8 +47,6 @@ def load_fits_cube(filename, extnum=0, **kwargs):
     #    for d in dropaxes:
     #        wcs = wcs_manipulation.drop_axis(wcs, d)
 
-    mask = SpectralCubeMask(wcs, np.logical_not(valid))
+    mask = SpectralCubeMask(np.logical_not(valid), wcs)
     cube = SpectralCube(data, wcs, mask, metadata=metadata)
     return cube
-    
-    

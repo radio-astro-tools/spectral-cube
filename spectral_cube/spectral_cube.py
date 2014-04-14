@@ -2,7 +2,10 @@ from abc import ABCMeta, abstractproperty
 
 from astropy import units as u
 import numpy as np
-import wcs_manipulation
+
+from . import wcs_manipulation
+
+__all__ = ['SpectralCube']
 
 
 class MaskBase(object):
@@ -33,6 +36,10 @@ class SpectralCubeMask(MaskBase):
     def include(self):
         return self._includemask
 
+    def __getitem__(self, slice):
+        # TODO: need to update WCS!
+        return SpectralCube(self._includemask[slice], self._wcs)
+
 
 class SpectralCube(object):
 
@@ -59,18 +66,18 @@ class SpectralCube(object):
     def shape(self):
         return self._data.shape
 
-    def read(self, filename, format=None):
-        pass
-
-    def write(self, filename, format=None, includestokes=False):
+    @classmethod
+    def read(cls, filename, format=None):
         if format == 'fits':
-            data = self._data
-            wcs = self._wcs
-            if not includestokes:
-                if data.shape[0] != 1:
-                    raise ValueError("Cannot drop stokes unless it's degenerate")
-                data = data[0,:,:,:]
-            #outhdu = fits.PrimaryHDU(data=data, header=
+            from .io.fits import load_fits_cube
+            return load_fits_cube(filename)
+        elif format == 'casa_image':
+            from .io.casa_image import load_casa_image
+            return load_casa_image(filename)
+        else:
+            raise ValueError("Format {0} not implemented".format(format))
+
+    def write(self, filename, format=None):
         pass
 
     def sum(self, axis=None):
