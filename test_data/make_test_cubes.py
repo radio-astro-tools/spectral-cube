@@ -13,7 +13,7 @@ def transpose(d, h, axes):
     d = d.transpose(np.argsort(axes))
     h2 = h.copy()
 
-    for i in range(4):
+    for i in range(len(axes)):
         for key in ['NAXIS', 'CDELT', 'CRPIX', 'CRVAL', 'CTYPE']:
             h2['%s%i' % (key, i + 1)] = h['%s%i' % (key, axes[i] + 1)]
 
@@ -21,6 +21,9 @@ def transpose(d, h, axes):
 
 
 if __name__ == "__main__":
+    np.random.seed(42)
+
+    # Single Stokes
     h = fits.header.Header.fromstring(HEADER_STR)
     h['NAXIS1'] = 2
     h['NAXIS2'] = 3
@@ -41,3 +44,19 @@ if __name__ == "__main__":
 
     d, h = transpose(d, h, [0, 2, 1, 3])
     fits.writeto('sdav.fits', d, h, clobber=True)
+
+    # 3D files
+    h = fits.header.Header.fromstring(HEADER_STR)
+    h['NAXIS1'] = 2
+    h['NAXIS2'] = 3
+    h['NAXIS3'] = 4
+    h['NAXIS'] = 3
+    for k in h:
+        if k.endswith('4'):
+            del h[k]
+
+    d = np.random.random((4, 3, 2))
+    fits.writeto('adv.fits', d, h, clobber=True)
+
+    d, h = transpose(d, h, [2, 0, 1])
+    fits.writeto('vad.fits', d, h, clobber=True)

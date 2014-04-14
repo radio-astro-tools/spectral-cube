@@ -15,22 +15,37 @@ class SpectralCubeMask(object):
     def exclude(self):
         return np.logical_not(self._includemask)
 
+
 class SpectralCube(object):
-    
-    def __init__(self, data, wcs, mask, metadata={}):
+
+    def __init__(self, data, wcs, mask=None, metadata=None):
         self._wcs = wcs
         self._data = data
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
-        assert mask._wcs == self._wcs
-        self.metadata = metadata
+        #assert mask._wcs == self._wcs
+        self.metadata = metadata or {}
 
-    def _transpose_axes(self):
+    def _oriented_data(self):
         # PLACEHOLDER:
         # we likely will not want to run this but use the logic without any array manips
         axtypes = self._wcs.get_axis_types()
-        for ii,ax in enumerate(axtypes):
+        types = [a['coordinate_type'] for a in axtypes]
+        nums = [None if a['coordinate_type'] != 'celestial' else a['number']
+                for a in axtypes]
+
+        t = [types.index('spectral'), nums.index(1), nums.index(0)]
+        t.extend(set([0, 1, 2, 3]) - set(t))
+        t = [3 - tt for tt in t]
+
+        # XXX this does not handle 3D cubes or >1 stokes plane
+        return np.squeeze(self._data.transpose(t))
+
+    def _oriented_wcs(self):
+        raise NotImplementedError()
+
+        for ii, ax in enumerate(axtypes):
             if ax['coordinate_type'] == 'spectral':
                 specaxisnumber = ii
 
@@ -77,8 +92,7 @@ class SpectralCube(object):
         Iterate over chunks of valid data
         """
         yield blah
-        
-    @property
+
     def data(self):
         """
         Return the underlying data as a numpy array.
@@ -86,6 +100,7 @@ class SpectralCube(object):
         
         Sets masked values to NaN or 0 (whatever is more useful)
         """
+        return self._oriented_data()
 
     @property
     def data_unmasked(self):
