@@ -16,10 +16,45 @@ class MaskBase(object):
     def include(self):
         pass
 
-    def extract_flat(self, cube):
-        pass
+    def _flat(self, cube):
+        """
+        Return a flattened array of the included elements of cube
+
+        Parameters
+        ----------
+        cube : array-like
+           The cube to extract
+
+        Returns
+        -------
+        A 1D ndarray
+
+        Notes
+        -----
+        This is an internal method used by :class:`SpectralCube`.
+        """
+        return cube[self.include]
 
     def _filled(self, array, fill=np.nan):
+        """
+        Replace the exluded elements of *array* with *fill*.
+
+        Parameters
+        ----------
+        array : array-like
+            Input array
+        fill : number
+            Replacement value
+
+        Returns
+        -------
+        A new array
+
+        Notes
+        -----
+        This is an internal method used by :class:`SpectralCube`.
+        Users should use :meth:`SpectralCubeMask.get_data`
+        """
         return np.where(self.include, array, fill)
 
     @property
