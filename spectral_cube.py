@@ -25,6 +25,18 @@ class SpectralCube(object):
         assert mask._wcs == self._wcs
         self.metadata = metadata
 
+    def _transpose_axes(self):
+        # PLACEHOLDER:
+        # we likely will not want to run this but use the logic without any array manips
+        axtypes = self._wcs.get_axis_types()
+        for ii,ax in enumerate(axtypes):
+            if ax['coordinate_type'] == 'spectral':
+                specaxisnumber = ii
+
+        if specaxisnumber != 0:
+            self._data = self._data.swapaxes(specaxisnumber, 0)
+            self._wcs
+
     @property
     def shape(self):
         pass
