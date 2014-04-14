@@ -87,17 +87,6 @@ class SpectralCube(object):
         #assert mask._wcs == self._wcs
         self.meta = meta or {}
 
-    def _oriented_wcs(self):
-        raise NotImplementedError()
-
-        for ii, ax in enumerate(axtypes):
-            if ax['coordinate_type'] == 'spectral':
-                specaxisnumber = ii
-
-        if specaxisnumber != 0:
-            self._data = self._data.swapaxes(specaxisnumber, 0)
-            self._wcs = wcs_manipulation.wcs_swapaxes(self._wcs, specaxisnumber, 0)
-
     @property
     def shape(self):
         return self._data.shape
@@ -261,11 +250,11 @@ class SpectralCube(object):
         if self._mask is None:
             mask_slab = None
         else:
-            mask_slab = self._mask[:,ilo:ihi]
+            mask_slab = self._mask[:, ilo:ihi]
 
         # Create new spectral cube
-        slab = SpectralCube(self._data[:,ilo:ihi], wcs_slab,
-                            mask=mask_slab, meta=self.meta)
+        slab = SpectralCube(self._data[:, ilo:ihi], wcs_slab,
+                            mask=mask_slab, metadata=self.metadata)
 
         return slab
 

@@ -53,3 +53,10 @@ def test_mask_data():
 
     expected = np.where(d > .1, d, 0)
     np.testing.assert_array_equal(c.get_data(fill=0), expected)
+
+"""
+TODO:
+
+ check that pix<->world is correct for all transpositions
+
+ """
