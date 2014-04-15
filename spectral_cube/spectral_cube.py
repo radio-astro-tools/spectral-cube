@@ -147,10 +147,6 @@ class FunctionMask(MaskBase):
     def _exclude(self, data, wcs, slices=None):
         return ~self._include(data, wcs, slices=slices)
 
-    @property
-    def shape(self):
-        return self._includemask.shape
-
 
 class SpectralCube(object):
 
