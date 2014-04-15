@@ -218,15 +218,34 @@ class SpectralCube(object):
         return out
 
     def _iter_rays(self, axis=None):
+        """
+        Iterate over slices corresponding to lines-of-sight through a cube
+        along the specified axis
+        """
         nx,ny = self._get_flat_shape(axis)
 
         for x in xrange(nx):
             for y in xrange(ny):
+                # create length-1 slices for each position
                 slc = [slice(x,x+1),slice(y,y+1)]
+                # create a length-N slice (all-inclusive) along the selected axis
                 slc.insert(axis,slice(None))
                 yield x,y,slc
 
     def flattened(self, slice=None, weights=None):
+        """
+        Return a slice of the cube giving only the valid data (i.e., removing
+        bad values)
+
+        Parameters
+        ----------
+        slice: 3-tuple
+            A length-3 tuple of slices (or any equivalent valid slice of a
+            cube)
+        weights: (optional) np.ndarray
+            An array with the same shape (or slicing abilities/results) as the
+            data cube
+        """
         data = self._mask._flattened(self._data, slice)
         if weights is not None:
             weights = self._mask._flattened(weights, slice)
@@ -240,8 +259,9 @@ class SpectralCube(object):
     def percentile(self, q, axis=None):
         return self._apply_along_axes(np.percentile, q=q, axis=axis)
 
-    def get_masked_array(self):
-        return np.ma.masked_where(self.mask, self._data[0])
+    # probably do not want to support this
+    #def get_masked_array(self):
+    #    return np.ma.masked_where(self.mask, self._data)
 
     def get_data(self, fill=np.nan):
         """
