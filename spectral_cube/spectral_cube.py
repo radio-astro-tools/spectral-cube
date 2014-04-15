@@ -168,7 +168,7 @@ class SpectralCube(object):
         """
 
         # TODO: use world[...] once implemented
-        iz, iy, ix = np.broadcast_arrays(np.arange(self.shape[1]), 0., 0.)
+        iz, iy, ix = np.broadcast_arrays(np.arange(self.shape[0]), 0., 0.)
         return self._wcs.all_pix2world(ix, iy, iz, 0)[2] * u.Unit(self._wcs.wcs.cunit[2])
 
     def closest_spectral_channel(self, value, rest_frequency=None):

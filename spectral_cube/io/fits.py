@@ -64,6 +64,8 @@ def write_fits_cube(filename, cube, include_stokes=False, clobber=False):
     TODO: document further!!
     """
 
+    # TODO: add stokes axis on writing for CASA compatibility
+
     if isinstance(cube, SpectralCube) or (isinstance(cube, StokesSpectralCube) and not include_stokes):
         header = cube._wcs.to_header()
         outhdu = fits.PrimaryHDU(data=cube._data, header=header)
