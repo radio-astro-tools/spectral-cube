@@ -194,7 +194,7 @@ class SpectralCube(object):
     def flattened(self, slice=None, weights=None):
         if slice is not None:
             data = self._data[slice]
-            mask = self._mask[slice]
+            mask = self._mask._includemask[slice]
             if weights is not None:
                 wts = weights[slice]
         else:
