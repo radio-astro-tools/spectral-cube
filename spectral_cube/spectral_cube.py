@@ -238,6 +238,11 @@ class SpectralCube(object):
         slab = SpectralCube(self._data[ilo:ihi], wcs_slab,
                             mask=mask_slab, meta=self.meta)
 
+        # TODO: we could change the WCS to give a spectral axis in the
+        # correct units as requested - so if the initial cube is in Hz and we
+        # request a range in km/s, we could adjust the WCS to be in km/s
+        # instead
+
         return slab
 
     def world_spines(self):
