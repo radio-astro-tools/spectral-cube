@@ -83,7 +83,6 @@ def _orient(array, wcs):
 
     result_array = array.transpose(t)
 
-    # TODO: Swap around WCS
-    result_wcs = wcs
+    result_wcs = wcs_utils.reindex_wcs(wcs, np.array(t, dtype=int))
 
     return result_array, result_wcs

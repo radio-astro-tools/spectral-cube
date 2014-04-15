@@ -106,8 +106,10 @@ def reindex_wcs(wcs, inds):
         e.g. swapaxes: [0,2,1,3]
         dropaxes: [0,1,3]
     """
+
     if not isinstance(inds, np.ndarray):
         raise TypeError("Indices must be an ndarray")
+
     if inds.dtype.kind != 'i':
         raise TypeError('Indices must be integers')
 
