@@ -114,7 +114,7 @@ class SpectralCubeMask(MaskBase):
         if data.shape != self._include_mask.shape:
             raise NotImplementedError("Cannot yet apply array masks with different dimensions to data")
 
-        if wcs != self._wcs:
+        if wcs.to_header() != self._wcs.to_header():
             raise NotImplementedError("Cannot yet apply array masks with different WCS to data")
 
         if slices is None:
