@@ -310,7 +310,7 @@ class SpectralCube(object):
 
         for x,y,slc in self._iter_rays(axis):
             # compute the world coordinates along the specified axis
-            coords = self.world(axis, slc)
+            coords = self.world[slc]
             # the numerator of the moment sum
             data = self.flattened(slc, weights=coords**order)
             # the denominator of the moment sum
