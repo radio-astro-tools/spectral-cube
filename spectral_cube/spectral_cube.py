@@ -172,6 +172,23 @@ class SpectralCube(object):
 
         return out
 
+    def flattened(self, slice=None, weights=None):
+        if slice is not None:
+            data = self._data[slice]
+            mask = self._mask[slice]
+            if weights is not None:
+                wts = weights[slice]
+        else:
+            data = self._data
+            mask = self._mask
+            wts = weights
+
+        if weights:
+            return data[mask.include]*weights[mask.include]
+        else:
+            return data[mask.include]
+        
+
     def get_masked_array(self):
         return np.ma.masked_where(self.mask, self._data[0])
 
