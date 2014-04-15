@@ -83,9 +83,10 @@ class SpectralCubeMask(MaskBase):
     def shape(self):
         return self._includemask.shape
 
-    def __getitem__(self, slice):
-        # TODO: need to update WCS!
-        return SpectralCubeMask(self._includemask[slice], self._wcs)
+    # use subcube instead
+    #def __getitem__(self, slice):
+    #    # TODO: need to update WCS!
+    #    return SpectralCubeMask(self._includemask[slice], self._wcs)
 
 
 class SpectralCube(object):
@@ -103,10 +104,11 @@ class SpectralCube(object):
     def shape(self):
         return self._data.shape
 
-    def __getitem__(self, slice):
-        # TODO: need to update WCS!
-        return SpectralCube(self._data[slice], self._wcs,
-                            mask=self._mask[slice], meta=self.meta)
+    # This should just be relegated to subcube
+    #def __getitem__(self, slice):
+    #    # TODO: need to update WCS!
+    #    return SpectralCube(self._data[slice], self._wcs,
+    #                        mask=self._mask[slice], meta=self.meta)
 
     def __repr__(self):
         return "SpectralCube with shape {0}: {1}".format(str(self.shape),
