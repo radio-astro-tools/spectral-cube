@@ -51,7 +51,7 @@ if __name__ == "__main__":
     h['NAXIS2'] = 3
     h['NAXIS3'] = 4
     h['NAXIS'] = 3
-    for k in h.keys():
+    for k in list(h.keys()):
         if k.endswith('4'):
             del h[k]
 
