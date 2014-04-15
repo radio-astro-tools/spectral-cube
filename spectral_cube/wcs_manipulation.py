@@ -23,7 +23,7 @@ def drop_axis(wcs, dropax):
         The index of the WCS to drop, counting from 0 (i.e., python convention,
         not FITS convention)
     """
-    inds = range(wcs.wcs.naxis)
+    inds = list(range(wcs.wcs.naxis))
     inds.pop(dropax)
     inds = np.array(inds)
 
@@ -46,7 +46,7 @@ def add_stokes_axis_to_wcs(wcs, add_before_ind):
     naxin = wcs.wcs.naxis
     naxout = naxin+1
 
-    inds = range(naxout)
+    inds = list(range(naxout))
     inds.pop(add_before_ind)
     inds = np.array(inds)
 
