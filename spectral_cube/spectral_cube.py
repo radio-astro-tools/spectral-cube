@@ -199,13 +199,13 @@ class SpectralCube(object):
                 wts = weights[slice]
         else:
             data = self._data
-            mask = self._mask
+            mask = self._mask._includemask
             wts = weights
 
         if weights:
-            return data[mask.include]*weights[mask.include]
+            return data[mask]*weights[mask]
         else:
-            return data[mask.include]
+            return data[mask]
         
 
     def get_masked_array(self):
