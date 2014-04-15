@@ -255,7 +255,7 @@ class SpectralCube(object):
 
         # Create new spectral cube
         slab = SpectralCube(self._data[:, ilo:ihi], wcs_slab,
-                            mask=mask_slab, metadata=self.metadata)
+                            mask=mask_slab, meta=self.meta)
 
         return slab
 

@@ -3,7 +3,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
 from spectral_cube import SpectralCube,SpectralCubeMask
-from . import wcs_manipulation
+from .. import wcs_manipulation
 
 
 def load_fits_cube(filename, extnum=0, **kwargs):
