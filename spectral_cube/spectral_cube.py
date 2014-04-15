@@ -165,7 +165,7 @@ class SpectralCube(object):
         """
         raise NotImplementedError()
 
-    def _apply_along_axes(self, function, axis=None, weights=None):
+    def _apply_along_axes(self, function, axis=None, weights=None, **kwargs):
         """
         """
         if axis is None:
@@ -179,7 +179,7 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
 
         # allocate memory for output array
-        out = np.empty(nx,ny)
+        out = np.empty([nx,ny])
 
         for x in xrange(nx):
             for y in xrange(ny):
@@ -187,7 +187,7 @@ class SpectralCube(object):
                 slc.insert(axis,slice(None))
                 # magic needs to happen here
                 data = self.flattened(slc, weights=weights)
-                out[x,y] = function(data)
+                out[x,y] = function(data, **kwargs)
 
         return out
 
@@ -207,6 +207,11 @@ class SpectralCube(object):
         else:
             return data[mask]
         
+    def median(self, axis=None):
+        return self._apply_along_axes(np.median, axis=axis)
+
+    def percentile(self, q, axis=None):
+        return self._apply_along_axes(np.percentile, q=q, axis=axis)
 
     def get_masked_array(self):
         return np.ma.masked_where(self.mask, self._data[0])
