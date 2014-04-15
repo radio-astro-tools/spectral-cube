@@ -36,8 +36,19 @@ def load_fits_cube(filename, extnum=0, **kwargs):
     meta = {'filename': filename,
             'extension_number': extnum}
 
-    mask = SpectralCubeMask(np.logical_not(valid), wcs)
-    cube = SpectralCube(data, wcs, mask, meta=meta)
+    if wcs.wcs.naxis == 3:
+
+        mask = SpectralCubeMask(np.logical_not(valid), wcs)
+        cube = SpectralCube(data, wcs, mask, meta=meta)
+
+    elif wcs.ndim == 4:
+
+        mask = SpectralCubeMask(np.logical_not(valid), wcs)
+        cube = StokesSpectralCube(data, wcs, mask, meta=meta)
+
+    else:
+
+        raise Exception("Data should be 3- or 4-dimensional")
 
     return cube
 

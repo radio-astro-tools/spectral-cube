@@ -83,6 +83,7 @@ class SpectralCubeMask(MaskBase):
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None):
+        # TODO: mask should be oriented?
         self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
@@ -260,7 +261,26 @@ class SpectralCube(object):
         This can be made to only compute the required values rather than compute everything then slice.
         """
 
-# demo code
+
+class StokesSpectralCube(SpectralCube):
+    """
+    A class to store a spectral cube with multiple Stokes parameters. By
+    default, this will act like a Stokes I spectral cube, but other stokes
+    parameters can be accessed with attribute notation.
+    """
+
+    def __init__(self, data, wcs, mask=None, meta=None):
+
+        # Split into different components
+        stokes_arrays, wcs_slice = cube_utils._split_stokes(data, wcs)
+
+        # XXX: For now, let's just extract I and work with that
+        data_i, wcs_i = _orient(stokes_arrays["I"], wcs_slice)
+
+        super(StokesSpectralCube, self).__init__(data_i, wcs_i, mask=mask, meta=meta)
+
+        # TODO: deal with the other stokes parameters here
+
 
 def read(filename, format=None):
     if format == 'fits':
