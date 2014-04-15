@@ -80,9 +80,39 @@ def _orient(array, wcs):
         raise ValueError("Input WCS should not contain stokes")
 
     t = [types.index('spectral'), nums.index(1), nums.index(0)]
-
     result_array = array.transpose(t)
 
-    result_wcs = wcs_utils.reindex_wcs(wcs, np.array(t, dtype=int))
+    t = np.argsort(t)
+    result_wcs = wcs_utils.reindex_wcs(wcs, t)
 
     return result_array, result_wcs
+
+
+def slice_syntax(f):
+    """
+    This decorator wraps a function that accepts a tuple of slices.
+
+    After wrapping, the function acts like a property that accepts
+    bracket syntax (e.g., p[1:3, :, :])
+
+    Parameters
+    ----------
+    f : function
+    """
+
+    def wrapper(self):
+        result = SliceIndexer(f, self)
+        result.__doc__ = f.__doc__
+        return result
+    result = property(wrapper)
+    return result
+
+
+class SliceIndexer(object):
+
+    def __init__(self, func, _other):
+        self._func = func
+        self._other = _other
+
+    def __getitem__(self, view):
+        return self._func(self._other, view)

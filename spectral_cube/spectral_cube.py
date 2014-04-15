@@ -71,7 +71,7 @@ class MaskBase(object):
 class SpectralCubeMask(MaskBase):
 
     def __init__(self, mask, wcs, include=True):
-        self._wcs = wcs
+        mask, self._wcs = cube_utils._orient(mask, wcs)
         self._includemask = mask if include else np.logical_not(mask)
         
     def __repr__(self):
@@ -421,20 +421,57 @@ class SpectralCube(object):
         strong distortions)
         """
 
-    @property
-    def world(self, axis, slc):
+    @cube_utils.slice_syntax
+    def world(self, view):
         """
-        Access the world coordinates for the cube, as if it was a Numpy array, so:
+        Return a list of the world coordinates in a cube (or a view of it).
 
-        >>> cube.world[0,:,:]
+        Cube.world is called with *bracket notation*, like a NumPy array::
+            c.world[0:3, :, :]
 
-        returns a dictionary of 2-d arrays giving the coordinates in the first spectral slice.
+        Returns
+        -------
+        [v, y, x] : list of NumPy arryas
+            The 3 world coordinates at each pixel in the view.
 
-        This can be made to only compute the required values rather than compute everything then slice.
+        Examples
+        --------
+        >>> c = read('xyv.fits')
+
+        Extract the first 3 velocity channels of the cube:
+        >>> v, y, x = c.world[0:3]
+
+        Extract all the world coordinates
+        >>> v, y, x = c.world[:, :, :]
+
+        Extract every other pixel along all axes
+        >>> v, y, x = c.world[::2, ::2, ::2]
+
+        Note
+        ----
+        Calling world with slices is efficient in the sense that it
+        only computes pixels within the view.
         """
+
+        # note: view is a tuple of slices
+
+        # the next 3 lines are equivalent to (but more efficient than)
+        # inds = np.indices(self._data.shape)
+        # inds = [i[view] for i in inds]
+        inds = np.ogrid[[slice(0, s) for s in self._data.shape]]
+        inds = np.broadcast_arrays(*inds)
+        inds = [i[view] for i in inds[::-1]]  # numpy -> wcs order
+
+        shp = inds[0].shape
+        inds = np.column_stack([i.ravel() for i in inds])
+        world = self._wcs.all_pix2world(inds, 0).T
+
+        world = [w.reshape(shp) for w in world]  # 1D->3D
+        return world[::-1]  # reverse WCS -> numpy order
 
 
 class StokesSpectralCube(SpectralCube):
+
     """
     A class to store a spectral cube with multiple Stokes parameters. By
     default, this will act like a Stokes I spectral cube, but other stokes
@@ -463,6 +500,7 @@ def read(filename, format=None):
     else:
         raise ValueError("Format {0} not implemented".format(format))
 
+
 def write(cube, filename, format=None, include_stokes=False, clobber=False):
     if format == 'fits':
         from .io.fits import write_fits_cube
@@ -470,7 +508,6 @@ def write(cube, filename, format=None, include_stokes=False, clobber=False):
                         include_stokes=include_stokes, clobber=clobber)
     else:
         raise NotImplementedError("Try FITS instead")
-
 
 
 def test():
