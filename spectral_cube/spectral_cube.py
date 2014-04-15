@@ -70,6 +70,10 @@ class SpectralCubeMask(MaskBase):
     def __init__(self, mask, wcs, include=True):
         self._wcs = wcs
         self._includemask = mask if include else np.logical_not(mask)
+        
+    def __repr__(self):
+        return "SpectralCubeMask with shape {0}: {1}".format(str(self.shape),
+                                                             self._includemask.__repr__())
 
     @property
     def include(self):
