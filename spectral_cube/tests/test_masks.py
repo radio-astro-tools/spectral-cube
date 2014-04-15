@@ -1,17 +1,18 @@
 import numpy as np
 from numpy.testing import assert_allclose
+from astropy.wcs import WCS
 
 from ..spectral_cube import SpectralCubeMask, FunctionMask
 
 def test_spectral_cube_mask():
 
     mask = np.array([[[False, True, True, False, True]]])
-    mask_wcs = None
+    mask_wcs = WCS()
 
     m = SpectralCubeMask(mask, mask_wcs)
 
     data = np.arange(5).reshape((1,1,5))
-    wcs = None
+    wcs = WCS()
 
     assert_allclose(m.include(data, wcs), [[[0,1,1,0,1]]])
     assert_allclose(m.exclude(data, wcs), [[[1,0,0,1,0]]])
@@ -27,7 +28,7 @@ def test_function_mask():
     m = FunctionMask(lambda x: x > 2)
 
     data = np.arange(5).reshape((1,1,5))
-    wcs = None
+    wcs = WCS()
 
     assert_allclose(m.include(data, wcs), [[[0,0,0,1,1]]])
     assert_allclose(m.exclude(data, wcs), [[[1,1,1,0,0]]])
