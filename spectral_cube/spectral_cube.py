@@ -65,9 +65,9 @@ class MaskBase(object):
         This is an internal method used by :class:`SpectralCube`.
         """
         if slices is None:
-            return cube[self.get_include(data, wcs)]
+            return data[self.include(data, wcs)]
         else:
-            return cube[slices][self.get_include(data, wcs, slices=slices)]
+            return data[slices][self.include(data, wcs, slices=slices)]
 
     def _filled(self, data, wcs, fill=np.nan, slices=None):
         """
