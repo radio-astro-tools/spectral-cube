@@ -59,7 +59,7 @@ def load_fits_cube(filename, extnum=0, **kwargs):
     return cube
 
 
-def write_fits_cube(filename, data, wcs, includestokes=False, clobber=False):
+def write_fits_cube(filename, cube, include_stokes=False, clobber=False):
     """
     Write a FITS cube with a WCS to a filename
 

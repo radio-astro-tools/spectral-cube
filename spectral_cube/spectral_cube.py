@@ -434,12 +434,30 @@ class SpectralCube(object):
         [v, y, x] : list of NumPy arryas
             The 3 world coordinates at each pixel in the view.
 
+        Examples
+        --------
+        >>> c = read('xyv.fits')
+
+        Extract the first 3 velocity channels of the cube:
+        >>> v, y, x = c.world[0:3]
+
+        Extract all the world coordinates
+        >>> v, y, x = c.world[:, :, :]
+
+        Extract every other pixel along all axes
+        >>> v, y, x = c.world[::2, ::2, ::2]
+
         Note
         ----
         Calling world with slices is efficient in the sense that it
         only computes pixels within the view.
         """
 
+        # note: view is a tuple of slices
+
+        # the next 3 lines are equivalent to (but more efficient than)
+        # inds = np.indices(self._data.shape)
+        # inds = [i[view] for i in inds]
         inds = np.ogrid[[slice(0, s) for s in self._data.shape]]
         inds = np.broadcast_arrays(*inds)
         inds = [i[view] for i in inds[::-1]]  # numpy -> wcs order
