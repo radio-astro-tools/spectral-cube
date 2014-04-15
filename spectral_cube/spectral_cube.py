@@ -103,6 +103,11 @@ class SpectralCube(object):
     def shape(self):
         return self._data.shape
 
+    def __getitem__(self, slice):
+        # TODO: need to update WCS!
+        return SpectralCube(self._data[slice], self._wcs,
+                            mask=self._mask[slice], meta=self.meta)
+
     @classmethod
     def read(cls, filename, format=None):
         if format == 'fits':
