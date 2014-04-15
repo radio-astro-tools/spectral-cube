@@ -2,7 +2,7 @@ import warnings
 from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
-from ..spectral_cube import SpectralCube, StokesSpectralCube, SpectralCubeMask
+from ..spectral_cube import SpectralCube, StokesSpectralCube, SpectralCubeMask, FunctionMask
 from .. import wcs_utils
 from .. import cube_utils
 
@@ -38,7 +38,7 @@ def load_fits_cube(filename, extnum=0, **kwargs):
 
         valid = np.isfinite(data)
 
-        mask = SpectralCubeMask(np.isfinite)
+        mask = FunctionMask(np.isfinite)
         cube = SpectralCube(data, wcs, mask, meta=meta)
 
     elif wcs.wcs.naxis == 4:
@@ -47,7 +47,7 @@ def load_fits_cube(filename, extnum=0, **kwargs):
 
         mask = {}
         for component in data:
-            mask[component] = SpectralCubeMask(np.isfinite)
+            mask[component] = FunctionMask(np.isfinite)
 
         cube = StokesSpectralCube(data, wcs, mask, meta=meta)
 
