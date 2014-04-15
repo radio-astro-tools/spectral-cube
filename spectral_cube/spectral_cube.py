@@ -186,17 +186,33 @@ class SpectralCube(object):
 
     def _apply_along_axes(self, function, axis=None, weights=None, **kwargs):
         """
-        """
-        if axis is None:
-            return np.median(self.data_valid)
+        Apply a function to valid data along the specified axis, optionally
+        using a weight array that is the same shape (or at least can be sliced
+        in the same way)
         
+        Parameters
+        ----------
+        function: function
+            A function that can be applied to a numpy array.  Does not need to
+            be nan-aware
+        axis: int
+            The axis to operate along
+        weights: (optional) np.ndarray
+            An array with the same shape (or slicing abilities/results) as the
+            data cube
+        """
+        
+        # determine the output array shape
         nx,ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
         out = np.empty([nx,ny])
 
-        for x,y,slc in self._iter_rays(axis)
+        # iterate over "lines of sight" through the cube
+        for x,y,slc in self._iter_rays(axis):
+            # acquire the flattened, valid data for the slice
             data = self.flattened(slc, weights=weights)
+            # store result in array
             out[x,y] = function(data, **kwargs)
 
         return out
@@ -272,7 +288,7 @@ class SpectralCube(object):
         # allocate memory for output array
         out = np.empty([nx,ny])
 
-        for x,y,slc in self._iter_rays(axis)
+        for x,y,slc in self._iter_rays(axis):
             coords = self.world(axis, slc)
             data = self.flattened(slc, weights=coords**order)
             weights = self.flattened(slc)
@@ -383,7 +399,7 @@ class SpectralCube(object):
         """
 
     @property
-    def world(self):
+    def world(self, axis, slc):
         """
         Access the world coordinates for the cube, as if it was a Numpy array, so:
 
