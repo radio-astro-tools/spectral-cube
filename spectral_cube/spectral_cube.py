@@ -245,7 +245,7 @@ class SpectralCube(object):
 
         # Create WCS slab
         wcs_slab = self._wcs.copy()
-        wcs_slab.wcs.crpix[1] -= ilo
+        wcs_slab.wcs.crpix[2] -= ilo
 
         # Create mask slab
         if self._mask is None:
