@@ -19,7 +19,7 @@ class MaskBase(object):
     def include(self):
         pass
 
-    def _flat(self, cube):
+    def _flattened(self, cube, slices):
         """
         Return a flattened array of the included elements of cube
 
@@ -36,7 +36,10 @@ class MaskBase(object):
         -----
         This is an internal method used by :class:`SpectralCube`.
         """
-        return cube[self.include]
+        if slices is None:
+            return cube[self.include]
+        else:
+            return cube[slices][self.include[slices]]
 
     def _filled(self, array, fill=np.nan):
         """
@@ -70,14 +73,27 @@ class SpectralCubeMask(MaskBase):
     def __init__(self, mask, wcs, include=True):
         self._wcs = wcs
         self._includemask = mask if include else np.logical_not(mask)
+        
+    def __repr__(self):
+        return "SpectralCubeMask with shape {0}: {1}".format(str(self.shape),
+                                                             self._includemask.__repr__())
 
     @property
     def include(self):
         return self._includemask
 
-    def __getitem__(self, slice):
-        # TODO: need to update WCS!
-        return SpectralCube(self._includemask[slice], self._wcs)
+    def _include(self, slice):
+        # this is what gets overridden
+        return self._includemask[slice]
+
+    @property
+    def shape(self):
+        return self._includemask.shape
+
+    # use subcube instead
+    #def __getitem__(self, slice):
+    #    # TODO: need to update WCS!
+    #    return SpectralCubeMask(self._includemask[slice], self._wcs)
 
 
 class SpectralCube(object):
@@ -95,20 +111,55 @@ class SpectralCube(object):
     def shape(self):
         return self._data.shape
 
+    # This should just be relegated to subcube
+    #def __getitem__(self, slice):
+    #    # TODO: need to update WCS!
+    #    return SpectralCube(self._data[slice], self._wcs,
+    #                        mask=self._mask[slice], meta=self.meta)
+
+    def __repr__(self):
+        return "SpectralCube with shape {0}: {1}".format(str(self.shape),
+                                                         self._data.__repr__())
+
+    @classmethod
+    def read(cls, filename, format=None):
+        if format == 'fits':
+            from .io.fits import load_fits_cube
+            return load_fits_cube(filename)
+        elif format == 'casa_image':
+            from .io.casa_image import load_casa_image
+            return load_casa_image(filename)
+        else:
+            raise ValueError("Format {0} not implemented".format(format))
+
+    def write(self, filename, format=None, includestokes=False, clobber=False):
+        if format == 'fits':
+            write_fits(filename, self._data, self._wcs,
+                       includestokes=includestokes, clobber=clobber)
+        else:
+            raise NotImplementedError("Try FITS instead")
+
+    def _apply_numpy_function(self, function, fill=np.nan, **kwargs):
+        """
+        Apply a numpy function to the cube
+        """
+        return function(self.get_data(fill=fill), **kwargs)
+
     def sum(self, axis=None):
-        pass
+        # use nansum, and multiply by mask to add zero each time there is badness
+        return self._apply_numpy_function(np.nansum, fill=np.nan, axis=axis)
 
     def max(self, axis=None):
-        pass
+        return self._apply_numpy_function(np.nanmax, fill=np.nan, axis=axis)
 
     def min(self, axis=None):
-        pass
+        return self._apply_numpy_function(np.nanmin, fill=np.nan, axis=axis)
 
     def argmax(self, axis=None):
-        pass
+        return self._apply_numpy_function(np.nanargmax, fill=np.nan, axis=axis)
 
     def argmin(self, axis=None):
-        pass
+        return self._apply_numpy_function(np.nanargmin, fill=np.nan, axis=axis)
 
     @property
     def data_valid(self):
@@ -120,6 +171,97 @@ class SpectralCube(object):
         Iterate over chunks of valid data
         """
         raise NotImplementedError()
+
+    def _get_flat_shape(self, axis):
+        """
+        Get the shape of the array after flattening along an axis
+        """
+        iteraxes = [0,1,2]
+        iteraxes.remove(axis)
+        # x,y are defined as first,second dim to iterate over
+        # (not x,y in pixel space...)
+        nx = self.shape[iteraxes[0]]
+        ny = self.shape[iteraxes[1]]
+        return nx,ny
+
+    def _apply_along_axes(self, function, axis=None, weights=None, **kwargs):
+        """
+        Apply a function to valid data along the specified axis, optionally
+        using a weight array that is the same shape (or at least can be sliced
+        in the same way)
+        
+        Parameters
+        ----------
+        function: function
+            A function that can be applied to a numpy array.  Does not need to
+            be nan-aware
+        axis: int
+            The axis to operate along
+        weights: (optional) np.ndarray
+            An array with the same shape (or slicing abilities/results) as the
+            data cube
+        """
+        
+        # determine the output array shape
+        nx,ny = self._get_flat_shape(axis)
+
+        # allocate memory for output array
+        out = np.empty([nx,ny])
+
+        # iterate over "lines of sight" through the cube
+        for x,y,slc in self._iter_rays(axis):
+            # acquire the flattened, valid data for the slice
+            data = self.flattened(slc, weights=weights)
+            # store result in array
+            out[x,y] = function(data, **kwargs)
+
+        return out
+
+    def _iter_rays(self, axis=None):
+        """
+        Iterate over slices corresponding to lines-of-sight through a cube
+        along the specified axis
+        """
+        nx,ny = self._get_flat_shape(axis)
+
+        for x in xrange(nx):
+            for y in xrange(ny):
+                # create length-1 slices for each position
+                slc = [slice(x,x+1),slice(y,y+1)]
+                # create a length-N slice (all-inclusive) along the selected axis
+                slc.insert(axis,slice(None))
+                yield x,y,slc
+
+    def flattened(self, slice=None, weights=None):
+        """
+        Return a slice of the cube giving only the valid data (i.e., removing
+        bad values)
+
+        Parameters
+        ----------
+        slice: 3-tuple
+            A length-3 tuple of slices (or any equivalent valid slice of a
+            cube)
+        weights: (optional) np.ndarray
+            An array with the same shape (or slicing abilities/results) as the
+            data cube
+        """
+        data = self._mask._flattened(self._data, slice)
+        if weights is not None:
+            weights = self._mask._flattened(weights, slice)
+            return data*weights
+        else:
+            return data
+        
+    def median(self, axis=None):
+        return self._apply_along_axes(np.median, axis=axis)
+
+    def percentile(self, q, axis=None):
+        return self._apply_along_axes(np.percentile, q=q, axis=axis)
+
+    # probably do not want to support this
+    #def get_masked_array(self):
+    #    return np.ma.masked_where(self.mask, self._data)
 
     def get_data(self, fill=np.nan):
         """
@@ -138,6 +280,7 @@ class SpectralCube(object):
         """
         Like data, but don't apply the mask
         """
+        return self._data
 
     def apply_mask(self, mask, inherit=True):
         """
@@ -153,12 +296,29 @@ class SpectralCube(object):
 
         """
 
-    def moment(self, order, wcs=False):
+    def moment(self, order, axis, wcs=False):
         """
         Determine the n'th moment along the spectral axis
 
         If *wcs = True*, return the WCS describing the moment
         """
+
+        nx,ny = self._get_flat_shape(axis)
+
+        # allocate memory for output array
+        out = np.empty([nx,ny])
+
+        for x,y,slc in self._iter_rays(axis):
+            # compute the world coordinates along the specified axis
+            coords = self.world(axis, slc)
+            # the numerator of the moment sum
+            data = self.flattened(slc, weights=coords**order)
+            # the denominator of the moment sum
+            weights = self.flattened(slc)
+
+            out[x,y] = data.sum()/weights.sum()
+
+        return out
 
     @property
     def spectral_axis(self):
@@ -262,7 +422,7 @@ class SpectralCube(object):
         """
 
     @property
-    def world(self):
+    def world(self, axis, slc):
         """
         Access the world coordinates for the cube, as if it was a Numpy array, so:
 
