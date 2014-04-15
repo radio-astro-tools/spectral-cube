@@ -4,8 +4,8 @@ from astropy import units as u
 import numpy as np
 from astropy.io import fits
 
-from . import wcs_manipulation
-from .wcs_manipulation import add_stokes_axis_to_wcs
+from . import wcs_utils
+from .wcs_utils import add_stokes_axis_to_wcs
 
 __all__ = ['SpectralCube']
 
