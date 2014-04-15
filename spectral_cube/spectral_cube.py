@@ -130,14 +130,13 @@ class SpectralCubeMask(MaskBase):
         return self._include_mask.shape
 
 
-class FunctionMask(object):
+class FunctionMask(MaskBase):
     """
     A mask defined as a function.
     """
 
-    def __init__(self, function, include=True):
+    def __init__(self, function):
         self._function = function
-        self._include = True
 
     def _include(self, data, wcs, slices=None):
         if slices is None:
