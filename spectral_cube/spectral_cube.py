@@ -82,6 +82,10 @@ class SpectralCubeMask(MaskBase):
     def include(self):
         return self._includemask
 
+    def _include(self, slice):
+        # this is what gets overridden
+        return self._includemask[slice]
+
     @property
     def shape(self):
         return self._includemask.shape
@@ -184,15 +188,25 @@ class SpectralCube(object):
         # allocate memory for output array
         out = np.empty([nx,ny])
 
+        for slc in self._iter_rays(axis)
+            data = self.flattened(slc, weights=weights)
+            out[x,y] = function(data, **kwargs)
+
+        return out
+
+    def _iter_rays(self, axis=None):
+        iteraxes = [0,1,2]
+        iteraxes.remove(axis)
+        # x,y are defined as first,second dim to iterate over
+        # (not x,y in pixel space...)
+        nx = self.shape[iteraxes[0]]
+        ny = self.shape[iteraxes[1]]
+
         for x in xrange(nx):
             for y in xrange(ny):
                 slc = [slice(x,x+1),slice(y,y+1)]
                 slc.insert(axis,slice(None))
-                # magic needs to happen here
-                data = self.flattened(slc, weights=weights)
-                out[x,y] = function(data, **kwargs)
-
-        return out
+                yield slc
 
     def flattened(self, slice=None, weights=None):
         data = self._mask._flattened(self._data, slice)
@@ -228,6 +242,7 @@ class SpectralCube(object):
         """
         Like data, but don't apply the mask
         """
+        return self._data
 
     def apply_mask(self, mask, inherit=True):
         """
@@ -243,12 +258,31 @@ class SpectralCube(object):
 
         """
 
-    def moment(self, order, wcs=False):
+    def moment(self, order, axis, wcs=False):
         """
         Determine the n'th moment along the spectral axis
 
         If *wcs = True*, return the WCS describing the moment
         """
+
+        iteraxes = [0,1,2]
+        iteraxes.remove(axis)
+        # x,y are defined as first,second dim to iterate over
+        # (not x,y in pixel space...)
+        nx = self.shape[iteraxes[0]]
+        ny = self.shape[iteraxes[1]]
+
+        # allocate memory for output array
+        out = np.empty([nx,ny])
+
+        for slc in self._iter_rays(axis)
+            coords = self.world(axis, slc)
+            data = self.flattened(slc, weights=coords**order)
+            weights = self.flattened(slc)
+
+            out[x,y] = data.sum()/weights.sum()
+
+        return out
 
     @property
     def spectral_axis(self):
