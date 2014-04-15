@@ -131,6 +131,28 @@ def reindex_wcs(wcs, inds):
     return outwcs
 
 
+def axis_names(wcs):
+    """
+    Extract world names for each coordinate axis
+
+    Parameters
+    ----------
+    wcs : astropy.wcs.WCS
+        The WCS object to extract names from
+
+    Returns
+    -------
+    A tuple of names along each axis
+    """
+    names = wcs.wcs.cname
+    types = wcs.wcs.ctype
+    for i in range(len(names)):
+        if len(names[i]) > 0:
+            continue
+        names[i] = types.split('-')[0]
+    return names
+
+
 def test_wcs_dropping():
     wcs = WCS(naxis=4)
     wcs.wcs.pc = np.zeros([4, 4])

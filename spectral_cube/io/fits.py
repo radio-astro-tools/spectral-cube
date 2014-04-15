@@ -6,6 +6,7 @@ from ..spectral_cube import SpectralCube, StokesSpectralCube, SpectralCubeMask
 from .. import wcs_utils
 from .. import cube_utils
 
+
 def load_fits_cube(filename, extnum=0, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
@@ -37,7 +38,7 @@ def load_fits_cube(filename, extnum=0, **kwargs):
 
         valid = np.isfinite(data)
 
-        mask = SpectralCubeMask(np.logical_not(valid), wcs)
+        mask = SpectralCubeMask(valid, wcs)
         cube = SpectralCube(data, wcs, mask, meta=meta)
 
     elif wcs.wcs.naxis == 4:
@@ -47,7 +48,7 @@ def load_fits_cube(filename, extnum=0, **kwargs):
         mask = {}
         for component in data:
             valid = np.isfinite(data[component])
-            mask[component] = SpectralCubeMask(np.logical_not(valid), wcs)
+            mask[component] = SpectralCubeMask(valid, wcs)
 
         cube = StokesSpectralCube(data, wcs, mask, meta=meta)
 
@@ -57,7 +58,8 @@ def load_fits_cube(filename, extnum=0, **kwargs):
 
     return cube
 
-def write_fits_cube(filename, cube, include_stokes=False, clobber=False):
+
+def write_fits_cube(filename, data, wcs, includestokes=False, clobber=False):
     """
     Write a FITS cube with a WCS to a filename
 

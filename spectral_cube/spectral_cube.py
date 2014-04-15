@@ -71,7 +71,7 @@ class MaskBase(object):
 class SpectralCubeMask(MaskBase):
 
     def __init__(self, mask, wcs, include=True):
-        self._wcs = wcs
+        mask, self._wcs = cube_utils._orient(mask, wcs)
         self._includemask = mask if include else np.logical_not(mask)
         
     def __repr__(self):
@@ -421,20 +421,22 @@ class SpectralCube(object):
         strong distortions)
         """
 
-    @property
-    def world(self, axis, slc):
-        """
-        Access the world coordinates for the cube, as if it was a Numpy array, so:
+    def world(self, view):
 
-        >>> cube.world[0,:,:]
+        inds = np.ogrid[[slice(0, s) for s in self._data.shape]]
+        inds = np.broadcast_arrays(*inds)
+        inds = [i[view] for i in inds[::-1]]  # numpy -> wcs order
 
-        returns a dictionary of 2-d arrays giving the coordinates in the first spectral slice.
+        shp = inds[0].shape
+        inds = np.column_stack([i.ravel() for i in inds])
+        world = self._wcs.all_pix2world(inds, 0).T
 
-        This can be made to only compute the required values rather than compute everything then slice.
-        """
+        world = [w.reshape(shp) for w in world]  # 1D->3D
+        return world[::-1]  # reverse WCS -> numpy order
 
 
 class StokesSpectralCube(SpectralCube):
+
     """
     A class to store a spectral cube with multiple Stokes parameters. By
     default, this will act like a Stokes I spectral cube, but other stokes
@@ -470,7 +472,6 @@ def write(cube, filename, format=None, include_stokes=False, clobber=False):
                         include_stokes=include_stokes, clobber=clobber)
     else:
         raise NotImplementedError("Try FITS instead")
-
 
 
 def test():

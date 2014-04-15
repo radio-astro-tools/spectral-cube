@@ -80,9 +80,9 @@ def _orient(array, wcs):
         raise ValueError("Input WCS should not contain stokes")
 
     t = [types.index('spectral'), nums.index(1), nums.index(0)]
-
     result_array = array.transpose(t)
 
-    result_wcs = wcs_utils.reindex_wcs(wcs, np.array(t, dtype=int))
+    t = np.argsort(t)
+    result_wcs = wcs_utils.reindex_wcs(wcs, t)
 
     return result_array, result_wcs
