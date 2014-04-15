@@ -19,7 +19,7 @@ class MaskBase(object):
     def include(self):
         pass
 
-    def _flat(self, cube):
+    def _flattened(self, cube, slices):
         """
         Return a flattened array of the included elements of cube
 
@@ -36,7 +36,10 @@ class MaskBase(object):
         -----
         This is an internal method used by :class:`SpectralCube`.
         """
-        return cube[self.include]
+        if slices is None:
+            return cube[self.include]
+        else:
+            return cube[slices][self.include[slices]]
 
     def _filled(self, array, fill=np.nan):
         """
@@ -192,20 +195,12 @@ class SpectralCube(object):
         return out
 
     def flattened(self, slice=None, weights=None):
-        if slice is not None:
-            data = self._data[slice]
-            mask = self._mask._includemask[slice]
-            if weights is not None:
-                wts = weights[slice]
+        data = self._mask._flattened(self._data, slice)
+        if weights is not None:
+            weights = self._mask._flattened(weights, slice)
+            return data*weights
         else:
-            data = self._data
-            mask = self._mask._includemask
-            wts = weights
-
-        if weights:
-            return data[mask]*weights[mask]
-        else:
-            return data[mask]
+            return data
         
     def median(self, axis=None):
         return self._apply_along_axes(np.median, axis=axis)
