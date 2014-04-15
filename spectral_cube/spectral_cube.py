@@ -108,6 +108,10 @@ class SpectralCube(object):
         return SpectralCube(self._data[slice], self._wcs,
                             mask=self._mask[slice], meta=self.meta)
 
+    def __repr__(self):
+        return "SpectralCube with shape {0}: {1}".format(str(self.shape),
+                                                         self._data.__repr__())
+
     @classmethod
     def read(cls, filename, format=None):
         if format == 'fits':
