@@ -70,7 +70,7 @@ class TestSpectralCube(object):
         world = [w.reshape(shp) for w in world]
         world = [w[view] for w in world][::-1]
 
-        w2 = c.world(view)
+        w2 = c.world[view]
         for result, expected in zip(w2, world):
             np.testing.assert_array_equal(result, expected)
 
@@ -80,7 +80,7 @@ class TestSpectralCube(object):
         c1, d1 = cube_and_raw('adv.fits')
         c2, d2 = cube_and_raw('vad.fits')
 
-        for w1, w2 in zip(c1.world(view), c2.world(view)):
+        for w1, w2 in zip(c1.world[view], c2.world[view]):
             np.testing.assert_array_equal(w1, w2)
 
 """

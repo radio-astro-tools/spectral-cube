@@ -421,7 +421,24 @@ class SpectralCube(object):
         strong distortions)
         """
 
+    @cube_utils.slice_syntax
     def world(self, view):
+        """
+        Return a list of the world coordinates in a cube (or a view of it).
+
+        Cube.world is called with *bracket notation*, like a NumPy array::
+            c.world[0:3, :, :]
+
+        Returns
+        -------
+        [v, y, x] : list of NumPy arryas
+            The 3 world coordinates at each pixel in the view.
+
+        Note
+        ----
+        Calling world with slices is efficient in the sense that it
+        only computes pixels within the view.
+        """
 
         inds = np.ogrid[[slice(0, s) for s in self._data.shape]]
         inds = np.broadcast_arrays(*inds)
@@ -464,6 +481,7 @@ def read(filename, format=None):
         return load_casa_image(filename)
     else:
         raise ValueError("Format {0} not implemented".format(format))
+
 
 def write(cube, filename, format=None, include_stokes=False, clobber=False):
     if format == 'fits':
