@@ -291,11 +291,11 @@ def read(filename, format=None):
     else:
         raise ValueError("Format {0} not implemented".format(format))
 
-def write(cube, filename, format=None, includestokes=False, clobber=False):
+def write(cube, filename, format=None, include_stokes=False, clobber=False):
     if format == 'fits':
         from .io.fits import write_fits_cube
-        write_fits_cube(filename, self._data, self._wcs,
-                        includestokes=includestokes, clobber=clobber)
+        write_fits_cube(filename, cube,
+                        include_stokes=include_stokes, clobber=clobber)
     else:
         raise NotImplementedError("Try FITS instead")
 
