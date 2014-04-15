@@ -93,11 +93,11 @@ class MaskBase(object):
         Users should use :meth:`SpectralCubeMask.get_data`
         """
         if slices is None:
-            data = data.copy()
+            sliced_data = data.copy()
         else:
-            data = data[slices].copy()
+            sliced_data = data[slices].copy()
 
-        return np.where(self.include(data, wcs, slices=slices), data, fill)
+        return np.where(self.include(data, wcs, slices=slices), sliced_data, fill)
 
 
 class SpectralCubeMask(MaskBase):
