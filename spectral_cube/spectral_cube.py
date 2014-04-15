@@ -69,7 +69,7 @@ class MaskBase(object):
         else:
             return cube[slices][self.get_include(data, wcs, slices=slices)]
 
-    def _filled(self, data, fill=np.nan, slices=None):
+    def _filled(self, data, wcs, fill=np.nan, slices=None):
         """
         Replace the exluded elements of *array* with *fill*.
 
@@ -117,7 +117,10 @@ class SpectralCubeMask(MaskBase):
         if wcs != self._wcs:
             raise NotImplementedError("Cannot yet apply array masks with different WCS to data")
 
-        return self._include_mask[slices]
+        if slices is None:
+            return self._include_mask
+        else:
+            return self._include_mask[slices]
 
     def _exclude(self, data, wcs, slices=None):
         return ~self._include(data, wcs, slices=slices)
@@ -137,7 +140,10 @@ class FunctionMask(object):
         self._include = True
 
     def _include(self, data, wcs, slices=None):
-        return self._function(data[slices])
+        if slices is None:
+            return self._function(data)
+        else:
+            return self._function(data[slices])
 
     def _exclude(self, data, wcs, slices=None):
         return ~self._include(data, wcs, slices=slices)
