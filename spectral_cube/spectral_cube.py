@@ -172,41 +172,43 @@ class SpectralCube(object):
         """
         raise NotImplementedError()
 
+    def _get_flat_shape(self, axis):
+        """
+        Get the shape of the array after flattening along an axis
+        """
+        iteraxes = [0,1,2]
+        iteraxes.remove(axis)
+        # x,y are defined as first,second dim to iterate over
+        # (not x,y in pixel space...)
+        nx = self.shape[iteraxes[0]]
+        ny = self.shape[iteraxes[1]]
+        return nx,ny
+
     def _apply_along_axes(self, function, axis=None, weights=None, **kwargs):
         """
         """
         if axis is None:
             return np.median(self.data_valid)
         
-        iteraxes = [0,1,2]
-        iteraxes.remove(axis)
-        # x,y are defined as first,second dim to iterate over
-        # (not x,y in pixel space...)
-        nx = self.shape[iteraxes[0]]
-        ny = self.shape[iteraxes[1]]
+        nx,ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
         out = np.empty([nx,ny])
 
-        for slc in self._iter_rays(axis)
+        for x,y,slc in self._iter_rays(axis)
             data = self.flattened(slc, weights=weights)
             out[x,y] = function(data, **kwargs)
 
         return out
 
     def _iter_rays(self, axis=None):
-        iteraxes = [0,1,2]
-        iteraxes.remove(axis)
-        # x,y are defined as first,second dim to iterate over
-        # (not x,y in pixel space...)
-        nx = self.shape[iteraxes[0]]
-        ny = self.shape[iteraxes[1]]
+        nx,ny = self._get_flat_shape(axis)
 
         for x in xrange(nx):
             for y in xrange(ny):
                 slc = [slice(x,x+1),slice(y,y+1)]
                 slc.insert(axis,slice(None))
-                yield slc
+                yield x,y,slc
 
     def flattened(self, slice=None, weights=None):
         data = self._mask._flattened(self._data, slice)
@@ -265,17 +267,12 @@ class SpectralCube(object):
         If *wcs = True*, return the WCS describing the moment
         """
 
-        iteraxes = [0,1,2]
-        iteraxes.remove(axis)
-        # x,y are defined as first,second dim to iterate over
-        # (not x,y in pixel space...)
-        nx = self.shape[iteraxes[0]]
-        ny = self.shape[iteraxes[1]]
+        nx,ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
         out = np.empty([nx,ny])
 
-        for slc in self._iter_rays(axis)
+        for x,y,slc in self._iter_rays(axis)
             coords = self.world(axis, slc)
             data = self.flattened(slc, weights=coords**order)
             weights = self.flattened(slc)
