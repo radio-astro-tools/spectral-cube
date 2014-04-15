@@ -1,3 +1,7 @@
+"""
+A class to represent a 3-d position-position-velocity spectral cube.
+"""
+
 from abc import ABCMeta, abstractproperty
 
 from astropy import units as u
@@ -92,24 +96,6 @@ class SpectralCube(object):
     def shape(self):
         return self._data.shape
 
-    @classmethod
-    def read(cls, filename, format=None):
-        if format == 'fits':
-            from .io.fits import load_fits_cube
-            return load_fits_cube(filename)
-        elif format == 'casa_image':
-            from .io.casa_image import load_casa_image
-            return load_casa_image(filename)
-        else:
-            raise ValueError("Format {0} not implemented".format(format))
-
-    def write(self, filename, format=None, includestokes=False, clobber=False):
-        if format == 'fits':
-            write_fits(filename, self._data, self._wcs,
-                       includestokes=includestokes, clobber=clobber)
-        else:
-            raise NotImplementedError("Try FITS instead")
-
     def sum(self, axis=None):
         pass
 
@@ -123,10 +109,6 @@ class SpectralCube(object):
         pass
 
     def argmin(self, axis=None):
-        pass
-
-    def interpolate_slice(self):
-        # Find a slice at an exact spectral value?
         pass
 
     @property
@@ -148,9 +130,9 @@ class SpectralCube(object):
         Sets masked values to *fill*
         """
         if self._mask is None:
-            return self._data[0]
+            return self._data
 
-        return self._mask._filled(self._data[0], fill)
+        return self._mask._filled(self._data, fill)
 
     @property
     def data_unmasked(self):
@@ -187,8 +169,8 @@ class SpectralCube(object):
         """
 
         # TODO: use world[...] once implemented
-        ist, iz, iy, ix = np.broadcast_arrays(0, np.arange(self.shape[1]), 0., 0.)
-        return self._wcs.all_pix2world(ix, iy, iz, ist, 0)[2] * u.Unit(self._wcs.wcs.cunit[2])
+        iz, iy, ix = np.broadcast_arrays(np.arange(self.shape[1]), 0., 0.)
+        return self._wcs.all_pix2world(ix, iy, iz, 0)[2] * u.Unit(self._wcs.wcs.cunit[2])
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -251,10 +233,10 @@ class SpectralCube(object):
         if self._mask is None:
             mask_slab = None
         else:
-            mask_slab = self._mask[:, ilo:ihi]
+            mask_slab = self._mask[ilo:ihi]
 
         # Create new spectral cube
-        slab = SpectralCube(self._data[:, ilo:ihi], wcs_slab,
+        slab = SpectralCube(self._data[ilo:ihi], wcs_slab,
                             mask=mask_slab, meta=self.meta)
 
         return slab
@@ -281,34 +263,113 @@ class SpectralCube(object):
         """
 
 
-def _orient(data, wcs):
-    if data.ndim not in [3, 4]:
-        raise ValueError("Input array must be 3 or 4 dimensional")
+def _split_stokes(array, wcs):
+    """
+    Given a 4-d data cube with 4-d WCS (spectral cube + stokes) return a
+    dictionary of data and WCS objects for each Stokes component
 
-    axtypes = wcs.get_axis_types()[::-1]  # reverse from wcs -> numpy convention
+    Parameters
+    ----------
+    array : `~numpy.ndarray`
+        The input 3-d array with two position dimensions, one spectral
+        dimension, and a Stokes dimension.
+    wcs : `~astropy.wcs.WCS`
+        The input 3-d WCS with two position dimensions, one spectral
+        dimension, and a Stokes dimension.
+    """
+
+    if array.ndim != 4:
+        raise ValueError("Input array must be 4-dimensional")
+
+    if wcs.wcs.naxis != 4:
+        raise ValueError("Input WCS must be 4-dimensional")
+
+    # reverse from wcs -> numpy convention
+    axtypes = wcs.get_axis_types()[::-1]
+
+    types = [a['coordinate_type'] for a in axtypes]
+
+    # Find stokes dimension
+    stokes_index = types.index('stokes')
+
+    # TODO: make the stokes names more general
+    stokes_names = ["I", "Q", "U", "V"]
+
+    stokes_arrays = {}
+
+    wcs_slice = wcs_utils.drop_axis(wcs, array.ndim - 1 - stokes_index)
+
+    for i_stokes in range(array.shape[stokes_index]):
+
+        array_slice = (i_stokes if idim == stokes_index else slice(None) for idim in range(array.ndim))
+
+        stokes_arrays[stokes_names[i_stokes]] = array[array_slice]
+
+    return stokes_arrays, wcs_slice
+
+
+def _orient(array, wcs):
+    """
+    Given a 3-d spectral cube and WCS, swap around the axes so that the
+    spectral axis cube is the first in Numpy notation, and the last in WCS
+    notation.
+
+    Parameters
+    ----------
+    array : `~numpy.ndarray`
+        The input 3-d array with two position dimensions and one spectral
+        dimension.
+    wcs : `~astropy.wcs.WCS`
+        The input 3-d WCS with two position dimensions and one spectral
+        dimension.
+    """
+
+    if array.ndim != 3:
+        raise ValueError("Input array must be 3-dimensional")
+
+    if wcs.wcs.naxis != 4:
+        raise ValueError("Input WCS must be 3-dimensional")
+
+    # reverse from wcs -> numpy convention
+    axtypes = wcs.get_axis_types()[::-1]
+
     types = [a['coordinate_type'] for a in axtypes]
     nums = [None if a['coordinate_type'] != 'celestial' else a['number']
             for a in axtypes]
 
     if 'stokes' in types:
-        t = [types.index('stokes'),
-             types.index('spectral'),
-             nums.index(1), nums.index(0)]
-        result = data.transpose(t)
-    else:
-        t = [types.index('spectral'),
-             nums.index(1), nums.index(0)]
-        result = data.transpose(t)[np.newaxis]
+        raise ValueError("Input WCS should not contain stokes")
 
-    # Update the WCS if needed
-    if not 'stokes' in types:
-        wcs = wcs.copy()
-        wcs = add_stokes_axis_to_wcs(wcs, 0)
+    t = [types.index('spectral'), nums.index(1), nums.index(0)]
 
-    return result, wcs
+    result_array = array.transpose(t)[np.newaxis]
+
+    # TODO: Swap around WCS
+    result_wcs = wcs
+
+    return result_array, result_wcs
 
 
 # demo code
+
+@classmethod
+def read(cls, filename, format=None):
+    if format == 'fits':
+        from .io.fits import load_fits_cube
+        return load_fits_cube(filename)
+    elif format == 'casa_image':
+        from .io.casa_image import load_casa_image
+        return load_casa_image(filename)
+    else:
+        raise ValueError("Format {0} not implemented".format(format))
+
+def write(self, filename, format=None, includestokes=False, clobber=False):
+    if format == 'fits':
+        write_fits(filename, self._data, self._wcs,
+                   includestokes=includestokes, clobber=clobber)
+    else:
+        raise NotImplementedError("Try FITS instead")
+
 
 
 def test():
