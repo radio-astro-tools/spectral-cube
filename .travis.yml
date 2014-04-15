@@ -16,9 +16,10 @@ before_install:
 
 install:
    - export PYTHONIOENCODING=UTF8 # just in case
-   - pip -q install --upgrade "numpy==$NUMPY_VERSION" --use-mirrors
-   - pip -q install --upgrade "astropy==$ASTROPY_VERSION" --use-mirrors
+   - pip -q install --upgrade "numpy==$NUMPY_VERSION"
+   - pip -q install --upgrade "astropy==$ASTROPY_VERSION"
    - if [[ $SETUP_CMD == cov ]]; then pip install pytest -q --use-mirrors; fi
 
 script:
+   - if [[ $SETUP_CMD == test ]]; then cd spectral_cube/tests/data ; make ; cd ../../../ ; fi
    - if [[ $SETUP_CMD == test ]]; then py.test spectral_cube ; fi
