@@ -113,28 +113,27 @@ class SpectralCube(object):
         else:
             raise NotImplementedError("Try FITS instead")
 
-    def _apply_numpy_function(self, function, **kwargs):
+    def _apply_numpy_function(self, function, fill=np.nan, **kwargs):
         """
         Apply a numpy function to the cube
         """
-
+        return function(self.get_data(fill=fill), **kwargs)
 
     def sum(self, axis=None):
         # use nansum, and multiply by mask to add zero each time there is badness
-        return np.nansum(self._data * self._mask.include, axis=axis)
+        return self._apply_numpy_function(np.nansum, fill=np.nan, axis=axis)
 
     def max(self, axis=None):
-        
-        return np.nansum(self._data * self._mask.include, axis=axis)
+        return self._apply_numpy_function(np.nanmax, fill=np.nan, axis=axis)
 
     def min(self, axis=None):
-        pass
+        return self._apply_numpy_function(np.nanmin, fill=np.nan, axis=axis)
 
     def argmax(self, axis=None):
-        pass
+        return self._apply_numpy_function(np.nanargmax, fill=np.nan, axis=axis)
 
     def argmin(self, axis=None):
-        pass
+        return self._apply_numpy_function(np.nanargmin, fill=np.nan, axis=axis)
 
     @property
     def data_valid(self):
