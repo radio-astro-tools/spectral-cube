@@ -1,14 +1,14 @@
 import numpy as np
 from astropy.wcs import WCS
 
-wcs_parameters_to_preserve = ['cel_offset','dateavg','dateobs','equinox',
+wcs_parameters_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
                               'latpole', 'lonpole', 'mjdavg', 'mjdobs', 'name',
                               'obsgeo', 'phi0', 'radesys', 'restfrq',
                               'restwav', 'specsys', 'ssysobs', 'ssyssrc',
                               'theta0', 'velangl', 'velosys', 'zsource']
 # not writable:
 # 'lat', 'lng', 'lattyp', 'lngtyp',
-                            
+
 
 def drop_axis(wcs, dropax):
     """
@@ -44,7 +44,7 @@ def add_stokes_axis_to_wcs(wcs, add_before_ind):
     """
 
     naxin = wcs.wcs.naxis
-    naxout = naxin+1
+    naxout = naxin + 1
 
     inds = list(range(naxout))
     inds.pop(add_before_ind)
@@ -52,11 +52,11 @@ def add_stokes_axis_to_wcs(wcs, add_before_ind):
 
     outwcs = WCS(naxis=naxout)
     for par in wcs_parameters_to_preserve:
-        setattr(outwcs.wcs, par, getattr(wcs.wcs,par))
+        setattr(outwcs.wcs, par, getattr(wcs.wcs, par))
 
-    pc = np.zeros([naxout,naxout])
-    pc[inds[:,np.newaxis],inds[np.newaxis,:]] = wcs.wcs.get_pc()
-    pc[add_before_ind,add_before_ind] = 1
+    pc = np.zeros([naxout, naxout])
+    pc[inds[:, np.newaxis], inds[np.newaxis, :]] = wcs.wcs.get_pc()
+    pc[add_before_ind, add_before_ind] = 1
 
     def append_to_end(val, lst):
         """ insert a value at index into a list """
@@ -87,7 +87,7 @@ def wcs_swapaxes(wcs, ax0, ax1):
         convention, not FITS convention)
     """
     inds = range(wcs.wcs.naxis)
-    inds[ax0],inds[ax1] = inds[ax1],inds[ax0]
+    inds[ax0], inds[ax1] = inds[ax1], inds[ax0]
     inds = np.array(inds)
 
     return reindex_wcs(wcs, inds)
@@ -113,7 +113,7 @@ def reindex_wcs(wcs, inds):
 
     outwcs = WCS(naxis=len(inds))
     for par in wcs_parameters_to_preserve:
-        setattr(outwcs.wcs, par, getattr(wcs.wcs,par))
+        setattr(outwcs.wcs, par, getattr(wcs.wcs, par))
 
     cdelt = wcs.wcs.get_cdelt()
     pc = wcs.wcs.get_pc()
@@ -124,64 +124,66 @@ def reindex_wcs(wcs, inds):
     outwcs.wcs.cunit = [wcs.wcs.cunit[i] for i in inds]
     outwcs.wcs.ctype = [wcs.wcs.ctype[i] for i in inds]
     outwcs.wcs.cname = [wcs.wcs.cname[i] for i in inds]
-    outwcs.wcs.pc = pc[inds[:,None],inds[None,:]]
+    outwcs.wcs.pc = pc[inds[:, None], inds[None, :]]
 
     return outwcs
 
 
 def test_wcs_dropping():
     wcs = WCS(naxis=4)
-    wcs.wcs.pc = np.zeros([4,4])
-    np.fill_diagonal(wcs.wcs.pc, np.arange(1,5))
-    pc = wcs.wcs.pc # for later use below
+    wcs.wcs.pc = np.zeros([4, 4])
+    np.fill_diagonal(wcs.wcs.pc, np.arange(1, 5))
+    pc = wcs.wcs.pc  # for later use below
 
-    dropped = drop_axis(wcs,0)
-    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([2,3,4]))
-    dropped = drop_axis(wcs,1)
-    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1,3,4]))
-    dropped = drop_axis(wcs,2)
-    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1,2,4]))
-    dropped = drop_axis(wcs,3)
-    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1,2,3]))
+    dropped = drop_axis(wcs, 0)
+    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([2, 3, 4]))
+    dropped = drop_axis(wcs, 1)
+    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1, 3, 4]))
+    dropped = drop_axis(wcs, 2)
+    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1, 2, 4]))
+    dropped = drop_axis(wcs, 3)
+    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1, 2, 3]))
 
     wcs = WCS(naxis=4)
     wcs.wcs.cd = pc
 
-    dropped = drop_axis(wcs,0)
-    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([2,3,4]))
-    dropped = drop_axis(wcs,1)
-    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1,3,4]))
-    dropped = drop_axis(wcs,2)
-    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1,2,4]))
-    dropped = drop_axis(wcs,3)
-    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1,2,3]))
+    dropped = drop_axis(wcs, 0)
+    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([2, 3, 4]))
+    dropped = drop_axis(wcs, 1)
+    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1, 3, 4]))
+    dropped = drop_axis(wcs, 2)
+    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1, 2, 4]))
+    dropped = drop_axis(wcs, 3)
+    assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1, 2, 3]))
+
 
 def test_wcs_swapping():
     wcs = WCS(naxis=4)
-    wcs.wcs.pc = np.zeros([4,4])
-    np.fill_diagonal(wcs.wcs.pc, np.arange(1,5))
-    pc = wcs.wcs.pc # for later use below
+    wcs.wcs.pc = np.zeros([4, 4])
+    np.fill_diagonal(wcs.wcs.pc, np.arange(1, 5))
+    pc = wcs.wcs.pc  # for later use below
 
-    swapped = wcs_swapaxes(wcs,0,1)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([2,1,3,4]))
-    swapped = wcs_swapaxes(wcs,0,3)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([4,2,3,1]))
-    swapped = wcs_swapaxes(wcs,2,3)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([1,2,4,3]))
+    swapped = wcs_swapaxes(wcs, 0, 1)
+    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([2, 1, 3, 4]))
+    swapped = wcs_swapaxes(wcs, 0, 3)
+    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([4, 2, 3, 1]))
+    swapped = wcs_swapaxes(wcs, 2, 3)
+    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([1, 2, 4, 3]))
 
     wcs = WCS(naxis=4)
     wcs.wcs.cd = pc
 
-    swapped = wcs_swapaxes(wcs,0,1)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([2,1,3,4]))
-    swapped = wcs_swapaxes(wcs,0,3)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([4,2,3,1]))
-    swapped = wcs_swapaxes(wcs,2,3)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([1,2,4,3]))
+    swapped = wcs_swapaxes(wcs, 0, 1)
+    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([2, 1, 3, 4]))
+    swapped = wcs_swapaxes(wcs, 0, 3)
+    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([4, 2, 3, 1]))
+    swapped = wcs_swapaxes(wcs, 2, 3)
+    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([1, 2, 4, 3]))
+
 
 def test_add_stokes():
     wcs = WCS(naxis=3)
-    
+
     for ii in range(4):
-        outwcs = add_stokes_axis_to_wcs(wcs,ii)
+        outwcs = add_stokes_axis_to_wcs(wcs, ii)
         assert outwcs.wcs.naxis == 4

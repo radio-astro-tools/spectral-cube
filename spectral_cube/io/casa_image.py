@@ -2,7 +2,7 @@ import warnings
 from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
-from spectral_cube import SpectralCube,SpectralCubeMask
+from spectral_cube import SpectralCube, SpectralCubeMask
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -79,6 +79,7 @@ try:
 except ImportError:
     raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
 
+
 def load_casa_image(filename, skipdata=False,
                     skipvalid=False, skipcs=False):
     """
@@ -124,7 +125,7 @@ def load_casa_image(filename, skipdata=False,
         # on the error checking. JIRA filed. Until then the
         # axes will be reversed from the original.
 
-        #if transpose == True:
+        # if transpose == True:
         #    new_order = np.arange(self.data.ndim)
         #    new_order = new_order[-1*np.arange(self.data.ndim)-1]
         #    print new_order
@@ -133,7 +134,7 @@ def load_casa_image(filename, skipdata=False,
     # close the ia tool
     ia.close()
 
-    meta = {'filename':filename}
+    meta = {'filename': filename}
 
     mask = SpectralCubeMask(wcs, np.logical_not(valid))
     cube = SpectralCube(data, wcs, mask, meta=meta)
