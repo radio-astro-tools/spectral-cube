@@ -259,6 +259,13 @@ class SpectralCube(object):
 
         return slab
 
+    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_frequency=None):
+        """
+        Extract a sub-cube spatially and spectrally
+
+        xlo = 'min' / 'max' should be special keywords
+        """
+
     def world_spines(self):
         """
         Returns a dict of 1D arrays, for the world coordinates
