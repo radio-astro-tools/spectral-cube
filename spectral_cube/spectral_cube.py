@@ -6,10 +6,8 @@ from abc import ABCMeta, abstractproperty
 
 from astropy import units as u
 import numpy as np
-from astropy.io import fits
 
-from . import wcs_utils
-from .wcs_utils import add_stokes_axis_to_wcs
+from . import cube_utils
 
 __all__ = ['SpectralCube']
 
@@ -85,7 +83,7 @@ class SpectralCubeMask(MaskBase):
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None):
-        self._data, self._wcs = _orient(data, wcs)
+        self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
@@ -262,98 +260,9 @@ class SpectralCube(object):
         This can be made to only compute the required values rather than compute everything then slice.
         """
 
-
-def _split_stokes(array, wcs):
-    """
-    Given a 4-d data cube with 4-d WCS (spectral cube + stokes) return a
-    dictionary of data and WCS objects for each Stokes component
-
-    Parameters
-    ----------
-    array : `~numpy.ndarray`
-        The input 3-d array with two position dimensions, one spectral
-        dimension, and a Stokes dimension.
-    wcs : `~astropy.wcs.WCS`
-        The input 3-d WCS with two position dimensions, one spectral
-        dimension, and a Stokes dimension.
-    """
-
-    if array.ndim != 4:
-        raise ValueError("Input array must be 4-dimensional")
-
-    if wcs.wcs.naxis != 4:
-        raise ValueError("Input WCS must be 4-dimensional")
-
-    # reverse from wcs -> numpy convention
-    axtypes = wcs.get_axis_types()[::-1]
-
-    types = [a['coordinate_type'] for a in axtypes]
-
-    # Find stokes dimension
-    stokes_index = types.index('stokes')
-
-    # TODO: make the stokes names more general
-    stokes_names = ["I", "Q", "U", "V"]
-
-    stokes_arrays = {}
-
-    wcs_slice = wcs_utils.drop_axis(wcs, array.ndim - 1 - stokes_index)
-
-    for i_stokes in range(array.shape[stokes_index]):
-
-        array_slice = (i_stokes if idim == stokes_index else slice(None) for idim in range(array.ndim))
-
-        stokes_arrays[stokes_names[i_stokes]] = array[array_slice]
-
-    return stokes_arrays, wcs_slice
-
-
-def _orient(array, wcs):
-    """
-    Given a 3-d spectral cube and WCS, swap around the axes so that the
-    spectral axis cube is the first in Numpy notation, and the last in WCS
-    notation.
-
-    Parameters
-    ----------
-    array : `~numpy.ndarray`
-        The input 3-d array with two position dimensions and one spectral
-        dimension.
-    wcs : `~astropy.wcs.WCS`
-        The input 3-d WCS with two position dimensions and one spectral
-        dimension.
-    """
-
-    if array.ndim != 3:
-        raise ValueError("Input array must be 3-dimensional")
-
-    if wcs.wcs.naxis != 4:
-        raise ValueError("Input WCS must be 3-dimensional")
-
-    # reverse from wcs -> numpy convention
-    axtypes = wcs.get_axis_types()[::-1]
-
-    types = [a['coordinate_type'] for a in axtypes]
-    nums = [None if a['coordinate_type'] != 'celestial' else a['number']
-            for a in axtypes]
-
-    if 'stokes' in types:
-        raise ValueError("Input WCS should not contain stokes")
-
-    t = [types.index('spectral'), nums.index(1), nums.index(0)]
-
-    result_array = array.transpose(t)[np.newaxis]
-
-    # TODO: Swap around WCS
-    result_wcs = wcs
-
-    return result_array, result_wcs
-
-
 # demo code
 
-@classmethod
-def read(cls, filename, format=None):
+def read(filename, format=None):
     if format == 'fits':
         from .io.fits import load_fits_cube
         return load_fits_cube(filename)
@@ -363,10 +272,11 @@ def read(cls, filename, format=None):
     else:
         raise ValueError("Format {0} not implemented".format(format))
 
-def write(self, filename, format=None, includestokes=False, clobber=False):
+def write(cube, filename, format=None, includestokes=False, clobber=False):
     if format == 'fits':
-        write_fits(filename, self._data, self._wcs,
-                   includestokes=includestokes, clobber=clobber)
+        from .io.fits import write_fits_cube
+        write_fits_cube(filename, self._data, self._wcs,
+                        includestokes=includestokes, clobber=clobber)
     else:
         raise NotImplementedError("Try FITS instead")
 

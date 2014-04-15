@@ -2,7 +2,7 @@ import warnings
 from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
-from spectral_cube import SpectralCube, SpectralCubeMask
+from spectral_cube import SpectralCube,SpectralCubeMask
 from .. import wcs_utils
 
 
@@ -41,7 +41,6 @@ def load_fits_cube(filename, extnum=0, **kwargs):
 
     return cube
 
-
 def write_fits_cube(filename, data, wcs, includestokes=False, clobber=False):
     """
     Write a FITS cube with a WCS to a filename
@@ -53,7 +52,7 @@ def write_fits_cube(filename, data, wcs, includestokes=False, clobber=False):
     if not includestokes:
         if data.shape[0] != 1:
             raise ValueError("Cannot drop stokes unless it's degenerate")
-        data = data[0, :,:,:]
+        data = data[0,:,:,:]
         if np.any(stokesax):
             drop = np.argmax(stokesax)
             wcs = wcs_utils.drop_axis(wcs, drop)
