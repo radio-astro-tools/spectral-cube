@@ -95,11 +95,37 @@ class SpectralCube(object):
     def shape(self):
         return self._data.shape
 
+    @classmethod
+    def read(cls, filename, format=None):
+        if format == 'fits':
+            from .io.fits import load_fits_cube
+            return load_fits_cube(filename)
+        elif format == 'casa_image':
+            from .io.casa_image import load_casa_image
+            return load_casa_image(filename)
+        else:
+            raise ValueError("Format {0} not implemented".format(format))
+
+    def write(self, filename, format=None, includestokes=False, clobber=False):
+        if format == 'fits':
+            write_fits(filename, self._data, self._wcs,
+                       includestokes=includestokes, clobber=clobber)
+        else:
+            raise NotImplementedError("Try FITS instead")
+
+    def _apply_numpy_function(self, function, **kwargs):
+        """
+        Apply a numpy function to the cube
+        """
+
+
     def sum(self, axis=None):
-        pass
+        # use nansum, and multiply by mask to add zero each time there is badness
+        return np.nansum(self._data * self._mask.include, axis=axis)
 
     def max(self, axis=None):
-        pass
+        
+        return np.nansum(self._data * self._mask.include, axis=axis)
 
     def min(self, axis=None):
         pass
