@@ -75,9 +75,13 @@ class SpectralCubeMask(MaskBase):
     def include(self):
         return self._includemask
 
+    @property
+    def shape(self):
+        return self._includemask.shape
+
     def __getitem__(self, slice):
         # TODO: need to update WCS!
-        return SpectralCube(self._includemask[slice], self._wcs)
+        return SpectralCubeMask(self._includemask[slice], self._wcs)
 
 
 class SpectralCube(object):
