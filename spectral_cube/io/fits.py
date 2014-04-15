@@ -2,9 +2,9 @@ import warnings
 from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
-from spectral_cube import SpectralCube,SpectralCubeMask
+from ..spectral_cube import SpectralCube, StokesSpectralCube, SpectralCubeMask
 from .. import wcs_utils
-
+from .. import cube_utils
 
 def load_fits_cube(filename, extnum=0, **kwargs):
     """
@@ -26,9 +26,6 @@ def load_fits_cube(filename, extnum=0, **kwargs):
     # read the data - assume first extension
     data = hdulist[extnum].data
 
-    # note where data is valid
-    valid = np.isfinite(data)
-
     # note the header and WCS information
     hdr = hdulist[extnum].header
     wcs = WCS(hdr)
@@ -38,12 +35,20 @@ def load_fits_cube(filename, extnum=0, **kwargs):
 
     if wcs.wcs.naxis == 3:
 
+        valid = np.isfinite(data)
+
         mask = SpectralCubeMask(np.logical_not(valid), wcs)
         cube = SpectralCube(data, wcs, mask, meta=meta)
 
-    elif wcs.ndim == 4:
+    elif wcs.wcs.naxis == 4:
 
-        mask = SpectralCubeMask(np.logical_not(valid), wcs)
+        data, wcs = cube_utils._split_stokes(data, wcs)
+
+        mask = {}
+        for component in data:
+            valid = np.isfinite(data[component])
+            mask[component] = SpectralCubeMask(np.logical_not(valid), wcs)
+
         cube = StokesSpectralCube(data, wcs, mask, meta=meta)
 
     else:

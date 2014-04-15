@@ -271,13 +271,12 @@ class StokesSpectralCube(SpectralCube):
 
     def __init__(self, data, wcs, mask=None, meta=None):
 
-        # Split into different components
-        stokes_arrays, wcs_slice = cube_utils._split_stokes(data, wcs)
+        # WCS should be 3-d, data should be dict of 3-d, mask should be disk
+        # of 3-d
 
         # XXX: For now, let's just extract I and work with that
-        data_i, wcs_i = _orient(stokes_arrays["I"], wcs_slice)
 
-        super(StokesSpectralCube, self).__init__(data_i, wcs_i, mask=mask, meta=meta)
+        super(StokesSpectralCube, self).__init__(data["I"], wcs, mask=mask["I"], meta=meta)
 
         # TODO: deal with the other stokes parameters here
 

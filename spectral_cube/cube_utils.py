@@ -40,7 +40,7 @@ def _split_stokes(array, wcs):
 
     for i_stokes in range(array.shape[stokes_index]):
 
-        array_slice = (i_stokes if idim == stokes_index else slice(None) for idim in range(array.ndim))
+        array_slice = [i_stokes if idim == stokes_index else slice(None) for idim in range(array.ndim)]
 
         stokes_arrays[stokes_names[i_stokes]] = array[array_slice]
 
