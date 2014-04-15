@@ -1,11 +1,13 @@
+"""
+A class to represent a 3-d position-position-velocity spectral cube.
+"""
+
 from abc import ABCMeta, abstractproperty
 
 from astropy import units as u
 import numpy as np
-from astropy.io import fits
 
-from . import wcs_utils
-from .wcs_utils import add_stokes_axis_to_wcs
+from . import cube_utils
 
 __all__ = ['SpectralCube']
 
@@ -81,7 +83,8 @@ class SpectralCubeMask(MaskBase):
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None):
-        self._data, self._wcs = _orient(data, wcs)
+        # TODO: mask should be oriented? Or should we assume correctly oriented here?
+        self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
@@ -91,24 +94,6 @@ class SpectralCube(object):
     @property
     def shape(self):
         return self._data.shape
-
-    @classmethod
-    def read(cls, filename, format=None):
-        if format == 'fits':
-            from .io.fits import load_fits_cube
-            return load_fits_cube(filename)
-        elif format == 'casa_image':
-            from .io.casa_image import load_casa_image
-            return load_casa_image(filename)
-        else:
-            raise ValueError("Format {0} not implemented".format(format))
-
-    def write(self, filename, format=None, includestokes=False, clobber=False):
-        if format == 'fits':
-            write_fits(filename, self._data, self._wcs,
-                       includestokes=includestokes, clobber=clobber)
-        else:
-            raise NotImplementedError("Try FITS instead")
 
     def sum(self, axis=None):
         pass
@@ -123,10 +108,6 @@ class SpectralCube(object):
         pass
 
     def argmin(self, axis=None):
-        pass
-
-    def interpolate_slice(self):
-        # Find a slice at an exact spectral value?
         pass
 
     @property
@@ -148,9 +129,9 @@ class SpectralCube(object):
         Sets masked values to *fill*
         """
         if self._mask is None:
-            return self._data[0]
+            return self._data
 
-        return self._mask._filled(self._data[0], fill)
+        return self._mask._filled(self._data, fill)
 
     @property
     def data_unmasked(self):
@@ -187,8 +168,8 @@ class SpectralCube(object):
         """
 
         # TODO: use world[...] once implemented
-        ist, iz, iy, ix = np.broadcast_arrays(0, np.arange(self.shape[1]), 0., 0.)
-        return self._wcs.all_pix2world(ix, iy, iz, ist, 0)[2] * u.Unit(self._wcs.wcs.cunit[2])
+        iz, iy, ix = np.broadcast_arrays(np.arange(self.shape[0]), 0., 0.)
+        return self._wcs.all_pix2world(ix, iy, iz, 0)[2] * u.Unit(self._wcs.wcs.cunit[2])
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -251,11 +232,16 @@ class SpectralCube(object):
         if self._mask is None:
             mask_slab = None
         else:
-            mask_slab = self._mask[:, ilo:ihi]
+            mask_slab = self._mask[ilo:ihi]
 
         # Create new spectral cube
-        slab = SpectralCube(self._data[:, ilo:ihi], wcs_slab,
+        slab = SpectralCube(self._data[ilo:ihi], wcs_slab,
                             mask=mask_slab, meta=self.meta)
+
+        # TODO: we could change the WCS to give a spectral axis in the
+        # correct units as requested - so if the initial cube is in Hz and we
+        # request a range in km/s, we could adjust the WCS to be in km/s
+        # instead
 
         return slab
 
@@ -288,34 +274,43 @@ class SpectralCube(object):
         """
 
 
-def _orient(data, wcs):
-    if data.ndim not in [3, 4]:
-        raise ValueError("Input array must be 3 or 4 dimensional")
+class StokesSpectralCube(SpectralCube):
+    """
+    A class to store a spectral cube with multiple Stokes parameters. By
+    default, this will act like a Stokes I spectral cube, but other stokes
+    parameters can be accessed with attribute notation.
+    """
 
-    axtypes = wcs.get_axis_types()[::-1]  # reverse from wcs -> numpy convention
-    types = [a['coordinate_type'] for a in axtypes]
-    nums = [None if a['coordinate_type'] != 'celestial' else a['number']
-            for a in axtypes]
+    def __init__(self, data, wcs, mask=None, meta=None):
 
-    if 'stokes' in types:
-        t = [types.index('stokes'),
-             types.index('spectral'),
-             nums.index(1), nums.index(0)]
-        result = data.transpose(t)
+        # WCS should be 3-d, data should be dict of 3-d, mask should be disk
+        # of 3-d
+
+        # XXX: For now, let's just extract I and work with that
+
+        super(StokesSpectralCube, self).__init__(data["I"], wcs, mask=mask["I"], meta=meta)
+
+        # TODO: deal with the other stokes parameters here
+
+
+def read(filename, format=None):
+    if format == 'fits':
+        from .io.fits import load_fits_cube
+        return load_fits_cube(filename)
+    elif format == 'casa_image':
+        from .io.casa_image import load_casa_image
+        return load_casa_image(filename)
     else:
-        t = [types.index('spectral'),
-             nums.index(1), nums.index(0)]
-        result = data.transpose(t)[np.newaxis]
+        raise ValueError("Format {0} not implemented".format(format))
 
-    # Update the WCS if needed
-    if not 'stokes' in types:
-        wcs = wcs.copy()
-        wcs = add_stokes_axis_to_wcs(wcs, 0)
+def write(cube, filename, format=None, include_stokes=False, clobber=False):
+    if format == 'fits':
+        from .io.fits import write_fits_cube
+        write_fits_cube(filename, cube,
+                        include_stokes=include_stokes, clobber=clobber)
+    else:
+        raise NotImplementedError("Try FITS instead")
 
-    return result, wcs
-
-
-# demo code
 
 
 def test():
