@@ -22,4 +22,4 @@ def test_moment0():
     mom0_0_np = mc_hdu.data.mean(axis=0)
     mom0_0_sc = sc.moment(0, axis=0)
     
-    assert np.testing.assert_array_almost_equal(mom0_0_np, mom0_0_sc)
+    np.testing.assert_array_almost_equal_nulp(mom0_0_np, mom0_0_sc.value)
