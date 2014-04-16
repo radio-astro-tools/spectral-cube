@@ -4,6 +4,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 import abc
 import warnings
+import operator
 
 from astropy import units as u
 import numpy as np
@@ -110,6 +111,7 @@ class MaskBase(object):
 
 
 class SpectralCubeMask(MaskBase):
+
     """
     A mask defined as an array on a spectral cube WCS
     """
@@ -142,6 +144,7 @@ class SpectralCubeMask(MaskBase):
 
 
 class LazyMask(MaskBase):
+
     """
     A boolean mask defined by the evaluation of a function on a fixed dataset.
 
@@ -181,6 +184,7 @@ class LazyMask(MaskBase):
 
 
 class FunctionMask(MaskBase):
+
     """
     A mask defined by a function that is evaluated at run-time using the data
     passed to the mask.
@@ -565,7 +569,7 @@ class SpectralCube(object):
         ihi += 1
 
         # Create WCS slab
-        wcs_slab = self._wcs.copy()
+        wcs_slab = self._wcs.deepcopy()
         wcs_slab.wcs.crpix[2] -= ilo
 
         # Create mask slab
@@ -573,7 +577,7 @@ class SpectralCube(object):
             mask_slab = None
         else:
             try:
-                mask_slab = self._mask[ilo:ihi,:,:]
+                mask_slab = self._mask[ilo:ihi, :,:]
             except TypeError:
                 warnings.warn("mask slab has not been computed correctly")
                 mask_slab = None
@@ -656,6 +660,26 @@ class SpectralCube(object):
         world = [w * u.Unit(self._wcs.wcs.cunit[i])
                  for i, w in enumerate(world)]
         return world[::-1]  # reverse WCS -> numpy order
+
+    def __gt__(self, value):
+        """
+        Return a LazyMask representing the inequality
+
+        Parameters
+        ----------
+        value : number
+            The threshold
+        """
+        return LazyMask(lambda data: data > value, self._data, self._wcs)
+
+    def __ge__(self, value):
+        return LazyMask(lambda data: data >= value, self._data, self._wcs)
+
+    def __le__(self, value):
+        return LazyMask(lambda data: data <= value, self._data, self._wcs)
+
+    def __lt__(self, value):
+        return LazyMask(lambda data: data < value, self._data, self._wcs)
 
 
 class StokesSpectralCube(SpectralCube):
