@@ -459,8 +459,10 @@ class SpectralCube(object):
                 coords = self.spectral_axis[:,None,None]
             else:
                 center = self._wcs.wcs.crval[1::-1]
-                #mapcoords = (((self.spatial_coordinate_map -
-                #               center[:,None,None])**2).sum(axis=0)**0.5)
+                # this line is wrong; the coordinates have nothing to do with
+                # pixel sizes
+                mapcoords = (((self.spatial_coordinate_map -
+                               center[:,None,None])**2).sum(axis=0)**0.5)
                 coords = mapcoords[None,:,:]
             #coords = self.world[:,:,:][axis] * includemask
             mdata = data*includemask
