@@ -36,9 +36,9 @@ def load_fits_cube(filename, extnum=0, **kwargs):
 
     if wcs.wcs.naxis == 3:
 
-        valid = np.isfinite(data)
+        data, wcs = cube_utils._orient(data, wcs)
 
-        mask = FunctionMask(np.isfinite)
+        mask = FunctionMask(np.isfinite, data, wcs)
         cube = SpectralCube(data, wcs, mask, meta=meta)
 
     elif wcs.wcs.naxis == 4:
@@ -47,9 +47,10 @@ def load_fits_cube(filename, extnum=0, **kwargs):
 
         mask = {}
         for component in data:
-            mask[component] = FunctionMask(np.isfinite)
+            data[component], wcs_slice = cube_utils._orient(data[component], wcs)
+            mask[component] = FunctionMask(np.isfinite, data[component], wcs_slice)
 
-        cube = StokesSpectralCube(data, wcs, mask, meta=meta)
+        cube = StokesSpectralCube(data, wcs_slice, mask, meta=meta)
 
     else:
 

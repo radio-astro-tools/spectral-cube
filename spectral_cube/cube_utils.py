@@ -82,7 +82,7 @@ def _orient(array, wcs):
     t = [types.index('spectral'), nums.index(1), nums.index(0)]
     result_array = array.transpose(t)
 
-    t = np.argsort(t)
+    t = wcs.wcs.naxis - np.array(t[::-1]) - 1
     result_wcs = wcs_utils.reindex_wcs(wcs, t)
 
     return result_array, result_wcs

@@ -22,27 +22,27 @@ class MaskBase(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def include(self, data, wcs, slices=None):
+    def include(self, slices=None):
         """
         Return a boolean array indicating which values should be included
         """
-        return self._include(data, wcs, slices=slices)
+        return self._include(slices=slices)
 
     @abc.abstractmethod
-    def _include(self, data, wcs, slices=None):
+    def _include(self, slices=None):
         pass
 
-    def exclude(self, data, wcs, slices=None):
+    def exclude(self, slices=None):
         """
         Return a boolean array indicating which values should be excluded
         """
-        return self._exclude(data, wcs, slices=slices)
+        return self._exclude(slices=slices)
 
     @abc.abstractmethod
-    def _exclude(self, data, wcs, slices=None):
+    def _exclude(self, slices=None):
         pass
 
-    def _flattened(self, data, wcs, slices=None):
+    def _flattened(self, data, slices=None):
         """
         Return a flattened array of the included elements of cube
 
@@ -50,8 +50,6 @@ class MaskBase(object):
         ----------
         data : array-like
             The data array to flatten
-        wcs : `~astropy.wcs.WCS`
-            The WCS for the data
         slices : tuple, optional
             Any slicing to apply to the data before flattening
 
@@ -65,11 +63,11 @@ class MaskBase(object):
         This is an internal method used by :class:`SpectralCube`.
         """
         if slices is None:
-            return data[self.include(data, wcs)]
+            return data[self.include()]
         else:
-            return data[slices][self.include(data, wcs, slices=slices)]
+            return data[slices][self.include(slices=slices)]
 
-    def _filled(self, data, wcs, fill=np.nan, slices=None):
+    def _filled(self, data, fill=np.nan, slices=None):
         """
         Replace the exluded elements of *array* with *fill*.
 
@@ -97,7 +95,7 @@ class MaskBase(object):
         else:
             sliced_data = data[slices].copy()
 
-        return np.where(self.include(data, wcs, slices=slices), sliced_data, fill)
+        return np.where(self.include(slices=slices), sliced_data, fill)
 
 
 class SpectralCubeMask(MaskBase):
@@ -105,25 +103,21 @@ class SpectralCubeMask(MaskBase):
     A mask defined as an array on a spectral cube WCS
     """
 
-    def __init__(self, mask, wcs, include=True):
+    def __init__(self, mask, mask_wcs, include=True):
+
+        # TODO: at the moment, assume that the mask WCS matches the data WCS
+
         self._include_mask = mask if include else np.logical_not(mask)
-        self._wcs = wcs
+        self._wcs = mask_wcs
 
-    def _include(self, data, wcs, slices=None):
-
-        if data.shape != self._include_mask.shape:
-            raise NotImplementedError("Cannot yet apply array masks with different dimensions to data")
-
-        if str(wcs.to_header()) != str(self._wcs.to_header()):
-            raise NotImplementedError("Cannot yet apply array masks with different WCS to data")
-
+    def _include(self, slices=None):
         if slices is None:
             return self._include_mask
         else:
             return self._include_mask[slices]
 
-    def _exclude(self, data, wcs, slices=None):
-        return ~self._include(data, wcs, slices=slices)
+    def _exclude(self, slices=None):
+        return ~self._include(slices=slices)
 
     @property
     def shape(self):
@@ -135,17 +129,19 @@ class FunctionMask(MaskBase):
     A mask defined as a function.
     """
 
-    def __init__(self, function):
+    def __init__(self, function, data, wcs, parent_cube=None):
         self._function = function
+        self._data = data
+        self._wcs = wcs
 
-    def _include(self, data, wcs, slices=None):
+    def _include(self, slices=None):
         if slices is None:
-            return self._function(data)
+            return self._function(self._data)
         else:
-            return self._function(data[slices])
+            return self._function(self._data[slices])
 
-    def _exclude(self, data, wcs, slices=None):
-        return ~self._include(data, wcs, slices=slices)
+    def _exclude(self, slices=None):
+        return ~self._include(slices=slices)
 
 
 class SpectralCube(object):
@@ -304,7 +300,7 @@ class SpectralCube(object):
         if self._mask is None:
             return self._data
 
-        return self._mask._filled(self._data, self._wcs, fill)
+        return self._mask._filled(self._data, fill)
 
     @property
     def data_unmasked(self):
