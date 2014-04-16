@@ -200,6 +200,7 @@ class TestMoment(BaseTest):
         expected = np.nansum(w * d, axis=axis) / np.nansum(d, axis=axis)
         np.testing.assert_allclose(result, expected)
 
+    @pytest.mark.xfail
     @pytest.mark.parametrize('axis', (1, 2))
     def test_mom1_ax12(self, axis):
         c = self.c
@@ -295,3 +296,13 @@ class TestMasks(BaseTest):
         expected = self.d[op(self.d, thresh)]
         actual = self.c.flattened()
         np.testing.assert_array_equal(actual, expected)
+
+def read_write_rountrip():
+    cube = read(path('adv.fits'))
+    cube.write(path('test.fits'))
+    cube2 = read(path('test.fits'))
+
+    assert cube.shape == cube.shape
+    np.testing.assert_allclose(cube._data, cube2._data)
+    assert cube._wcs.to_header_string() == cube2._wcs.to_header_string() 
+
