@@ -444,10 +444,7 @@ class SpectralCube(object):
         """
         Compute the moments by holding the whole array in memory
         """
-        raise NotImplementedError("At least, not tested at all yet.")
-        includemask = self._mask.include
-        # What I want:
-        #includemask = self.mask.asarray()
+        includemask = self._mask.include(data=self._data, wcs=self._wcs)
         if np.any(np.isnan(self._data)):
             data = self.filled(fill=0)
             includemask[np.isnan(data)] = False
@@ -458,7 +455,14 @@ class SpectralCube(object):
         if order == 0:
             return (data*includemask).sum(axis=axis) / includemask.sum(axis=axis)
         else:
-            coords = self.world[:,:,:][axis] * includemask
+            if axis == 0:
+                coords = self.spectral_axis[:,None,None]
+            else:
+                center = self._wcs.wcs.crval[1::-1]
+                #mapcoords = (((self.spatial_coordinate_map -
+                #               center[:,None,None])**2).sum(axis=0)**0.5)
+                coords = mapcoords[None,:,:]
+            #coords = self.world[:,:,:][axis] * includemask
             mdata = data*includemask
             weighted = (mdata*coords**order)
             denom = mdata.sum(axis=axis)
@@ -470,8 +474,11 @@ class SpectralCube(object):
         A `~astropy.units.Quantity` array containing the central values of
         each channel along the spectral axis.
         """
-
         return self.world[:, 0, 0][0].ravel()
+
+    @property
+    def spatial_coordinate_map(self):
+        return self.world[0, :, :][1:]
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
