@@ -298,8 +298,11 @@ class SpectralCube(object):
         """
         return function(self.get_data(fill=fill), **kwargs)
 
-    def get_mask(self):
+    def get_mask_array(self):
         return self._mask.include(data=self._data, wcs=self._wcs)
+
+    def get_mask(self):
+        return self._mask
 
     def sum(self, axis=None):
         # use nansum, and multiply by mask to add zero each time there is badness
