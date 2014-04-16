@@ -281,7 +281,8 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
-    def _apply_along_axes(self, function, axis=None, weights=None, **kwargs):
+    def _apply_along_axes(self, function, axis=None, weights=None, wcs=False,
+                          **kwargs):
         """
         Apply a function to valid data along the specified axis, optionally
         using a weight array that is the same shape (or at least can be sliced
@@ -313,6 +314,10 @@ class SpectralCube(object):
             data = self.flattened(slc, weights=weights)
             # store result in array
             out[x, y] = function(data, **kwargs)
+
+        if wcs:
+            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            return out,newwcs
 
         return out
 
@@ -496,7 +501,7 @@ class SpectralCube(object):
         ihi += 1
 
         # Create WCS slab
-        wcs_slab = self._wcs.copy()
+        wcs_slab = self._wcs.deepcopy()
         wcs_slab.wcs.crpix[2] -= ilo
 
         # Create mask slab
