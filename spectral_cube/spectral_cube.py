@@ -12,6 +12,11 @@ from . import cube_utils
 
 __all__ = ['SpectralCube']
 
+try:  # TODO replace with six.py
+    xrange
+except NameError:
+    xrange = range
+
 
 class MaskBase(object):
     __metaclass__ = ABCMeta

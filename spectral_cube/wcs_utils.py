@@ -86,7 +86,7 @@ def wcs_swapaxes(wcs, ax0, ax1):
         The indices of the WCS to be swapped, counting from 0 (i.e., python
         convention, not FITS convention)
     """
-    inds = range(wcs.wcs.naxis)
+    inds = list(range(wcs.wcs.naxis))
     inds[ax0], inds[ax1] = inds[ax1], inds[ax0]
     inds = np.array(inds)
 
