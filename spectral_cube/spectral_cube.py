@@ -106,8 +106,9 @@ class MaskBase(object):
         This is an internal method used by :class:`SpectralCube`.
         Users should use :meth:`SpectralCubeMask.get_data`
         """
-        sliced_data = data[slices]
-        return np.where(self.include(data=data, wcs=wcs, slices=slices), sliced_data, fill)
+        sliced_data = data[slices].copy()
+        sliced_data[self.include(data=data, wcs=wcs, slices=slices)] = fill
+        return sliced_data
 
 
 class SpectralCubeMask(MaskBase):
@@ -120,12 +121,15 @@ class SpectralCubeMask(MaskBase):
         self._mask = mask
         self._mask_type = 'include' if include else 'exclude'
         self._wcs = wcs
+        self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._mask.shape:
             raise ValueError("data shape does not match mask shape")
-        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
-            raise ValueError("WCS does not match mask WCS")
+        if new_wcs not in self._wcs_whitelist:
+            if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+                raise ValueError("WCS does not match mask WCS")
+        self._wcs_whitelist.add(new_wcs)
 
     def _include(self, data=None, wcs=None, slices=()):
         result_mask = self._mask[slices]
@@ -168,12 +172,15 @@ class LazyMask(MaskBase):
         self._function = function
         self._data = data
         self._wcs = wcs
+        self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._data.shape:
             raise ValueError("data shape does not match mask shape")
-        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
-            raise ValueError("WCS does not match mask WCS")
+        if new_wcs not in self._wcs_whitelist:
+            if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+                raise ValueError("WCS does not match mask WCS")
+        self._wcs_whitelist.add(new_wcs)
 
     def _include(self, data=None, wcs=None, slices=()):
         self._validate_wcs(data, wcs)
@@ -366,7 +373,7 @@ class SpectralCube(object):
     # def get_masked_array(self):
     #    return np.ma.masked_where(self.mask, self._data)
 
-    def get_data(self, fill=np.nan):
+    def get_data(self, fill=np.nan, slices=()):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -374,16 +381,17 @@ class SpectralCube(object):
         Sets masked values to *fill*
         """
         if self._mask is None:
-            return self._data
+            return self._data[slices]
 
-        return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill)
+        return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill,
+                                  slices=slices)
 
     @property
-    def data_unmasked(self):
+    def data_unmasked(self, slices=()):
         """
         Like data, but don't apply the mask
         """
-        return self._data
+        return self._data[slices]
 
     def apply_mask(self, mask, inherit=True):
         """
@@ -400,11 +408,11 @@ class SpectralCube(object):
         """
 
     @property
-    def pix_cen(self):
+    def _pix_cen(self):
 
         # Start off by extracting the world coordinates of the pixels
-        _, lat, lon = self.world[0,:,:]
-        spectral, _, _ = self.world[:,0,0]
+        _, lat, lon = self.world[0, :, :]
+        spectral, _, _ = self.world[:, 0, 0]
 
         # Convert to radians
         lon = np.radians(lon)
@@ -412,24 +420,24 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dx = angular_separation(lon[:,:-1], lat[:,:-1], lon[:,1:], lat[:,:-1])
-        dy = angular_separation(lon[:-1,:], lat[:-1,:], lon[1:,:], lat[1:,:])
+        dx = angular_separation(lon[:, :-1], lat[:, :-1], lon[:, 1:], lat[:, :-1])
+        dy = angular_separation(lon[:-1, :], lat[:-1, :], lon[1:, :], lat[1:, :])
 
         # Find the cumulative offset - need to add a zero at the start
         x = np.zeros(self._data.shape[1:])
         y = np.zeros(self._data.shape[1:])
-        x[:,1:] = np.cumsum(dx, axis=1)
-        y[1:,:] = np.cumsum(dy, axis=0)
+        x[:, 1:] = np.cumsum(dx, axis=1)
+        y[1:, :] = np.cumsum(dy, axis=0)
 
         x = x.reshape(1, x.shape[0], x.shape[1])
         y = y.reshape(1, y.shape[0], y.shape[1])
         spectral = spectral.reshape(-1, 1, 1)
         x, y, spectral = np.broadcast_arrays(x, y, spectral)
 
-        return x * u.deg, y * u.deg, spectral * u.Unit(self._wcs.wcs.cunit[0])
+        return spectral, y, x
 
     @property
-    def pix_size(self):
+    def _pix_size(self):
 
         # First, scale along x direction
 
@@ -446,7 +454,7 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dx = angular_separation(lon[:,:-1], lat[:,:-1], lon[:,1:], lat[:,:-1])
+        dx = angular_separation(lon[:, :-1], lat[:, :-1], lon[:, 1:], lat[:, :-1])
 
         # Next, scale along y direction
 
@@ -463,7 +471,7 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dy = angular_separation(lon[:-1,:], lat[:-1,:], lon[1:,:], lat[1:,:])
+        dy = angular_separation(lon[:-1, :], lat[:-1, :], lon[1:, :], lat[1:, :])
 
         # Next, spectral coordinates
         zpix = np.linspace(-0.5, self._data.shape[0] - 0.5, self._data.shape[0] + 1)
@@ -479,9 +487,49 @@ class SpectralCube(object):
         dspectral = dspectral.reshape(-1, 1, 1)
         dx, dy, dspectral = np.broadcast_arrays(dx, dy, dspectral)
 
-        return dx * u.deg, dy * u.deg, dspectral * u.Unit(self._wcs.wcs.cunit[0])
+        return dspectral, dy, dx
 
-    def moment(self, order, axis, wcs=False):
+    def _moment_slicewise(self, order, axis):
+
+        shp = self._data.shape[:axis] + self._data.shape[axis + 1:]
+        result = np.zeros(shp)
+
+        view = [slice(None)] * 3
+        pix_cen = self._pix_cen[axis]
+        pix_size = self._pix_size[axis]
+        if order == 0:
+            for i in range(self._data.shape[axis]):
+                view[axis] = i
+                plane = self.get_data(fill=0, slices=view)
+                result += plane * pix_size[view]
+            return result
+
+        weights = np.zeros(shp)
+
+        if order == 1:
+            for i in range(self._data.shape[axis]):
+                view[axis] = i
+                plane = self.get_data(fill=0, slices=view)
+                result += (plane *
+                           pix_cen[view] *
+                           pix_size[view])
+                weights += plane * pix_size[view]
+            return result / weights
+
+        # would be nice to get mom1 and momn in single pass over data
+        mom1 = self._moment_slicewise(1, axis)
+        for i in range(self._data.shape[axis]):
+            view[axis] = i
+            plane = self.get_data(fill=0, slices=view)
+            result += (plane *
+                       (pix_cen[view] - mom1) ** order *
+                       pix_size[view])
+            weights += plane * pix_size[view]
+
+        unit = u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
+        return (result / weights) * unit
+
+    def moment(self, order=0, axis=0, wcs=False):
         """
         Determine the n'th moment along the spectral axis
 
@@ -490,6 +538,7 @@ class SpectralCube(object):
         if wcs:
             raise NotImplementedError("WCS output not yet implemented")
 
+        return self._moment_slicewise(order, axis)
         nx, ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
@@ -577,7 +626,7 @@ class SpectralCube(object):
             mask_slab = None
         else:
             try:
-                mask_slab = self._mask[ilo:ihi, :,:]
+                mask_slab = self._mask[ilo:ihi, :, :]
             except TypeError:
                 warnings.warn("mask slab has not been computed correctly")
                 mask_slab = None

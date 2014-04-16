@@ -180,7 +180,6 @@ class TestNumpyMethods(BaseTest):
 
 class TestMoment(BaseTest):
 
-    @pytest.mark.xfail
     def test_mom0(self):
         c = self.c
         np.testing.assert_allclose(c.moment(0, axis=0), c.sum(axis=0))
@@ -195,7 +194,6 @@ class TestMoment(BaseTest):
         expected = np.nansum(w * d, axis=axis) / np.nansum(d, axis=axis)
         np.testing.assert_allclose(result, expected)
 
-    @pytest.mark.xfail
     @pytest.mark.parametrize('axis', (1, 2))
     def test_mom1_ax12(self, axis):
         c = self.c
