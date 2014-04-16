@@ -32,9 +32,7 @@ def test_lazy_mask():
     data = np.arange(5).reshape((1,1,5))
     wcs = WCS()
 
-    cube = SpectralCube(data, wcs)
-
-    m = LazyMask(lambda x: x > 2, cube)
+    m = LazyMask(lambda x: x > 2, data=data, wcs=wcs)
 
     assert_allclose(m.include(data, wcs), [[[0,0,0,1,1]]])
     assert_allclose(m.exclude(data, wcs), [[[1,1,1,0,0]]])
