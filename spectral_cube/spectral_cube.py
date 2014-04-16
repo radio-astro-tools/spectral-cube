@@ -398,6 +398,10 @@ class SpectralCube(object):
             newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
             return out,newwcs
 
+        if wcs:
+            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            return out,newwcs
+
         return out
 
     def _iter_rays(self, axis=None):
