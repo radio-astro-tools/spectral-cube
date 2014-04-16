@@ -151,3 +151,18 @@ def axis_names(wcs):
             continue
         names[i] = types[i].split('-')[0]
     return names
+
+
+def slice_wcs(wcs, view):
+    """
+    Slice a WCS instance using a Numpy slice. The order of the slice should
+    be reversed (as for the data) compared to the natural WCS order.
+    """
+    wcs_new = wcs.deepcopy()
+    for i, iview in enumerate(view):
+        if iview.start is not None:
+            if iview.step not in (None, 1):
+                raise ValueError("Cannot yet slice WCS with strides different from None or 1")
+            wcs_index = wcs.wcs.naxis - 1 - i
+            wcs_new.wcs.crpix[wcs_index] -= iview.start
+    return wcs_new

@@ -67,3 +67,10 @@ def test_axis_names():
     assert axis_names(wcs) == ['RA', 'DEC', 'VOPT']
     wcs = WCS(path('vad.fits'))
     assert axis_names(wcs) == ['VOPT', 'RA', 'DEC']
+
+
+def test_wcs_slice():
+    wcs = WCS(naxis=3)
+    wcs.wcs.crpix = [50., 45., 30.]
+    wcs_new = slice_wcs(wcs, (slice(10,20), slice(None), slice(20,30)))
+    np.testing.assert_allclose(wcs_new.wcs.crpix, [30., 45., 20.])
