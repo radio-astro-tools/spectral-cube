@@ -576,6 +576,14 @@ class SpectralCube(object):
         return world[::-1]  # reverse WCS -> numpy order
 
 
+    def write(self, filename, format=None, include_stokes=False, clobber=False):
+        if format == 'fits':
+            from .io.fits import write_fits_cube
+            write_fits_cube(filename, cube,
+                            include_stokes=include_stokes, clobber=clobber)
+        else:
+            raise NotImplementedError("Try FITS instead")
+
 class StokesSpectralCube(SpectralCube):
 
     """
@@ -605,12 +613,3 @@ def read(filename, format=None):
         return load_casa_image(filename)
     else:
         raise ValueError("Format {0} not implemented".format(format))
-
-
-def write(cube, filename, format=None, include_stokes=False, clobber=False):
-    if format == 'fits':
-        from .io.fits import write_fits_cube
-        write_fits_cube(filename, cube,
-                        include_stokes=include_stokes, clobber=clobber)
-    else:
-        raise NotImplementedError("Try FITS instead")
