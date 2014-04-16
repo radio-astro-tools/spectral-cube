@@ -103,7 +103,7 @@ class MaskBase(object):
         Notes
         -----
         This is an internal method used by :class:`SpectralCube`.
-        Users should use :meth:`SpectralCubeMask.get_data`
+        Users should use :meth:`SpectralCubeMask.get_filled_data`
         """
         sliced_data = data[slices]
         return np.where(self.include(data=data, wcs=wcs, slices=slices), sliced_data, fill)
@@ -204,10 +204,18 @@ class LazyMask(MaskBase):
         for which the boolean mask is defined.
     """
 
-    def __init__(self, function, data, wcs):
+    def __init__(self, function, cube=None, data=None, wcs=None):
         self._function = function
-        self._data = data
-        self._wcs = wcs
+        if cube is not None and (data is not None or wcs is not None):
+            raise ValueError("Pass only cube or (data & wcs)")
+        elif cube is not None:
+            self._data = cube._data
+            self._wcs = cube._wcs
+        elif data is not None and wcs is not None:
+            self._data = data
+            self._wcs = wcs
+        else:
+            raise ValueError("Either a cube or (data & wcs) is required.")
 
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._data.shape:
@@ -274,6 +282,14 @@ class SpectralCube(object):
     def shape(self):
         return self._data.shape
 
+    @property
+    def size(self):
+        return self._data.size
+
+    @property
+    def ndim(self):
+        return self._data.ndim
+
     # This should just be relegated to subcube
     # def __getitem__(self, slice):
     # TODO: need to update WCS!
@@ -288,7 +304,13 @@ class SpectralCube(object):
         """
         Apply a numpy function to the cube
         """
-        return function(self.get_data(fill=fill), **kwargs)
+        return function(self.get_filled_data(fill=fill), **kwargs)
+
+    def get_mask_array(self):
+        return self._mask.include(data=self._data, wcs=self._wcs)
+
+    def get_mask(self):
+        return self._mask
 
     def sum(self, axis=None):
         # use nansum, and multiply by mask to add zero each time there is badness
@@ -360,7 +382,7 @@ class SpectralCube(object):
                 out[x, y] = function(data, **kwargs)
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
             return out,newwcs
 
         return out
@@ -401,11 +423,11 @@ class SpectralCube(object):
         else:
             return data
 
-    def median(self, axis=None):
-        return self._apply_along_axes(np.median, axis=axis)
+    def median(self, axis=None, **kwargs):
+        return self._apply_along_axes(np.median, axis=axis, **kwargs)
 
-    def percentile(self, q, axis=None):
-        return self._apply_along_axes(np.percentile, q=q, axis=axis)
+    def percentile(self, q, axis=None, **kwargs):
+        return self._apply_along_axes(np.percentile, q=q, axis=axis, **kwargs)
 
     # probably do not want to support this
     # def get_masked_array(self):
@@ -421,7 +443,7 @@ class SpectralCube(object):
                             meta=self._meta)
         return cube
 
-    def get_data(self, fill=np.nan):
+    def get_filled_data(self, fill=np.nan):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -433,12 +455,18 @@ class SpectralCube(object):
 
         return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill)
 
-    @property
-    def data_unmasked(self):
+    def get_unmasked_data(self, copy=False):
         """
         Like data, but don't apply the mask
         """
-        return self._data
+        if copy:
+            return self._data.copy()
+        else:
+            return self._data
+
+    @property
+    def wcs(self):
+        return self._wcs
 
     def moment(self, order, axis, wcs=False):
         """
@@ -475,7 +503,7 @@ class SpectralCube(object):
                 out[x,y] = weighted.sum()/denom
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
             return out, newwcs
         return out
 

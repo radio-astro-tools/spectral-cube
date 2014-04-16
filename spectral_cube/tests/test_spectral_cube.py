@@ -39,7 +39,7 @@ class TestSpectralCube(object):
         """data() should return velocity axis first, then world 1, then world 0"""
         c, d = cube_and_raw(name + '.fits')
         expected = np.squeeze(d.transpose(trans))
-        np.testing.assert_allclose(c.get_data(), expected)
+        np.testing.assert_allclose(c.get_filled_data(), expected)
 
     @pytest.mark.parametrize(('file', 'view'), (
                              ('adv.fits', np.s_[:, :, :]),
@@ -102,10 +102,10 @@ class TestFilters(object):
         c, d = self.c, self.d
 
         expected = np.where(d > .1, d, np.nan)
-        np.testing.assert_allclose(c.get_data(), expected)
+        np.testing.assert_allclose(c.get_filled_data(), expected)
 
         expected = np.where(d > .1, d, 0)
-        np.testing.assert_allclose(c.get_data(fill=0), expected)
+        np.testing.assert_allclose(c.get_filled_data(fill=0), expected)
 
     def test_flatten(self):
         c, d = self.c, self.d
@@ -294,5 +294,5 @@ def test_apply_mask():
     cube = SpectralCube(data, wcs=wcs, mask=m1)
     cube2 = cube.apply_mask(m2)
 
-    np.testing.assert_allclose(cube.get_data(),[[[np.nan,1,2,3,4]]])
-    np.testing.assert_allclose(cube2.get_data(),[[[np.nan,1,2,np.nan,np.nan]]])
+    np.testing.assert_allclose(cube.get_filled_data(),[[[np.nan,1,2,3,4]]])
+    np.testing.assert_allclose(cube2.get_filled_data(),[[[np.nan,1,2,np.nan,np.nan]]])
