@@ -165,7 +165,7 @@ class SpectralCubeMask(MaskBase):
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._mask.shape:
             raise ValueError("data shape does not match mask shape")
-        if str(new_wcs.to_header_string()) != str(self._wcs.to_header_string()):
+        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
             raise ValueError("WCS does not match mask WCS")
 
     def _include(self, data=None, wcs=None, slices=()):
@@ -212,7 +212,7 @@ class LazyMask(MaskBase):
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._data.shape:
             raise ValueError("data shape does not match mask shape")
-        if str(new_wcs.to_header_string()) != str(self._wcs.to_header_string()):
+        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
             raise ValueError("WCS does not match mask WCS")
 
     def _include(self, data=None, wcs=None, slices=()):
