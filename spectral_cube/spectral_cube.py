@@ -293,11 +293,6 @@ class SpectralCube(object):
     def get_mask(self):
         return self._mask.include(data=self._data, wcs=self._wcs)
 
-    def set_mask(self, mask):
-        if mask._wcs.to_header_string() != self._wcs.to_header_string():
-            raise ValueError("WCS do not match")
-        self._mask = mask
-
     def sum(self, axis=None):
         # use nansum, and multiply by mask to add zero each time there is badness
         return self._apply_numpy_function(np.nansum, fill=np.nan, axis=axis)
