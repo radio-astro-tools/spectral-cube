@@ -25,12 +25,21 @@ class MaskBase(object):
 
     def include(self, data=None, wcs=None, slices=None):
         """
-        Return a boolean array indicating which values should be included
+        Return a boolean array indicating which values should be included.
+
+        If ``slices`` is passed, only the sliced mask will be returned, which
+        avoids having to load the whole mask in memory. Otherwise, the whole
+        mask is returned in-memory.
         """
         self._validate_wcs(data, wcs)
         return self._include(data=data, wcs=wcs, slices=slices)
 
     def _validate_wcs(self, data, wcs):
+        """
+        This method can be overridden in cases where the data and WCS have to
+        conform to some rules. This gets called automatically when
+        ``include`` or ``exclude`` are called.
+        """
         pass
 
     @abc.abstractmethod
@@ -39,7 +48,11 @@ class MaskBase(object):
 
     def exclude(self, data=None, wcs=None, slices=None):
         """
-        Return a boolean array indicating which values should be excluded
+        Return a boolean array indicating which values should be excluded.
+
+        If ``slices`` is passed, only the sliced mask will be returned, which
+        avoids having to load the whole mask in memory. Otherwise, the whole
+        mask is returned in-memory.
         """
         self._validate_wcs(data, wcs)
         return self._exclude(data=data, wcs=wcs, slices=slices)
@@ -109,11 +122,6 @@ class SpectralCubeMask(MaskBase):
     """
 
     def __init__(self, mask, wcs, include=True):
-
-        # TODO: at the moment, assume that the mask WCS matches the data WCS
-        # TODO: keep track of whether mask is include or exclude rather than
-        #       using logical_not
-
         self._mask = mask
         self._mask_type = 'include' if include else 'exclude'
         self._wcs = wcs
