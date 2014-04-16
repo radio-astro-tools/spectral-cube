@@ -318,7 +318,7 @@ class SpectralCube(object):
             else:
                 out = function(self._data, axis=axis, **kwargs)
         else:
-            # Iterate over 1D slices through the array
+            # Iterate over 1D slices through the array along the specified axis
             # allocate memory for output array
             out = np.empty([nx, ny])
 
