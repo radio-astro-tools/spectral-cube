@@ -151,3 +151,13 @@ def axis_names(wcs):
             continue
         names[i] = types[i].split('-')[0]
     return names
+
+
+def slice_wcs(wcs, view):
+    print(view)
+    wcs_new = wcs.deepcopy()
+    for i, iview in enumerate(view):
+        if iview.start is not None:
+            wcs_index = wcs.wcs.naxis - 1 - i
+            wcs_new.wcs.crpix[wcs_index] -= iview.start
+    return wcs_new

@@ -9,6 +9,7 @@ from astropy import units as u
 import numpy as np
 
 from . import cube_utils
+from . import wcs_utils
 
 __all__ = ['SpectralCube']
 
@@ -141,6 +142,9 @@ class SpectralCubeMask(MaskBase):
     def shape(self):
         return self._include_mask.shape
 
+    def __getitem__(self, view):
+        return SpectralCubeMask(self._mask[view], wcs_utils.slice_wcs(self._wcs, view))
+
 
 class LazyMask(MaskBase):
     """
@@ -180,9 +184,8 @@ class LazyMask(MaskBase):
         else:
             return self._function(self._data[slices])
 
-    def __getitem__(self, slice):
-        # TODO: need to return a sliced LazyMask which requires WCS slicing
-        raise NotImplementedError("Slicing not implementing for LazyMask")
+    def __getitem__(self, view):
+        return LazyMask(self._function, self._data[view], wcs_utils.slice_wcs(self._wcs, view))
 
 
 class FunctionMask(MaskBase):
@@ -498,7 +501,7 @@ class SpectralCube(object):
             mask_slab = None
         else:
             try:
-                mask_slab = self._mask[ilo:ihi]
+                mask_slab = self._mask[ilo:ihi,:,:]
             except TypeError:
                 warnings.warn("mask slab has not been computed correctly")
                 mask_slab = None
