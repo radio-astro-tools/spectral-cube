@@ -3,7 +3,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from astropy.wcs import WCS
 
-from ..spectral_cube import SpectralCubeMask, LazyMask, FunctionMask, CompositeMask
+from ..spectral_cube import SpectralCubeMask, SpectralCube, LazyMask, FunctionMask, CompositeMask
 
 
 def test_spectral_cube_mask():
@@ -32,7 +32,9 @@ def test_lazy_mask():
     data = np.arange(5).reshape((1,1,5))
     wcs = WCS()
 
-    m = LazyMask(lambda x: x > 2, data, wcs)
+    cube = SpectralCube(data, wcs)
+
+    m = LazyMask(lambda x: x > 2, cube)
 
     assert_allclose(m.include(data, wcs), [[[0,0,0,1,1]]])
     assert_allclose(m.exclude(data, wcs), [[[1,1,1,0,0]]])
