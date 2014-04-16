@@ -180,6 +180,11 @@ class LazyMask(MaskBase):
         else:
             return self._function(self._data[slices])
 
+    def __getitem__(self, slice):
+        # TODO: need to return a sliced LazyMask which requires WCS slicing
+        raise NotImplementedError("Slicing not implementing for LazyMask")
+
+
 class FunctionMask(MaskBase):
     """
     A mask defined by a function that is evaluated at run-time using the data
@@ -213,6 +218,9 @@ class FunctionMask(MaskBase):
         elif slices is not None and result.shape != data[slices].shape:
             raise ValueError("Function did not return mask with correct shape - expected {0}, got {1}".format(data[slices].shape, result.shape))
         return result
+
+    def __getitem__(self, slice):
+        return self
 
 
 class SpectralCube(object):
@@ -344,9 +352,9 @@ class SpectralCube(object):
             An array with the same shape (or slicing abilities/results) as the
             data cube
         """
-        data = self._mask._flattened(self._data, slice)
+        data = self._mask._flattened(data=self._data, wcs=self._wcs, slices=slice)
         if weights is not None:
-            weights = self._mask._flattened(weights, slice)
+            weights = self._mask._flattened(data=weights, wcs=self._wcs, slices=slice)
             return data * weights
         else:
             return data
@@ -411,7 +419,7 @@ class SpectralCube(object):
         for x, y, slc in self._iter_rays(axis):
             # compute the world coordinates along the specified axis
             coords = self.world[slc][axis]
-            boolmask = self._mask.include[slc]
+            boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
             # the denominator of the moment sum
             weights = self.flattened(slc)
             # the numerator of the moment sum
