@@ -426,7 +426,7 @@ class SpectralCube(object):
             else:
                 # compute the world coordinates along the specified axis
                 coords = self.world[slc][axis]
-		boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
+                boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
                 # the numerator of the moment sum
                 weighted = (data*coords[boolmask]**order)
                 denom = data.sum()
