@@ -106,6 +106,8 @@ class SpectralCubeMask(MaskBase):
     def __init__(self, mask, mask_wcs, include=True):
 
         # TODO: at the moment, assume that the mask WCS matches the data WCS
+        # TODO: keep track of whether mask is include or exclude rather than
+        #       using logical_not
 
         self._include_mask = mask if include else np.logical_not(mask)
         self._wcs = mask_wcs
