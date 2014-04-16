@@ -127,15 +127,6 @@ class SpectralCube(object):
         return "SpectralCube with shape {0}: {1}".format(str(self.shape),
                                                          self._data.__repr__())
 
-    @classmethod
-    def read(cls, filename, format=None, **kwargs):
-        return read(filename, format=format, **kwargs)
-
-    def write(self, filename, format=None,
-              include_stokes=False, clobber=False):
-        return write(filename, format=format, include_stokes=include_stokes,
-                     clobber=clobber)
-
     def _apply_numpy_function(self, function, fill=np.nan, **kwargs):
         """
         Apply a numpy function to the cube
