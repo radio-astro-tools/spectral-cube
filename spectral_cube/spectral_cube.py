@@ -409,15 +409,23 @@ class SpectralCube(object):
         # allocate memory for output array
         out = np.zeros([nx, ny]) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
 
-        for x, y, slc in self._iter_rays(axis):
-            # compute the world coordinates along the specified axis
-            coords = self.world[slc][axis]
-            boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
-            # the denominator of the moment sum
-            weights = self.flattened(slc)
-            # the numerator of the moment sum
-            weighted = (weights * coords[boolmask] ** order)
-            out[x, y] = (weighted.sum() / weights.sum())
+        for x,y,slc in self._iter_rays(axis):
+            # the intensity, i.e. the weights
+            data = self.flattened(slc)
+
+            # cheat a little if order == 0
+            if order == 0:
+                weighted = data
+                denom = len(data)
+            else:
+                # compute the world coordinates along the specified axis
+                coords = self.world[slc][axis]
+		boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
+                # the numerator of the moment sum
+                weighted = (data*coords[boolmask]**order)
+                denom = data.sum()
+
+            out[x,y] = weighted.sum()/denom
 
         return out
 
