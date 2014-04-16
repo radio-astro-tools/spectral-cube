@@ -1,1 +1,2 @@
-from .spectral_cube import SpectralCube, SpectralCubeMask, read, write
+from .spectral_cube import (SpectralCube, SpectralCubeMask, read, FunctionMask,
+                            LazyMask)

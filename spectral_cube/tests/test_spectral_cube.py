@@ -258,3 +258,13 @@ class TestSlab(object):
         ms = u.m / u.s
         c2 = self.c.spectral_slab(-318600 * ms, -320000 * ms)
         np.testing.assert_allclose(c2._data, self.d[1:3])
+
+def read_write_rountrip():
+    cube = read(path('adv.fits'))
+    cube.write(path('test.fits'))
+    cube2 = read(path('test.fits'))
+
+    assert cube.shape == cube.shape
+    np.testing.assert_allclose(cube._data, cube2._data)
+    assert cube._wcs.to_header_string() == cube2._wcs.to_header_string() 
+

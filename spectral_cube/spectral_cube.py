@@ -579,7 +579,7 @@ class SpectralCube(object):
     def write(self, filename, format=None, include_stokes=False, clobber=False):
         if format == 'fits':
             from .io.fits import write_fits_cube
-            write_fits_cube(filename, cube,
+            write_fits_cube(filename, self,
                             include_stokes=include_stokes, clobber=clobber)
         else:
             raise NotImplementedError("Try FITS instead")
