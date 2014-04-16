@@ -47,3 +47,22 @@ def test_moment1(axis):
     mom1_sc = sc.moment(1, axis=axis)
     
     np.testing.assert_array_almost_equal_nulp(mom1_np, mom1_sc.value)
+
+@pytest.mark.parametrize(('axis',),
+                         [(0,),
+                          (1,),
+                          (2,)])
+def test_moment2(axis):
+    mc_hdu = moment_cube()
+    sc = spfits.load_fits_hdu(mc_hdu)
+
+    pixcrds = np.array([x.ravel() for x in np.indices(sc.shape)]).T
+    world = sc._wcs.wcs_pix2world(pixcrds,0)
+    # I don't know why I have to transpose it, but the spectral coordinate
+    # NEEDS to go first, so this is how it is...
+    w = world[:,2-axis].reshape(sc.shape).T
+
+    mom2_np = (mc_hdu.data*(w**2)).sum(axis=axis) / (mc_hdu.data.sum(axis=axis))
+    mom2_sc = sc.moment(2, axis=axis)
+    
+    np.testing.assert_array_almost_equal_nulp(mom2_np, mom2_sc.value)
