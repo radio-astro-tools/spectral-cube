@@ -281,7 +281,8 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
-    def _apply_along_axes(self, function, axis=None, weights=None, **kwargs):
+    def _apply_along_axes(self, function, axis=None, weights=None,
+                          memory_threshold='auto', **kwargs):
         """
         Apply a function to valid data along the specified axis, optionally
         using a weight array that is the same shape (or at least can be sliced
@@ -297,6 +298,11 @@ class SpectralCube(object):
         weights: (optional) np.ndarray
             An array with the same shape (or slicing abilities/results) as the
             data cube
+        memory_threshold : str or u.bytes
+            The threshold above which to use streaming operations on disk.
+            Below this value, the entire array will be read into memory.  The
+            default is 'auto', which will give 1/4 the total available system
+            memory if psutil is installed, otherwise 1 GB.
         """
         if axis is None:
             return function(self.flattened(), **kwargs)
@@ -304,15 +310,24 @@ class SpectralCube(object):
         # determine the output array shape
         nx, ny = self._get_flat_shape(axis)
 
-        # allocate memory for output array
-        out = np.empty([nx, ny])
+        # do in memory if less 
+        mthresh = memory_threshold if memory_threshold else _memory_available()
+        if self._data.nbytes*u.byte < mthresh:
+            if weights:
+                out = function(self._data*weights, axis=axis, **kwargs)
+            else:
+                out = function(self._data, axis=axis, **kwargs)
+        else:
+            # Iterate over 1D slices through the array
+            # allocate memory for output array
+            out = np.empty([nx, ny])
 
-        # iterate over "lines of sight" through the cube
-        for x, y, slc in self._iter_rays(axis):
-            # acquire the flattened, valid data for the slice
-            data = self.flattened(slc, weights=weights)
-            # store result in array
-            out[x, y] = function(data, **kwargs)
+            # iterate over "lines of sight" through the cube
+            for x, y, slc in self._iter_rays(axis):
+                # acquire the flattened, valid data for the slice
+                data = self.flattened(slc, weights=weights)
+                # store result in array
+                out[x, y] = function(data, **kwargs)
 
         return out
 
@@ -614,3 +629,10 @@ def write(cube, filename, format=None, include_stokes=False, clobber=False):
                         include_stokes=include_stokes, clobber=clobber)
     else:
         raise NotImplementedError("Try FITS instead")
+
+def _memory_available(default=1*u.Gbyte, fraction=0.25):
+    try:
+        import psutil
+        return (psutil.phymem_usage().total * u.byte) * fraction
+    except ImportError:
+        return default
