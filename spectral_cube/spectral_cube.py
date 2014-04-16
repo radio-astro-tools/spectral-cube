@@ -443,6 +443,7 @@ class SpectralCube(object):
         """
         Compute the moments by holding the whole array in memory
         """
+        raise NotImplementedError("At least, not tested at all yet.")
         includemask = self._mask.include
         # What I want:
         #includemask = self.mask.asarray()
