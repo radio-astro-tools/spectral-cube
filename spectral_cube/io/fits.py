@@ -24,15 +24,18 @@ def load_fits_cube(filename, extnum=0, **kwargs):
     # open the file
     hdulist = fits.open(filename, **kwargs)
 
-    # read the data - assume first extension
-    data = hdulist[extnum].data
-
-    # note the header and WCS information
-    hdr = hdulist[extnum].header
-    wcs = WCS(hdr)
-
     meta = {'filename': filename,
             'extension_number': extnum}
+
+    return load_fits_hdu(hdulist[extnum], meta=meta)
+
+def load_fits_hdu(hdu, meta={}, **kwargs):
+    # read the data - assume first extension
+    data = hdu.data
+
+    # note the header and WCS information
+    hdr = hdu.header
+    wcs = WCS(hdr)
 
     if wcs.wcs.naxis == 3:
 
