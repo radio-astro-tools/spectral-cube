@@ -165,7 +165,7 @@ class SpectralCubeMask(MaskBase):
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._mask.shape:
             raise ValueError("data shape does not match mask shape")
-        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+        if str(new_wcs.to_header_string()) != str(self._wcs.to_header_string()):
             raise ValueError("WCS does not match mask WCS")
 
     def _include(self, data=None, wcs=None, slices=()):
@@ -212,7 +212,7 @@ class LazyMask(MaskBase):
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._data.shape:
             raise ValueError("data shape does not match mask shape")
-        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+        if str(new_wcs.to_header_string()) != str(self._wcs.to_header_string()):
             raise ValueError("WCS does not match mask WCS")
 
     def _include(self, data=None, wcs=None, slices=()):
@@ -290,6 +290,14 @@ class SpectralCube(object):
         """
         return function(self.get_data(fill=fill), **kwargs)
 
+    def get_mask(self):
+        return self._mask.include(data=self._data, wcs=self._wcs)
+
+    def set_mask(self, mask):
+        if mask._wcs.to_header_string() != self._wcs.to_header_string():
+            raise ValueError("WCS do not match")
+        self._mask = mask
+
     def sum(self, axis=None):
         # use nansum, and multiply by mask to add zero each time there is badness
         return self._apply_numpy_function(np.nansum, fill=np.nan, axis=axis)
@@ -360,7 +368,7 @@ class SpectralCube(object):
                 out[x, y] = function(data, **kwargs)
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
             return out,newwcs
 
         return out
@@ -401,11 +409,11 @@ class SpectralCube(object):
         else:
             return data
 
-    def median(self, axis=None):
-        return self._apply_along_axes(np.median, axis=axis)
+    def median(self, axis=None, **kwargs):
+        return self._apply_along_axes(np.median, axis=axis, **kwargs)
 
-    def percentile(self, q, axis=None):
-        return self._apply_along_axes(np.percentile, q=q, axis=axis)
+    def percentile(self, q, axis=None, **kwargs):
+        return self._apply_along_axes(np.percentile, q=q, axis=axis, **kwargs)
 
     # probably do not want to support this
     # def get_masked_array(self):
@@ -475,7 +483,7 @@ class SpectralCube(object):
                 out[x,y] = weighted.sum()/denom
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
             return out, newwcs
         return out
 
