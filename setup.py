@@ -34,6 +34,6 @@ setup(name='spectral_cube',
       author='Chris Beaumont, Adam Leroy, Adam Ginsburg, Erik Rosolowsky, and Tom Robitaille',
       author_email='adam.g.ginsburg@gmail.com',
       url='https://github.com/radio_tools/spectral_cube',
-      packages=['spectral_cube'], 
+      packages=['spectral_cube','spectral_cube.io','spectral_cube.tests'], 
       cmdclass = {'test': PyTest},
      )
