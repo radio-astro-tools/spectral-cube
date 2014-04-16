@@ -5,7 +5,7 @@ from astropy.wcs import WCS
 
 import numpy as np
 
-from spectral_cube import SpectralCube, SpectralCubeMask, read
+from spectral_cube import SpectralCube, SpectralCubeMask, FunctionMask, read
 from . import path
 
 
@@ -272,5 +272,27 @@ def read_write_rountrip():
 
     assert cube.shape == cube.shape
     np.testing.assert_allclose(cube._data, cube2._data)
-    assert cube._wcs.to_header_string() == cube2._wcs.to_header_string() 
+    assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
+
+def test_apply_mask():
+
+    data = np.array([[[0,1,2,3,4]]])
+
+    def lower_threshold(data, wcs, slices=()):
+        return data[slices] > 0
+
+    def upper_threshold(data, wcs, slices=()):
+        return data[slices] < 3
+
+    m1 = FunctionMask(lower_threshold)
+    m2 = FunctionMask(upper_threshold)
+
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
+
+    cube = SpectralCube(data, wcs=wcs, mask=m1)
+    cube2 = cube.apply_mask(m2)
+
+    np.testing.assert_allclose(cube.get_data(),[[[np.nan,1,2,3,4]]])
+    np.testing.assert_allclose(cube2.get_data(),[[[np.nan,1,2,np.nan,np.nan]]])

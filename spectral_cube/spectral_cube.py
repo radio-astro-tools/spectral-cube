@@ -268,7 +268,7 @@ class SpectralCube(object):
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
         #assert mask._wcs == self._wcs
-        self.meta = meta or {}
+        self._meta = meta or {}
 
     @property
     def shape(self):
@@ -419,6 +419,7 @@ class SpectralCube(object):
         cube = SpectralCube(self._data, wcs=self._wcs,
                             mask=self._mask & mask if inherit_mask else mask,
                             meta=self._meta)
+        return cube
 
     def get_data(self, fill=np.nan):
         """
@@ -438,20 +439,6 @@ class SpectralCube(object):
         Like data, but don't apply the mask
         """
         return self._data
-
-    def apply_mask(self, mask, inherit=True):
-        """
-        Return a new Cube object, that applies the input mask to the underlying data.
-
-        Handles any necessary logic to resample the mask
-
-        If inherit=True, the new Cube uses the union of the original and new mask
-
-        What type of object is `mask`? SpectralMask?
-        Not sure -- I guess it needs to have WCS. Conceptually maps onto a boolean ndarray
-            CubeMask? -> maybe SpectralCubeMask to be consistent with SpectralCube
-
-        """
 
     def moment(self, order, axis, wcs=False):
         """
@@ -602,7 +589,7 @@ class SpectralCube(object):
 
         # Create new spectral cube
         slab = SpectralCube(self._data[ilo:ihi], wcs_slab,
-                            mask=mask_slab, meta=self.meta)
+                            mask=mask_slab, meta=self._meta)
 
         # TODO: we could change the WCS to give a spectral axis in the
         # correct units as requested - so if the initial cube is in Hz and we
