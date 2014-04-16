@@ -401,8 +401,6 @@ class SpectralCube(object):
 
         If *wcs = True*, return the WCS describing the moment
         """
-        if wcs:
-            raise NotImplementedError("WCS output not yet implemented")
 
         nx, ny = self._get_flat_shape(axis)
 
@@ -431,6 +429,9 @@ class SpectralCube(object):
             if denom != 0:
                 out[x,y] = weighted.sum()/denom
 
+        if wcs:
+            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            return out, newwcs
         return out
 
     @property
