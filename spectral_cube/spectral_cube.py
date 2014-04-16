@@ -407,7 +407,9 @@ class SpectralCube(object):
         nx, ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
-        out = np.zeros([nx, ny]) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
+        # nan is a workaround to deal with the impossibility of assigning nan
+        # to a np united array
+        out = (np.zeros([nx, ny])*np.nan) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
 
         for x,y,slc in self._iter_rays(axis):
             # the intensity, i.e. the weights
@@ -425,7 +427,9 @@ class SpectralCube(object):
                 weighted = (data*coords[boolmask]**order)
                 denom = data.sum()
 
-            out[x,y] = weighted.sum()/denom
+            # otherwise, leave as nan
+            if denom != 0:
+                out[x,y] = weighted.sum()/denom
 
         return out
 
