@@ -424,7 +424,11 @@ class SpectralCube(object):
             return data
 
     def median(self, axis=None, **kwargs):
-        return self._apply_along_axes(np.median, axis=axis, **kwargs)
+        try:
+            from bottleneck import nanmedian
+            return self._apply_numpy_function(nanmedian, axis=axis, **kwargs)
+        except ImportError:
+            return self._apply_along_axes(np.median, axis=axis, **kwargs)
 
     def percentile(self, q, axis=None, **kwargs):
         return self._apply_along_axes(np.percentile, q=q, axis=axis, **kwargs)
