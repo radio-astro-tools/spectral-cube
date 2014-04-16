@@ -424,7 +424,7 @@ class SpectralCube(object):
                             meta=self._meta)
         return cube
 
-    def get_data(self, fill=np.nan):
+    def get_filled_data(self, fill=np.nan):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -436,12 +436,18 @@ class SpectralCube(object):
 
         return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill)
 
-    @property
-    def data_unmasked(self):
+    def get_unmasked_data(self, copy=False):
         """
         Like data, but don't apply the mask
         """
-        return self._data
+        if copy:
+            return self._data.copy()
+        else:
+            return self._data
+
+    @property
+    def wcs(self):
+        return self._wcs
 
     def moment(self, order, axis, wcs=False):
         """
