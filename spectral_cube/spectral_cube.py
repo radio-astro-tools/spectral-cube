@@ -204,10 +204,10 @@ class LazyMask(MaskBase):
         for which the boolean mask is defined.
     """
 
-    def __init__(self, function, data, wcs):
+    def __init__(self, function, cube):
         self._function = function
-        self._data = data
-        self._wcs = wcs
+        self._data = cube._data
+        self._wcs = cube._wcs
 
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._data.shape:
