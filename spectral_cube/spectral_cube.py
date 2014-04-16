@@ -444,8 +444,10 @@ class SpectralCube(object):
         Compute the moments by holding the whole array in memory
         """
         includemask = self._mask.include
+        # What I want:
+        #includemask = self.mask.asarray()
         if np.any(np.isnan(self._data)):
-            data = self._data.copy()
+            data = self.filled(fill=0)
             includemask[np.isnan(data)] = False
             data[np.isnan(data)] = 0
         else:
