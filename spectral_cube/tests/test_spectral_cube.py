@@ -1,8 +1,9 @@
 import pytest
+import operator
+
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
-
 import numpy as np
 
 from spectral_cube import SpectralCube, SpectralCubeMask, FunctionMask, read
@@ -23,6 +24,17 @@ def assert_almost_equal(arr1,arr2):
         np.testing.assert_array_almost_equal_nulp(x.value,arr2.value)
     else:
         np.testing.assert_array_almost_equal_nulp(arr1,arr2)
+
+class BaseTest(object):
+
+    def setup_method(self, method):
+        c, d = cube_and_raw('adv.fits')
+        mask = SpectralCubeMask(d > 0.5, c._wcs)
+        c._mask = mask
+        self.c = c
+        self.mask = mask
+        self.d = d
+
 
 class TestSpectralCube(object):
 
@@ -86,35 +98,25 @@ class TestSpectralCube(object):
             np.testing.assert_allclose(w1, w2)
 
 
-class TestFilters(object):
-
-    def setup_method(self, method):
-        c, d = cube_and_raw('advs.fits')
-        d = d[0]
-        wcs = c._wcs
-        mask = SpectralCubeMask(d > .1, wcs)
-        self.d = d
-        self.c = c
-        self.mask = mask
-        c._mask = mask
+class TestFilters(BaseTest):
 
     def test_mask_data(self):
         c, d = self.c, self.d
 
-        expected = np.where(d > .1, d, np.nan)
-        np.testing.assert_allclose(c.get_filled_data(), expected)
+        expected = np.where(d > .5, d, np.nan)
+        np.testing.assert_allclose(c.get_data(), expected)
 
-        expected = np.where(d > .1, d, 0)
-        np.testing.assert_allclose(c.get_filled_data(fill=0), expected)
+        expected = np.where(d > .5, d, 0)
+        np.testing.assert_allclose(c.get_data(fill=0), expected)
 
     def test_flatten(self):
         c, d = self.c, self.d
-        expected = d[d > 0.1]
+        expected = d[d > 0.5]
         np.testing.assert_allclose(c.flattened(), expected)
 
     def test_flatten_weights(self):
         c, d = self.c, self.d
-        expected = d[d > 0.1] ** 2
+        expected = d[d > 0.5] ** 2
         np.testing.assert_allclose(c.flattened(weights=d), expected)
 
     @pytest.mark.xfail
@@ -122,19 +124,11 @@ class TestFilters(object):
         c, d = self.c, self.d
 
         expected = d[:3, :2, ::2]
-        expected = expected[expected > 0.1]
+        expected = expected[expected > 0.5]
         np.testing.assert_allclose(c[0:3, 0:2, 0::2].flattened(), expected)
 
 
-class TestNumpyMethods(object):
-
-    def setup_method(self, method):
-        c, d = cube_and_raw('adv.fits')
-        mask = SpectralCubeMask(d > 0.5, c._wcs)
-        c._mask = mask
-        self.c = c
-        self.mask = mask
-        self.d = d
+class TestNumpyMethods(BaseTest):
 
     def _check_numpy(self, cubemethod, array, func):
         for axis in [None, 0, 1, 2]:
@@ -187,18 +181,10 @@ class TestNumpyMethods(object):
         c2, d2 = cube_and_raw('vad.fits')
         for axis in [None, 0, 1, 2]:
             np.testing.assert_allclose(getattr(c1, method)(axis=axis),
-                                          getattr(c2, method)(axis=axis))
+                                       getattr(c2, method)(axis=axis))
 
 
-class TestMoment(object):
-
-    def setup_method(self, method):
-        c, d = cube_and_raw('adv.fits')
-        mask = SpectralCubeMask(d > 0.5, c._wcs)
-        c._mask = mask
-        self.c = c
-        self.mask = mask
-        self.d = d
+class TestMoment(BaseTest):
 
     @pytest.mark.xfail
     def test_mom0(self):
@@ -227,15 +213,7 @@ class TestMoment(object):
         np.testing.assert_allclose(result, expected)
 
 
-class TestSlab(object):
-
-    def setup_method(self, method):
-        c, d = cube_and_raw('adv.fits')
-        mask = SpectralCubeMask(d > 0.5, c._wcs)
-        c._mask = mask
-        self.c = c
-        self.mask = mask
-        self.d = d
+class TestSlab(BaseTest):
 
     def test_closest_spectral_channel(self):
         c = self.c
@@ -296,3 +274,26 @@ def test_apply_mask():
 
     np.testing.assert_allclose(cube.get_filled_data(),[[[np.nan,1,2,3,4]]])
     np.testing.assert_allclose(cube2.get_filled_data(),[[[np.nan,1,2,np.nan,np.nan]]])
+
+    def test_slab_preserves_wcs(self):
+        # regression test
+        ms = u.m / u.s
+        crpix = list(self.c._wcs.wcs.crpix)
+        c2 = self.c.spectral_slab(-318600 * ms, -320000 * ms)
+        assert list(self.c._wcs.wcs.crpix) == crpix
+
+
+class TestMasks(BaseTest):
+
+    @pytest.mark.parametrize('op', (operator.gt, operator.lt,
+                             operator.le, operator.ge))
+    def test_operator_threshold(self, op):
+
+        # choose thresh to exercise proper equality tests
+        thresh = self.d.ravel()[0]
+        m = op(self.c, thresh)
+        self.c._mask = m
+
+        expected = self.d[op(self.d, thresh)]
+        actual = self.c.flattened()
+        np.testing.assert_array_equal(actual, expected)
