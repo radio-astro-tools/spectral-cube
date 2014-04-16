@@ -103,7 +103,7 @@ class MaskBase(object):
         Notes
         -----
         This is an internal method used by :class:`SpectralCube`.
-        Users should use :meth:`SpectralCubeMask.get_data`
+        Users should use :meth:`SpectralCubeMask.get_filled_data`
         """
         sliced_data = data[slices]
         return np.where(self.include(data=data, wcs=wcs, slices=slices), sliced_data, fill)
@@ -304,7 +304,7 @@ class SpectralCube(object):
         """
         Apply a numpy function to the cube
         """
-        return function(self.get_data(fill=fill), **kwargs)
+        return function(self.get_filled_data(fill=fill), **kwargs)
 
     def get_mask_array(self):
         return self._mask.include(data=self._data, wcs=self._wcs)
