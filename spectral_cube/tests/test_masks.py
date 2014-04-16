@@ -3,7 +3,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from astropy.wcs import WCS
 
-from ..spectral_cube import SpectralCubeMask, LazyMask, FunctionMask
+from ..spectral_cube import SpectralCubeMask, LazyMask, FunctionMask, CompositeMask
 
 
 def test_spectral_cube_mask():
@@ -80,10 +80,7 @@ def test_function_mask_incorrect_shape():
 def test_function_mask():
 
     def threshold(data, wcs, slices=()):
-        if slices is None:
-            return data > 2
-        else:
-            return data[slices] > 2
+        return data[slices] > 2
 
     m = FunctionMask(threshold)
 
@@ -114,3 +111,64 @@ def test_function_mask():
     assert_allclose(m.exclude(data, wcs, slices=(0,0,slice(0,3))), [0,1,1])
     assert_allclose(m._filled(data, wcs, slices=(0,0,slice(0,3))), [3,np.nan,np.nan])
     assert_allclose(m._flattened(data, wcs, slices=(0,0,slice(0,3))), [3])
+
+
+def test_composite_mask():
+
+    def lower_threshold(data, wcs, slices=()):
+        return data[slices] > 0
+
+    def upper_threshold(data, wcs, slices=()):
+        return data[slices] < 3
+
+    m1 = FunctionMask(lower_threshold)
+    m2 = FunctionMask(upper_threshold)
+
+    m = m1 & m2
+
+    data = np.arange(5).reshape((1,1,5))
+    wcs = WCS()
+
+    assert_allclose(m.include(data, wcs), [[[0,1,1,0,0]]])
+    assert_allclose(m.exclude(data, wcs), [[[1,0,0,1,1]]])
+    assert_allclose(m._filled(data, wcs), [[[np.nan,1,2,np.nan,np.nan]]])
+    assert_allclose(m._flattened(data, wcs), [1,2])
+
+    assert_allclose(m.include(data, wcs, slices=(0,0,slice(1,4))), [1,1,0])
+    assert_allclose(m.exclude(data, wcs, slices=(0,0,slice(1,4))), [0,0,1])
+    assert_allclose(m._filled(data, wcs, slices=(0,0,slice(1,4))), [1, 2, np.nan])
+    assert_allclose(m._flattened(data, wcs, slices=(0,0,slice(1,4))), [1, 2])
+
+
+def test_mask_logic():
+
+    data = np.arange(5).reshape((1,1,5))
+    wcs = WCS()
+
+    def threshold_1(data, wcs, slices=()):
+        return data[slices] > 0
+
+    def threshold_2(data, wcs, slices=()):
+        return data[slices] < 4
+
+    def threshold_3(data, wcs, slices=()):
+        return data[slices] != 2
+
+    m1 = FunctionMask(threshold_1)
+    m2 = FunctionMask(threshold_2)
+    m3 = FunctionMask(threshold_3)
+
+    m = m1 & m2
+    assert_allclose(m.include(data, wcs), [[[0,1,1,1,0]]])
+
+    m = m1 | m2
+    assert_allclose(m.include(data, wcs), [[[1,1,1,1,1]]])
+
+    m = m1 | ~m2
+    assert_allclose(m.include(data, wcs), [[[0,1,1,1,1]]])
+
+    m = m1 & m2 & m3
+    assert_allclose(m.include(data, wcs), [[[0,1,0,1,0]]])
+
+    m = (m1 | m3) & m2
+    assert_allclose(m.include(data, wcs), [[[1,1,1,1,0]]])

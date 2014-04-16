@@ -108,6 +108,49 @@ class MaskBase(object):
         sliced_data = data[slices]
         return np.where(self.include(data=data, wcs=wcs, slices=slices), sliced_data, fill)
 
+    def __and__(self, other):
+        return CompositeMask(self, other, operation='and')
+
+    def __or__(self, other):
+        return CompositeMask(self, other, operation='or')
+
+    def __invert__(self):
+        return InvertedMask(self)
+
+
+class InvertedMask(MaskBase):
+
+    def __init__(self, mask):
+        self._mask = mask
+
+    def _include(self, data=None, wcs=None, slices=()):
+        return ~self._mask.include(data=data, wcs=wcs, slices=slices)
+
+
+class CompositeMask(MaskBase):
+    """
+    A combination of several masks. This does an 'and' operation on the
+    include masks.
+    """
+
+    def __init__(self, mask1, mask2, operation='and'):
+        self._mask1 = mask1
+        self._mask2 = mask2
+        self._operation = operation
+
+    def _validate_wcs(self, new_data, new_wcs):
+        self._mask1._validate_wcs(new_data, new_wcs)
+        self._mask2._validate_wcs(new_data, new_wcs)
+
+    def _include(self, data=None, wcs=None, slices=()):
+        result_mask_1 = self._mask1._include(data=data, wcs=wcs, slices=slices)
+        result_mask_2 = self._mask2._include(data=data, wcs=wcs, slices=slices)
+        if self._operation == 'and':
+            return result_mask_1 & result_mask_2
+        elif self._operation == 'or':
+            return result_mask_1 | result_mask_2
+        else:
+            raise ValueError("Operation '{0}' not supported".format(self._operation))
 
 class SpectralCubeMask(MaskBase):
     """
@@ -225,7 +268,7 @@ class SpectralCube(object):
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
         #assert mask._wcs == self._wcs
-        self.meta = meta or {}
+        self._meta = meta or {}
 
     @property
     def shape(self):
@@ -368,6 +411,16 @@ class SpectralCube(object):
     # def get_masked_array(self):
     #    return np.ma.masked_where(self.mask, self._data)
 
+    def apply_mask(self, mask, inherit_mask=True):
+        """
+        Return a new SpectralCube instance that contains a composite mask of
+        the current SpectralCube and the new ``mask``.
+        """
+        cube = SpectralCube(self._data, wcs=self._wcs,
+                            mask=self._mask & mask if inherit_mask else mask,
+                            meta=self._meta)
+        return cube
+
     def get_data(self, fill=np.nan):
         """
         Return the underlying data as a numpy array.
@@ -386,20 +439,6 @@ class SpectralCube(object):
         Like data, but don't apply the mask
         """
         return self._data
-
-    def apply_mask(self, mask, inherit=True):
-        """
-        Return a new Cube object, that applies the input mask to the underlying data.
-
-        Handles any necessary logic to resample the mask
-
-        If inherit=True, the new Cube uses the union of the original and new mask
-
-        What type of object is `mask`? SpectralMask?
-        Not sure -- I guess it needs to have WCS. Conceptually maps onto a boolean ndarray
-            CubeMask? -> maybe SpectralCubeMask to be consistent with SpectralCube
-
-        """
 
     def moment(self, order, axis, wcs=False):
         """
@@ -550,7 +589,7 @@ class SpectralCube(object):
 
         # Create new spectral cube
         slab = SpectralCube(self._data[ilo:ihi], wcs_slab,
-                            mask=mask_slab, meta=self.meta)
+                            mask=mask_slab, meta=self._meta)
 
         # TODO: we could change the WCS to give a spectral axis in the
         # correct units as requested - so if the initial cube is in Hz and we
