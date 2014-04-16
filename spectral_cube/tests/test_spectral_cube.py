@@ -17,6 +17,12 @@ def cube_and_raw(filename):
     c = read(p, format='fits')
     return c, d
 
+def assert_almost_equal(arr1,arr2):
+    if hasattr(arr1,'to') and hasattr(arr2,'to'):
+        x = arr1.to(arr2.unit)
+        np.testing.assert_array_almost_equal_nulp(x.value,arr2.value)
+    else:
+        np.testing.assert_array_almost_equal_nulp(arr1,arr2)
 
 class TestSpectralCube(object):
 

@@ -281,7 +281,8 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
-    def _apply_along_axes(self, function, axis=None, weights=None, **kwargs):
+    def _apply_along_axes(self, function, axis=None, weights=None, wcs=False,
+                          **kwargs):
         """
         Apply a function to valid data along the specified axis, optionally
         using a weight array that is the same shape (or at least can be sliced
@@ -305,14 +306,19 @@ class SpectralCube(object):
         nx, ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
-        out = np.empty([nx, ny])
+        out = np.empty([nx, ny]) * np.nan
 
         # iterate over "lines of sight" through the cube
         for x, y, slc in self._iter_rays(axis):
             # acquire the flattened, valid data for the slice
             data = self.flattened(slc, weights=weights)
-            # store result in array
-            out[x, y] = function(data, **kwargs)
+            if len(data) != 0:
+                # store result in array
+                out[x, y] = function(data, **kwargs)
+
+        if wcs:
+            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            return out,newwcs
 
         return out
 
@@ -401,25 +407,68 @@ class SpectralCube(object):
 
         If *wcs = True*, return the WCS describing the moment
         """
-        if wcs:
-            raise NotImplementedError("WCS output not yet implemented")
 
         nx, ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
-        out = np.zeros([nx, ny]) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
+        # nan is a workaround to deal with the impossibility of assigning nan
+        # to a np united array
+        out = (np.zeros([nx, ny])*np.nan) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
 
-        for x, y, slc in self._iter_rays(axis):
-            # compute the world coordinates along the specified axis
-            coords = self.world[slc][axis]
-            boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
-            # the denominator of the moment sum
-            weights = self.flattened(slc)
-            # the numerator of the moment sum
-            weighted = (weights * coords[boolmask] ** order)
-            out[x, y] = (weighted.sum() / weights.sum())
+        for x,y,slc in self._iter_rays(axis):
+            # the intensity, i.e. the weights
+            data = self.flattened(slc)
 
+            # cheat a little if order == 0
+            if order == 0:
+                weighted = data
+                denom = len(data)
+            else:
+                # compute the world coordinates along the specified axis
+                coords = self.world[slc][axis]
+                boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
+                # the numerator of the moment sum
+                weighted = (data*coords[boolmask]**order)
+                denom = data.sum()
+
+            # otherwise, leave as nan
+            if denom != 0:
+                out[x,y] = weighted.sum()/denom
+
+        if wcs:
+            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            return out, newwcs
         return out
+
+    def _moment_in_memory(self, order, axis):
+        """
+        Compute the moments by holding the whole array in memory
+        """
+        includemask = self._mask.include(data=self._data, wcs=self._wcs)
+        if np.any(np.isnan(self._data)):
+            data = self.filled(fill=0)
+            includemask[np.isnan(data)] = False
+            data[np.isnan(data)] = 0
+        else:
+            data = self._data
+
+        if order == 0:
+            return (data*includemask).sum(axis=axis) / includemask.sum(axis=axis)
+        else:
+            if axis == 0:
+                coords = self.spectral_axis[:,None,None]
+            else:
+                center = self._wcs.wcs.crval[1::-1]
+                # this line is wrong; the coordinates have nothing to do with
+                # pixel sizes
+                mapcoords = (((self.spatial_coordinate_map -
+                               center[:,None,None])**2).sum(axis=0)**0.5)
+                coords = mapcoords[None,:,:]
+            #coords = self.world[:,:,:][axis] * includemask
+            mdata = data*includemask
+            weighted = (mdata*coords**order)
+            denom = mdata.sum(axis=axis)
+            return weighted.sum(axis=axis)/denom
 
     @property
     def spectral_axis(self):
@@ -427,8 +476,11 @@ class SpectralCube(object):
         A `~astropy.units.Quantity` array containing the central values of
         each channel along the spectral axis.
         """
-
         return self.world[:, 0, 0][0].ravel()
+
+    @property
+    def spatial_coordinate_map(self):
+        return self.world[0, :, :][1:]
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -483,7 +535,7 @@ class SpectralCube(object):
         ihi += 1
 
         # Create WCS slab
-        wcs_slab = self._wcs.copy()
+        wcs_slab = self._wcs.deepcopy()
         wcs_slab.wcs.crpix[2] -= ilo
 
         # Create mask slab
