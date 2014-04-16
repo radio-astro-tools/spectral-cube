@@ -63,9 +63,9 @@ def test_lazy_mask():
 def test_function_mask_incorrect_shape():
 
     # The following function will return the incorrect shape because it does
-    # not treat slices correctly - using slices=None will *add* a dimension.
-    def threshold(data, wcs, slices=None):
-        return data[slices] > 2
+    # not apply the slices
+    def threshold(data, wcs, slices=()):
+        return data > 2
 
     m = FunctionMask(threshold)
 
@@ -73,13 +73,13 @@ def test_function_mask_incorrect_shape():
     wcs = WCS()
 
     with pytest.raises(ValueError) as exc:
-        m.include(data, wcs)
-    assert exc.value.args[0] == "Function did not return mask with correct shape - expected (1, 1, 5), got (1, 1, 1, 5)"
+        m.include(data, wcs, slices=(0,0,slice(1,4)))
+    assert exc.value.args[0] == "Function did not return mask with correct shape - expected (3,), got (1, 1, 5)"
 
 
 def test_function_mask():
 
-    def threshold(data, wcs, slices=None):
+    def threshold(data, wcs, slices=()):
         if slices is None:
             return data > 2
         else:
