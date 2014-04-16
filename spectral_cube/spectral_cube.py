@@ -439,6 +439,27 @@ class SpectralCube(object):
             return out, newwcs
         return out
 
+    def _moment_in_memory(self, order, axis):
+        """
+        Compute the moments by holding the whole array in memory
+        """
+        includemask = self._mask.include
+        if np.any(np.isnan(self._data)):
+            data = self._data.copy()
+            includemask[np.isnan(data)] = False
+            data[np.isnan(data)] = 0
+        else:
+            data = self._data
+
+        if order == 0:
+            return (data*includemask).sum(axis=axis) / includemask.sum(axis=axis)
+        else:
+            coords = self.world[:,:,:][axis] * includemask
+            mdata = data*includemask
+            weighted = (mdata*coords**order)
+            denom = mdata.sum(axis=axis)
+            return weighted.sum(axis=axis)/denom
+
     @property
     def spectral_axis(self):
         """
