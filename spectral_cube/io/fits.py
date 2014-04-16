@@ -41,8 +41,7 @@ def load_fits_hdu(hdu, meta={}, **kwargs):
 
         data, wcs = cube_utils._orient(data, wcs)
 
-        cube_ = SpectralCube(data=data, wcs=wcs)
-        mask = LazyMask(np.isfinite, cube_)
+        mask = LazyMask(np.isfinite, data=data, wcs=wcs)
         cube = SpectralCube(data, wcs, mask, meta=meta)
 
     elif wcs.wcs.naxis == 4:
@@ -52,8 +51,7 @@ def load_fits_hdu(hdu, meta={}, **kwargs):
         mask = {}
         for component in data:
             data[component], wcs_slice = cube_utils._orient(data[component], wcs)
-            cube_ = SpectralCube(data=data[component], wcs=wcs_slice)
-            mask[component] = LazyMask(np.isfinite, cube_)
+            mask[component] = LazyMask(np.isfinite, data=data[component], wcs=wcs_slice)
 
         cube = StokesSpectralCube(data, wcs_slice, mask, meta=meta)
 

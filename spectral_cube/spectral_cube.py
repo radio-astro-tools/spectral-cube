@@ -204,10 +204,18 @@ class LazyMask(MaskBase):
         for which the boolean mask is defined.
     """
 
-    def __init__(self, function, cube):
+    def __init__(self, function, cube=None, data=None, wcs=None):
         self._function = function
-        self._data = cube._data
-        self._wcs = cube._wcs
+        if cube is not None and (data is not None or wcs is not None):
+            raise ValueError("Pass only cube or (data & wcs)")
+        elif cube is not None:
+            self._data = cube._data
+            self._wcs = cube._wcs
+        elif data is not None and wcs is not None:
+            self._data = data
+            self._wcs = wcs
+        else:
+            raise ValueError("Either a cube or (data & wcs) is required.")
 
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._data.shape:
