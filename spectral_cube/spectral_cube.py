@@ -274,6 +274,14 @@ class SpectralCube(object):
     def shape(self):
         return self._data.shape
 
+    @property
+    def size(self):
+        return self._data.size
+
+    @property
+    def ndim(self):
+        return self._data.ndim
+
     # This should just be relegated to subcube
     # def __getitem__(self, slice):
     # TODO: need to update WCS!
