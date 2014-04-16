@@ -4,6 +4,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 from abc import ABCMeta, abstractproperty
 import warnings
+import operator
 
 from astropy import units as u
 import numpy as np
@@ -369,7 +370,7 @@ class SpectralCube(object):
         ihi += 1
 
         # Create WCS slab
-        wcs_slab = self._wcs.copy()
+        wcs_slab = self._wcs.deepcopy()
         wcs_slab.wcs.crpix[2] -= ilo
 
         # Create mask slab
@@ -460,6 +461,26 @@ class SpectralCube(object):
         world = [w * u.Unit(self._wcs.wcs.cunit[i])
                  for i, w in enumerate(world)]
         return world[::-1]  # reverse WCS -> numpy order
+
+    def __gt__(self, value):
+        """
+        Return a LazyMask representing the inequality
+
+        Parameters
+        ----------
+        value : number
+            The threshold
+        """
+        return LazyMask(operator.gt, self._data, self._wcs)
+
+    def __ge__(self, value):
+        return LazyMask(operator.ge, self._data, self._wcs)
+
+    def __le__(self, value):
+        return LazyMask(operator.le, self._data, self._wcs)
+
+    def __lt__(self, value):
+        return LazyMask(operator.lt, self._data, self._wcs)
 
 
 class StokesSpectralCube(SpectralCube):
