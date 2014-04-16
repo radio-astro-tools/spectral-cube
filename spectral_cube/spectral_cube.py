@@ -306,14 +306,15 @@ class SpectralCube(object):
         nx, ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
-        out = np.empty([nx, ny])
+        out = np.empty([nx, ny]) * np.nan
 
         # iterate over "lines of sight" through the cube
         for x, y, slc in self._iter_rays(axis):
             # acquire the flattened, valid data for the slice
             data = self.flattened(slc, weights=weights)
-            # store result in array
-            out[x, y] = function(data, **kwargs)
+            if len(data) != 0:
+                # store result in array
+                out[x, y] = function(data, **kwargs)
 
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, axis)
