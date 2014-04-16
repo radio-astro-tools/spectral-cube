@@ -22,27 +22,31 @@ class MaskBase(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def include(self, slices=None):
+    def include(self, data=None, wcs=None, slices=None):
         """
         Return a boolean array indicating which values should be included
         """
-        return self._include(slices=slices)
+        self._validate_wcs(data, wcs)
+        return self._include(data=data, wcs=wcs, slices=slices)
 
-    @abc.abstractmethod
-    def _include(self, slices=None):
+    def _validate_wcs(self, data, wcs):
         pass
 
-    def exclude(self, slices=None):
+    @abc.abstractmethod
+    def _include(self, data=None, wcs=None, slices=None):
+        pass
+
+    def exclude(self, data=None, wcs=None, slices=None):
         """
         Return a boolean array indicating which values should be excluded
         """
-        return self._exclude(slices=slices)
+        self._validate_wcs(data, wcs)
+        return self._exclude(data=data, wcs=wcs, slices=slices)
 
-    @abc.abstractmethod
-    def _exclude(self, slices=None):
-        pass
+    def _exclude(self, data=None, wcs=None, slices=None):
+        return ~self._include(data=data, wcs=wcs, slices=slices)
 
-    def _flattened(self, data, slices=None):
+    def _flattened(self, data, wcs=None, slices=None):
         """
         Return a flattened array of the included elements of cube
 
@@ -63,11 +67,11 @@ class MaskBase(object):
         This is an internal method used by :class:`SpectralCube`.
         """
         if slices is None:
-            return data[self.include()]
+            return data[self.include(data=data, wcs=wcs)]
         else:
-            return data[slices][self.include(slices=slices)]
+            return data[slices][self.include(data=data, wcs=wcs, slices=slices)]
 
-    def _filled(self, data, fill=np.nan, slices=None):
+    def _filled(self, data, wcs=None, fill=np.nan, slices=None):
         """
         Replace the exluded elements of *array* with *fill*.
 
@@ -95,7 +99,7 @@ class MaskBase(object):
         else:
             sliced_data = data[slices]
 
-        return np.where(self.include(slices=slices), sliced_data, fill)
+        return np.where(self.include(data=data, wcs=wcs, slices=slices), sliced_data, fill)
 
 
 class SpectralCubeMask(MaskBase):
@@ -103,47 +107,112 @@ class SpectralCubeMask(MaskBase):
     A mask defined as an array on a spectral cube WCS
     """
 
-    def __init__(self, mask, mask_wcs, include=True):
+    def __init__(self, mask, wcs, include=True):
 
         # TODO: at the moment, assume that the mask WCS matches the data WCS
         # TODO: keep track of whether mask is include or exclude rather than
         #       using logical_not
 
-        self._include_mask = mask if include else np.logical_not(mask)
-        self._wcs = mask_wcs
+        self._mask = mask
+        self._mask_type = 'include' if include else 'exclude'
+        self._wcs = wcs
 
-    def _include(self, slices=None):
+    def _validate_wcs(self, new_data, new_wcs):
+        if new_data.shape != self._mask.shape:
+            raise ValueError("data shape does not match mask shape")
+        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+            raise ValueError("WCS does not match mask WCS")
+
+    def _include(self, data=None, wcs=None, slices=None):
         if slices is None:
-            return self._include_mask
+            result_mask = self._mask
         else:
-            return self._include_mask[slices]
+            result_mask = self._mask[slices]
+        return result_mask if self._mask_type == 'include' else ~result_mask
 
-    def _exclude(self, slices=None):
-        return ~self._include(slices=slices)
+    def _exclude(self, data=None, wcs=None, slices=None):
+        if slices is None:
+            result_mask = self._mask
+        else:
+            result_mask = self._mask[slices]
+        return result_mask if self._mask_type == 'exclude' else ~result_mask
 
     @property
     def shape(self):
         return self._include_mask.shape
 
 
-class FunctionMask(MaskBase):
+class LazyMask(MaskBase):
     """
-    A mask defined as a function.
+    A boolean mask defined by the evaluation of a function on a fixed dataset.
+
+    This is conceptually identical to a fixed boolean mask as in
+    :class:`~spectral_cube.spectralSpectralCubeMask` but defers the
+    evaluation of the mask until it is needed.
+
+    Parameters
+    ----------
+    function : callable
+        The function to apply to ``data``
+    data : array-like
+        The array to evaluate ``function`` on. This should support Numpy-like
+        slicing syntax.
+    wcs : `~astropy.wcs.WCS`
+        The WCS of the input data, which is used to define the coordinates
+        for which the boolean mask is defined.
     """
 
-    def __init__(self, function, data, wcs, parent_cube=None):
+    def __init__(self, function, data, wcs):
         self._function = function
         self._data = data
         self._wcs = wcs
 
-    def _include(self, slices=None):
+    def _validate_wcs(self, new_data, new_wcs):
+        if new_data.shape != self._data.shape:
+            raise ValueError("data shape does not match mask shape")
+        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+            raise ValueError("WCS does not match mask WCS")
+
+    def _include(self, data=None, wcs=None, slices=None):
+        self._validate_wcs(data, wcs)
         if slices is None:
             return self._function(self._data)
         else:
             return self._function(self._data[slices])
 
-    def _exclude(self, slices=None):
-        return ~self._include(slices=slices)
+class FunctionMask(MaskBase):
+    """
+    A mask defined by a function that is evaluated at run-time using the data
+    passed to the mask.
+
+    This is different from :class:`~spectral_cube.spectral_cube.LazyMask` in
+    that the mask here can be evaluated using the data passed to the mask and
+    the :class:`~spectral_cube.spectral_cube.LazyMask` is applied only to the
+    data passed when initializing the
+    :class:`~spectral_cube.spectral_cube.LazyMask` instance.
+
+    Parameters
+    ----------
+    function : callable
+        The function to evaluate the mask. The call signature should be
+        ``function(data, wcs, slice)`` where ``data`` and ``wcs`` are the
+        arguments that get passed to e.g. ``include``, ``exclude``,
+        ``_filled``, and ``_flattened``.
+    """
+
+    def __init__(self, function):
+        self._function = function
+
+    def _validate_wcs(self, data, wcs):
+        pass
+
+    def _include(self, data=None, wcs=None, slices=None):
+        result = self._function(data, wcs, slices)
+        if slices is None and result.shape != data.shape:
+            raise ValueError("Function did not return mask with correct shape - expected {0}, got {1}".format(data.shape, result.shape))
+        elif slices is not None and result.shape != data[slices].shape:
+            raise ValueError("Function did not return mask with correct shape - expected {0}, got {1}".format(data[slices].shape, result.shape))
+        return result
 
 
 class SpectralCube(object):
@@ -302,7 +371,7 @@ class SpectralCube(object):
         if self._mask is None:
             return self._data
 
-        return self._mask._filled(self._data, fill)
+        return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill)
 
     @property
     def data_unmasked(self):
