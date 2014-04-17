@@ -12,7 +12,7 @@ before_install:
    - export PATH=/home/travis/anaconda/bin:/home/travis/miniconda3/bin:$PATH
 
 install:
-   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION astropy=$ASTROPY_VERSION pytest
+   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION astropy=$ASTROPY_VERSION pytest pip
    - pip install pytest-cov coveralls
 
 script:
