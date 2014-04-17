@@ -401,13 +401,30 @@ class SpectralCube(object):
 
         """
 
-    def moment(self, order, axis, wcs=False):
-        """
-        Determine the n'th moment along the spectral axis
+    def moment0(self, axis, wcs=False):
+        nx, ny = self._get_flat_shape(axis)
 
-        If *wcs = True*, return the WCS describing the moment
-        """
+        # allocate memory for output array
+        # nan is a workaround to deal with the impossibility of assigning nan
+        # to a np united array
+        out = (np.zeros([nx, ny])*np.nan) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
 
+        for x,y,slc in self._iter_rays(axis):
+            # the intensity, i.e. the weights
+            weighted = self.flattened(slc)
+
+            denom = len(weighted)
+
+            # otherwise, leave as nan
+            if denom != 0:
+                out[x,y] = weighted.sum()/denom
+
+        if wcs:
+            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
+            return out, newwcs
+        return out
+
+    def moment1(self, axis, wcs=False):
         nx, ny = self._get_flat_shape(axis)
 
         # allocate memory for output array
@@ -419,31 +436,52 @@ class SpectralCube(object):
             # the intensity, i.e. the weights
             data = self.flattened(slc)
 
-            # cheat a little if order == 0
-            if order == 0:
-                weighted = data
-                denom = len(data)
-            else:
-                # compute the world coordinates along the specified axis
-                coords = self.world[slc][axis]
-                boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
-                # the numerator of the moment sum
-                weighted = (data*coords[boolmask]**order)
-                denom = data.sum()
-
-            # otherwise, leave as nan
-            if denom != 0:
-                out[x,y] = weighted.sum()/denom
+            # compute the world coordinates along the specified axis
+            coords = self.world[slc][axis]
+            boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
+            # the numerator of the moment sum
+            weighted = (data*coords[boolmask]**order)
+            denom = data.sum()
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
             return out, newwcs
         return out
+
+    def moment2(self, axis, wcs=False):
+        nx, ny = self._get_flat_shape(axis)
+
+        # allocate memory for output array
+        # nan is a workaround to deal with the impossibility of assigning nan
+        # to a np united array
+        out = (np.zeros([nx, ny])*np.nan) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
+
+        # calculate moment1 first
+        mom1 = self.moment1(axis=axis)
+
+        for x,y,slc in self._iter_rays(axis):
+            # the intensity, i.e. the weights
+            data = self.flattened(slc)
+
+            # compute the world coordinates along the specified axis
+            coords = self.world[slc][axis]-mom1[x,y]
+            boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
+            # the numerator of the moment sum
+            weighted = (data*(coords[boolmask])**order)
+            denom = data.sum()
+
+        if wcs:
+            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
+            return out, newwcs
+        return out
+
 
     def _moment_in_memory(self, order, axis):
         """
         Compute the moments by holding the whole array in memory
         """
+        raise NotImplementedError("This needs to be refactored to match the
+                                  usual definitions of 'moment'")
         includemask = self._mask.include(data=self._data, wcs=self._wcs)
         if np.any(np.isnan(self._data)):
             data = self.filled(fill=0)
