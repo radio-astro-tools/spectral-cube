@@ -124,6 +124,11 @@ def moment_cubewise(cube, order, axis):
                 np.nansum(data, axis=axis))
     else:
         mom1 = moment_cubewise(cube, 1, axis)
+        # insert an axis so it broadcasts properly
+        shp = list(_moment_shp(cube, axis))
+        shp.insert(axis, 1)
+        mom1 = mom1.reshape(shp)
+
         return (np.nansum(data * (pix_cen - mom1) ** order, axis=axis) /
                 np.nansum(data, axis=axis))
 
@@ -131,7 +136,7 @@ def moment_cubewise(cube, order, axis):
 def moment_auto(cube, order, axis):
     # guess a good strategy
 
-    if np.product(cube.shape) < 1e7:  # smallish, do in RAM
+    if np.product(cube.shape) < 1e8:  # smallish, do in RAM
         return moment_cubewise(cube, order, axis)
 
     return moment_slicewise(cube, order, axis)  # save memory
