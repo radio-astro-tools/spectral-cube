@@ -5,15 +5,19 @@ python:
     - 3.3
 
 env:
-    - NUMPY_VERSION=1.8 ASTROPY_VERSION=0.3.1 SETUP_CMD='test'
+    - NUMPY_VERSION=1.8 ASTROPY_VERSION=0.3.1
 
 before_install:
    - source .setup_conda.sh $TRAVIS_PYTHON_VERSION
    - export PATH=/home/travis/anaconda/bin:/home/travis/miniconda3/bin:$PATH
 
 install:
-   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION astropy=$ASTROPY_VERSION pytest
+   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION astropy=$ASTROPY_VERSION pytest pip
+   - pip install pytest-cov coveralls
 
 script:
-   - if [[ $SETUP_CMD == test ]]; then cd spectral_cube/tests/data ; make ; cd ../../../ ; fi
-   - if [[ $SETUP_CMD == test ]]; then py.test spectral_cube ; fi
+   - cd spectral_cube/tests/data ; make ; cd ../../../
+   - py.test --cov spectral_cube
+
+after_success:
+ - coveralls
