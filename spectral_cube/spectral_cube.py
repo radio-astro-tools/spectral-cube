@@ -489,6 +489,11 @@ class SpectralCube(object):
                             meta=self._meta)
         return cube
 
+    def __getitem__(self, slice):
+       return SpectralCube(self._data[slice],
+                           wcs_utils.slice_wcs(self._wcs, view),
+                           mask=self._mask[slice], meta=self.meta)
+
     def get_filled_data(self, fill=np.nan, check_endian=False, slices=()):
         """
         Return the underlying data as a numpy array.
@@ -512,12 +517,6 @@ class SpectralCube(object):
 
         return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill,
                                   slices=slices)
-
-    # This should just be relegated to subcube
-    def __getitem__(self, slice):
-    
-       return SpectralCube(self._data[slice], self._wcs,
-                           mask=self._mask[slice], meta=self.meta)
 
     @property
     def data_unmasked(self, slices=()):
