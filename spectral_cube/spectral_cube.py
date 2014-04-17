@@ -500,12 +500,20 @@ class SpectralCube(object):
                             mask=self._mask[view],
                             meta=meta)
 
+    def set_fill_value(self, fill_value):
+        """
+        Set the fill value of the array.  This doesn't do much, but allows for
+        error checking, I guess?
+
+        TODO: Remove snarky documentation; possibly remove this method
+        """
+        self._fill_value = fill_value
+
     @cube_utils.slice_syntax
     def filled_data(self, view):
-        return self.get_filled_data(view, fill=self._fill_value)
+        return self._get_filled_data(view, fill=self._fill_value)
 
-
-    def get_filled_data(self, fill=np.nan, check_endian=False, view=()):
+    def _get_filled_data(self, view=(), fill=np.nan):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
