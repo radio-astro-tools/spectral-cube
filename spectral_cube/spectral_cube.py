@@ -300,11 +300,14 @@ class SpectralCube(object):
         return "SpectralCube with shape {0}: {1}".format(str(self.shape),
                                                          self._data.__repr__())
 
-    def _apply_numpy_function(self, function, fill=np.nan, **kwargs):
+    def _apply_numpy_function(self, function, fill=np.nan,
+                              check_endian=check_endian, **kwargs):
         """
         Apply a numpy function to the cube
         """
-        return function(self.get_filled_data(fill=fill), **kwargs)
+        return function(self.get_filled_data(fill=fill,
+                                             check_endian=check_endian),
+                        **kwargs)
 
     def get_mask_array(self):
         return self._mask.include(data=self._data, wcs=self._wcs)
@@ -426,7 +429,8 @@ class SpectralCube(object):
     def median(self, axis=None, **kwargs):
         try:
             from bottleneck import nanmedian
-            return self._apply_numpy_function(nanmedian, axis=axis, **kwargs)
+            return self._apply_numpy_function(nanmedian, axis=axis,
+                                              check_endian=True, **kwargs)
         except ImportError:
             return self._apply_along_axes(np.median, axis=axis, **kwargs)
 
@@ -447,17 +451,27 @@ class SpectralCube(object):
                             meta=self._meta)
         return cube
 
-    def get_filled_data(self, fill=np.nan):
+    def get_filled_data(self, fill=np.nan, check_endian=False):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
 
         Sets masked values to *fill*
         """
-        if self._mask is None:
-            return self._data
+        if check_endian:
+            if not self._data.dtype.isnative:
+                dt = str(self._data.dtype)
+                dt[0] = '=' # '=' means native byteorder
+                data = self._data.view(dt)
+            else:
+                data = self._data
+        else:
+            data = self._data
 
-        return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill)
+        if self._mask is None:
+            return data
+
+        return self._mask._filled(data=data, wcs=self._wcs, fill=fill)
 
     def get_unmasked_data(self, copy=False):
         """
