@@ -531,16 +531,7 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
-        return self.get_unmasked_data(view)
-
-    def get_unmasked_data(self, view=(), copy=False):
-        """
-        Like data, but don't apply the mask
-        """
-        if copy:
-            return self._data[view].copy()
-        else:
-            return self._data[view]
+        return self._data(view)
 
 
     @property
