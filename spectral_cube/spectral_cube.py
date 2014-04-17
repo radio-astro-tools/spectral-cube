@@ -480,13 +480,14 @@ class SpectralCube(object):
     # def get_masked_array(self):
     #    return np.ma.masked_where(self.mask, self._data)
 
-    def apply_mask(self, mask, inherit_mask=True):
+    def with_mask(self, mask, inherit_mask=True):
         """
         Return a new SpectralCube instance that contains a composite mask of
         the current SpectralCube and the new ``mask``.
         """
         cube = SpectralCube(self._data, wcs=self._wcs,
                             mask=self._mask & mask if inherit_mask else mask,
+                            fill_value=self.fill_value,
                             meta=self._meta)
         return cube
 
@@ -498,6 +499,7 @@ class SpectralCube(object):
         return SpectralCube(self._data[view],
                             wcs_utils.slice_wcs(self._wcs, view),
                             mask=self._mask[view],
+                            fill_value=self.fill_value,
                             meta=meta)
 
     @property
@@ -509,6 +511,13 @@ class SpectralCube(object):
     @cube_utils.slice_syntax
     def filled_data(self, view):
         return self._get_filled_data(view, fill=self._fill_value)
+
+    def with_fill_value(self, fill_value):
+        return SpectralCube(data=self._data,
+                            wcs=self._wcs,
+                            mask=self._mask,
+                            fill_value=self.fill_value,
+                            meta=meta)
 
     def _get_filled_data(self, view=(), fill=np.nan):
         """
@@ -849,6 +858,7 @@ class SpectralCube(object):
 
         # Create new spectral cube
         slab = SpectralCube(self._data[ilo:ihi], wcs_slab,
+                            fill_value=self.fill_value,
                             mask=mask_slab, meta=self._meta)
 
         # TODO: we could change the WCS to give a spectral axis in the
