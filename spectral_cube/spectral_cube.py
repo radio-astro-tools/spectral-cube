@@ -321,6 +321,7 @@ class SpectralCube(object):
                            # object or array-like object, given that WCS needs to be consistent with data?
         #assert mask._wcs == self._wcs
         self._meta = meta or {}
+        self._fill_value = fill_value
 
     @property
     def shape(self):
@@ -489,12 +490,22 @@ class SpectralCube(object):
                             meta=self._meta)
         return cube
 
-    def __getitem__(self, slice):
-       return SpectralCube(self._data[slice],
-                           wcs_utils.slice_wcs(self._wcs, view),
-                           mask=self._mask[slice], meta=self.meta)
+    def __getitem__(self, view):
+        meta = {}
+        meta.update(self.meta)
+        meta['slice'] = [(s.start,s.stop,s.step) for s in view]
+                                                               
+        return SpectralCube(self._data[view],
+                            wcs_utils.slice_wcs(self._wcs, view),
+                            mask=self._mask[view],
+                            meta=meta)
 
-    def get_filled_data(self, fill=np.nan, check_endian=False, slices=()):
+    @cube_utils.slice_syntax
+    def filled_data(self, view):
+        return self.get_filled_data(view, fill=self._fill_value)
+
+
+    def get_filled_data(self, fill=np.nan, check_endian=False, view=()):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -513,17 +524,24 @@ class SpectralCube(object):
             data = self._data
 
         if self._mask is None:
-            return self._data[slices]
+            return self._data[view]
 
         return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill,
-                                  slices=slices)
+                                  view=view)
 
-    @property
-    def data_unmasked(self, slices=()):
+    @cube_utils.slice_syntax
+    def unmasked_data(self, view):
+        return self.get_unmasked_data(view, fill=self._fill_value)
+
+    def get_unmasked_data(self, view=(), copy=False):
         """
         Like data, but don't apply the mask
         """
-        return self._data[slices]
+        if copy:
+            return self._data[view].copy()
+        else:
+            return self._data[view]
+
 
     @property
     def wcs(self):
