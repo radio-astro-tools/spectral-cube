@@ -4,7 +4,6 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 import abc
 import warnings
-import operator
 from functools import wraps
 
 from astropy import units as u
@@ -119,8 +118,9 @@ class MaskBase(object):
         This is an internal method used by :class:`SpectralCube`.
         Users should use :meth:`SpectralCubeMask.get_filled_data`
         """
-        sliced_data = data[slices].copy()
-        sliced_data[self.exclude(data=data, wcs=wcs, slices=slices)] = fill
+        sliced_data = data[slices].copy().astype(np.float)
+        ex = self.exclude(data=data, wcs=wcs, slices=slices)
+        sliced_data[ex] = fill
         return sliced_data
 
     def __and__(self, other):
@@ -166,6 +166,7 @@ class CompositeMask(MaskBase):
             return result_mask_1 | result_mask_2
         else:
             raise ValueError("Operation '{0}' not supported".format(self._operation))
+
 
 class SpectralCubeMask(MaskBase):
 
@@ -236,6 +237,8 @@ class LazyMask(MaskBase):
             self._wcs = wcs
         else:
             raise ValueError("Either a cube or (data & wcs) is required.")
+
+        self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._data.shape:
@@ -408,8 +411,8 @@ class SpectralCube(object):
                 out[x, y] = function(data, **kwargs)
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
-            return out,newwcs
+            newwcs = wcs_utils.drop_axis(self._wcs, 2 - axis)
+            return out, newwcs
 
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, axis)
@@ -879,16 +882,16 @@ class SpectralCube(object):
         value : number
             The threshold
         """
-        return LazyMask(lambda data: data > value, self._data, self._wcs)
+        return LazyMask(lambda data: data > value, data=self._data, wcs=self._wcs)
 
     def __ge__(self, value):
-        return LazyMask(lambda data: data >= value, self._data, self._wcs)
+        return LazyMask(lambda data: data >= value, data=self._data, wcs=self._wcs)
 
     def __le__(self, value):
-        return LazyMask(lambda data: data <= value, self._data, self._wcs)
+        return LazyMask(lambda data: data <= value, data=self._data, wcs=self._wcs)
 
     def __lt__(self, value):
-        return LazyMask(lambda data: data < value, self._data, self._wcs)
+        return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
     def write(self, filename, format=None, include_stokes=False, clobber=False):
         if format == 'fits':

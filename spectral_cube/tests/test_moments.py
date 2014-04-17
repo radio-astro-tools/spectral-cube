@@ -92,8 +92,6 @@ def test_consistent_mask_handling(axis, order):
     sc = spfits.load_fits_hdu(mc_hdu)
     sc._mask = sc > 4
 
-    print sc.get_data()
-
     cwise = sc.moment(axis=axis, order=order, how='cube')
     swise = sc.moment(axis=axis, order=order, how='slice')
     rwise = sc.moment(axis=axis, order=order, how='ray')

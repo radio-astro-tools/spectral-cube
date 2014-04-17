@@ -102,12 +102,11 @@ class TestFilters(BaseTest):
 
     def test_mask_data(self):
         c, d = self.c, self.d
-
         expected = np.where(d > .5, d, np.nan)
-        np.testing.assert_allclose(c.get_data(), expected)
+        np.testing.assert_allclose(c.get_filled_data(), expected)
 
         expected = np.where(d > .5, d, 0)
-        np.testing.assert_allclose(c.get_data(fill=0), expected)
+        np.testing.assert_allclose(c.get_filled_data(fill=0), expected)
 
     def test_flatten(self):
         c, d = self.c, self.d
@@ -184,34 +183,6 @@ class TestNumpyMethods(BaseTest):
                                        getattr(c2, method)(axis=axis))
 
 
-class TestMoment(BaseTest):
-
-    def test_mom0(self):
-        c = self.c
-        np.testing.assert_allclose(c.moment(0, axis=0), c.sum(axis=0))
-
-    @pytest.mark.parametrize('axis', (0,))
-    def test_mom1(self, axis):
-        c = self.c
-        d = np.where(self.d > 0.5, self.d, np.nan)
-        w = self.c.world[:][axis].value
-
-        result = c.moment(1, axis=axis).value
-        expected = np.nansum(w * d, axis=axis) / np.nansum(d, axis=axis)
-        np.testing.assert_allclose(result, expected)
-
-    @pytest.mark.xfail
-    @pytest.mark.parametrize('axis', (1, 2))
-    def test_mom1_ax12(self, axis):
-        c = self.c
-        d = np.where(self.d > 0.5, self.d, np.nan)
-        w = self.c.world[:][axis].value
-
-        result = c.moment(1, axis=axis).value
-        expected = np.nansum(w * d, axis=axis) / np.nansum(d, axis=axis)
-        np.testing.assert_allclose(result, expected)
-
-
 class TestSlab(BaseTest):
 
     def test_closest_spectral_channel(self):
@@ -271,14 +242,14 @@ def test_apply_mask():
     cube = SpectralCube(data, wcs=wcs, mask=m1)
     cube2 = cube.apply_mask(m2)
 
-    np.testing.assert_allclose(cube.get_filled_data(),[[[np.nan,1,2,3,4]]])
-    np.testing.assert_allclose(cube2.get_filled_data(),[[[np.nan,1,2,np.nan,np.nan]]])
+    np.testing.assert_allclose(cube.get_filled_data(), [[[np.nan, 1, 2, 3, 4]]])
+    np.testing.assert_allclose(cube2.get_filled_data(), [[[np.nan, 1, 2, np.nan, np.nan]]])
 
     def test_slab_preserves_wcs(self):
         # regression test
         ms = u.m / u.s
         crpix = list(self.c._wcs.wcs.crpix)
-        c2 = self.c.spectral_slab(-318600 * ms, -320000 * ms)
+        self.c.spectral_slab(-318600 * ms, -320000 * ms)
         assert list(self.c._wcs.wcs.crpix) == crpix
 
 
