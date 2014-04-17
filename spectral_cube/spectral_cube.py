@@ -531,7 +531,7 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
-        return self.get_unmasked_data(view, fill=self._fill_value)
+        return self.get_unmasked_data(view)
 
     def get_unmasked_data(self, view=(), copy=False):
         """
