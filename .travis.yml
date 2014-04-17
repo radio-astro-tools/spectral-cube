@@ -12,7 +12,8 @@ before_install:
    - export PATH=/home/travis/anaconda/bin:/home/travis/miniconda3/bin:$PATH
 
 install:
-   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION astropy=$ASTROPY_VERSION pytest pytest-cov coveralls
+   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION astropy=$ASTROPY_VERSION pytest
+   - pip install pytest-cov coveralls
 
 script:
    - if [[ $SETUP_CMD == test ]]; then cd spectral_cube/tests/data ; make ; cd ../../../ ; fi
