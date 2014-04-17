@@ -313,7 +313,7 @@ class FunctionMask(MaskBase):
 
 class SpectralCube(object):
 
-    def __init__(self, data, wcs, mask=None, meta=None):
+    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan):
         # TODO: mask should be oriented? Or should we assume correctly oriented here?
         self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
@@ -333,12 +333,6 @@ class SpectralCube(object):
     @property
     def ndim(self):
         return self._data.ndim
-
-    # This should just be relegated to subcube
-    # def __getitem__(self, slice):
-    # TODO: need to update WCS!
-    #    return SpectralCube(self._data[slice], self._wcs,
-    #                        mask=self._mask[slice], meta=self.meta)
 
     def __repr__(self):
         return "SpectralCube with shape {0}: {1}".format(str(self.shape),
@@ -518,6 +512,12 @@ class SpectralCube(object):
 
         return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill,
                                   slices=slices)
+
+    # This should just be relegated to subcube
+    def __getitem__(self, slice):
+    
+       return SpectralCube(self._data[slice], self._wcs,
+                           mask=self._mask[slice], meta=self.meta)
 
     @property
     def data_unmasked(self, slices=()):
