@@ -5,6 +5,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 import abc
 import warnings
 import operator
+from functools import wraps
 
 from astropy import units as u
 import numpy as np
@@ -18,6 +19,18 @@ try:  # TODO replace with six.py
     xrange
 except NameError:
     xrange = range
+
+
+def cached(func):
+    cache = {}
+
+    @wraps(func)
+    def wrapper(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+
+    return wrapper
 
 
 class MaskBase(object):
@@ -107,7 +120,7 @@ class MaskBase(object):
         Users should use :meth:`SpectralCubeMask.get_filled_data`
         """
         sliced_data = data[slices].copy()
-        sliced_data[self.include(data=data, wcs=wcs, slices=slices)] = fill
+        sliced_data[self.exclude(data=data, wcs=wcs, slices=slices)] = fill
         return sliced_data
 
     def __and__(self, other):
@@ -500,9 +513,16 @@ class SpectralCube(object):
     def wcs(self):
         return self._wcs
 
-    @property
+    @cached
     def _pix_cen(self):
+        """
+        Offset of every pixel from the origin, along each direction
 
+        Returns
+        -------
+        tuple of spectral_offset, y_offset, x_offset, each 3D arrays
+        describing the distance from the origin
+        """
         # Start off by extracting the world coordinates of the pixels
         _, lat, lon = self.world[0,:,:]
         spectral, _, _ = self.world[:, 0, 0]
@@ -513,23 +533,24 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dx = angular_separation(lon[:, :-1], lat[:, :-1], lon[:, 1:], lat[:, :-1])
-        dy = angular_separation(lon[:-1,:], lat[:-1,:], lon[1:,:], lat[1:,:])
+        dx = angular_separation(lon[:, :-1], lat[:, :-1],
+                                lon[:, 1:], lat[:, :-1])
+        dy = angular_separation(lon[:-1,:], lat[:-1,:],
+                                lon[1:,:], lat[1:,:])
 
         # Find the cumulative offset - need to add a zero at the start
         x = np.zeros(self._data.shape[1:])
         y = np.zeros(self._data.shape[1:])
-        x[:, 1:] = np.cumsum(dx, axis=1)
-        y[1:,:] = np.cumsum(dy, axis=0)
+        x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
+        y[1:,:] = np.cumsum(np.degrees(dy), axis=0)
 
         x = x.reshape(1, x.shape[0], x.shape[1])
         y = y.reshape(1, y.shape[0], y.shape[1])
-        spectral = spectral.reshape(-1, 1, 1)
+        spectral = spectral.reshape(-1, 1, 1) - spectral.ravel()[0]
         x, y, spectral = np.broadcast_arrays(x, y, spectral)
-
         return spectral, y, x
 
-    @property
+    @cached
     def _pix_size(self):
 
         # First, scale along x direction
@@ -547,12 +568,15 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dx = angular_separation(lon[:, :-1], lat[:, :-1], lon[:, 1:], lat[:, :-1])
+        dx = angular_separation(lon[:, :-1], lat[:, :-1],
+                                lon[:, 1:], lat[:, :-1])
 
         # Next, scale along y direction
 
         xpix = np.linspace(0., self._data.shape[2] - 1, self._data.shape[2])
-        ypix = np.linspace(-0.5, self._data.shape[1] - 0.5, self._data.shape[1] + 1)
+        ypix = np.linspace(-0.5,
+                           self._data.shape[1] - 0.5,
+                           self._data.shape[1] + 1)
         xpix, ypix = np.meshgrid(xpix, ypix)
         zpix = np.zeros(xpix.shape)
 
@@ -564,10 +588,12 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dy = angular_separation(lon[:-1,:], lat[:-1,:], lon[1:,:], lat[1:,:])
+        dy = angular_separation(lon[:-1,:], lat[:-1,:],
+                                lon[1:,:], lat[1:,:])
 
         # Next, spectral coordinates
-        zpix = np.linspace(-0.5, self._data.shape[0] - 0.5, self._data.shape[0] + 1)
+        zpix = np.linspace(-0.5, self._data.shape[0] - 0.5,
+                           self._data.shape[0] + 1)
         xpix = np.zeros(zpix.shape)
         ypix = np.zeros(zpix.shape)
 
@@ -575,129 +601,117 @@ class SpectralCube(object):
 
         dspectral = np.diff(spectral)
 
-        dx = dx.reshape(1, dx.shape[0], dx.shape[1])
-        dy = dy.reshape(1, dy.shape[0], dy.shape[1])
-        dspectral = dspectral.reshape(-1, 1, 1)
+        dx = np.abs(np.degrees(dx.reshape(1, dx.shape[0], dx.shape[1])))
+        dy = np.abs(np.degrees(dy.reshape(1, dy.shape[0], dy.shape[1])))
+        dspectral = np.abs(dspectral.reshape(-1, 1, 1))
         dx, dy, dspectral = np.broadcast_arrays(dx, dy, dspectral)
 
         return dspectral, dy, dx
 
-    def _moment_slicewise(self, order, axis):
-
-        shp = self._data.shape[:axis] + self._data.shape[axis + 1:]
-        result = np.zeros(shp)
-
-        view = [slice(None)] * 3
-        pix_cen = self._pix_cen[axis]
-        pix_size = self._pix_size[axis]
-        if order == 0:
-            for i in range(self._data.shape[axis]):
-                view[axis] = i
-                plane = self.get_data(fill=0, slices=view)
-                result += plane * pix_size[view]
-            return result
-
-        weights = np.zeros(shp)
-
-        if order == 1:
-            for i in range(self._data.shape[axis]):
-                view[axis] = i
-                plane = self.get_data(fill=0, slices=view)
-                result += (plane *
-                           pix_cen[view] *
-                           pix_size[view])
-                weights += plane * pix_size[view]
-            return result / weights
-
-        # would be nice to get mom1 and momn in single pass over data
-        mom1 = self._moment_slicewise(1, axis)
-        for i in range(self._data.shape[axis]):
-            view[axis] = i
-            plane = self.get_data(fill=0, slices=view)
-            result += (plane *
-                       (pix_cen[view] - mom1) ** order *
-                       pix_size[view])
-            weights += plane * pix_size[view]
-
-        unit = u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
-        return (result / weights) * unit
-
-    def moment(self, order=0, axis=0, wcs=False, how='slice'):
+    def moment(self, order=0, axis=0, wcs=False, how='auto'):
         """
-        Determine the n'th moment along the spectral axis
+        Compute moments along the spectral axis
 
-        If *wcs = True*, return the WCS describing the moment
+        Moments are defined as follows:
+
+        Moment 0:
+        $
+        M_0 \int I dl
+        $
+
+        Moment 1:
+        $
+        M_1 = \frac{\int I l dl}{M_0}
+        $
+
+        Moment N:
+        $
+        M_N = \frac{\int I (l - M1)**N dl}{M_0}
+        $
+
+        Parameters
+        ----------
+        order : int
+           The order of the moment to take. Default=0
+
+        axis : int
+           The axis along which to compute the moment. Default=0
+
+        wcs : bool
+           If true, return the WCS of the moment map along with the data.
+           Default=False
+
+        how : cube | slice | ray | auto
+           How to compute the moment. All strategies give the same
+           result, but certain strategies are more efficient depending
+           on data size and layout. Cube/slice/ray work iterate over
+           decreasing subsets of the data, to conserve memory.
+           Default='auto'
+
+        Returns
+        -------
+           map [, wcs]
+           The moment map (numpy array) and, if wcs=True, the WCS object
+           describing the map
+
+        Notes
+        -----
+        Generally, how='cube' is fastest for small cubes that easily
+        fit into memory. how='slice' is best for most larger datasets.
+        how='ray' is probably only a good idea for very large cubes
+        whose data are contiguous over the axis of the moment map.
+
+        For the first moment, the result for axis=1, 2 is the angular
+        offset *relative to the cube face*. For axis=0, it is the
+        *absolute* velocity/frequency of the first moment.
         """
-        dispatch = dict(slice=self._moment_slicewise,
-                        cube=self._moment_cubewise,
-                        ray=self._moment_raywise)
+        from ._moments import (moment_slicewise, moment_cubewise,
+                               moment_raywise, moment_auto)
+
+        dispatch = dict(slice=moment_slicewise,
+                        cube=moment_cubewise,
+                        ray=moment_raywise,
+                        auto=moment_auto)
+
         if how not in dispatch:
             return ValueError("Invalid how. Must be in %s" %
                               sorted(list(dispatch.keys())))
 
-        out = dispatch[how](order, axis)
+        out = dispatch[how](self, order, axis)
+
+        # apply units
+        unit = u.Unit(self._wcs.wcs.cunit[2 - axis]) ** max(order, 1)
+        out = out * unit
+
+        # special case: for order=1, axis=1, you usually want
+        # the absolute velocity and not the offset
+        if order == 1 and axis == 0:
+            out += self.world[0,:,:][0]
+
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, axis)
             return out, newwcs
         return out
 
-    def _moment_raywise(self, order, axis):
-        nx, ny = self._get_flat_shape(axis)
-
-        # allocate memory for output array
-        # nan is a workaround to deal with the impossibility of assigning nan
-        # to a np united array
-        out = (np.zeros([nx, ny]) * np.nan) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
-
-        for x, y, slc in self._iter_rays(axis):
-            # the intensity, i.e. the weights
-            data = self.flattened(slc)
-
-            # cheat a little if order == 0
-            if order == 0:
-                weighted = data
-                denom = len(data)
-            else:
-                # compute the world coordinates along the specified axis
-                coords = self.world[slc][axis]
-                boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
-                # the numerator of the moment sum
-                weighted = (data * coords[boolmask] ** order)
-                denom = data.sum()
-
-            # otherwise, leave as nan
-            if denom != 0:
-                out[x, y] = weighted.sum() / denom
-
-    def _moment_cubewise(self, order, axis):
+    def moment0(axis=0, how='auto'):
+        """Compute the zeroth moment along an axis.
+        See :meth:`moment`.
         """
-        Compute the moments by holding the whole array in memory
-        """
-        includemask = self._mask.include(data=self._data, wcs=self._wcs)
-        if np.any(np.isnan(self._data)):
-            data = self.filled(fill=0)
-            includemask[np.isnan(data)] = False
-            data[np.isnan(data)] = 0
-        else:
-            data = self._data
+        return self.moment(axis=axis, order=0, how=how)
 
-        if order == 0:
-            return (data * includemask).sum(axis=axis) / includemask.sum(axis=axis)
-        else:
-            if axis == 0:
-                coords = self.spectral_axis[:, None, None]
-            else:
-                center = self._wcs.wcs.crval[1::-1]
-                # this line is wrong; the coordinates have nothing to do with
-                # pixel sizes
-                mapcoords = (((self.spatial_coordinate_map -
-                               center[:, None, None]) ** 2).sum(axis=0) ** 0.5)
-                coords = mapcoords[None,:,:]
-            #coords = self.world[:,:,:][axis] * includemask
-            mdata = data * includemask
-            weighted = (mdata * coords ** order)
-            denom = mdata.sum(axis=axis)
-            return weighted.sum(axis=axis) / denom
+    def moment1(axis=0, how='auto'):
+        """
+        Compute the 1st moment along an axis.
+        See :meth:`moment`
+        """
+        return self.moment(axis=axis, order=1, how=how)
+
+    def moment2(axis=0, how='auto'):
+        """
+        Compute the 2nd moment along an axis.
+        See :meth:`moment`
+        """
+        return self.moment(axis=axis, order=2, how=how)
 
     @property
     def spectral_axis(self):
