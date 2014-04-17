@@ -500,14 +500,11 @@ class SpectralCube(object):
                             mask=self._mask[view],
                             meta=meta)
 
-    def set_fill_value(self, fill_value):
-        """
-        Set the fill value of the array.  This doesn't do much, but allows for
-        error checking, I guess?
-
-        TODO: Remove snarky documentation; possibly remove this method
-        """
-        self._fill_value = fill_value
+    @property
+    def fill_value(self):
+        """ immutable fill value; to "change" just create a new cube with a new
+        fill value"""
+        return self._fill_value
 
     @cube_utils.slice_syntax
     def filled_data(self, view):
