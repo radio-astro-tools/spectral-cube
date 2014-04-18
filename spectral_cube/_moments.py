@@ -45,7 +45,7 @@ def _slice0(cube, axis):
     valid = np.zeros(shp, dtype=np.bool)
     for i in range(cube.shape[axis]):
         view[axis] = i
-        plane = cube.get_filled_data(slices=view)
+        plane = cube.filled_data[view]
         valid |= np.isfinite(plane)
         result += np.nan_to_num(plane) * pix_size[view]
     result[~valid] = np.nan
@@ -75,7 +75,7 @@ def _slice1(cube, axis):
 
     for i in range(cube.shape[axis]):
         view[axis] = i
-        plane = cube.get_filled_data(fill=0, slices=view)
+        plane = cube._get_filled_data(fill=0, view=view)
         result += (plane *
                    pix_cen[view] *
                    pix_size[view])
@@ -106,7 +106,7 @@ def moment_slicewise(cube, order, axis):
 
     for i in range(cube.shape[axis]):
         view[axis] = i
-        plane = cube.get_filled_data(fill=0, slices=view)
+        plane = cube._get_filled_data(fill=0, view=view)
         result += (plane *
                    (pix_cen[view] - mom1) ** order *
                    pix_size[view])
@@ -128,7 +128,7 @@ def moment_raywise(cube, order, axis):
     for x, y, slc in cube._iter_rays(axis):
         # the intensity, i.e. the weights
         include = cube._mask.include(data=cube._data, wcs=cube._wcs,
-                                     slices=slc)
+                                     view=slc)
         if not include.any():
             continue
 
@@ -156,7 +156,7 @@ def moment_cubewise(cube, order, axis):
     """
 
     pix_cen = cube._pix_cen()[axis]
-    data = cube.get_filled_data() * cube._pix_size()[axis]
+    data = cube._get_filled_data() * cube._pix_size()[axis]
 
     if order == 0:
         return np.nansum(data, axis=axis)
