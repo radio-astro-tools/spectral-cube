@@ -486,7 +486,7 @@ class SpectralCube(object):
                             meta=self._meta)
         return cube
 
-    def get_filled_data(self, fill=np.nan, check_endian=False):
+    def get_filled_data(self, fill=np.nan, check_endian=False, slices=()):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -497,7 +497,7 @@ class SpectralCube(object):
             if not self._data.dtype.isnative:
                 kind = str(self._data.dtype.kind)
                 sz = str(self._data.dtype.itemsize)
-                dt = '='+kind+sz
+                dt = '=' + kind + sz
                 data = self._data.astype(dt)
             else:
                 data = self._data
@@ -539,7 +539,7 @@ class SpectralCube(object):
         this is implicit (e.g., they are not astropy Quantity arrays)
         """
         # Start off by extracting the world coordinates of the pixels
-        _, lat, lon = self.world[0, :,:]
+        _, lat, lon = self.world[0,:,:]
         spectral, _, _ = self.world[:, 0, 0]
 
         # Convert to radians
@@ -550,14 +550,14 @@ class SpectralCube(object):
         from astropy.coordinates.angle_utilities import angular_separation
         dx = angular_separation(lon[:, :-1], lat[:, :-1],
                                 lon[:, 1:], lat[:, :-1])
-        dy = angular_separation(lon[:-1, :], lat[:-1,:],
-                                lon[1:, :], lat[1:,:])
+        dy = angular_separation(lon[:-1,:], lat[:-1,:],
+                                lon[1:,:], lat[1:,:])
 
         # Find the cumulative offset - need to add a zero at the start
         x = np.zeros(self._data.shape[1:])
         y = np.zeros(self._data.shape[1:])
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
-        y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
+        y[1:,:] = np.cumsum(np.degrees(dy), axis=0)
 
         x = x.reshape(1, x.shape[0], x.shape[1])
         y = y.reshape(1, y.shape[0], y.shape[1])
@@ -619,8 +619,8 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dy = angular_separation(lon[:-1, :], lat[:-1,:],
-                                lon[1:, :], lat[1:,:])
+        dy = angular_separation(lon[:-1,:], lat[:-1,:],
+                                lon[1:,:], lat[1:,:])
 
         # Next, spectral coordinates
         zpix = np.linspace(-0.5, self._data.shape[0] - 0.5,
@@ -720,7 +720,7 @@ class SpectralCube(object):
         # special case: for order=1, axis=1, you usually want
         # the absolute velocity and not the offset
         if order == 1 and axis == 0:
-            out += self.world[0, :,:][0]
+            out += self.world[0,:,:][0]
 
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
@@ -757,7 +757,7 @@ class SpectralCube(object):
 
     @property
     def spatial_coordinate_map(self):
-        return self.world[0, :,:][1:]
+        return self.world[0,:,:][1:]
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -820,7 +820,7 @@ class SpectralCube(object):
             mask_slab = None
         else:
             try:
-                mask_slab = self._mask[ilo:ihi, :,:]
+                mask_slab = self._mask[ilo:ihi,:,:]
             except TypeError:
                 warnings.warn("mask slab has not been computed correctly")
                 mask_slab = None
