@@ -957,6 +957,8 @@ class SpectralCube(object):
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
     def write(self, filename, format=None, include_stokes=False, clobber=False):
+        if format is None:
+            format = determine_format_from_filename(filename)
         if format == 'fits':
             from .io.fits import write_fits_cube
             write_fits_cube(filename, self,
@@ -987,10 +989,7 @@ class StokesSpectralCube(SpectralCube):
 
 def read(filename, format=None):
     if format is None:
-        if filename[-4:] == 'fits':
-            format = 'fits'
-        elif filename[-5:] == 'image':
-            format = 'image'
+        format = determine_format_from_filename(filename)
     if format == 'fits':
         from .io.fits import load_fits_cube
         return load_fits_cube(filename)
@@ -999,3 +998,9 @@ def read(filename, format=None):
         return load_casa_image(filename)
     else:
         raise ValueError("Format {0} not implemented".format(format))
+
+def determine_format_from_filename(filename):
+    if filename[-4:] == 'fits':
+        return 'fits'
+    elif filename[-5:] == 'image':
+        return 'casa_image'
