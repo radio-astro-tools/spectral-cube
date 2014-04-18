@@ -97,3 +97,12 @@ def test_consistent_mask_handling(axis, order):
     rwise = sc.moment(axis=axis, order=order, how='ray')
     np.testing.assert_array_almost_equal(cwise, swise)
     np.testing.assert_array_almost_equal(cwise, rwise)
+
+
+def test_convenience_methods():
+    mc_hdu = moment_cube()
+    sc = spfits.load_fits_hdu(mc_hdu)
+
+    np.testing.assert_array_almost_equal(sc.moment0(axis=0), MOMENTS[0][0])
+    np.testing.assert_array_almost_equal(sc.moment1(axis=2), MOMENTS[1][2])
+    np.testing.assert_array_almost_equal(sc.moment2(axis=1), MOMENTS[2][1])

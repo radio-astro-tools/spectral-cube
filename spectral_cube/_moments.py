@@ -1,11 +1,41 @@
 import numpy as np
 
+"""
+Functions to compute moment maps in a variety of ways
+"""
+
 
 def _moment_shp(cube, axis):
+    """
+    Return the shape of the moment map
+
+    Parameters
+    -----------
+    cube : SpectralCube
+       The cube to collapse
+    axis : int
+       The axis to collapse along (numpy convention)
+
+    Returns
+    -------
+    ny, nx
+    """
     return cube.shape[:axis] + cube.shape[axis + 1:]
 
 
 def _slice0(cube, axis):
+    """
+    0th moment along an axis, calculated slicewise
+
+    Parameters
+    ----------
+    cube : SpectralCube
+    axis : int
+
+    Returns
+    -------
+    moment0 : array
+    """
     shp = _moment_shp(cube, axis)
     result = np.zeros(shp)
 
@@ -23,6 +53,18 @@ def _slice0(cube, axis):
 
 
 def _slice1(cube, axis):
+    """
+    1st moment along an axis, calculated slicewise
+
+    Parameters
+    ----------
+    cube : SpectralCube
+    axis : int
+
+    Returns
+    -------
+    moment1 : array
+    """
     shp = _moment_shp(cube, axis)
     result = np.zeros(shp)
 
@@ -124,6 +166,7 @@ def moment_cubewise(cube, order, axis):
                 np.nansum(data, axis=axis))
     else:
         mom1 = moment_cubewise(cube, 1, axis)
+
         # insert an axis so it broadcasts properly
         shp = list(_moment_shp(cube, axis))
         shp.insert(axis, 1)
@@ -134,7 +177,9 @@ def moment_cubewise(cube, order, axis):
 
 
 def moment_auto(cube, order, axis):
-    # guess a good strategy
+    """
+    Build a moment map, choosing a strategy to balance speed and memory.
+    """
 
     if np.product(cube.shape) < 1e8:  # smallish, do in RAM
         return moment_cubewise(cube, order, axis)

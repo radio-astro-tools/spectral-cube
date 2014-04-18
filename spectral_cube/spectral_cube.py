@@ -21,6 +21,9 @@ except NameError:
 
 
 def cached(func):
+    """
+    Decorator to cache function calls
+    """
     cache = {}
 
     @wraps(func)
@@ -30,6 +33,11 @@ def cached(func):
         return cache[args]
 
     return wrapper
+
+
+# convenience structures to keep track of the reversed index
+# conventions between WCS and numpy
+np2wcs = {2: 0, 1: 1, 0: 2}
 
 
 class MaskBase(object):
@@ -143,6 +151,7 @@ class InvertedMask(MaskBase):
 
 
 class CompositeMask(MaskBase):
+
     """
     A combination of several masks. This does an 'and' operation on the
     include masks.
@@ -411,11 +420,7 @@ class SpectralCube(object):
                 out[x, y] = function(data, **kwargs)
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, 2 - axis)
-            return out, newwcs
-
-        if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
             return out, newwcs
 
         return out
@@ -525,9 +530,16 @@ class SpectralCube(object):
         -------
         tuple of spectral_offset, y_offset, x_offset, each 3D arrays
         describing the distance from the origin
+
+        Notes
+        -----
+        These arrays are broadcast, and are not memory intensive
+
+        Each array is in the units of the corresponding wcs.cunit, but
+        this is implicit (e.g., they are not astropy Quantity arrays)
         """
         # Start off by extracting the world coordinates of the pixels
-        _, lat, lon = self.world[0,:,:]
+        _, lat, lon = self.world[0, :,:]
         spectral, _, _ = self.world[:, 0, 0]
 
         # Convert to radians
@@ -538,14 +550,14 @@ class SpectralCube(object):
         from astropy.coordinates.angle_utilities import angular_separation
         dx = angular_separation(lon[:, :-1], lat[:, :-1],
                                 lon[:, 1:], lat[:, :-1])
-        dy = angular_separation(lon[:-1,:], lat[:-1,:],
-                                lon[1:,:], lat[1:,:])
+        dy = angular_separation(lon[:-1, :], lat[:-1,:],
+                                lon[1:, :], lat[1:,:])
 
         # Find the cumulative offset - need to add a zero at the start
         x = np.zeros(self._data.shape[1:])
         y = np.zeros(self._data.shape[1:])
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
-        y[1:,:] = np.cumsum(np.degrees(dy), axis=0)
+        y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
 
         x = x.reshape(1, x.shape[0], x.shape[1])
         y = y.reshape(1, y.shape[0], y.shape[1])
@@ -555,6 +567,22 @@ class SpectralCube(object):
 
     @cached
     def _pix_size(self):
+        """
+        Return the size of each pixel along each direction, in world units
+
+        Returns
+        -------
+        dv, dy, dx : tuple of 3D arrays
+
+        The extent of each pixel along each direction
+
+        Notes
+        -----
+        These arrays are broadcast, and are not memory intensive
+
+        Each array is in the units of the corresponding wcs.cunit, but
+        this is implicit (e.g., they are not astropy Quantity arrays)
+        """
 
         # First, scale along x direction
 
@@ -591,8 +619,8 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dy = angular_separation(lon[:-1,:], lat[:-1,:],
-                                lon[1:,:], lat[1:,:])
+        dy = angular_separation(lon[:-1, :], lat[:-1,:],
+                                lon[1:, :], lat[1:,:])
 
         # Next, spectral coordinates
         zpix = np.linspace(-0.5, self._data.shape[0] - 0.5,
@@ -683,33 +711,36 @@ class SpectralCube(object):
         out = dispatch[how](self, order, axis)
 
         # apply units
-        unit = u.Unit(self._wcs.wcs.cunit[2 - axis]) ** max(order, 1)
+        unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
+
+        # TODO apply data unit to moment 0
+
         out = out * unit
 
         # special case: for order=1, axis=1, you usually want
         # the absolute velocity and not the offset
         if order == 1 and axis == 0:
-            out += self.world[0,:,:][0]
+            out += self.world[0, :,:][0]
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, axis)
+            newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
             return out, newwcs
         return out
 
-    def moment0(axis=0, how='auto'):
+    def moment0(self, axis=0, how='auto'):
         """Compute the zeroth moment along an axis.
         See :meth:`moment`.
         """
         return self.moment(axis=axis, order=0, how=how)
 
-    def moment1(axis=0, how='auto'):
+    def moment1(self, axis=0, how='auto'):
         """
         Compute the 1st moment along an axis.
         See :meth:`moment`
         """
         return self.moment(axis=axis, order=1, how=how)
 
-    def moment2(axis=0, how='auto'):
+    def moment2(self, axis=0, how='auto'):
         """
         Compute the 2nd moment along an axis.
         See :meth:`moment`
@@ -726,7 +757,7 @@ class SpectralCube(object):
 
     @property
     def spatial_coordinate_map(self):
-        return self.world[0,:,:][1:]
+        return self.world[0, :,:][1:]
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -789,7 +820,7 @@ class SpectralCube(object):
             mask_slab = None
         else:
             try:
-                mask_slab = self._mask[ilo:ihi,:,:]
+                mask_slab = self._mask[ilo:ihi, :,:]
             except TypeError:
                 warnings.warn("mask slab has not been computed correctly")
                 mask_slab = None
