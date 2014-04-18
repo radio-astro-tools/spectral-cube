@@ -25,7 +25,7 @@ class PyTest(Command):
         errno = subprocess.call([sys.executable, 'runtests.py'])
         raise SystemExit(errno)
 
-execfile('spectral_cube/version.py')
+from spectral_cube.version import __version__
 
 setup(name='spectral_cube',
       version=__version__,
