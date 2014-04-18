@@ -4,6 +4,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 import abc
 import warnings
+from functools import wraps
 
 from astropy import units as u
 import numpy as np
@@ -17,6 +18,26 @@ try:  # TODO replace with six.py
     xrange
 except NameError:
     xrange = range
+
+
+def cached(func):
+    """
+    Decorator to cache function calls
+    """
+    cache = {}
+
+    @wraps(func)
+    def wrapper(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+
+    return wrapper
+
+
+# convenience structures to keep track of the reversed index
+# conventions between WCS and numpy
+np2wcs = {2: 0, 1: 1, 0: 2}
 
 
 class MaskBase(object):
@@ -105,8 +126,10 @@ class MaskBase(object):
         This is an internal method used by :class:`SpectralCube`.
         Users should use :meth:`SpectralCubeMask.get_filled_data`
         """
-        sliced_data = data[slices]
-        return np.where(self.include(data=data, wcs=wcs, slices=slices), sliced_data, fill)
+        sliced_data = data[slices].copy().astype(np.float)
+        ex = self.exclude(data=data, wcs=wcs, slices=slices)
+        sliced_data[ex] = fill
+        return sliced_data
 
     def __and__(self, other):
         return CompositeMask(self, other, operation='and')
@@ -128,6 +151,7 @@ class InvertedMask(MaskBase):
 
 
 class CompositeMask(MaskBase):
+
     """
     A combination of several masks. This does an 'and' operation on the
     include masks.
@@ -152,7 +176,9 @@ class CompositeMask(MaskBase):
         else:
             raise ValueError("Operation '{0}' not supported".format(self._operation))
 
+
 class SpectralCubeMask(MaskBase):
+
     """
     A mask defined as an array on a spectral cube WCS
     """
@@ -161,12 +187,15 @@ class SpectralCubeMask(MaskBase):
         self._mask = mask
         self._mask_type = 'include' if include else 'exclude'
         self._wcs = wcs
+        self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._mask.shape:
             raise ValueError("data shape does not match mask shape")
-        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
-            raise ValueError("WCS does not match mask WCS")
+        if new_wcs not in self._wcs_whitelist:
+            if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+                raise ValueError("WCS does not match mask WCS")
+        self._wcs_whitelist.add(new_wcs)
 
     def _include(self, data=None, wcs=None, slices=()):
         result_mask = self._mask[slices]
@@ -185,6 +214,7 @@ class SpectralCubeMask(MaskBase):
 
 
 class LazyMask(MaskBase):
+
     """
     A boolean mask defined by the evaluation of a function on a fixed dataset.
 
@@ -217,11 +247,15 @@ class LazyMask(MaskBase):
         else:
             raise ValueError("Either a cube or (data & wcs) is required.")
 
+        self._wcs_whitelist = set()
+
     def _validate_wcs(self, new_data, new_wcs):
         if new_data.shape != self._data.shape:
             raise ValueError("data shape does not match mask shape")
-        if str(new_wcs.to_header()) != str(self._wcs.to_header()):
-            raise ValueError("WCS does not match mask WCS")
+        if new_wcs not in self._wcs_whitelist:
+            if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+                raise ValueError("WCS does not match mask WCS")
+        self._wcs_whitelist.add(new_wcs)
 
     def _include(self, data=None, wcs=None, slices=()):
         self._validate_wcs(data, wcs)
@@ -232,6 +266,7 @@ class LazyMask(MaskBase):
 
 
 class FunctionMask(MaskBase):
+
     """
     A mask defined by a function that is evaluated at run-time using the data
     passed to the mask.
@@ -385,8 +420,8 @@ class SpectralCube(object):
                 out[x, y] = function(data, **kwargs)
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
-            return out,newwcs
+            newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+            return out, newwcs
 
         return out
 
@@ -451,7 +486,7 @@ class SpectralCube(object):
                             meta=self._meta)
         return cube
 
-    def get_filled_data(self, fill=np.nan, check_endian=False):
+    def get_filled_data(self, fill=np.nan, check_endian=False, slices=()):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -462,7 +497,7 @@ class SpectralCube(object):
             if not self._data.dtype.isnative:
                 kind = str(self._data.dtype.kind)
                 sz = str(self._data.dtype.itemsize)
-                dt = '='+kind+sz
+                dt = '=' + kind + sz
                 data = self._data.astype(dt)
             else:
                 data = self._data
@@ -470,29 +505,42 @@ class SpectralCube(object):
             data = self._data
 
         if self._mask is None:
-            return data
+            return self._data[slices]
 
-        return self._mask._filled(data=data, wcs=self._wcs, fill=fill)
+        return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill,
+                                  slices=slices)
 
-    def get_unmasked_data(self, copy=False):
+    @property
+    def data_unmasked(self, slices=()):
         """
         Like data, but don't apply the mask
         """
-        if copy:
-            return self._data.copy()
-        else:
-            return self._data
+        return self._data[slices]
 
     @property
     def wcs(self):
         return self._wcs
 
-    @property
-    def pix_cen(self):
+    @cached
+    def _pix_cen(self):
+        """
+        Offset of every pixel from the origin, along each direction
 
+        Returns
+        -------
+        tuple of spectral_offset, y_offset, x_offset, each 3D arrays
+        describing the distance from the origin
+
+        Notes
+        -----
+        These arrays are broadcast, and are not memory intensive
+
+        Each array is in the units of the corresponding wcs.cunit, but
+        this is implicit (e.g., they are not astropy Quantity arrays)
+        """
         # Start off by extracting the world coordinates of the pixels
         _, lat, lon = self.world[0,:,:]
-        spectral, _, _ = self.world[:,0,0]
+        spectral, _, _ = self.world[:, 0, 0]
 
         # Convert to radians
         lon = np.radians(lon)
@@ -500,24 +548,41 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dx = angular_separation(lon[:,:-1], lat[:,:-1], lon[:,1:], lat[:,:-1])
-        dy = angular_separation(lon[:-1,:], lat[:-1,:], lon[1:,:], lat[1:,:])
+        dx = angular_separation(lon[:, :-1], lat[:, :-1],
+                                lon[:, 1:], lat[:, :-1])
+        dy = angular_separation(lon[:-1,:], lat[:-1,:],
+                                lon[1:,:], lat[1:,:])
 
         # Find the cumulative offset - need to add a zero at the start
         x = np.zeros(self._data.shape[1:])
         y = np.zeros(self._data.shape[1:])
-        x[:,1:] = np.cumsum(dx, axis=1)
-        y[1:,:] = np.cumsum(dy, axis=0)
+        x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
+        y[1:,:] = np.cumsum(np.degrees(dy), axis=0)
 
         x = x.reshape(1, x.shape[0], x.shape[1])
         y = y.reshape(1, y.shape[0], y.shape[1])
-        spectral = spectral.reshape(-1, 1, 1)
+        spectral = spectral.reshape(-1, 1, 1) - spectral.ravel()[0]
         x, y, spectral = np.broadcast_arrays(x, y, spectral)
+        return spectral, y, x
 
-        return x * u.deg, y * u.deg, spectral * u.Unit(self._wcs.wcs.cunit[0])
+    @cached
+    def _pix_size(self):
+        """
+        Return the size of each pixel along each direction, in world units
 
-    @property
-    def pix_size(self):
+        Returns
+        -------
+        dv, dy, dx : tuple of 3D arrays
+
+        The extent of each pixel along each direction
+
+        Notes
+        -----
+        These arrays are broadcast, and are not memory intensive
+
+        Each array is in the units of the corresponding wcs.cunit, but
+        this is implicit (e.g., they are not astropy Quantity arrays)
+        """
 
         # First, scale along x direction
 
@@ -534,12 +599,15 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dx = angular_separation(lon[:,:-1], lat[:,:-1], lon[:,1:], lat[:,:-1])
+        dx = angular_separation(lon[:, :-1], lat[:, :-1],
+                                lon[:, 1:], lat[:, :-1])
 
         # Next, scale along y direction
 
         xpix = np.linspace(0., self._data.shape[2] - 1, self._data.shape[2])
-        ypix = np.linspace(-0.5, self._data.shape[1] - 0.5, self._data.shape[1] + 1)
+        ypix = np.linspace(-0.5,
+                           self._data.shape[1] - 0.5,
+                           self._data.shape[1] + 1)
         xpix, ypix = np.meshgrid(xpix, ypix)
         zpix = np.zeros(xpix.shape)
 
@@ -551,10 +619,12 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dy = angular_separation(lon[:-1,:], lat[:-1,:], lon[1:,:], lat[1:,:])
+        dy = angular_separation(lon[:-1,:], lat[:-1,:],
+                                lon[1:,:], lat[1:,:])
 
         # Next, spectral coordinates
-        zpix = np.linspace(-0.5, self._data.shape[0] - 0.5, self._data.shape[0] + 1)
+        zpix = np.linspace(-0.5, self._data.shape[0] - 0.5,
+                           self._data.shape[0] + 1)
         xpix = np.zeros(zpix.shape)
         ypix = np.zeros(zpix.shape)
 
@@ -562,81 +632,120 @@ class SpectralCube(object):
 
         dspectral = np.diff(spectral)
 
-        dx = dx.reshape(1, dx.shape[0], dx.shape[1])
-        dy = dy.reshape(1, dy.shape[0], dy.shape[1])
-        dspectral = dspectral.reshape(-1, 1, 1)
+        dx = np.abs(np.degrees(dx.reshape(1, dx.shape[0], dx.shape[1])))
+        dy = np.abs(np.degrees(dy.reshape(1, dy.shape[0], dy.shape[1])))
+        dspectral = np.abs(dspectral.reshape(-1, 1, 1))
         dx, dy, dspectral = np.broadcast_arrays(dx, dy, dspectral)
 
-        return dx * u.deg, dy * u.deg, dspectral * u.Unit(self._wcs.wcs.cunit[0])
+        return dspectral, dy, dx
 
-    def moment(self, order, axis, wcs=False):
+    def moment(self, order=0, axis=0, wcs=False, how='auto'):
         """
-        Determine the n'th moment along the spectral axis
+        Compute moments along the spectral axis
 
-        If *wcs = True*, return the WCS describing the moment
+        Moments are defined as follows:
+
+        Moment 0:
+        $
+        M_0 \int I dl
+        $
+
+        Moment 1:
+        $
+        M_1 = \frac{\int I l dl}{M_0}
+        $
+
+        Moment N:
+        $
+        M_N = \frac{\int I (l - M1)**N dl}{M_0}
+        $
+
+        Parameters
+        ----------
+        order : int
+           The order of the moment to take. Default=0
+
+        axis : int
+           The axis along which to compute the moment. Default=0
+
+        wcs : bool
+           If true, return the WCS of the moment map along with the data.
+           Default=False
+
+        how : cube | slice | ray | auto
+           How to compute the moment. All strategies give the same
+           result, but certain strategies are more efficient depending
+           on data size and layout. Cube/slice/ray work iterate over
+           decreasing subsets of the data, to conserve memory.
+           Default='auto'
+
+        Returns
+        -------
+           map [, wcs]
+           The moment map (numpy array) and, if wcs=True, the WCS object
+           describing the map
+
+        Notes
+        -----
+        Generally, how='cube' is fastest for small cubes that easily
+        fit into memory. how='slice' is best for most larger datasets.
+        how='ray' is probably only a good idea for very large cubes
+        whose data are contiguous over the axis of the moment map.
+
+        For the first moment, the result for axis=1, 2 is the angular
+        offset *relative to the cube face*. For axis=0, it is the
+        *absolute* velocity/frequency of the first moment.
         """
+        from ._moments import (moment_slicewise, moment_cubewise,
+                               moment_raywise, moment_auto)
 
-        nx, ny = self._get_flat_shape(axis)
+        dispatch = dict(slice=moment_slicewise,
+                        cube=moment_cubewise,
+                        ray=moment_raywise,
+                        auto=moment_auto)
 
-        # allocate memory for output array
-        # nan is a workaround to deal with the impossibility of assigning nan
-        # to a np united array
-        out = (np.zeros([nx, ny])*np.nan) * u.Unit(self._wcs.wcs.cunit[2 - axis]) ** order
+        if how not in dispatch:
+            return ValueError("Invalid how. Must be in %s" %
+                              sorted(list(dispatch.keys())))
 
-        for x,y,slc in self._iter_rays(axis):
-            # the intensity, i.e. the weights
-            data = self.flattened(slc)
+        out = dispatch[how](self, order, axis)
 
-            # cheat a little if order == 0
-            if order == 0:
-                weighted = data
-                denom = len(data)
-            else:
-                # compute the world coordinates along the specified axis
-                coords = self.world[slc][axis]
-                boolmask = self._mask.include(data=self._data, wcs=self._wcs)[slc]
-                # the numerator of the moment sum
-                weighted = (data*coords[boolmask]**order)
-                denom = data.sum()
+        # apply units
+        unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
 
-            # otherwise, leave as nan
-            if denom != 0:
-                out[x,y] = weighted.sum()/denom
+        # TODO apply data unit to moment 0
+
+        out = out * unit
+
+        # special case: for order=1, axis=1, you usually want
+        # the absolute velocity and not the offset
+        if order == 1 and axis == 0:
+            out += self.world[0,:,:][0]
 
         if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, 2-axis)
+            newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
             return out, newwcs
         return out
 
-    def _moment_in_memory(self, order, axis):
+    def moment0(self, axis=0, how='auto'):
+        """Compute the zeroth moment along an axis.
+        See :meth:`moment`.
         """
-        Compute the moments by holding the whole array in memory
-        """
-        includemask = self._mask.include(data=self._data, wcs=self._wcs)
-        if np.any(np.isnan(self._data)):
-            data = self.filled(fill=0)
-            includemask[np.isnan(data)] = False
-            data[np.isnan(data)] = 0
-        else:
-            data = self._data
+        return self.moment(axis=axis, order=0, how=how)
 
-        if order == 0:
-            return (data*includemask).sum(axis=axis) / includemask.sum(axis=axis)
-        else:
-            if axis == 0:
-                coords = self.spectral_axis[:,None,None]
-            else:
-                center = self._wcs.wcs.crval[1::-1]
-                # this line is wrong; the coordinates have nothing to do with
-                # pixel sizes
-                mapcoords = (((self.spatial_coordinate_map -
-                               center[:,None,None])**2).sum(axis=0)**0.5)
-                coords = mapcoords[None,:,:]
-            #coords = self.world[:,:,:][axis] * includemask
-            mdata = data*includemask
-            weighted = (mdata*coords**order)
-            denom = mdata.sum(axis=axis)
-            return weighted.sum(axis=axis)/denom
+    def moment1(self, axis=0, how='auto'):
+        """
+        Compute the 1st moment along an axis.
+        See :meth:`moment`
+        """
+        return self.moment(axis=axis, order=1, how=how)
+
+    def moment2(self, axis=0, how='auto'):
+        """
+        Compute the 2nd moment along an axis.
+        See :meth:`moment`
+        """
+        return self.moment(axis=axis, order=2, how=how)
 
     @property
     def spectral_axis(self):
@@ -648,7 +757,7 @@ class SpectralCube(object):
 
     @property
     def spatial_coordinate_map(self):
-        return self.world[0, :, :][1:]
+        return self.world[0,:,:][1:]
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -795,6 +904,25 @@ class SpectralCube(object):
                  for i, w in enumerate(world)]
         return world[::-1]  # reverse WCS -> numpy order
 
+    def __gt__(self, value):
+        """
+        Return a LazyMask representing the inequality
+
+        Parameters
+        ----------
+        value : number
+            The threshold
+        """
+        return LazyMask(lambda data: data > value, data=self._data, wcs=self._wcs)
+
+    def __ge__(self, value):
+        return LazyMask(lambda data: data >= value, data=self._data, wcs=self._wcs)
+
+    def __le__(self, value):
+        return LazyMask(lambda data: data <= value, data=self._data, wcs=self._wcs)
+
+    def __lt__(self, value):
+        return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
     def write(self, filename, format=None, include_stokes=False, clobber=False):
         if format == 'fits':
@@ -803,6 +931,7 @@ class SpectralCube(object):
                             include_stokes=include_stokes, clobber=clobber)
         else:
             raise NotImplementedError("Try FITS instead")
+
 
 class StokesSpectralCube(SpectralCube):
 
