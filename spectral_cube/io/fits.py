@@ -37,6 +37,9 @@ def load_fits_hdu(hdu, meta={}, **kwargs):
     hdr = hdu.header
     wcs = WCS(hdr)
 
+    if 'BUNIT' in hdr:
+        meta['bunit'] = hdr['BUNIT']
+
     if wcs.wcs.naxis == 3:
 
         data, wcs = cube_utils._orient(data, wcs)
