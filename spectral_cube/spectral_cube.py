@@ -460,9 +460,10 @@ class SpectralCube(object):
         """
         if check_endian:
             if not self._data.dtype.isnative:
-                dt = str(self._data.dtype)
-                dt[0] = '=' # '=' means native byteorder
-                data = self._data.view(dt)
+                kind = str(self._data.dtype.kind)
+                sz = str(self._data.dtype.itemsize)
+                dt = '='+kind+sz
+                data = self._data.astype(dt)
             else:
                 data = self._data
         else:
