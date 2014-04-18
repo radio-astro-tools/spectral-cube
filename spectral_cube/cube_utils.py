@@ -1,6 +1,5 @@
 import numpy as np
 from . import wcs_utils
-from . import cube_utils
 import warnings
 
 
@@ -81,8 +80,8 @@ def _orient(array, wcs):
         warnings.warn("No spectral axis found; header may be non-compliant.")
         types = [tp if tp == 'celestial' else 'spectral' for tp in types]
         spec = types.index('spectral')
-        if wcs.wcs.ctype[spec] in cube_utils.bad_spectypes_mapping:
-            wcs.wcs.ctype[spec] = cube_utils.bad_spectypes_mapping[wcs.wcs.ctype[spec]]
+        if wcs.wcs.ctype[spec] in wcs_utils.bad_spectypes_mapping:
+            wcs.wcs.ctype[spec] = wcs_utils.bad_spectypes_mapping[wcs.wcs.ctype[spec]]
 
     nums = [None if a['coordinate_type'] != 'celestial' else a['number']
             for a in axtypes]
