@@ -140,6 +140,9 @@ class MaskBase(object):
     def __invert__(self):
         return InvertedMask(self)
 
+    def __getitem__(self):
+        raise NotImplementedError("Slicing not supported by mask class {0}".format(self.__class__.__name__))
+
 
 class InvertedMask(MaskBase):
 
@@ -148,6 +151,9 @@ class InvertedMask(MaskBase):
 
     def _include(self, data=None, wcs=None, slices=()):
         return ~self._mask.include(data=data, wcs=wcs, slices=slices)
+
+    def __getitem__(self, view):
+        return InvertedMask(self._mask[view])
 
 
 class CompositeMask(MaskBase):
@@ -175,6 +181,9 @@ class CompositeMask(MaskBase):
             return result_mask_1 | result_mask_2
         else:
             raise ValueError("Operation '{0}' not supported".format(self._operation))
+
+    def __getitem__(self, view):
+        return CompositeMask(self._mask1[view], self._mask2[view], operation=self._operation)
 
 
 class SpectralCubeMask(MaskBase):
@@ -262,7 +271,7 @@ class LazyMask(MaskBase):
         return self._function(self._data[slices])
 
     def __getitem__(self, view):
-        return LazyMask(self._function, self._data[view], wcs_utils.slice_wcs(self._wcs, view))
+        return LazyMask(self._function, data=self._data[view], wcs=wcs_utils.slice_wcs(self._wcs, view))
 
 
 class FunctionMask(MaskBase):
@@ -821,8 +830,8 @@ class SpectralCube(object):
         else:
             try:
                 mask_slab = self._mask[ilo:ihi,:,:]
-            except TypeError:
-                warnings.warn("mask slab has not been computed correctly")
+            except NotImplementedError:
+                warnings.warn("Mask slicing not implemented for {0} - dropping mask".format(self._mask.__class__.__name__))
                 mask_slab = None
 
         # Create new spectral cube
