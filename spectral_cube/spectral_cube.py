@@ -468,6 +468,88 @@ class SpectralCube(object):
     def wcs(self):
         return self._wcs
 
+    @property
+    def pix_cen(self):
+
+        # Start off by extracting the world coordinates of the pixels
+        _, lat, lon = self.world[0,:,:]
+        spectral, _, _ = self.world[:,0,0]
+
+        # Convert to radians
+        lon = np.radians(lon)
+        lat = np.radians(lat)
+
+        # Find the dx and dy arrays
+        from astropy.coordinates.angle_utilities import angular_separation
+        dx = angular_separation(lon[:,:-1], lat[:,:-1], lon[:,1:], lat[:,:-1])
+        dy = angular_separation(lon[:-1,:], lat[:-1,:], lon[1:,:], lat[1:,:])
+
+        # Find the cumulative offset - need to add a zero at the start
+        x = np.zeros(self._data.shape[1:])
+        y = np.zeros(self._data.shape[1:])
+        x[:,1:] = np.cumsum(dx, axis=1)
+        y[1:,:] = np.cumsum(dy, axis=0)
+
+        x = x.reshape(1, x.shape[0], x.shape[1])
+        y = y.reshape(1, y.shape[0], y.shape[1])
+        spectral = spectral.reshape(-1, 1, 1)
+        x, y, spectral = np.broadcast_arrays(x, y, spectral)
+
+        return x * u.deg, y * u.deg, spectral * u.Unit(self._wcs.wcs.cunit[0])
+
+    @property
+    def pix_size(self):
+
+        # First, scale along x direction
+
+        xpix = np.linspace(-0.5, self._data.shape[2] - 0.5, self._data.shape[2] + 1)
+        ypix = np.linspace(0., self._data.shape[1] - 1, self._data.shape[1])
+        xpix, ypix = np.meshgrid(xpix, ypix)
+        zpix = np.zeros(xpix.shape)
+
+        lon, lat, _ = self._wcs.all_pix2world(xpix, ypix, zpix, 0)
+
+        # Convert to radians
+        lon = np.radians(lon)
+        lat = np.radians(lat)
+
+        # Find the dx and dy arrays
+        from astropy.coordinates.angle_utilities import angular_separation
+        dx = angular_separation(lon[:,:-1], lat[:,:-1], lon[:,1:], lat[:,:-1])
+
+        # Next, scale along y direction
+
+        xpix = np.linspace(0., self._data.shape[2] - 1, self._data.shape[2])
+        ypix = np.linspace(-0.5, self._data.shape[1] - 0.5, self._data.shape[1] + 1)
+        xpix, ypix = np.meshgrid(xpix, ypix)
+        zpix = np.zeros(xpix.shape)
+
+        lon, lat, _ = self._wcs.all_pix2world(xpix, ypix, zpix, 0)
+
+        # Convert to radians
+        lon = np.radians(lon)
+        lat = np.radians(lat)
+
+        # Find the dx and dy arrays
+        from astropy.coordinates.angle_utilities import angular_separation
+        dy = angular_separation(lon[:-1,:], lat[:-1,:], lon[1:,:], lat[1:,:])
+
+        # Next, spectral coordinates
+        zpix = np.linspace(-0.5, self._data.shape[0] - 0.5, self._data.shape[0] + 1)
+        xpix = np.zeros(zpix.shape)
+        ypix = np.zeros(zpix.shape)
+
+        _, _, spectral = self._wcs.all_pix2world(xpix, ypix, zpix, 0)
+
+        dspectral = np.diff(spectral)
+
+        dx = dx.reshape(1, dx.shape[0], dx.shape[1])
+        dy = dy.reshape(1, dy.shape[0], dy.shape[1])
+        dspectral = dspectral.reshape(-1, 1, 1)
+        dx, dy, dspectral = np.broadcast_arrays(dx, dy, dspectral)
+
+        return dx * u.deg, dy * u.deg, dspectral * u.Unit(self._wcs.wcs.cunit[0])
+
     def moment(self, order, axis, wcs=False):
         """
         Determine the n'th moment along the spectral axis
