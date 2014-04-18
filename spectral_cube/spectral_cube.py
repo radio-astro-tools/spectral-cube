@@ -344,7 +344,7 @@ class SpectralCube(object):
         """
         Apply a numpy function to the cube
         """
-        return function(self.get_filled_data(fill=fill,
+        return function(self._get_filled_data(fill=fill,
                                              check_endian=check_endian),
                         **kwargs)
 
