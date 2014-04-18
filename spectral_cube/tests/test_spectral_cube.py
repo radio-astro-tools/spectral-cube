@@ -229,11 +229,11 @@ def test_apply_mask():
 
     data = np.array([[[0,1,2,3,4]]])
 
-    def lower_threshold(data, wcs, slices=()):
-        return data[slices] > 0
+    def lower_threshold(data, wcs, view=()):
+        return data[view] > 0
 
-    def upper_threshold(data, wcs, slices=()):
-        return data[slices] < 3
+    def upper_threshold(data, wcs, view=()):
+        return data[view] < 3
 
     m1 = FunctionMask(lower_threshold)
     m2 = FunctionMask(upper_threshold)

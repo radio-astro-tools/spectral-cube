@@ -21,10 +21,10 @@ def test_spectral_cube_mask():
     assert_allclose(m._filled(data, wcs), [[[np.nan,1,2,np.nan,4]]])
     assert_allclose(m._flattened(data, wcs), [1,2,4])
 
-    assert_allclose(m.include(data, wcs, slices=(0,0,slice(1,4))), [1,1,0])
-    assert_allclose(m.exclude(data, wcs, slices=(0,0,slice(1,4))), [0,0,1])
-    assert_allclose(m._filled(data, wcs, slices=(0,0,slice(1,4))), [1,2,np.nan])
-    assert_allclose(m._flattened(data, wcs, slices=(0,0,slice(1,4))), [1,2])
+    assert_allclose(m.include(data, wcs, view=(0,0,slice(1,4))), [1,1,0])
+    assert_allclose(m.exclude(data, wcs, view=(0,0,slice(1,4))), [0,0,1])
+    assert_allclose(m._filled(data, wcs, view=(0,0,slice(1,4))), [1,2,np.nan])
+    assert_allclose(m._flattened(data, wcs, view=(0,0,slice(1,4))), [1,2])
 
 
 def test_lazy_mask():
@@ -39,10 +39,10 @@ def test_lazy_mask():
     assert_allclose(m._filled(data, wcs), [[[np.nan,np.nan,np.nan,3,4]]])
     assert_allclose(m._flattened(data, wcs), [3,4])
 
-    assert_allclose(m.include(data, wcs, slices=(0,0,slice(1,4))), [0,0,1])
-    assert_allclose(m.exclude(data, wcs, slices=(0,0,slice(1,4))), [1,1,0])
-    assert_allclose(m._filled(data, wcs, slices=(0,0,slice(1,4))), [np.nan,np.nan,3])
-    assert_allclose(m._flattened(data, wcs, slices=(0,0,slice(1,4))), [3])
+    assert_allclose(m.include(data, wcs, view=(0,0,slice(1,4))), [0,0,1])
+    assert_allclose(m.exclude(data, wcs, view=(0,0,slice(1,4))), [1,1,0])
+    assert_allclose(m._filled(data, wcs, view=(0,0,slice(1,4))), [np.nan,np.nan,3])
+    assert_allclose(m._flattened(data, wcs, view=(0,0,slice(1,4))), [3])
 
     # Now if we call with different data, the results for include and exclude
     # should *not* change.
@@ -54,17 +54,17 @@ def test_lazy_mask():
     assert_allclose(m._filled(data, wcs), [[[np.nan,np.nan,np.nan,0,-1]]])
     assert_allclose(m._flattened(data, wcs), [0,-1])
 
-    assert_allclose(m.include(data, wcs, slices=(0,0,slice(1,4))), [0,0,1])
-    assert_allclose(m.exclude(data, wcs, slices=(0,0,slice(1,4))), [1,1,0])
-    assert_allclose(m._filled(data, wcs, slices=(0,0,slice(1,4))), [np.nan,np.nan,0])
-    assert_allclose(m._flattened(data, wcs, slices=(0,0,slice(1,4))), [0])
+    assert_allclose(m.include(data, wcs, view=(0,0,slice(1,4))), [0,0,1])
+    assert_allclose(m.exclude(data, wcs, view=(0,0,slice(1,4))), [1,1,0])
+    assert_allclose(m._filled(data, wcs, view=(0,0,slice(1,4))), [np.nan,np.nan,0])
+    assert_allclose(m._flattened(data, wcs, view=(0,0,slice(1,4))), [0])
 
 
 def test_function_mask_incorrect_shape():
 
     # The following function will return the incorrect shape because it does
-    # not apply the slices
-    def threshold(data, wcs, slices=()):
+    # not apply the view
+    def threshold(data, wcs, view=()):
         return data > 2
 
     m = FunctionMask(threshold)
@@ -73,14 +73,14 @@ def test_function_mask_incorrect_shape():
     wcs = WCS()
 
     with pytest.raises(ValueError) as exc:
-        m.include(data, wcs, slices=(0,0,slice(1,4)))
+        m.include(data, wcs, view=(0,0,slice(1,4)))
     assert exc.value.args[0] == "Function did not return mask with correct shape - expected (3,), got (1, 1, 5)"
 
 
 def test_function_mask():
 
-    def threshold(data, wcs, slices=()):
-        return data[slices] > 2
+    def threshold(data, wcs, view=()):
+        return data[view] > 2
 
     m = FunctionMask(threshold)
 
@@ -92,10 +92,10 @@ def test_function_mask():
     assert_allclose(m._filled(data, wcs), [[[np.nan,np.nan,np.nan,3,4]]])
     assert_allclose(m._flattened(data, wcs), [3,4])
 
-    assert_allclose(m.include(data, wcs, slices=(0,0,slice(1,4))), [0,0,1])
-    assert_allclose(m.exclude(data, wcs, slices=(0,0,slice(1,4))), [1,1,0])
-    assert_allclose(m._filled(data, wcs, slices=(0,0,slice(1,4))), [np.nan,np.nan,3])
-    assert_allclose(m._flattened(data, wcs, slices=(0,0,slice(1,4))), [3])
+    assert_allclose(m.include(data, wcs, view=(0,0,slice(1,4))), [0,0,1])
+    assert_allclose(m.exclude(data, wcs, view=(0,0,slice(1,4))), [1,1,0])
+    assert_allclose(m._filled(data, wcs, view=(0,0,slice(1,4))), [np.nan,np.nan,3])
+    assert_allclose(m._flattened(data, wcs, view=(0,0,slice(1,4))), [3])
 
     # Now if we call with different data, the results for include and exclude
     # *should* change.
@@ -107,19 +107,19 @@ def test_function_mask():
     assert_allclose(m._filled(data, wcs), [[[3, np.nan,np.nan,np.nan,np.nan]]])
     assert_allclose(m._flattened(data, wcs), [3])
 
-    assert_allclose(m.include(data, wcs, slices=(0,0,slice(0,3))), [1,0,0])
-    assert_allclose(m.exclude(data, wcs, slices=(0,0,slice(0,3))), [0,1,1])
-    assert_allclose(m._filled(data, wcs, slices=(0,0,slice(0,3))), [3,np.nan,np.nan])
-    assert_allclose(m._flattened(data, wcs, slices=(0,0,slice(0,3))), [3])
+    assert_allclose(m.include(data, wcs, view=(0,0,slice(0,3))), [1,0,0])
+    assert_allclose(m.exclude(data, wcs, view=(0,0,slice(0,3))), [0,1,1])
+    assert_allclose(m._filled(data, wcs, view=(0,0,slice(0,3))), [3,np.nan,np.nan])
+    assert_allclose(m._flattened(data, wcs, view=(0,0,slice(0,3))), [3])
 
 
 def test_composite_mask():
 
-    def lower_threshold(data, wcs, slices=()):
-        return data[slices] > 0
+    def lower_threshold(data, wcs, view=()):
+        return data[view] > 0
 
-    def upper_threshold(data, wcs, slices=()):
-        return data[slices] < 3
+    def upper_threshold(data, wcs, view=()):
+        return data[view] < 3
 
     m1 = FunctionMask(lower_threshold)
     m2 = FunctionMask(upper_threshold)
@@ -134,10 +134,10 @@ def test_composite_mask():
     assert_allclose(m._filled(data, wcs), [[[np.nan,1,2,np.nan,np.nan]]])
     assert_allclose(m._flattened(data, wcs), [1,2])
 
-    assert_allclose(m.include(data, wcs, slices=(0,0,slice(1,4))), [1,1,0])
-    assert_allclose(m.exclude(data, wcs, slices=(0,0,slice(1,4))), [0,0,1])
-    assert_allclose(m._filled(data, wcs, slices=(0,0,slice(1,4))), [1, 2, np.nan])
-    assert_allclose(m._flattened(data, wcs, slices=(0,0,slice(1,4))), [1, 2])
+    assert_allclose(m.include(data, wcs, view=(0,0,slice(1,4))), [1,1,0])
+    assert_allclose(m.exclude(data, wcs, view=(0,0,slice(1,4))), [0,0,1])
+    assert_allclose(m._filled(data, wcs, view=(0,0,slice(1,4))), [1, 2, np.nan])
+    assert_allclose(m._flattened(data, wcs, view=(0,0,slice(1,4))), [1, 2])
 
 
 def test_mask_logic():
@@ -145,14 +145,14 @@ def test_mask_logic():
     data = np.arange(5).reshape((1,1,5))
     wcs = WCS()
 
-    def threshold_1(data, wcs, slices=()):
-        return data[slices] > 0
+    def threshold_1(data, wcs, view=()):
+        return data[view] > 0
 
-    def threshold_2(data, wcs, slices=()):
-        return data[slices] < 4
+    def threshold_2(data, wcs, view=()):
+        return data[view] < 4
 
-    def threshold_3(data, wcs, slices=()):
-        return data[slices] != 2
+    def threshold_3(data, wcs, view=()):
+        return data[view] != 2
 
     m1 = FunctionMask(threshold_1)
     m2 = FunctionMask(threshold_2)
