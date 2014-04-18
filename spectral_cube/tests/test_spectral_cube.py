@@ -207,11 +207,13 @@ class TestSlab(BaseTest):
         ms = u.m / u.s
         c2 = self.c.spectral_slab(-320000 * ms, -318600 * ms)
         np.testing.assert_allclose(c2._data, self.d[1:3])
+        assert c2._mask is not None
 
     def test_slab_reverse_limits(self):
         ms = u.m / u.s
         c2 = self.c.spectral_slab(-318600 * ms, -320000 * ms)
         np.testing.assert_allclose(c2._data, self.d[1:3])
+        assert c2._mask is not None
 
 def read_write_rountrip():
     cube = read(path('adv.fits'))
