@@ -519,7 +519,7 @@ class SpectralCube(object):
                             fill_value=self.fill_value,
                             meta=meta)
 
-    def _get_filled_data(self, view=(), fill=np.nan):
+    def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -986,6 +986,11 @@ class StokesSpectralCube(SpectralCube):
 
 
 def read(filename, format=None):
+    if format is None:
+        if filename[-4:] == 'fits':
+            format = 'fits'
+        elif filename[-5:] == 'image':
+            format = 'image'
     if format == 'fits':
         from .io.fits import load_fits_cube
         return load_fits_cube(filename)

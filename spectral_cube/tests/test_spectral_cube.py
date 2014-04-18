@@ -270,12 +270,3 @@ class TestMasks(BaseTest):
         actual = self.c.flattened()
         np.testing.assert_array_equal(actual, expected)
 
-def read_write_rountrip():
-    cube = read(path('adv.fits'))
-    cube.write(path('test.fits'))
-    cube2 = read(path('test.fits'))
-
-    assert cube.shape == cube.shape
-    np.testing.assert_allclose(cube._data, cube2._data)
-    assert cube._wcs.to_header_string() == cube2._wcs.to_header_string() 
-
