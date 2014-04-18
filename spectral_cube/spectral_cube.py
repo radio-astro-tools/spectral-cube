@@ -322,6 +322,17 @@ class SpectralCube(object):
         #assert mask._wcs == self._wcs
         self._meta = meta or {}
         self._fill_value = fill_value
+        if 'BUNIT' in self._meta:
+            self._unit = u.Unit(self._meta['BUNIT'])
+        else:
+            self._unit = None
+
+    @property
+    def unit(self):
+        if self._unit:
+            return self._unit
+        else:
+            return 1
 
     @property
     def shape(self):
@@ -356,13 +367,13 @@ class SpectralCube(object):
 
     def sum(self, axis=None):
         # use nansum, and multiply by mask to add zero each time there is badness
-        return self._apply_numpy_function(np.nansum, fill=np.nan, axis=axis)
+        return self._apply_numpy_function(np.nansum, fill=np.nan, axis=axis) * self.unit
 
     def max(self, axis=None):
-        return self._apply_numpy_function(np.nanmax, fill=np.nan, axis=axis)
+        return self._apply_numpy_function(np.nanmax, fill=np.nan, axis=axis) * self.unit
 
     def min(self, axis=None):
-        return self._apply_numpy_function(np.nanmin, fill=np.nan, axis=axis)
+        return self._apply_numpy_function(np.nanmin, fill=np.nan, axis=axis) * self.unit
 
     def argmax(self, axis=None):
         return self._apply_numpy_function(np.nanargmax, fill=-np.inf, axis=axis)
@@ -461,20 +472,20 @@ class SpectralCube(object):
         data = self._mask._flattened(data=self._data, wcs=self._wcs, view=slice)
         if weights is not None:
             weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
-            return data * weights
+            return data * weights * self.unit
         else:
-            return data
+            return data * self.unit
 
     def median(self, axis=None, **kwargs):
         try:
             from bottleneck import nanmedian
             return self._apply_numpy_function(nanmedian, axis=axis,
-                                              check_endian=True, **kwargs)
+                                              check_endian=True, **kwargs) * self.unit
         except ImportError:
-            return self._apply_along_axes(np.median, axis=axis, **kwargs)
+            return self._apply_along_axes(np.median, axis=axis, **kwargs) * self.unit
 
     def percentile(self, q, axis=None, **kwargs):
-        return self._apply_along_axes(np.percentile, q=q, axis=axis, **kwargs)
+        return self._apply_along_axes(np.percentile, q=q, axis=axis, **kwargs) * self.unit
 
     # probably do not want to support this
     # def get_masked_array(self):
@@ -538,14 +549,14 @@ class SpectralCube(object):
             data = self._data
 
         if self._mask is None:
-            return self._data[view]
+            return self._data[view] * self.unit
 
         return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill,
-                                  view=view)
+                                  view=view) * self.unit
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
-        return self._data(view)
+        return self._data(view) * self.unit
 
 
     @property
@@ -755,8 +766,8 @@ class SpectralCube(object):
 
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-            return out, newwcs
-        return out
+            return out * self.unit, newwcs
+        return out * self.unit
 
     def moment0(self, axis=0, how='auto'):
         """Compute the zeroth moment along an axis.
