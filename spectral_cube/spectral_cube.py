@@ -301,7 +301,7 @@ class SpectralCube(object):
                                                          self._data.__repr__())
 
     def _apply_numpy_function(self, function, fill=np.nan,
-                              check_endian=check_endian, **kwargs):
+                              check_endian=False, **kwargs):
         """
         Apply a numpy function to the cube
         """
