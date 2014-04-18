@@ -9,6 +9,9 @@ wcs_parameters_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
 # not writable:
 # 'lat', 'lng', 'lattyp', 'lngtyp',
 
+bad_spectypes_mapping = {'VELOCITY':'VELO',
+                         'WAVELENG':'WAVE',
+                         }
 
 def drop_axis(wcs, dropax):
     """
