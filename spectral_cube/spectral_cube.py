@@ -124,7 +124,7 @@ class MaskBase(object):
         Notes
         -----
         This is an internal method used by :class:`SpectralCube`.
-        Users should use :meth:`SpectralCubeMask.get_filled_data`
+        Users should use the property :meth:`SpectralCubeMask.filled_data`
         """
         sliced_data = data[view].copy().astype(np.float)
         ex = self.exclude(data=data, wcs=wcs, view=view)
