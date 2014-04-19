@@ -493,7 +493,7 @@ class SpectralCube(object):
 
     def __getitem__(self, view):
         meta = {}
-        meta.update(self.meta)
+        meta.update(self._meta)
         meta['slice'] = [(s.start,s.stop,s.step) for s in view]
                                                                
         return SpectralCube(self._data[view],
