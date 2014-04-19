@@ -528,7 +528,7 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def filled_data(self, view):
-        return self._get_filled_data(view, fill=self._fill_value)
+        return self._get_filled_data(view, fill=self._fill_value) * self.unit
 
     def with_fill_value(self, fill_value):
         return SpectralCube(data=self._data,
@@ -556,10 +556,10 @@ class SpectralCube(object):
             data = self._data
 
         if self._mask is None:
-            return data[view] * self.unit
+            return data[view]
 
         return self._mask._filled(data=data, wcs=self._wcs, fill=fill,
-                                  view=view) * self.unit
+                                  view=view)
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
