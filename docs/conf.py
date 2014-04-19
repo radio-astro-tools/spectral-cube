@@ -32,8 +32,14 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
+    'astropy.sphinx.ext.numpydoc',
+    'astropy.sphinx.ext.astropyautosummary',
     'astropy.sphinx.ext.automodsumm',
     'astropy.sphinx.ext.automodapi',
+    'astropy.sphinx.ext.tocdepthfix',
+    'astropy.sphinx.ext.doctest',
+    'astropy.sphinx.ext.changelog_links',
+    'astropy.sphinx.ext.viewcode'  # Use patched version of viewcode
 ]
 
 # Add any paths that contain templates here, relative to this directory.
