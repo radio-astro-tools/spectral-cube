@@ -332,7 +332,7 @@ class SpectralCube(object):
         if self._unit:
             return self._unit
         else:
-            return u.one
+            return u.dimensionless_unscaled
 
     @property
     def shape(self):
