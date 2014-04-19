@@ -271,3 +271,5 @@ intersphinx_mapping = {
     'astropy': ('http://docs.astropy.org/en/stable/', None),
     'h5py': ('http://docs.h5py.org/en/latest/', None)
     }
+
+nitpicky = True
