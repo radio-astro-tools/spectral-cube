@@ -1,5 +1,6 @@
 import numpy as np
 from . import wcs_utils
+import warnings
 
 
 def _split_stokes(array, wcs):
@@ -73,6 +74,15 @@ def _orient(array, wcs):
     axtypes = wcs.get_axis_types()[::-1]
 
     types = [a['coordinate_type'] for a in axtypes]
+
+    # sanitize noncompliant headers
+    if 'spectral' not in types:
+        warnings.warn("No spectral axis found; header may be non-compliant.")
+        types = [tp if tp == 'celestial' else 'spectral' for tp in types]
+        spec = types.index('spectral')
+        if wcs.wcs.ctype[spec] in wcs_utils.bad_spectypes_mapping:
+            wcs.wcs.ctype[spec] = wcs_utils.bad_spectypes_mapping[wcs.wcs.ctype[spec]]
+
     nums = [None if a['coordinate_type'] != 'celestial' else a['number']
             for a in axtypes]
 

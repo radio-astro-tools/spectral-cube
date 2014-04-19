@@ -51,7 +51,7 @@ class TestSpectralCube(object):
         """data() should return velocity axis first, then world 1, then world 0"""
         c, d = cube_and_raw(name + '.fits')
         expected = np.squeeze(d.transpose(trans))
-        np.testing.assert_allclose(c.get_filled_data(), expected)
+        np.testing.assert_allclose(c._get_filled_data(), expected)
 
     @pytest.mark.parametrize(('file', 'view'), (
                              ('adv.fits', np.s_[:, :, :]),
@@ -103,10 +103,10 @@ class TestFilters(BaseTest):
     def test_mask_data(self):
         c, d = self.c, self.d
         expected = np.where(d > .5, d, np.nan)
-        np.testing.assert_allclose(c.get_filled_data(), expected)
+        np.testing.assert_allclose(c._get_filled_data(), expected)
 
         expected = np.where(d > .5, d, 0)
-        np.testing.assert_allclose(c.get_filled_data(fill=0), expected)
+        np.testing.assert_allclose(c._get_filled_data(fill=0), expected)
 
     def test_flatten(self):
         c, d = self.c, self.d
@@ -215,7 +215,7 @@ class TestSlab(BaseTest):
         np.testing.assert_allclose(c2._data, self.d[1:3])
         assert c2._mask is not None
 
-def read_write_rountrip():
+def test_read_write_rountrip():
     cube = read(path('adv.fits'))
     cube.write(path('test.fits'))
     cube2 = read(path('test.fits'))
@@ -225,15 +225,15 @@ def read_write_rountrip():
     assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
 
-def test_apply_mask():
+def test_with_mask():
 
     data = np.array([[[0,1,2,3,4]]])
 
-    def lower_threshold(data, wcs, slices=()):
-        return data[slices] > 0
+    def lower_threshold(data, wcs, view=()):
+        return data[view] > 0
 
-    def upper_threshold(data, wcs, slices=()):
-        return data[slices] < 3
+    def upper_threshold(data, wcs, view=()):
+        return data[view] < 3
 
     m1 = FunctionMask(lower_threshold)
     m2 = FunctionMask(upper_threshold)
@@ -242,10 +242,10 @@ def test_apply_mask():
     wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
 
     cube = SpectralCube(data, wcs=wcs, mask=m1)
-    cube2 = cube.apply_mask(m2)
+    cube2 = cube.with_mask(m2)
 
-    np.testing.assert_allclose(cube.get_filled_data(), [[[np.nan, 1, 2, 3, 4]]])
-    np.testing.assert_allclose(cube2.get_filled_data(), [[[np.nan, 1, 2, np.nan, np.nan]]])
+    np.testing.assert_allclose(cube._get_filled_data(), [[[np.nan, 1, 2, 3, 4]]])
+    np.testing.assert_allclose(cube2._get_filled_data(), [[[np.nan, 1, 2, np.nan, np.nan]]])
 
     def test_slab_preserves_wcs(self):
         # regression test
@@ -269,13 +269,4 @@ class TestMasks(BaseTest):
         expected = self.d[op(self.d, thresh)]
         actual = self.c.flattened()
         np.testing.assert_array_equal(actual, expected)
-
-def read_write_rountrip():
-    cube = read(path('adv.fits'))
-    cube.write(path('test.fits'))
-    cube2 = read(path('test.fits'))
-
-    assert cube.shape == cube.shape
-    np.testing.assert_allclose(cube._data, cube2._data)
-    assert cube._wcs.to_header_string() == cube2._wcs.to_header_string() 
 
