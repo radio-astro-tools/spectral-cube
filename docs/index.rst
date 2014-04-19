@@ -2,11 +2,11 @@ Spectral Cube documentation
 ===========================
 
 The ``spectral_cube`` package provides an easy way to read, manipulate,
-analysis, and write data cubes with two positional dimensions and one
-spectral dimension, optionally with Stokes parameteres. The spectral cube
+analyze, and write data cubes with two positional dimensions and one
+spectral dimension, optionally with Stokes parameters. The spectral cube
 reader is designed to be robust to the wide range of conventions of axis
 order, spatial projections, and spectral units that exist, and provides a
-uniform interface to all spectral cubes. The packge is designed to work with
+uniform interface to all spectral cubes. The package is designed to work with
 large files, including files larger than the available memory on a computer.
 
 Overview
@@ -14,9 +14,9 @@ Overview
 
 The package centers around the
 :class:`~spectral_cube.spectral_cube.SpectralCube` class. In the following
-sections, we look at how to read data into this class, how to manipulate
-spectral cubes, extract moment maps or subsets of spectral cubes, and how to
-write out spectral cubes to files.
+sections, we look at how to read data into this class, manipulate spectral
+cubes, extract moment maps or subsets of spectral cubes, and write spectral
+cubes to files.
 
 Initializing
 ------------
@@ -30,32 +30,31 @@ with::
     >>> from spectral_cube import SpectralCube
 
 The easiest way to instantiate a
-:class:`~spectral_cube.spectral_cube.SpectralCube` is to pass a 3-d Numpy
+:class:`~spectral_cube.spectral_cube.SpectralCube` is to pass a 3-d numpy
 array along with a 3-d :class:`~astropy.wcs.WCS` object::
 
     >>> cube = SpectralCube(data=data, wcs=wcs)
 
-Here ``data`` can be a normal Numpy array, or a *memory-mapped* Numpy arra
+Here ``data`` can be a normal Numpy array, or a *memory-mapped* Numpy array
 (memory-mapping is a technique that avoids reading the whole file into memory
 and instead accessing it from the disk as needed). When reading in data from
-FITS files with `astropy.io.fits <LINK>`_, the ``memmap`` option allows you
-to access the data via a memory-mapped array.
+FITS files with `astropy.io.fits <LINK>`_, the ``memmap`` keyword argument
+allows you to access the data via a memory-mapped array.
 
 Reading
 -------
 
-In practice, you will likely most often want to simply read a spectral cube
-from a file. The reader in ``spectral_cube`` is designed to be able to deal
-with any arbitrary axis order, and always return a consistently oriented
+In practice, you will most often want to read a spectral cube from a file. The
+reader in ``spectral_cube`` is designed to be able to deal with any arbitrary
+axis order and always return a consistently oriented
 spectral cube (see `Accessing data`_ below). To read in a file, use the
 :meth:`~spectral_cube.spectral_cube.SpectralCube.read` class method as
 follows::
 
      >>> cube = SpectralCube.read('L1448_13CO.fits')
 
-This will always read the I Stokes parameter in the file, or compute the I
-Stokes parameter if not directly available. For information on accessing
-other Stokes parameters, see the `Stokes parameters`_ section.
+This will always read the Stokes I parameter in the file. For information on
+accessing other Stokes parameters, see the `Stokes parameters`_ section.
 
 .. note:: In most cases, the FITS reader should be able to open the file in
           memory-mapped mode, which means that the data is not immediately
@@ -87,7 +86,7 @@ Accessing data
 --------------
 
 Once you have initialized a :meth:`~spectral_cube.spectral_cube.SpectralCube`
-instance, either directly, or by reading in a file, there are a number of
+instance, either directly or by reading in a file, there are a number of
 ways of accessing the data.
 
 Unmasked data
@@ -119,9 +118,9 @@ initializer). The 'filled' data is accessed with e.g.::
 
 .. TODO: show example output
 
-Note that accessing the filled data should still be efficient because the
-data values are accessed and filled only once you access the actual data
-values, so this should still be efficient for large datasets.
+Note that accessing the filled data should still be efficient because the data
+are loaded and filled only once you access the actual data values, so this
+should still be efficient for large datasets.
 
 In both the case of the unmasked and filled data, the efficiency breaks down
 if you try and access all the data values, for example by doing
@@ -146,7 +145,7 @@ Selecting subsets
 Extracting a spectral slab
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Given a spectral cube, it is easy to extract a sub-cube covering only a range
+Given a spectral cube, it is easy to extract a sub-cube covering only a subset
 of the original range in the spectral axis. To do this, you can use the
 :meth:`~spectral_cube.spectral_cube.SpectralCube.spectral_slab` method. This
 method takes lower and upper bounds for the spectral axis, as well as an
@@ -166,7 +165,7 @@ In the above example, regardless of what units the original cube was in, the
 how to convert the velocities to frequencies if needed. The resulting cube
 ``co_1_0`` (which is also a
 :class:`~spectral_cube.spectral_cube.SpectralCube` instance) then contains
-all channels that overlap with the range -50 to 50km/s relative to the 12CO
+all channels that overlap with the range -50 to 50 km/s relative to the 12CO
 1-0 line.
 
 Extracting a sub-cube by indexing
@@ -206,7 +205,7 @@ be used include masks based on simple conditions (e.g. the data values should
 be larger than 5) or masks based on the values that they are called with.
 
 Masks based on simple functions that operate on the initial data use the
-:class:`~spectral_cube.spectral_cube.LazyMsak` class. The motivation behind
+:class:`~spectral_cube.spectral_cube.LazyMask` class. The motivation behind
 the :class:`~spectral_cube.spectral_cube.LazyMask` class is that it is
 essentially equivalent to a boolean array, but the boolean values are
 computed on-the-fly as needed, meaning that the whole boolean array does not
