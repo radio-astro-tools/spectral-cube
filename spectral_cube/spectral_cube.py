@@ -314,18 +314,25 @@ class FunctionMask(MaskBase):
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan):
+
+        # Deal with metadata first because it can affect data reading
+        self._meta = meta or {}
+        if 'BUNIT' in self._meta:
+            self._unit = u.Unit(self._meta['BUNIT'])
+        elif hasattr(data,'unit'):
+            self._unit = data.unit
+            # strip the unit so that it can be treated as cube metadata
+            data = data.value
+        else:
+            self._unit = None
+        
         # TODO: mask should be oriented? Or should we assume correctly oriented here?
         self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
         #assert mask._wcs == self._wcs
-        self._meta = meta or {}
         self._fill_value = fill_value
-        if 'BUNIT' in self._meta:
-            self._unit = u.Unit(self._meta['BUNIT'])
-        else:
-            self._unit = None
 
     @property
     def unit(self):
@@ -549,9 +556,9 @@ class SpectralCube(object):
             data = self._data
 
         if self._mask is None:
-            return self._data[view] * self.unit
+            return data[view] * self.unit
 
-        return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill,
+        return self._mask._filled(data=data, wcs=self._wcs, fill=fill,
                                   view=view) * self.unit
 
     @cube_utils.slice_syntax

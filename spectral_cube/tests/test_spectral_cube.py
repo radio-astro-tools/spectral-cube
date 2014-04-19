@@ -6,7 +6,7 @@ from astropy import units as u
 from astropy.wcs import WCS
 import numpy as np
 
-from spectral_cube import SpectralCube, SpectralCubeMask, FunctionMask, read
+from .. import SpectralCube, SpectralCubeMask, FunctionMask, read
 from . import path
 
 
