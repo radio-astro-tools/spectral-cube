@@ -217,7 +217,7 @@ class TestSlab(BaseTest):
 
 def test_read_write_rountrip():
     cube = read(path('adv.fits'))
-    cube.write(path('test.fits'))
+    cube.write(path('test.fits'),clobber=True)
     cube2 = read(path('test.fits'))
 
     assert cube.shape == cube.shape
@@ -269,4 +269,3 @@ class TestMasks(BaseTest):
         expected = self.d[op(self.d, thresh)]
         actual = self.c.flattened()
         np.testing.assert_array_equal(actual, expected)
-
