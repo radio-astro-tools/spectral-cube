@@ -244,3 +244,7 @@ instance by making use of the
 :meth:`~spectral_cube.spectral_cube.SpectralCube.write` method::
 
     >>> cube.write('new_cube.fits', format='fits')
+
+.. automodapi:: spectral_cube
+   :no-inheritance-diagram:
+
