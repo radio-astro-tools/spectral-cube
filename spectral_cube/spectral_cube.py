@@ -332,7 +332,7 @@ class SpectralCube(object):
         if self._unit:
             return self._unit
         else:
-            return u.Unit(1)
+            return u.one
 
     @property
     def shape(self):
