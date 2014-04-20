@@ -22,10 +22,10 @@ cubes to files.
    :maxdepth: 1
 
    creating_reading.rst
+   masking.rst
    accessing.rst
    subsets.rst
    moments.rst
-   masking.rst
    stokes.rst
    big_data.rst
 

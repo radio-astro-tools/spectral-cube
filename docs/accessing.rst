@@ -1,4 +1,3 @@
-
 Accessing data
 ==============
 
@@ -18,9 +17,7 @@ which is a Numpy-like array that has not had the mask applied::
 
 The order of the dimensions of the ``data_unmasked`` array is deterministic -
 it is always ``(n_spectral, n_y, n_x)`` irrespective of how the cube was
-stored on disk. In the case where the array is memory-mapped, slicing the
-array as shown above results in only that slice being read from disk, so it
-should be faster than reading the whole dataset.
+stored on disk.
 
 Masked data
 -----------
@@ -38,12 +35,6 @@ initializer). The 'filled' data is accessed with e.g.::
 Note that accessing the filled data should still be efficient because the data
 are loaded and filled only once you access the actual data values, so this
 should still be efficient for large datasets.
-
-In both the case of the unmasked and filled data, the efficiency breaks down
-if you try and access all the data values, for example by doing
-``cube.data_filled.sum()``. In such cases, it is more efficient to iterate
-over smaller parts of the data (such as slices) rather than access all the
-data in one go.
 
 Flattened data
 --------------
