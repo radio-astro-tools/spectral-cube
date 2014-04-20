@@ -274,7 +274,7 @@ intersphinx_mapping = {
     'numpy': ('http://docs.scipy.org/doc/numpy/', None),
     'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
     'matplotlib': ('http://matplotlib.sourceforge.net/', None),
-    'astropy': ('http://docs.astropy.org/en/stable/', None),
+    'astropy': ('http://docs.astropy.org/en/latest/', None),
     'h5py': ('http://docs.h5py.org/en/latest/', None)
     }
 
