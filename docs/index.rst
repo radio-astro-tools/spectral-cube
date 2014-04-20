@@ -13,7 +13,7 @@ Overview
 --------
 
 The package centers around the
-:class:`~spectral_cube.spectral_cube.SpectralCube` class. In the following
+:class:`~spectral_cube.SpectralCube` class. In the following
 sections, we look at how to read data into this class, manipulate spectral
 cubes, extract moment maps or subsets of spectral cubes, and write spectral
 cubes to files.
@@ -21,7 +21,7 @@ cubes to files.
 Initializing
 ------------
 
-The :class:`~spectral_cube.spectral_cube.SpectralCube` class is used to
+The :class:`~spectral_cube.SpectralCube` class is used to
 represent 3-dimensional datasets (two positional dimensions and one spectral
 dimension) with a World Coordinate System (WCS) projection that describes the
 mapping from pixel to world coordinates and vice-versa. The class is imported
@@ -30,7 +30,7 @@ with::
     >>> from spectral_cube import SpectralCube
 
 The easiest way to instantiate a
-:class:`~spectral_cube.spectral_cube.SpectralCube` is to pass a 3-d numpy
+:class:`~spectral_cube.SpectralCube` is to pass a 3-d numpy
 array along with a 3-d :class:`~astropy.wcs.WCS` object::
 
     >>> cube = SpectralCube(data=data, wcs=wcs)
@@ -48,7 +48,7 @@ In practice, you will most often want to read a spectral cube from a file. The
 reader in ``spectral_cube`` is designed to be able to deal with any arbitrary
 axis order and always return a consistently oriented
 spectral cube (see `Accessing data`_ below). To read in a file, use the
-:meth:`~spectral_cube.spectral_cube.SpectralCube.read` class method as
+:meth:`~spectral_cube.SpectralCube.read` class method as
 follows::
 
      >>> cube = SpectralCube.read('L1448_13CO.fits')
@@ -69,7 +69,7 @@ Masking
 
 In addition to supporting the representation of data and associated WCS, it
 is also possible to attach a boolean mask to the
-:class:`~spectral_cube.spectral_cube.SpectralCube` class. Masks can take
+:class:`~spectral_cube.SpectralCube` class. Masks can take
 various forms, but one of the more common ones is a cube with the same
 dimensions as the data, and that contains e.g. the boolean value `True` where
 data should be used, and the value `False` when the data should be ignored
@@ -85,7 +85,7 @@ masks. This is described in more detail in `Advanced masking`_ below.
 Accessing data
 --------------
 
-Once you have initialized a :meth:`~spectral_cube.spectral_cube.SpectralCube`
+Once you have initialized a :meth:`~spectral_cube.SpectralCube`
 instance, either directly or by reading in a file, there are a number of
 ways of accessing the data.
 
@@ -111,7 +111,7 @@ Masked data
 You can also access the masked data using ``data_filled``. This array is a
 copy of the original data with any masked value replaced by a fill value
 (which is ``np.nan`` by default but can be changed using the ``fill_value``
-option in the :class:`~spectral_cube.spectral_cube.SpectralCube`
+option in the :class:`~spectral_cube.SpectralCube`
 initializer). The 'filled' data is accessed with e.g.::
 
     >>> slice_filled = cube.data_filled[0,:,:]
@@ -133,7 +133,7 @@ Flattened data
 
 If you are only interested in getting a flat (i.e. 1-d) array of all the
 non-masked values, you can also make use of the
-:meth:`~spectral_cube.spectral_cube.SpectralCube.flattened` method::
+:meth:`~spectral_cube.SpectralCube.flattened` method::
 
    >>> flat_array = cube.flattened()
 
@@ -147,10 +147,10 @@ Extracting a spectral slab
 
 Given a spectral cube, it is easy to extract a sub-cube covering only a subset
 of the original range in the spectral axis. To do this, you can use the
-:meth:`~spectral_cube.spectral_cube.SpectralCube.spectral_slab` method. This
+:meth:`~spectral_cube.SpectralCube.spectral_slab` method. This
 method takes lower and upper bounds for the spectral axis, as well as an
 optional rest frequency, and returns a new
-:class:`~spectral_cube.spectral_cube.SpectralCube` instance. The bounds can
+:class:`~spectral_cube.SpectralCube` instance. The bounds can
 be specified as a frequency, wavelength, or a velocity relative to a rest
 frequency. If the latter, then the rest frequency needs to be specified. The
 bounds and the rest frequency (if applicable) should be given as Astropy
@@ -161,10 +161,10 @@ bounds and the rest frequency (if applicable) should be given as Astropy
                                     rest_frequency=115.27120 * u.GHz)
 
 In the above example, regardless of what units the original cube was in, the
-:meth:`~spectral_cube.spectral_cube.SpectralCube.spectral_slab` can determine
+:meth:`~spectral_cube.SpectralCube.spectral_slab` can determine
 how to convert the velocities to frequencies if needed. The resulting cube
 ``co_1_0`` (which is also a
-:class:`~spectral_cube.spectral_cube.SpectralCube` instance) then contains
+:class:`~spectral_cube.SpectralCube` instance) then contains
 all channels that overlap with the range -50 to 50 km/s relative to the 12CO
 1-0 line.
 
@@ -176,14 +176,14 @@ Numpy slicing notation::
 
     >>> sub_cube = cube[:100, 10:50, 10:50]
 
-This returns a new :class:`~spectral_cube.spectral_cube.SpectralCube` object
+This returns a new :class:`~spectral_cube.SpectralCube` object
 with updated WCS information.
 
 Moment maps and statistics
 --------------------------
 
 Producing moment maps from a
-:class:`~spectral_cube.spectral_cube.SpectralCube` instance is
+:class:`~spectral_cube.SpectralCube` instance is
 straightforward::
 
     >>> moment_0 = cube.moment(order=0)
@@ -205,13 +205,13 @@ be used include masks based on simple conditions (e.g. the data values should
 be larger than 5) or masks based on the values that they are called with.
 
 Masks based on simple functions that operate on the initial data use the
-:class:`~spectral_cube.spectral_cube.LazyMask` class. The motivation behind
-the :class:`~spectral_cube.spectral_cube.LazyMask` class is that it is
+:class:`~spectral_cube.LazyMask` class. The motivation behind
+the :class:`~spectral_cube.LazyMask` class is that it is
 essentially equivalent to a boolean array, but the boolean values are
 computed on-the-fly as needed, meaning that the whole boolean array does not
 ever necessarily need to be computed or stored in memory, making it ideal for
 very large datasets. The function passed to
-:class:`~spectral_cube.spectral_cube.LazyMask` should be a simple function
+:class:`~spectral_cube.LazyMask` should be a simple function
 taking one argument - the dataset itself::
 
     >>> from spectral_cube import LazyMask
@@ -238,9 +238,9 @@ Handling large datasets
 Writing out
 -----------
 
-You can write out a :class:`~spectral_cube.spectral_cube.SpectralCube`
+You can write out a :class:`~spectral_cube.SpectralCube`
 instance by making use of the
-:meth:`~spectral_cube.spectral_cube.SpectralCube.write` method::
+:meth:`~spectral_cube.SpectralCube.write` method::
 
     >>> cube.write('new_cube.fits', format='fits')
 
