@@ -49,13 +49,13 @@ class SpectralCube(object):
         self._meta = meta or {}
         if 'BUNIT' in self._meta:
             self._unit = u.Unit(self._meta['BUNIT'])
-        elif hasattr(data,'unit'):
+        elif hasattr(data, 'unit'):
             self._unit = data.unit
             # strip the unit so that it can be treated as cube metadata
             data = data.value
         else:
             self._unit = None
-        
+
         # TODO: mask should be oriented? Or should we assume correctly oriented here?
         self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
@@ -119,13 +119,41 @@ class SpectralCube(object):
                           copy=False)
 
     def argmax(self, axis=None):
+        """
+        Return the index of the maximum data value.
+
+        Parameters
+        ----------
+        axis : int or None
+            The axis to operate on
+
+        Notes
+        -----
+        The return value is arbitrary if all pixels along ``axis`` are
+        excluded from the mask
+        """
         return self._apply_numpy_function(np.nanargmax, fill=-np.inf, axis=axis)
 
     def argmin(self, axis=None):
+        """
+        Return the index of the minimum data value.
+
+        Parameters
+        ----------
+        axis : int or None
+            The axis to operate on
+
+        Notes
+        -----
+        The return value is arbitrary if all pixels along ``axis`` are
+        excluded from the mask
+        """
         return self._apply_numpy_function(np.nanargmin, fill=np.inf, axis=axis)
 
     def chunked(self, chunksize=1000):
         """
+        Not Implemented.
+
         Iterate over chunks of valid data
         """
         raise NotImplementedError()
@@ -232,6 +260,16 @@ class SpectralCube(object):
                               copy=False)
 
     def percentile(self, q, axis=None, **kwargs):
+        """
+        Return percentiles of the data.
+
+        Parameters
+        ----------
+        q : float
+            The percentile to compute
+        axis : int, or None
+            Which axis to compute percentiles over
+        """
         return u.Quantity(self._apply_along_axes(np.percentile, q=q, axis=axis,
                                                  **kwargs), self.unit,
                           copy=False)
@@ -254,8 +292,8 @@ class SpectralCube(object):
     def __getitem__(self, view):
         meta = {}
         meta.update(self._meta)
-        meta['slice'] = [(s.start,s.stop,s.step) for s in view]
-                                                               
+        meta['slice'] = [(s.start, s.stop, s.step) for s in view]
+
         return SpectralCube(self._data[view],
                             wcs_utils.slice_wcs(self._wcs, view),
                             mask=self._mask[view],
@@ -264,21 +302,35 @@ class SpectralCube(object):
 
     @property
     def fill_value(self):
-        """ immutable fill value; to "change" just create a new cube with a new
-        fill value"""
+        """ The replacement value used by :meth:`filled_data`.
+
+        fill_value is immutable; use :meth:`with_fill_value`
+        to create a new cube with a different fill value.
+        """
         return self._fill_value
 
     @cube_utils.slice_syntax
     def filled_data(self, view):
+        """
+        Return a portion of the data array, with excluded mask values
+        replaced by `fill_value`.
+        """
         return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
                           self.unit, copy=False)
 
     def with_fill_value(self, fill_value):
+        """
+        Create a new :class:`SpectralCube` with a different `fill_value`.
+
+        Note
+        ----
+        This method is fast (it does not copy any data)
+        """
         return SpectralCube(data=self._data,
                             wcs=self._wcs,
                             mask=self._mask,
                             fill_value=self.fill_value,
-                            meta=meta)
+                            meta=self._meta)
 
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
         """
@@ -307,7 +359,6 @@ class SpectralCube(object):
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
         return u.Quantity(self._data(view), self.unit, copy=False)
-
 
     @property
     def wcs(self):
@@ -433,24 +484,21 @@ class SpectralCube(object):
 
     def moment(self, order=0, axis=0, wcs=False, how='auto'):
         """
-        Compute moments along the spectral axis
+        Compute moments along the spectral axis.
 
         Moments are defined as follows:
 
         Moment 0:
-        $
-        M_0 \int I dl
-        $
+
+        .. math:: M_0 \\int I dl
 
         Moment 1:
-        $
-        M_1 = \frac{\int I l dl}{M_0}
-        $
+
+        .. math:: M_1 = \\frac{\\int I l dl}{M_0}
 
         Moment N:
-        $
-        M_N = \frac{\int I (l - M1)**N dl}{M_0}
-        $
+
+        .. math:: M_N = \\frac{\\int I (l - M1)**N dl}{M_0}
 
         Parameters
         ----------
@@ -632,19 +680,26 @@ class SpectralCube(object):
 
     def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_frequency=None):
         """
-        Extract a sub-cube spatially and spectrally
+        Extract a sub-cube spatially and spectrally.
+
+        This method is not yet implemented.
 
         xlo = 'min' / 'max' should be special keywords
+
         """
+        raise NotImplementedError()
 
     def world_spines(self):
         """
-        Returns a dict of 1D arrays, for the world coordinates
+        Returns a list of 1D arrays, for the world coordinates
         along each pixel axis.
 
         Raises error if this operation is ill-posed (e.g. rotated world coordinates,
         strong distortions)
+
+        This method is not currently implemented. Use :meth:`world` instead.
         """
+        raise NotImplementedError()
 
     @cube_utils.slice_syntax
     def world(self, view):
@@ -719,6 +774,20 @@ class SpectralCube(object):
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
     def write(self, filename, format=None, include_stokes=False, clobber=False):
+        """
+        Write the cube to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The path to write the file to
+        format : str
+            The kind fo file to write. (Currently limited to 'fits')
+        include_stokes : bool
+            If True, write out stokes parameters
+        clobber : bool
+            If True, overwrite `filename` if it exists
+        """
         if format is None:
             format = determine_format_from_filename(filename)
         if format == 'fits':
@@ -750,6 +819,20 @@ class StokesSpectralCube(SpectralCube):
 
 
 def read(filename, format=None):
+    """
+    Read a file into a :class:`SpectralCube` instance.
+
+    Parameters
+    ----------
+    filename : str
+        File to read
+    format : str
+        File format. Currently resricted to 'fits'
+
+    Returns
+    -------
+    cube : :class:`SpectralCube`
+    """
     if format is None:
         format = determine_format_from_filename(filename)
     if format == 'fits':
@@ -760,6 +843,7 @@ def read(filename, format=None):
         return load_casa_image(filename)
     else:
         raise ValueError("Format {0} not implemented".format(format))
+
 
 def determine_format_from_filename(filename):
     if filename[-4:] == 'fits':

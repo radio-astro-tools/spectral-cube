@@ -13,13 +13,13 @@ optional rest frequency, and returns a new
 be specified as a frequency, wavelength, or a velocity relative to a rest
 frequency. If the latter, then the rest frequency needs to be specified. The
 bounds and the rest frequency (if applicable) should be given as Astropy
-:class:`~astropy.units.Quantity` instances as follows:
+:class:`Quantities <astropy.units.Quantity>` as follows:
 
     >>> from astropy import units as u
     >>> co_1_0 = cube.spectral_slab(-50 * u.km / u.s, +50 * u.km / u.s,
                                     rest_frequency=115.27120 * u.GHz)
 
-In the above example, regardless of what units the original cube was in, the
+Regardless of what units the original cube was in, the
 :meth:`~spectral_cube.SpectralCube.spectral_slab` can determine
 how to convert the velocities to frequencies if needed. The resulting cube
 ``co_1_0`` (which is also a
