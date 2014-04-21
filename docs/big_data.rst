@@ -12,7 +12,7 @@ in FITS files (though this will not work with compressed - e.g. ``.fits.gz``
 - files). The :meth:`~spectral_cube.SpectralCube.read` method will make use
 of this feature if available.
 
-If using memory mapping, then When accessing the data using e.g. the
+If using memory mapping, then when accessing the data using e.g. the
 :attr:`~spectral_cube.SpectralCube.data_filled` and
 :attr:`~spectral_cube.SpectralCube.data_unmasked` attributes, the data is
 still not copied until specific values are accessed. Even taking slices from

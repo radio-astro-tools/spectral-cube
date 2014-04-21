@@ -48,8 +48,8 @@ specifying conditions on the :class:`~spectral_cube.SpectralCube` instances:
    >>> cube > 5
        LazyMask(...)
 
-Combing and applying masks
---------------------------
+Combining and applying masks
+----------------------------
 
 Masks can be combined using standard boolean comparison operators::
 
