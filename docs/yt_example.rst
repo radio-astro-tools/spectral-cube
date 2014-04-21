@@ -40,17 +40,22 @@ This section shows an example of a rendering script that can be used to
 produce a 3-d isocontour visualization using an object returned by
 :meth:`~spectral_cube.SpectralCube.to_yt`::
 
+    import numpy as np
+    from spectral_cube import read
     from yt.mods import ColorTransferFunction, write_bitmap
 
+    # Read in spectral cube
+    cube = read('L1448_13CO.fits', format='fits')
+
     # Extract the yt object from the SpectralCube instance
-    pf = cube.to_yt(spectral_factor=0.5)
+    pf = cube.to_yt(spectral_factor=0.75, center=[51.424522, 30.723611, 5205.18071])
 
     # Set the number of levels, the minimum and maximum level and the width
     # of the isocontours
     n_v = 10
-    vmin = 0.3
-    vmax = 2.0
-    dv = 0.01
+    vmin = 0.05
+    vmax = 4.0
+    dv = 0.02
 
     # Set up color transfer function
     transfer = ColorTransferFunction((vmin, vmax))
@@ -58,8 +63,9 @@ produce a 3-d isocontour visualization using an object returned by
 
     # Set up the camera parameters
     center = [0., 0., 0.]  # pixel units relative to current center
-    direction = np.array([0.0, 1.0, 0.0])
-    width = 1000.  # pixels
+    direction = np.array([1.0, 0.0, 0.0])
+    width = 100.  # pixels
+    size = 1024
 
     camera = pf.h.camera(center, direction, width, size, transfer,
                          fields=['flux'])
