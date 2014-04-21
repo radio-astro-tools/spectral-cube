@@ -235,8 +235,9 @@ SpectralCube with shape=(4, 3, 2):
 
 def test_read_write_rountrip(tmpdir):
     cube = read(path('adv.fits'))
-    cube.write(str(tmpdir.join('test.fits')))
-    cube2 = read(path('test.fits'))
+    tmp_file = str(tmpdir.join('test.fits'))
+    cube.write(tmp_file)
+    cube2 = read(tmp_file)
 
     assert cube.shape == cube.shape
     np.testing.assert_allclose(cube._data, cube2._data)
