@@ -129,7 +129,7 @@ class TestFilters(BaseTest):
 
 class TestNumpyMethods(BaseTest):
 
-    def _check_numpy(self, cubemethod, array, func, has_unit=False):
+    def _check_numpy(self, cubemethod, array, func):
         for axis in [None, 0, 1, 2]:
             expected = func(array, axis=axis)
             actual = cubemethod(axis=axis)
@@ -137,15 +137,15 @@ class TestNumpyMethods(BaseTest):
 
     def test_sum(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
-        self._check_numpy(self.c.sum, d, np.nansum, has_unit=True)
+        self._check_numpy(self.c.sum, d, np.nansum)
 
     def test_max(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
-        self._check_numpy(self.c.max, d, np.nanmax, has_unit=True)
+        self._check_numpy(self.c.max, d, np.nanmax)
 
     def test_min(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
-        self._check_numpy(self.c.min, d, np.nanmin, has_unit=True)
+        self._check_numpy(self.c.min, d, np.nanmin)
 
     def test_argmax(self):
         d = np.where(self.d > 0.5, self.d, -10)
