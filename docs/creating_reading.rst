@@ -19,9 +19,9 @@ In most cases, you are likely to read in an existing spectral cube from a
 file. The reader in ``spectral_cube`` is designed to be able to deal with any
 arbitrary axis order and always return a consistently oriented spectral cube
 (see :doc:`accessing`). To read in a file, use the
-:meth:`~spectral_cube.SpectralCube.read` class method as follows::
+:func:`~spectral_cube.read` function as follows::
 
-     >>> cube = SpectralCube.read('L1448_13CO.fits')
+     >>> cube = read('L1448_13CO.fits')
 
 This will always read the Stokes I parameter in the file. For information on
 accessing other Stokes parameters, see :doc:`stokes`.

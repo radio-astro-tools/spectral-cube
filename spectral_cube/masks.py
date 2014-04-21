@@ -195,13 +195,16 @@ class LazyMask(MaskBase):
     A boolean mask defined by the evaluation of a function on a fixed dataset.
 
     This is conceptually identical to a fixed boolean mask as in
-    :class:`~spectral_cube.spectralSpectralCubeMask` but defers the
+    :class:`SpectralCubeMask` but defers the
     evaluation of the mask until it is needed.
 
     Parameters
     ----------
     function : callable
-        The function to apply to ``data``
+        The function to apply to ``data``. This method should accept
+        a numpy array, which will be a subset of the data array passed
+        to __init__. It should return a boolean array, where True values
+        indicate that which pixels are valid/unaffected by masking.
     data : array-like
         The array to evaluate ``function`` on. This should support Numpy-like
         slicing syntax.
@@ -247,11 +250,10 @@ class FunctionMask(MaskBase):
     A mask defined by a function that is evaluated at run-time using the data
     passed to the mask.
 
-    This is different from :class:`~spectral_cube.spectral_cube.LazyMask` in
-    that the mask here can be evaluated using the data passed to the mask and
-    the :class:`~spectral_cube.spectral_cube.LazyMask` is applied only to the
-    data passed when initializing the
-    :class:`~spectral_cube.spectral_cube.LazyMask` instance.
+    This function differs from :class:`LazyMask` in the arguments which
+    are passed to the function. FunctionMasks receive an array,
+    wcs object, and view, whereas LazyMasks receive pre-sliced views
+    into an array specified at mask-creation time.
 
     Parameters
     ----------
@@ -259,7 +261,9 @@ class FunctionMask(MaskBase):
         The function to evaluate the mask. The call signature should be
         ``function(data, wcs, slice)`` where ``data`` and ``wcs`` are the
         arguments that get passed to e.g. ``include``, ``exclude``,
-        ``_filled``, and ``_flattened``.
+        ``_filled``, and ``_flattened``. The function should return
+        a boolean array, where `True` values indicate that which pixels
+        are valid / unaffected by masking.
     """
 
     def __init__(self, function):

@@ -34,13 +34,14 @@ datasets. The function passed to :class:`~spectral_cube.LazyMask` should be a
 simple function taking one argument - the dataset itself::
 
     >>> from spectral_cube import LazyMask
-    >>> LazyMask(np.isfinite)
+    >>> cube = read(...)
+    >>> LazyMask(np.isfinite, cube=cube)
 
 or for example::
 
     >>> def threshold(data):
     ...     return data > 3.
-    >>> LazyMask(threshold)
+    >>> LazyMask(threshold, cube=cube)
 
 :class:`~spectral_cube.LazyMask` instances can also be defined directly by
 specifying conditions on the :class:`~spectral_cube.SpectralCube` instances:
@@ -53,7 +54,7 @@ Combining and applying masks
 
 Masks can be combined using standard boolean comparison operators::
 
-   >>> new_mask = (mask1 & mask2) | ~mask3
+   >>> background_mask = valid_mask & ~signal_mask
 
 The ``&`` operator is used as an *and* operator, the ``|`` operator is used
 as an *or* operator, and the ``~`` operator is used to indicate the *not*
@@ -83,8 +84,20 @@ change the fill value on a cube, you can make use of the
     >>> cube2 = cube.with_fill_value(0.)
 
 This returns a new :class:`~spectral_cube.SpectralCube` instance that
-contains a view to the same data in ``cube`` (so no data is copied).
+contains a view to the same data in ``cube`` (so no data are copied).
 
+Inclusion and Exclusion
+-----------------------
 
+The term "mask" is often used to refer both to the act of exluding
+and including pixels from analysis. To be explicit about how they behave,
+all mask objects have an
+:meth:`~spectral_cube.masks.MaskBase.include` method that returns a boolean
+array. True values in this array indicate that the pixel is included/valid,
+and not filtered/replaced in any way. Conversely, True values in the output
+from :meth:`~spectral_cube.masks.MaskBase.exclude`
+indicate the pixel is excluded/invalid, and will be filled/filtered.
+The inclusion/exclusion behavior of any mask can be inverted via
+``mask_inverse = ~mask``.
 
 .. TODO: add example for FunctionalMask
