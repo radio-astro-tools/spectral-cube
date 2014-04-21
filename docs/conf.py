@@ -38,7 +38,6 @@ extensions = [
     'astropy.sphinx.ext.automodapi',
     'astropy.sphinx.ext.tocdepthfix',
     'astropy.sphinx.ext.doctest',
-    'astropy.sphinx.ext.changelog_links',
     'astropy.sphinx.ext.viewcode'  # Use patched version of viewcode
 ]
 
