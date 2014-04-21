@@ -32,6 +32,14 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
+    'astropy.sphinx.ext.numpydoc',
+    'astropy.sphinx.ext.astropyautosummary',
+    'astropy.sphinx.ext.automodsumm',
+    'astropy.sphinx.ext.automodapi',
+    'astropy.sphinx.ext.tocdepthfix',
+    'astropy.sphinx.ext.doctest',
+    'astropy.sphinx.ext.changelog_links',
+    'astropy.sphinx.ext.viewcode'  # Use patched version of viewcode
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -261,6 +269,13 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
+intersphinx_mapping = {
+    'python': ('http://docs.python.org/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
+    'matplotlib': ('http://matplotlib.sourceforge.net/', None),
+    'astropy': ('http://docs.astropy.org/en/latest/', None),
+    'h5py': ('http://docs.h5py.org/en/latest/', None)
+    }
 
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+nitpicky = True
