@@ -314,14 +314,32 @@ class FunctionMask(MaskBase):
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan):
+
+        # Deal with metadata first because it can affect data reading
+        self._meta = meta or {}
+        if 'BUNIT' in self._meta:
+            self._unit = u.Unit(self._meta['BUNIT'])
+        elif hasattr(data,'unit'):
+            self._unit = data.unit
+            # strip the unit so that it can be treated as cube metadata
+            data = data.value
+        else:
+            self._unit = None
+        
         # TODO: mask should be oriented? Or should we assume correctly oriented here?
         self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
                            # object or array-like object, given that WCS needs to be consistent with data?
         #assert mask._wcs == self._wcs
-        self._meta = meta or {}
         self._fill_value = fill_value
+
+    @property
+    def unit(self):
+        if self._unit:
+            return self._unit
+        else:
+            return u.dimensionless_unscaled
 
     @property
     def shape(self):
@@ -356,13 +374,19 @@ class SpectralCube(object):
 
     def sum(self, axis=None):
         # use nansum, and multiply by mask to add zero each time there is badness
-        return self._apply_numpy_function(np.nansum, fill=np.nan, axis=axis)
+        return u.Quantity(self._apply_numpy_function(np.nansum, fill=np.nan,
+                                                     axis=axis), self.unit,
+                          copy=False)
 
     def max(self, axis=None):
-        return self._apply_numpy_function(np.nanmax, fill=np.nan, axis=axis)
+        return u.Quantity(self._apply_numpy_function(np.nanmax, fill=np.nan,
+                                                     axis=axis), self.unit,
+                          copy=False)
 
     def min(self, axis=None):
-        return self._apply_numpy_function(np.nanmin, fill=np.nan, axis=axis)
+        return u.Quantity(self._apply_numpy_function(np.nanmin, fill=np.nan,
+                                                     axis=axis), self.unit,
+                          copy=False)
 
     def argmax(self, axis=None):
         return self._apply_numpy_function(np.nanargmax, fill=-np.inf, axis=axis)
@@ -461,20 +485,26 @@ class SpectralCube(object):
         data = self._mask._flattened(data=self._data, wcs=self._wcs, view=slice)
         if weights is not None:
             weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
-            return data * weights
+            return u.Quantity(data * weights, self.unit, copy=False)
         else:
-            return data
+            return u.Quantity(data, self.unit, copy=False)
 
     def median(self, axis=None, **kwargs):
         try:
             from bottleneck import nanmedian
-            return self._apply_numpy_function(nanmedian, axis=axis,
-                                              check_endian=True, **kwargs)
+            return u.Quantity(self._apply_numpy_function(nanmedian, axis=axis,
+                                                         check_endian=True,
+                                                         **kwargs), self.unit,
+                              copy=False)
         except ImportError:
-            return self._apply_along_axes(np.median, axis=axis, **kwargs)
+            return u.Quantity(self._apply_along_axes(np.median, axis=axis,
+                                                     **kwargs), self.unit,
+                              copy=False)
 
     def percentile(self, q, axis=None, **kwargs):
-        return self._apply_along_axes(np.percentile, q=q, axis=axis, **kwargs)
+        return u.Quantity(self._apply_along_axes(np.percentile, q=q, axis=axis,
+                                                 **kwargs), self.unit,
+                          copy=False)
 
     # probably do not want to support this
     # def get_masked_array(self):
@@ -510,7 +540,8 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def filled_data(self, view):
-        return self._get_filled_data(view, fill=self._fill_value)
+        return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
+                          self.unit, copy=False)
 
     def with_fill_value(self, fill_value):
         return SpectralCube(data=self._data,
@@ -538,14 +569,14 @@ class SpectralCube(object):
             data = self._data
 
         if self._mask is None:
-            return self._data[view]
+            return data[view]
 
-        return self._mask._filled(data=self._data, wcs=self._wcs, fill=fill,
+        return self._mask._filled(data=data, wcs=self._wcs, fill=fill,
                                   view=view)
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
-        return self._data(view)
+        return u.Quantity(self._data(view), self.unit, copy=False)
 
 
     @property
@@ -742,11 +773,12 @@ class SpectralCube(object):
         out = dispatch[how](self, order, axis)
 
         # apply units
-        unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
-
-        # TODO apply data unit to moment 0
-
-        out = out * unit
+        if order == 0:
+            axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
+            out = u.Quantity(out, self.unit * axunit, copy=False)
+        else:
+            unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
+            out = u.Quantity(out, unit, copy=False)
 
         # special case: for order=1, axis=1, you usually want
         # the absolute velocity and not the offset
