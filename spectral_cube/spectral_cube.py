@@ -774,7 +774,8 @@ class SpectralCube(object):
 
         # apply units
         if order == 0:
-            out = u.Quantity(out, self.unit, copy=False)
+            axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
+            out = u.Quantity(out, self.unit * axunit, copy=False)
         else:
             unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
             out = u.Quantity(out, unit, copy=False)

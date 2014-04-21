@@ -13,13 +13,13 @@ data_unit = u.dimensionless_unscaled
 
 m0v = np.array([[27, 30, 33],
                 [36, 39, 42],
-                [45, 48, 51]]) * data_unit * dv / dv.unit
+                [45, 48, 51]]) * data_unit * dv
 m0y = np.array([[9, 12, 15],
                 [36, 39, 42],
-                [63, 66, 69]]) * data_unit * dy / dy.unit
+                [63, 66, 69]]) * data_unit * dy
 m0x = np.array([[3, 12, 21],
                 [30, 39, 48],
-                [57, 66, 75]]) * data_unit * dx / dx.unit
+                [57, 66, 75]]) * data_unit * dx
 
 # M1V is a special case, where we return the actual coordinate
 m1v = np.array([[1.66666667, 1.6, 1.54545455],
