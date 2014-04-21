@@ -374,13 +374,19 @@ class SpectralCube(object):
 
     def sum(self, axis=None):
         # use nansum, and multiply by mask to add zero each time there is badness
-        return self._apply_numpy_function(np.nansum, fill=np.nan, axis=axis) * self.unit
+        return u.Quantity(self._apply_numpy_function(np.nansum, fill=np.nan,
+                                                     axis=axis), self.unit,
+                          copy=False)
 
     def max(self, axis=None):
-        return self._apply_numpy_function(np.nanmax, fill=np.nan, axis=axis) * self.unit
+        return u.Quantity(self._apply_numpy_function(np.nanmax, fill=np.nan,
+                                                     axis=axis), self.unit,
+                          copy=False)
 
     def min(self, axis=None):
-        return self._apply_numpy_function(np.nanmin, fill=np.nan, axis=axis) * self.unit
+        return u.Quantity(self._apply_numpy_function(np.nanmin, fill=np.nan,
+                                                     axis=axis), self.unit,
+                          copy=False)
 
     def argmax(self, axis=None):
         return self._apply_numpy_function(np.nanargmax, fill=-np.inf, axis=axis)
@@ -479,20 +485,26 @@ class SpectralCube(object):
         data = self._mask._flattened(data=self._data, wcs=self._wcs, view=slice)
         if weights is not None:
             weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
-            return data * weights * self.unit
+            return u.Quantity(data * weights, self.unit, copy=False)
         else:
-            return data * self.unit
+            return u.Quantity(data, self.unit, copy=False)
 
     def median(self, axis=None, **kwargs):
         try:
             from bottleneck import nanmedian
-            return self._apply_numpy_function(nanmedian, axis=axis,
-                                              check_endian=True, **kwargs) * self.unit
+            return u.Quantity(self._apply_numpy_function(nanmedian, axis=axis,
+                                                         check_endian=True,
+                                                         **kwargs), self.unit,
+                              copy=False)
         except ImportError:
-            return self._apply_along_axes(np.median, axis=axis, **kwargs) * self.unit
+            return u.Quantity(self._apply_along_axes(np.median, axis=axis,
+                                                     **kwargs), self.unit,
+                              copy=False)
 
     def percentile(self, q, axis=None, **kwargs):
-        return self._apply_along_axes(np.percentile, q=q, axis=axis, **kwargs) * self.unit
+        return u.Quantity(self._apply_along_axes(np.percentile, q=q, axis=axis,
+                                                 **kwargs), self.unit,
+                          copy=False)
 
     # probably do not want to support this
     # def get_masked_array(self):
@@ -528,7 +540,8 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def filled_data(self, view):
-        return self._get_filled_data(view, fill=self._fill_value) * self.unit
+        return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
+                          self.unit, copy=False)
 
     def with_fill_value(self, fill_value):
         return SpectralCube(data=self._data,
@@ -563,7 +576,7 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
-        return self._data(view) * self.unit
+        return u.Quantity(self._data(view), self.unit, copy=False)
 
 
     @property
@@ -771,10 +784,11 @@ class SpectralCube(object):
         if order == 1 and axis == 0:
             out += self.world[0,:,:][0]
 
+        out = u.Quantity(out, self.unit, copy=False)
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-            return out * self.unit, newwcs
-        return out * self.unit
+            return out, newwcs
+        return out
 
     def moment0(self, axis=0, how='auto'):
         """Compute the zeroth moment along an axis.
