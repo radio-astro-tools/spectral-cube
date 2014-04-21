@@ -8,8 +8,8 @@ In addition to supporting the representation of data and associated WCS, it
 is also possible to attach a boolean mask to the
 :class:`~spectral_cube.SpectralCube` class. Masks can take
 various forms, but one of the more common ones is a cube with the same
-dimensions as the data, and that contains e.g. the boolean value `True` where
-data should be used, and the value `False` when the data should be ignored
+dimensions as the data, and that contains e.g. the boolean value ``True`` where
+data should be used, and the value ``False`` when the data should be ignored
 (though it is also possible to flip the convention around). To create a
 boolean mask from a boolean array ``mask_array``, simply use::
 
