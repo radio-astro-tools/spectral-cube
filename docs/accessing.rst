@@ -22,13 +22,13 @@ stored on disk.
 Masked data
 -----------
 
-You can also access the masked data using ``data_filled``. This array is a
+You can also access the masked data using ``filled_data``. This array is a
 copy of the original data with any masked value replaced by a fill value
 (which is ``np.nan`` by default but can be changed using the ``fill_value``
 option in the :class:`~spectral_cube.SpectralCube`
 initializer). The 'filled' data is accessed with e.g.::
 
-    >>> slice_filled = cube.data_filled[0,:,:]
+    >>> slice_filled = cube.filled_data[0,:,:]
 
 .. TODO: show example output
 
