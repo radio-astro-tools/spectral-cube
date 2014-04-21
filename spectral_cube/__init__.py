@@ -1,2 +1,2 @@
-from .spectral_cube import (SpectralCube, SpectralCubeMask, read, FunctionMask,
-                            LazyMask)
+from .spectral_cube import (SpectralCube, read, StokesSpectralCube)
+from .masks import *

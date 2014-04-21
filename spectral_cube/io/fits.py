@@ -1,9 +1,7 @@
-import warnings
 from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
-from ..spectral_cube import SpectralCube, StokesSpectralCube, SpectralCubeMask, LazyMask
-from .. import wcs_utils
+from .. import SpectralCube, StokesSpectralCube, LazyMask
 from .. import cube_utils
 
 
@@ -28,6 +26,7 @@ def load_fits_cube(filename, extnum=0, **kwargs):
             'extension_number': extnum}
 
     return load_fits_hdu(hdulist[extnum], meta=meta)
+
 
 def load_fits_hdu(hdu, meta={}, **kwargs):
     # read the data - assume first extension
