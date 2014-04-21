@@ -1625,8 +1625,24 @@ class StokesSpectralCube(SpectralCube):
         hdu : int or str
             For FITS files, the HDU to read in (can be the ID or name of an
             HDU).
+
+        Returns
+        -------
+        cube : :class:`SpectralCube`
         """
-        raise NotImplementedError("")
+        if format is None:
+            format = determine_format_from_filename(filename)
+        if format == 'fits':
+            from .io.fits import load_fits_cube
+            return load_fits_cube(filename)
+        elif format == 'casa_image':
+            from .io.casa_image import load_casa_image
+            return load_casa_image(filename)
+        elif format == 'class_lmv':
+            from .io.class_lmv import load_lmv_cube
+            return load_lmv_cube(filename)
+        else:
+            raise ValueError("Format {0} not implemented".format(format))
 
     def write(self, filename, overwrite=False, format=None):
         """
@@ -1642,3 +1658,11 @@ class StokesSpectralCube(SpectralCube):
             If True, overwrite `filename` if it exists
         """
         raise NotImplementedError("")
+
+def determine_format_from_filename(filename):
+    if filename[-4:] == 'fits':
+        return 'fits'
+    elif filename[-5:] == 'image':
+        return 'casa_image'
+    elif filename[-3:] == 'lmv':
+        return 'class_lmv'
