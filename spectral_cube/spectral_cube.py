@@ -773,18 +773,17 @@ class SpectralCube(object):
         out = dispatch[how](self, order, axis)
 
         # apply units
-        unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
-
-        # TODO apply data unit to moment 0
-
-        out = out * unit
+        if order == 0:
+            out = u.Quantity(out, self.unit, copy=False)
+        else:
+            unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
+            out = u.Quantity(out, unit, copy=False)
 
         # special case: for order=1, axis=1, you usually want
         # the absolute velocity and not the offset
         if order == 1 and axis == 0:
             out += self.world[0,:,:][0]
 
-        out = u.Quantity(out, self.unit, copy=False)
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
             return out, newwcs
