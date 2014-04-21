@@ -19,16 +19,24 @@ The :meth:`~spectral_cube.SpectralCube.to_yt` method is used as follows::
     >>> pf = cube.to_yt(spectral_factor=0.5)
 
 The ``pf`` object is then a yt object that can be used for rendering! By
-default the dataset is defined in pixel coordinates, going from -n/2 to n/2 (to ensure that the cube is centered on the origin by default).
+default the dataset is defined in pixel coordinates, going from -n/2 to n/2
+(to ensure that the cube is centered on the origin by default).
 
-It is possible to specify a different center for the cube by passing the ``center`` argument, which should be a tuple of (x, y, spectral) coordinates. If the coordinates are passed without units, then they are assumed to be pixel coordinates. If the values passed are Astropy `~astropy.units.Quantity` objects with units, then the values are assumed to be world coordinates. For example:
+It is possible to specify a different center for the cube by passing the
+``center`` argument, which should be a tuple of (x, y, spectral) coordinates.
+If the coordinates are passed without units, then they are assumed to be
+pixel coordinates. If the values passed are Astropy `~astropy.units.Quantity`
+objects with units, then the values are assumed to be world coordinates. For
+example:
 
     >>> from astropy import units as u
     >>> pf = cube.to_yt(spectral_factor=0.5, center=(51.424522 * u.deg,
                                                      30.723611 * u.deg,
                                                      5205.18071 * u.m / u.s])
 
-will ensure the cube is centered at the specified coordinates. The cube will still be defined in pixel coordinates in yt, but the origin will be the one corresponding to the above coordinates.
+will ensure the cube is centered at the specified coordinates. The cube will
+still be defined in pixel coordinates in yt, but the origin will be the one
+corresponding to the above coordinates.
 
 .. TODO: add a way to center it on a specific coordinate and return in world
 .. coordinate offset.
