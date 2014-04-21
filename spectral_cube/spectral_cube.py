@@ -354,7 +354,11 @@ class SpectralCube(object):
         return self._data.ndim
 
     def __repr__(self):
-        s = "SpectralCube with shape={0}:\n".format(self.shape)
+        s = "SpectralCube with shape={0}".format(self.shape)
+        if self.unit is u.dimensionless_unscaled:
+            s += ":\n"
+        else:
+            s +=  " and unit={0}:\n".format(self.unit)
         s += " n_x: {0}  type_x: {1:8s}  unit_x: {2}\n".format(self.shape[2], self.wcs.wcs.ctype[0], self.wcs.wcs.cunit[0])
         s += " n_y: {0}  type_y: {1:8s}  unit_y: {2}\n".format(self.shape[1], self.wcs.wcs.ctype[1], self.wcs.wcs.cunit[1])
         s += " n_s: {0}  type_s: {1:8s}  unit_s: {2}".format(self.shape[0], self.wcs.wcs.ctype[2], self.wcs.wcs.cunit[2])

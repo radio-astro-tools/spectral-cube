@@ -233,6 +233,15 @@ SpectralCube with shape=(4, 3, 2):
  n_s: 4  type_s: VOPT      unit_s: m / s
         """.strip()
 
+    def test_repr_withunit(self):
+        self.c._unit = u.Jy
+        assert repr(self.c) == """
+SpectralCube with shape=(4, 3, 2) and unit=Jy:
+ n_x: 2  type_x: RA---SIN  unit_x: deg
+ n_y: 3  type_y: DEC--SIN  unit_y: deg
+ n_s: 4  type_s: VOPT      unit_s: m / s
+        """.strip()
+
 def test_read_write_rountrip(tmpdir):
     cube = read(path('adv.fits'))
     tmp_file = str(tmpdir.join('test.fits'))
