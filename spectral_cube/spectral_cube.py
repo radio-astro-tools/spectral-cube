@@ -361,6 +361,23 @@ class SpectralCube(object):
                             fill_value=self.fill_value,
                             meta=self._meta)
 
+    def with_spectral_unit(self, unit, velocity_convention=None):
+        """
+        Returns a new Cube with a different Spectral Axis unit
+        """
+        from .spectral_axis import convert_spectral_axis,join_wcs
+
+        meta = self._meta.copy()
+        if 'Original Unit' not in self._meta:
+            meta['Original Unit'] = self._wcs.wcs.cunit[self._wcs.wcs.spec]
+
+        newspwcs = convert_spectral_axis(self._wcs, unit,
+                                         velocity_convention=velocity_convention)
+        newwcs = join_wcs(self._wcs.sub([wcs.WCSSUB_CELESTIAL]), newspwcs)
+        # TODO: Do we need to update the mask WCS too?
+        return SpectralCube(data=self._data, wcs=newwcs, mask=self._mask,
+                            fill_value=self.fill_value, meta=meta)
+
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
         """
         Return the underlying data as a numpy array.
