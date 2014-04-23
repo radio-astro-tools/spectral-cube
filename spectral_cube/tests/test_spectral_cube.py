@@ -475,3 +475,25 @@ def test_ds9region():
     
     #region = 'circle(2,2,2)'
     #subcube = cube.subcube_from_ds9region(region)
+
+def test_endians():
+    """
+    Test that the endianness checking returns something in Native form
+    (this is only needed for non-numpy functions that worry about the
+    endianness of their data)
+    """
+    big = np.array([[[1],[2]]], dtype='>f4')
+    lil = np.array([[[1],[2]]], dtype='<f4')
+    mywcs = WCS(naxis=3)
+    mywcs.wcs.ctype[0] = 'RA'
+    mywcs.wcs.ctype[1] = 'DEC'
+    mywcs.wcs.ctype[2] = 'VELO'
+    
+    bigcube = SpectralCube(data=big, wcs=mywcs)
+    xbig = bigcube._get_filled_data(check_endian=True)
+
+    lilcube = SpectralCube(data=lil, wcs=mywcs)
+    xlil = lilcube._get_filled_data(check_endian=True)
+
+    assert xbig.dtype.byteorder == '='
+    assert xlil.dtype.byteorder == '='
