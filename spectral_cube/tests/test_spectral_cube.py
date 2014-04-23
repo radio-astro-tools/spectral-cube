@@ -215,10 +215,38 @@ class TestSlab(BaseTest):
         np.testing.assert_allclose(c2._data, self.d[1:3])
         assert c2._mask is not None
 
-def test_read_write_rountrip():
+    def test_slab_preserves_wcs(self):
+        # regression test
+        ms = u.m / u.s
+        crpix = list(self.c._wcs.wcs.crpix)
+        self.c.spectral_slab(-318600 * ms, -320000 * ms)
+        assert list(self.c._wcs.wcs.crpix) == crpix
+
+
+class TestRepr(BaseTest):
+
+    def test_repr(self):
+        assert repr(self.c) == """
+SpectralCube with shape=(4, 3, 2):
+ n_x: 2  type_x: RA---SIN  unit_x: deg
+ n_y: 3  type_y: DEC--SIN  unit_y: deg
+ n_s: 4  type_s: VOPT      unit_s: m / s
+        """.strip()
+
+    def test_repr_withunit(self):
+        self.c._unit = u.Jy
+        assert repr(self.c) == """
+SpectralCube with shape=(4, 3, 2) and unit=Jy:
+ n_x: 2  type_x: RA---SIN  unit_x: deg
+ n_y: 3  type_y: DEC--SIN  unit_y: deg
+ n_s: 4  type_s: VOPT      unit_s: m / s
+        """.strip()
+
+def test_read_write_rountrip(tmpdir):
     cube = read(path('adv.fits'))
-    cube.write(path('test.fits'),clobber=True)
-    cube2 = read(path('test.fits'))
+    tmp_file = str(tmpdir.join('test.fits'))
+    cube.write(tmp_file)
+    cube2 = read(tmp_file)
 
     assert cube.shape == cube.shape
     np.testing.assert_allclose(cube._data, cube2._data)
@@ -246,14 +274,6 @@ def test_with_mask():
 
     np.testing.assert_allclose(cube._get_filled_data(), [[[np.nan, 1, 2, 3, 4]]])
     np.testing.assert_allclose(cube2._get_filled_data(), [[[np.nan, 1, 2, np.nan, np.nan]]])
-
-    def test_slab_preserves_wcs(self):
-        # regression test
-        ms = u.m / u.s
-        crpix = list(self.c._wcs.wcs.crpix)
-        self.c.spectral_slab(-318600 * ms, -320000 * ms)
-        assert list(self.c._wcs.wcs.crpix) == crpix
-
 
 class TestMasks(BaseTest):
 
