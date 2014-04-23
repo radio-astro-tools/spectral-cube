@@ -481,6 +481,11 @@ def test_endians():
     Test that the endianness checking returns something in Native form
     (this is only needed for non-numpy functions that worry about the
     endianness of their data)
+
+    WARNING: Because the endianness is machine-dependent, this may fail on
+    different architectures!  This is because numpy automatically converts
+    little-endian to native in the dtype parameter; I need a workaround for
+    this.
     """
     big = np.array([[[1],[2]]], dtype='>f4')
     lil = np.array([[[1],[2]]], dtype='<f4')
@@ -496,4 +501,10 @@ def test_endians():
     xlil = lilcube._get_filled_data(check_endian=True)
 
     assert xbig.dtype.byteorder == '='
+    assert xlil.dtype.byteorder == '='
+
+    xbig = bigcube._get_filled_data(check_endian=False)
+    xlil = lilcube._get_filled_data(check_endian=False)
+
+    assert xbig.dtype.byteorder == '>'
     assert xlil.dtype.byteorder == '='
