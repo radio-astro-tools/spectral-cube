@@ -3,7 +3,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 from astropy.wcs import WCS
 
-from .. import SpectralCubeMask, SpectralCube, LazyMask, FunctionMask, CompositeMask
+from .. import (BooleanArrayMask, SpectralCube, LazyMask,
+                FunctionMask, CompositeMask)
 
 
 def test_spectral_cube_mask():
@@ -11,7 +12,7 @@ def test_spectral_cube_mask():
     mask = np.array([[[False, True, True, False, True]]])
     mask_wcs = WCS()
 
-    m = SpectralCubeMask(mask, mask_wcs)
+    m = BooleanArrayMask(mask, mask_wcs)
 
     data = np.arange(5).reshape((1, 1, 5))
     wcs = WCS()

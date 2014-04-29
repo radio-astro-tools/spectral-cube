@@ -10,7 +10,7 @@ import numpy as np
 
 from . import cube_utils
 from . import wcs_utils
-from .masks import LazyMask
+from .masks import LazyMask, BooleanArrayMask
 
 
 __all__ = ['SpectralCube']
@@ -59,7 +59,7 @@ class SpectralCube(object):
         # TODO: mask should be oriented? Or should we assume correctly oriented here?
         self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
-        self._mask = mask  # specifies which elements to Nan/blank/ignore -> SpectralCubeMask
+        self._mask = mask  # specifies which elements to Nan/blank/ignore
                            # object or array-like object, given that WCS needs to be consistent with data?
         #assert mask._wcs == self._wcs
         self._fill_value = fill_value
@@ -88,7 +88,7 @@ class SpectralCube(object):
         if self.unit is u.dimensionless_unscaled:
             s += ":\n"
         else:
-            s +=  " and unit={0}:\n".format(self.unit)
+            s += " and unit={0}:\n".format(self.unit)
         s += " n_x: {0}  type_x: {1:8s}  unit_x: {2}\n".format(self.shape[2], self.wcs.wcs.ctype[0], self.wcs.wcs.cunit[0])
         s += " n_y: {0}  type_y: {1:8s}  unit_y: {2}\n".format(self.shape[1], self.wcs.wcs.ctype[1], self.wcs.wcs.cunit[1])
         s += " n_s: {0}  type_s: {1:8s}  unit_s: {2}".format(self.shape[0], self.wcs.wcs.ctype[2], self.wcs.wcs.cunit[2])
@@ -281,15 +281,37 @@ class SpectralCube(object):
                                                  **kwargs), self.unit,
                           copy=False)
 
-    # probably do not want to support this
-    # def get_masked_array(self):
-    #    return np.ma.masked_where(self.mask, self._data)
-
     def with_mask(self, mask, inherit_mask=True):
         """
         Return a new SpectralCube instance that contains a composite mask of
         the current SpectralCube and the new ``mask``.
+
+        Parameters
+        ----------
+        mask : :class:`MaskBase` instance, or boolean numpy array
+            The mask to apply. If a boolean array is supplied,
+            it will be converted into a mask, assuming that
+            True values indicate included elements.
+
+        inherit_mask : bool (optional, default=True)
+            If True, combines the provided mask with the
+            mask currently attached to the cube
+
+        Returns
+        -------
+        new_cube : :class:`SpectralCube`
+            A cube with the new mask applied.
+
+        Note
+        ----
+        This operation returns a view into the data, and not a copy.
         """
+        if isinstance(mask, np.ndarray):
+            if mask.shape != self._data.shape:
+                raise ValueError("Mask shape doesn't match data shape: "
+                                 "%s vs %s" % (mask.shape, self._data.shape))
+            mask = BooleanArrayMask(mask, self._wcs)
+
         cube = SpectralCube(self._data, wcs=self._wcs,
                             mask=self._mask & mask if inherit_mask else mask,
                             fill_value=self.fill_value,
@@ -365,7 +387,7 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
-        return u.Quantity(self._data(view), self.unit, copy=False)
+        return u.Quantity(self._data[view], self.unit, copy=False)
 
     @property
     def wcs(self):
@@ -389,7 +411,7 @@ class SpectralCube(object):
         this is implicit (e.g., they are not astropy Quantity arrays)
         """
         # Start off by extracting the world coordinates of the pixels
-        _, lat, lon = self.world[0,:,:]
+        _, lat, lon = self.world[0, :,:]
         spectral, _, _ = self.world[:, 0, 0]
 
         # Convert to radians
@@ -400,14 +422,14 @@ class SpectralCube(object):
         from astropy.coordinates.angle_utilities import angular_separation
         dx = angular_separation(lon[:, :-1], lat[:, :-1],
                                 lon[:, 1:], lat[:, :-1])
-        dy = angular_separation(lon[:-1,:], lat[:-1,:],
-                                lon[1:,:], lat[1:,:])
+        dy = angular_separation(lon[:-1, :], lat[:-1,:],
+                                lon[1:, :], lat[1:,:])
 
         # Find the cumulative offset - need to add a zero at the start
         x = np.zeros(self._data.shape[1:])
         y = np.zeros(self._data.shape[1:])
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
-        y[1:,:] = np.cumsum(np.degrees(dy), axis=0)
+        y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
 
         x = x.reshape(1, x.shape[0], x.shape[1])
         y = y.reshape(1, y.shape[0], y.shape[1])
@@ -469,8 +491,8 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dy = angular_separation(lon[:-1,:], lat[:-1,:],
-                                lon[1:,:], lat[1:,:])
+        dy = angular_separation(lon[:-1, :], lat[:-1,:],
+                                lon[1:, :], lat[1:,:])
 
         # Next, spectral coordinates
         zpix = np.linspace(-0.5, self._data.shape[0] - 0.5,
@@ -568,7 +590,7 @@ class SpectralCube(object):
         # special case: for order=1, axis=1, you usually want
         # the absolute velocity and not the offset
         if order == 1 and axis == 0:
-            out += self.world[0,:,:][0]
+            out += self.world[0, :,:][0]
 
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
@@ -605,7 +627,7 @@ class SpectralCube(object):
 
     @property
     def spatial_coordinate_map(self):
-        return self.world[0,:,:][1:]
+        return self.world[0, :,:][1:]
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -668,7 +690,7 @@ class SpectralCube(object):
             mask_slab = None
         else:
             try:
-                mask_slab = self._mask[ilo:ihi,:,:]
+                mask_slab = self._mask[ilo:ihi, :,:]
             except NotImplementedError:
                 warnings.warn("Mask slicing not implemented for {0} - dropping mask".format(self._mask.__class__.__name__))
                 mask_slab = None

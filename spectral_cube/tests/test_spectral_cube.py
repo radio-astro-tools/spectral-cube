@@ -6,7 +6,7 @@ from astropy import units as u
 from astropy.wcs import WCS
 import numpy as np
 
-from .. import SpectralCube, SpectralCubeMask, FunctionMask, read
+from .. import SpectralCube, BooleanArrayMask, FunctionMask, read
 from . import path
 
 
@@ -18,18 +18,20 @@ def cube_and_raw(filename):
     c = read(p, format='fits')
     return c, d
 
-def assert_almost_equal(arr1,arr2):
-    if hasattr(arr1,'to') and hasattr(arr2,'to'):
+
+def assert_almost_equal(arr1, arr2):
+    if hasattr(arr1, 'to') and hasattr(arr2, 'to'):
         x = arr1.to(arr2.unit)
-        np.testing.assert_array_almost_equal_nulp(x.value,arr2.value)
+        np.testing.assert_array_almost_equal_nulp(x.value, arr2.value)
     else:
-        np.testing.assert_array_almost_equal_nulp(arr1,arr2)
+        np.testing.assert_array_almost_equal_nulp(arr1, arr2)
+
 
 class BaseTest(object):
 
     def setup_method(self, method):
         c, d = cube_and_raw('adv.fits')
-        mask = SpectralCubeMask(d > 0.5, c._wcs)
+        mask = BooleanArrayMask(d > 0.5, c._wcs)
         c._mask = mask
         self.c = c
         self.mask = mask
@@ -54,7 +56,7 @@ class TestSpectralCube(object):
         np.testing.assert_allclose(c._get_filled_data(), expected)
 
     @pytest.mark.parametrize(('file', 'view'), (
-                             ('adv.fits', np.s_[:, :, :]),
+                             ('adv.fits', np.s_[:, :,:]),
                              ('adv.fits', np.s_[::2, :, :2]),
                              ('adv.fits', np.s_[0]),
                              ))
@@ -77,7 +79,7 @@ class TestSpectralCube(object):
         for result, expected in zip(w2, world):
             np.testing.assert_allclose(result, expected)
 
-    @pytest.mark.parametrize('view', (np.s_[:, :, :],
+    @pytest.mark.parametrize('view', (np.s_[:, :,:],
                              np.s_[:2, :3, ::2]))
     def test_world_transposes_3d(self, view):
         c1, d1 = cube_and_raw('adv.fits')
@@ -87,7 +89,7 @@ class TestSpectralCube(object):
             np.testing.assert_allclose(w1, w2)
 
     @pytest.mark.parametrize('view',
-                             (np.s_[:, :, :],
+                             (np.s_[:, :,:],
                               np.s_[:2, :3, ::2],
                               np.s_[::3, ::2, :1],
                               np.s_[:], ))
@@ -242,6 +244,7 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
  n_s: 4  type_s: VOPT      unit_s: m / s
         """.strip()
 
+
 def test_read_write_rountrip(tmpdir):
     cube = read(path('adv.fits'))
     tmp_file = str(tmpdir.join('test.fits'))
@@ -253,27 +256,51 @@ def test_read_write_rountrip(tmpdir):
     assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
 
-def test_with_mask():
-
-    data = np.array([[[0,1,2,3,4]]])
+def _dummy_cube():
+    data = np.array([[[0, 1, 2, 3, 4]]])
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
 
     def lower_threshold(data, wcs, view=()):
         return data[view] > 0
 
+    m1 = FunctionMask(lower_threshold)
+
+    cube = SpectralCube(data, wcs=wcs, mask=m1)
+    return cube
+
+
+def test_with_mask():
+
     def upper_threshold(data, wcs, view=()):
         return data[view] < 3
 
-    m1 = FunctionMask(lower_threshold)
     m2 = FunctionMask(upper_threshold)
 
-    wcs = WCS(naxis=3)
-    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
-
-    cube = SpectralCube(data, wcs=wcs, mask=m1)
+    cube = _dummy_cube()
     cube2 = cube.with_mask(m2)
 
     np.testing.assert_allclose(cube._get_filled_data(), [[[np.nan, 1, 2, 3, 4]]])
     np.testing.assert_allclose(cube2._get_filled_data(), [[[np.nan, 1, 2, np.nan, np.nan]]])
+
+
+def test_with_mask_with_boolean_array():
+    cube = _dummy_cube()
+    mask = cube._data > 2
+    cube2 = cube.with_mask(mask, inherit_mask=False)
+    assert isinstance(cube2._mask, BooleanArrayMask)
+    assert cube2._mask._wcs is cube._wcs
+    assert cube2._mask._mask is mask
+
+
+def test_with_mask_with_bad_array_shape():
+    cube = _dummy_cube()
+    mask = np.zeros((5, 5), dtype=np.bool)
+    with pytest.raises(ValueError) as exc:
+        cube.with_mask(mask)
+    assert exc.value.args[0] == ("Mask shape doesn't match data shape: "
+                                 "(5, 5) vs (1, 1, 5)")
+
 
 class TestMasks(BaseTest):
 

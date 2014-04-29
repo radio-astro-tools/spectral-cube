@@ -2,7 +2,7 @@ import warnings
 from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
-from spectral_cube import SpectralCube, SpectralCubeMask
+from spectral_cube import SpectralCube, BooleanArrayMask
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -136,7 +136,7 @@ def load_casa_image(filename, skipdata=False,
 
     meta = {'filename': filename}
 
-    mask = SpectralCubeMask(wcs, np.logical_not(valid))
+    mask = BooleanArrayMask(wcs, np.logical_not(valid))
     cube = SpectralCube(data, wcs, mask, meta=meta)
 
     return cube

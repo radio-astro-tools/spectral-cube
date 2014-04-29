@@ -3,7 +3,7 @@ import abc
 import numpy as np
 from . import wcs_utils
 
-__all__ = ['InvertedMask', 'CompositeMask', 'SpectralCubeMask',
+__all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
            'LazyMask', 'FunctionMask']
 
 
@@ -91,7 +91,7 @@ class MaskBase(object):
         Notes
         -----
         This is an internal method used by :class:`SpectralCube`.
-        Users should use the property :meth:`SpectralCubeMask.filled_data`
+        Users should use the property :meth:`MaskBase.filled_data`
         """
         sliced_data = data[view].copy().astype(np.float)
         ex = self.exclude(data=data, wcs=wcs, view=view)
@@ -153,7 +153,7 @@ class CompositeMask(MaskBase):
         return CompositeMask(self._mask1[view], self._mask2[view], operation=self._operation)
 
 
-class SpectralCubeMask(MaskBase):
+class BooleanArrayMask(MaskBase):
 
     """
     A mask defined as an array on a spectral cube WCS
@@ -186,7 +186,7 @@ class SpectralCubeMask(MaskBase):
         return self._include_mask.shape
 
     def __getitem__(self, view):
-        return SpectralCubeMask(self._mask[view], wcs_utils.slice_wcs(self._wcs, view))
+        return BooleanArrayMask(self._mask[view], wcs_utils.slice_wcs(self._wcs, view))
 
 
 class LazyMask(MaskBase):
@@ -195,7 +195,7 @@ class LazyMask(MaskBase):
     A boolean mask defined by the evaluation of a function on a fixed dataset.
 
     This is conceptually identical to a fixed boolean mask as in
-    :class:`SpectralCubeMask` but defers the
+    :class:`BooleanArrayMask` but defers the
     evaluation of the mask until it is needed.
 
     Parameters

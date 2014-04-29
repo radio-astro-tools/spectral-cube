@@ -13,8 +13,8 @@ data should be used, and the value ``False`` when the data should be ignored
 (though it is also possible to flip the convention around). To create a
 boolean mask from a boolean array ``mask_array``, simply use::
 
-    >>> from spectral_cube import SpectralCubeMask
-    >>> mask = SpectralCubeMask(mask=mask_array, wcs=cube.wcs)
+    >>> from spectral_cube import BooleanArrayMask
+    >>> mask = BooleanArrayMask(mask=mask_array, wcs=cube.wcs)
 
 Advanced masking
 ----------------
@@ -44,7 +44,7 @@ or for example::
     >>> LazyMask(threshold, cube=cube)
 
 :class:`~spectral_cube.LazyMask` instances can also be defined directly by
-specifying conditions on the :class:`~spectral_cube.SpectralCube` instances:
+specifying conditions on :class:`~spectral_cube.SpectralCube` objects:
 
    >>> cube > 5
        LazyMask(...)
@@ -70,6 +70,12 @@ In the above example, ``cube2`` contains a mask that is the ``&`` combination
 of ``new_mask`` with the existing mask on ``cube``. The ``cube2`` object
 contains a view to the same data as ``cube``, so no data is copied during
 this operation.
+
+Boolean arrays can also be used as input to
+:meth:`~spectral_cube.SpectralCube.with_mask`, assuming the shape of the mask
+and the data match
+
+    >>> cube2 = cube.with_mask(boolean_array)
 
 Fill values
 -----------
