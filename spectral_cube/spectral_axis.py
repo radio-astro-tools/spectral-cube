@@ -4,14 +4,14 @@ from astropy import constants
 import warnings
 
 def _parse_velocity_convention(vc):
-    if vc in (u.doppler_radio, 'radio', 'RADIO', 'VRAD', 'frequency'):
+    if vc in (u.doppler_radio, 'radio', 'RADIO', 'VRAD', 'F'):
         return u.doppler_radio
-    elif vc in (u.doppler_optical, 'optical', 'OPTICAL', 'VOPT', 'wavelength'):
+    elif vc in (u.doppler_optical, 'optical', 'OPTICAL', 'VOPT', 'W'):
         return u.doppler_optical
-    elif vc in (u.doppler_relativistic, 'relativistic', 'RELATIVE', 'VREL', 'speed'):
+    elif vc in (u.doppler_relativistic, 'relativistic', 'RELATIVE', 'VREL', 'speed', 'V'):
         return u.doppler_relativistic
-    else:
-        raise ValueError("Unrecognized velocity (doppler) convention")
+    #else:
+    #    raise ValueError("Unrecognized velocity (doppler) convention")
 
 # These are the only linear transformations allowed
 linear_ctypes = {u.doppler_optical: 'VOPT', u.doppler_radio: 'VRAD'}
@@ -19,6 +19,11 @@ linear_ctypes = {u.doppler_optical: 'VOPT', u.doppler_radio: 'VRAD'}
 all_ctypes = {'speed': linear_ctypes,
               'frequency': 'FREQ',
               'length': 'WAVE'}
+
+ctype_to_physicaltype = {'W': 'wavelength',
+                         'A': 'air wavelength', # unsupported
+                         'F': 'frequency',
+                         'V': 'speed'}
 
 
 def _get_linear_transformation(unit1, unit2):
@@ -46,7 +51,15 @@ def _get_linear_transformation(unit1, unit2):
 def _get_transformation(unit1, unit2):
     pass
 
-def convert_spectral_axis_linear(mywcs, outunit):
+def get_restfreq_from_wcs(mywcs):
+    if mywcs.wcs.restfrq:
+        ref_value = mywcs.wcs.restfrq*u.Hz
+        return ref_value
+    elif mywcs.wcs.restwav:
+        ref_value = mywcs.wcs.restwav*u.m
+        return ref_value
+
+def convert_spectral_axis_linear(mywcs, outunit, rest_value=None):
     """
     Conversions between two equivalent LINEAR WCS systems
 
@@ -55,6 +68,7 @@ def convert_spectral_axis_linear(mywcs, outunit):
     """
     spwcs = mywcs.sub([wcs.WCSSUB_SPECTRAL])
     myunit = u.Unit(spwcs.wcs.cunit[0])
+    outunit = u.Unit(outunit)
     equiv = _get_linear_transformation(myunit, outunit)
 
     if equiv is None:
@@ -62,10 +76,20 @@ def convert_spectral_axis_linear(mywcs, outunit):
                          "{0} to {1}".format(str(myunit),
                                              str(outunit)))
 
-    ref_value = mywcs.wcs.restfrq*u.Hz or mywcs.wcs.restwav*u.m
-    if equiv in (u.doppler_optical, u.doppler_radio) and ref_value.value == 0:
-        raise ValueError("Must have a reference wavelength or frequency to "
-                         "convert between velocity and wavelength or frequency.")
+    if outunit.physical_type == 'speed':
+        if rest_value is None:
+            ref_value = get_restfreq_from_wcs(mywcs)
+            if ref_value is None:
+                raise ValueError("If converting from wavelength/frequency to speed, "
+                                 "a reference wavelength/frequency is required.")
+        else:
+            ref_value = rest_value.to(u.Hz, u.spectral())
+    elif myunit.physical_type == 'speed':
+        # The rest frequency and wavelength should be equivalent
+        ref_value = get_restfreq_from_wcs(mywcs)
+        if ref_value is None:
+            raise ValueError("If converting from speed to wavelength/frequency, "
+                             "a reference wavelength/frequency is required.")
 
     crval = (spwcs.wcs.crval[0] * myunit)
     new_crval = crval.to(outunit, equiv(ref_value))
@@ -82,11 +106,12 @@ def convert_spectral_axis_linear(mywcs, outunit):
 
     return new_wcs
 
-def convert_spectral_axis(mywcs, outunit, out_ctype):
+def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     """
 
     Only VACUUM units are supported (not air)
     """
+    outunit = u.Unit(outunit)
     myunit = u.Unit(mywcs.wcs.cunit[mywcs.wcs.spec])
     in_spec_ctype = mywcs.wcs.ctype[mywcs.wcs.spec]
 
@@ -95,15 +120,30 @@ def convert_spectral_axis(mywcs, outunit, out_ctype):
     lin_ctype = (in_spec_ctype[5] if len(in_spec_ctype) > 4 else ' ') # 6th character
     lin_cunit = (wcs_unit_dict[lin_ctype] if lin_ctype in wcs_unit_dict
                  else mywcs.wcs.cunit[mywcs.wcs.spec])
+    if lin_ctype == ' ':
+        lin_ctype = in_spec_ctype[:4]
 
-    #in_linear = lin_ctype == ' '
-    #out_linear = out_ctype[6] == ' '
+    out_ctype_conv = out_ctype[7] if len(out_ctype) > 4 else out_ctype[:4]
+    vcequiv = _parse_velocity_convention(out_ctype_conv)
 
-    #if (in_linear and out_linear):
-    #    return convert_spectral_axis_linear(mywcs, outunit)
+    if ((_get_linear_transformation(myunit, outunit) == vcequiv)):
+        return convert_spectral_axis_linear(mywcs, outunit, rest_value=rest_value)
 
-    # The rest frequency and wavelength should be equivalent
-    ref_value = mywcs.wcs.restfrq*u.Hz or mywcs.wcs.restwav*u.m
+    ref_value = None
+    if outunit.physical_type == 'speed':
+        if rest_value is None:
+            raise ValueError("If converting from wavelength/frequency to speed, "
+                             "a reference wavelength/frequency is required.")
+        ref_value = rest_value.to(u.Hz, u.spectral())
+    elif myunit.physical_type == 'speed':
+        # The rest frequency and wavelength should be equivalent
+        if mywcs.wcs.restfrq:
+            ref_value = mywcs.wcs.restfrq*u.Hz
+        elif mywcs.wcs.restwav:
+            ref_value = mywcs.wcs.restwav*u.m
+        else:
+            raise ValueError("If converting from speed to wavelength/frequency, "
+                             "a reference wavelength/frequency is required.")
 
     # because of astropy magic, we can just convert directly from crval_in to crval_out
     # astropy takes care of the "chaining" described in Greisen 2006
@@ -119,38 +159,45 @@ def convert_spectral_axis(mywcs, outunit, out_ctype):
     #                         + u.spectral())
 
     # 1. Convert velocity to frequency or wavelength (or leave freq/wav alone)
-    try:
-        in_vcequiv = _parse_velocity_convention(lin_cunit.physical_type)(ref_value)
-        crval_lin = crval_in.to(lin_cunit, in_vcequiv + u.spectral())
-    except ValueError:
+    #try:
+    #    in_vcequiv = _parse_velocity_convention(lin_ctype)(ref_value)
+    #    crval_lin = crval_in.to(lin_cunit, in_vcequiv + u.spectral())
+    #except ValueError:
+    #    crval_lin = crval_in.to(lin_cunit, u.spectral())
+    if ref_value is None:
         crval_lin = crval_in.to(lin_cunit, u.spectral())
-
-    # 2. Convert freq/wav to velocity (or wav/freq)
-    try:
-        vcequiv = _parse_velocity_convention(out_ctype[:4])(ref_value)
-        crval_out = crval_lin.to(outunit, vcequiv + u.spectral())
-    except ValueError:
-        crval_out = crval_lin.to(outunit, u.spectral())
+    else:
+        crval_lin = crval_in.to(lin_cunit, u.spectral() +
+                                u.doppler_relativistic(ref_value))
 
     # output cdelt is the derivative at the output CRVAL
+    # Compute the "linear" version of cdelt... (i.e., the quantity that CDELT
+    # will be linearly proportional to)
     cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * myunit)
-    cdelt_out = cdelt_derivative(crval_lin, cdelt_in,
+    cdelt_lin = cdelt_derivative(crval_lin, cdelt_in,
                                  intype=myunit.physical_type,
-                                 outtype=outunit.physical_type,
-                                 rest=ref_value).to(outunit)
+                                 outtype=ctype_to_physicaltype[out_ctype_conv],
+                                 rest=ref_value)
+    # 2. Convert freq/wav to velocity (or wav/freq)
+    if vcequiv is not None and ref_value is not None:
+        crval_out = crval_lin.to(outunit, vcequiv(ref_value) + u.spectral())
 
-    # This block is if you wanted to *determine* out_ctype instead of specify it
-    #nonlinearalgorithmcode = (typedict[myunit.physical_type] + "2" +
-    #                          typedict[outunit.physical_type])
-    #
-    #if outunit.physical_type == 'speed':
-    #    out_ctype = linear_ctypes[vcequiv]
-    #else:
-    #    out_ctype = all_ctypes[outunit.physical_type]
-
-    #out_ctype += "_" + nonlinearalgorithmcode
+        if cdelt_lin.unit.physical_type == 'speed':
+            cdelt_out = cdelt_lin.to(outunit, vcequiv(ref_value) + u.spectral())
+        else:
+            # this little bit of apparent redundancy is because there is no "delta"
+            # equivalency, and defining one is tedious
+            # It is easier to recognize that cdelt+crval can be converted...
+            val_to_get_cdelt = (cdelt_lin+ref_value.to(cdelt_lin.unit, u.spectral()))
+            cdelt_out = val_to_get_cdelt.to(outunit, vcequiv(ref_value) + u.spectral())
+    else:
+        crval_out = crval_lin.to(outunit, u.spectral())
+        cdelt_out = cdelt_lin.to(outunit, u.spectral())
 
     assert crval_out.unit == cdelt_out.unit
+
+    # A cdelt of 0 would be meaningless
+    assert cdelt_out.value != 0
 
     newwcs = mywcs.deepcopy()
     newwcs.wcs.cdelt[newwcs.wcs.spec] = cdelt_out.value
@@ -160,7 +207,8 @@ def convert_spectral_axis(mywcs, outunit, out_ctype):
 
     return newwcs
 
-def cdelt_derivative(crval, cdelt, intype, outtype, rest=None, equivalencies=[]):
+def cdelt_derivative(crval, cdelt, intype, outtype, rest=None, equivalencies=[],
+                     convention=None):
     if set((outtype,intype)) == set(('wavelength','frequency')):
         # Symmetric equations!
         return -constants.c / crval**2 * cdelt
