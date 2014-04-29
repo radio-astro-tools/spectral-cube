@@ -15,13 +15,13 @@ axis::
 
     >>> moment_0_along_x = cube.moment(order=0, axis=2)
 
-The moment maps returned are :class:`~spectral_cube.MomentMap` instances,
+The moment maps returned are :class:`~spectral_cube.Projection` instances,
 which act like :class:`~astropy.units.Quantity` objects, and also have
 convenience methods for writing to a file::
 
     >>> moment_0.write('moment0.fits')
 
- and converting the data and WCS to a FITS HDU::
+and converting the data and WCS to a FITS HDU::
 
     >>> moment_0.hdu
     <astropy.io.fits.hdu.image.PrimaryHDU at 0x10d6ec510>

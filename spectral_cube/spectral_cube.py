@@ -67,9 +67,9 @@ def aggregation_docstring(func):
 np2wcs = {2: 0, 1: 1, 0: 2}
 
 
-class MomentMap(u.Quantity):
+class Projection(u.Quantity):
 
-    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None):
+    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None, meta=None):
 
         if value.ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -79,12 +79,17 @@ class MomentMap(u.Quantity):
 
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype, copy=copy).view(cls)
         self._wcs = wcs
+        self._meta = meta
 
         return self
 
     @property
     def wcs(self):
         return self._wcs
+
+    @property
+    def meta(self):
+        return self._meta
 
     @property
     def hdu(self):
@@ -807,7 +812,11 @@ class SpectralCube(object):
 
         new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
-        return MomentMap(out, copy=False, wcs=new_wcs)
+        meta = {'moment_order': order,
+                'moment_axis': axis,
+                'moment_method': how}
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta)
 
     def moment0(self, axis=0, how='auto'):
         """Compute the zeroth moment along an axis.
