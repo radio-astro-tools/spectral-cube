@@ -1,5 +1,7 @@
 import numpy as np
 
+from .cube_utils import iterator_strategy
+
 """
 Functions to compute moment maps in a variety of ways
 """
@@ -180,8 +182,6 @@ def moment_auto(cube, order, axis):
     """
     Build a moment map, choosing a strategy to balance speed and memory.
     """
-
-    if np.product(cube.shape) < 1e8:  # smallish, do in RAM
-        return moment_cubewise(cube, order, axis)
-
-    return moment_slicewise(cube, order, axis)  # save memory
+    strategy = dict(cube=moment_cubewise, ray=moment_raywise,
+                    slice=moment_slicewise)
+    return strategy[iterator_strategy(cube, axis)](cube, order, axis)

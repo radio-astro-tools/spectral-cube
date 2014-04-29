@@ -139,3 +139,30 @@ class SliceIndexer(object):
 
     def __getitem__(self, view):
         return self._func(self._other, view)
+
+
+def iterator_strategy(cube, axis=None):
+    """
+    Guess the most efficient iteration strategy
+    for iterating over a cube, given it's size and layout
+
+    Parameters
+    ----------
+    cube : SpectralCube instance
+        The cube to iterate over
+    axis : [0, 1, 2]
+        For reduction methods, the axis that is
+        being collapsed
+
+    Returns
+    -------
+    strategy : ['cube' | 'ray' | 'slice']
+        The recommended iteration strategy.
+        *cube* recommends working with the entire array in memory
+        *slice* recomends working with one slice at a time
+        *ray*  recommends working with one ray at a time
+    """
+    # pretty simple for now
+    if np.product(cube.shape) < 1e8:  # smallish
+        return 'cube'
+    return 'slice'
