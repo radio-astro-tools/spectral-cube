@@ -256,27 +256,50 @@ def test_read_write_rountrip(tmpdir):
     assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
 
-def test_with_mask():
-
+def _dummy_cube():
     data = np.array([[[0, 1, 2, 3, 4]]])
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
 
     def lower_threshold(data, wcs, view=()):
         return data[view] > 0
 
+    m1 = FunctionMask(lower_threshold)
+
+    cube = SpectralCube(data, wcs=wcs, mask=m1)
+    return cube
+
+
+def test_with_mask():
+
     def upper_threshold(data, wcs, view=()):
         return data[view] < 3
 
-    m1 = FunctionMask(lower_threshold)
     m2 = FunctionMask(upper_threshold)
 
-    wcs = WCS(naxis=3)
-    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
-
-    cube = SpectralCube(data, wcs=wcs, mask=m1)
+    cube = _dummy_cube()
     cube2 = cube.with_mask(m2)
 
     np.testing.assert_allclose(cube._get_filled_data(), [[[np.nan, 1, 2, 3, 4]]])
     np.testing.assert_allclose(cube2._get_filled_data(), [[[np.nan, 1, 2, np.nan, np.nan]]])
+
+
+def test_with_mask_with_boolean_array():
+    cube = _dummy_cube()
+    mask = cube._data > 2
+    cube2 = cube.with_mask(mask, inherit_mask=False)
+    assert isinstance(cube2._mask, BooleanArrayMask)
+    assert cube2._mask._wcs is cube._wcs
+    assert cube2._mask._mask is mask
+
+
+def test_with_mask_with_bad_array_shape():
+    cube = _dummy_cube()
+    mask = np.zeros((5, 5), dtype=np.bool)
+    with pytest.raises(ValueError) as exc:
+        cube.with_mask(mask)
+    assert exc.value.args[0] == ("Mask shape doesn't match data shape: "
+                                 "(5, 5) vs (1, 1, 5)")
 
 
 class TestMasks(BaseTest):

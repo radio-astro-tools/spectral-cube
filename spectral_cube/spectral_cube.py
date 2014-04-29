@@ -10,7 +10,7 @@ import numpy as np
 
 from . import cube_utils
 from . import wcs_utils
-from .masks import LazyMask
+from .masks import LazyMask, BooleanArrayMask
 
 
 __all__ = ['SpectralCube']
@@ -281,15 +281,37 @@ class SpectralCube(object):
                                                  **kwargs), self.unit,
                           copy=False)
 
-    # probably do not want to support this
-    # def get_masked_array(self):
-    #    return np.ma.masked_where(self.mask, self._data)
-
     def with_mask(self, mask, inherit_mask=True):
         """
         Return a new SpectralCube instance that contains a composite mask of
         the current SpectralCube and the new ``mask``.
+
+        Parameters
+        ----------
+        mask : :class:`MaskBase` instance, or boolean numpy array
+            The mask to apply. If a boolean array is supplied,
+            it will be converted into a mask, assuming that
+            True values indicate included elements.
+
+        inherit_mask : bool (optional, default=True)
+            If True, combines the provided mask with the
+            mask currently attached to the cube
+
+        Returns
+        -------
+        new_cube : :class:`SpectralCube`
+            A cube with the new mask applied.
+
+        Note
+        ----
+        This operation returns a view into the data, and not a copy.
         """
+        if isinstance(mask, np.ndarray):
+            if mask.shape != self._data.shape:
+                raise ValueError("Mask shape doesn't match data shape: "
+                                 "%s vs %s" % (mask.shape, self._data.shape))
+            mask = BooleanArrayMask(mask, self._wcs)
+
         cube = SpectralCube(self._data, wcs=self._wcs,
                             mask=self._mask & mask if inherit_mask else mask,
                             fill_value=self.fill_value,
@@ -365,7 +387,7 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
-        return u.Quantity(self._data(view), self.unit, copy=False)
+        return u.Quantity(self._data[view], self.unit, copy=False)
 
     @property
     def wcs(self):
