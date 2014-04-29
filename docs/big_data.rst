@@ -47,8 +47,11 @@ of relevant data, to make writing code like this easier:
 - :meth:`SpectralCube` itself can be sliced to extract subcubes
 - :meth:`SpectralCube.spectral_slab` extracts a subset of spectral channels.
 
-The various moment methods in :class:`SpectralCube` iterate over smaller chunks of data, to avoid large memory allocations when working with
-big cubes.
+Many methods in :class:`SpectralCube` iterate over smaller chunks of data, to avoid large memory allocations when working with
+big cubes. Some of these have a ``how`` keyword parameter, for
+fine-grained control over how much memory is accessed at once.
+ ``how='cube'`` works with the entire array in memory, ``how='slice'``
+ works with one slice at a time, and ``how='ray'`` works with one ray at a time.
 
 As a user, your best strategy for working with large datasets is to rely on
 builtin methods to :class:`SpectralCube`, and to access data from
@@ -56,9 +59,8 @@ builtin methods to :class:`SpectralCube`, and to access data from
 in smaller chunks if possible.
 
 .. warning ::
-    At the moment, the :meth:`~SpectralCube.max`, :meth:`~SpectralCube.min`,
-    :meth:`~SpectralCube.argmax`, :meth:`~SpectralCube.argmin`,
-    and :meth:`~SpectralCube.sum` methods are **not** optimized for handling large datasets.
+    At the moment, :meth:`~SpectralCube.argmax` and :meth:`~SpectralCube.argmin`,
+    are **not** optimized for handling large datasets.
 
 
 Minimize Data Copying
