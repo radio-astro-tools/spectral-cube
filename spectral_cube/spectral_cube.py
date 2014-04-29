@@ -343,6 +343,11 @@ class SpectralCube(object):
         """
         Return a portion of the data array, with excluded mask values
         replaced by `fill_value`.
+
+        Returns
+        -------
+        data : Quantity
+            The masked data.
         """
         return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
                           self.unit, copy=False)
@@ -387,6 +392,15 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
+        """
+        Return a view of the subset of the underlying data,
+        ignoring the mask.
+
+        Returns
+        -------
+        data : Quantity instance
+            The unmasked data
+        """
         return u.Quantity(self._data[view], self.unit, copy=False)
 
     @property
@@ -758,11 +772,6 @@ class SpectralCube(object):
 
         Extract every other pixel along all axes
         >>> v, y, x = c.world[::2, ::2, ::2]
-
-        Note
-        ----
-        Calling world with view is efficient in the sense that it
-        only computes pixels within the view.
         """
 
         # note: view is a tuple of view

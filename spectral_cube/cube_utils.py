@@ -114,8 +114,21 @@ def slice_syntax(f):
         result = SliceIndexer(f, self)
         result.__doc__ = f.__doc__
         return result
+
+    wrapper.__doc__ = slice_doc.format(f.__doc__ or '',
+                                       f.__name__)
+
     result = property(wrapper)
     return result
+
+slice_doc = """
+{0}
+
+Notes
+-----
+Supports efficient Numpy slice notation,
+like ``{1}[0:3, :, 2:4]``
+"""
 
 
 class SliceIndexer(object):
