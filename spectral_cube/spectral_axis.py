@@ -92,7 +92,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, velocity_convention=None):
     vcequiv = _parse_velocity_convention(velocity_convention)
     in_spec_ctype = mywcs.wcs.ctype[wcs.wcs.spec]
 
-    # Used to indicate the intial / final sampling system 
+    # Used to indicate the intial / final sampling system
     wcs_unit_dict = {'F': u.Hz, 'W': u.m, 'V': u.m/u.s}
     lin_ctype = in_spec_ctype[6] # 6th character
     lin_cunit = wcs_unit_dict[lin_ctype]
@@ -105,6 +105,9 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, velocity_convention=None):
     #     _get_linear_transformation(myunit, outunit) == vcequiv)):
         return convert_spectral_axis_linear(mywcs, outunit)
 
+    # The rest frequency and wavelength should be equivalent
+    ref_value = mywcs.wcs.restfrq*u.Hz or mywcs.wcs.restwav*u.m
+
     typedict = {'speed':'V',
                 'frequency':'F',
                 'wavelength':'W'}
@@ -115,39 +118,35 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, velocity_convention=None):
     # because of astropy magic, we can just convert directly from crval_in to crval_out
     # astropy takes care of the "chaining" described in Greisen 2006
     # the derivative is computed locally to the output unit
+    crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * myunit)
 
-    crval = (spwcs.wcs.crval[0] * myunit)
     # Compute the X_r value, using eqns 6,8..16 in Greisein 2006
     # (the velocity conversions are all "apparent velocity", i.e. relativistic
     # convention)
-    crval_lin = crval.to(lin_cunit, u.doppler_relativistic(ref_value) + u.spectral())
+    crval_out = crval_in.to(lin_cunit, u.doppler_relativistic(ref_value) + u.spectral())
 
-    #crval_out = crval_lin.to(wcs_unit_dict[
 
     # output cdelt is the derivative at the output CRVAL
+    cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * myunit)
+    cdelt_out = cdelt_derivative(crval_out, cdelt_in,
+                                 intype=myunit.physical_type,
+                                 outtype=outunit.physical_type, rest=ref_value)
 
-    cdelt = (spwcs.wcs.cdelt[0] * myunit)
-    delt1 = (crval + cdelt).to(outunit, equiv(ref_value) + u.spectral())
+    if outunit.physical_type == 'speed':
+        out_ctype = linear_ctypes[vcequiv]
+    else:
+        out_ctype = all_ctypes[outunit.physical_type]
 
+    out_ctype += "_" + nonlinearalgorithmcode
 
+    newwcs = mywcs.copy()
+    newwcs.wcs.cdelt[newwcs.wcs.spec] = cdelt_out
+    newwcs.wcs.crval[newwcs.wcs.spec] = crval_out
+    newwcs.wcs.ctype[newwcs.wcs.spec] = out_ctype
 
+    return newwcs
 
-    #crval = 
-    #cdelt = 
-    #ctype = 
-
-"""
-1. Convert to linear from whatever it is, e.g. VRAD-W2F would need to convert
-   VRAD -> F -> W, because the sampling is linear in W
-2. Convert to the new nonlinear system
-"""
-
-def toX():
-    pass
-def toP():
-    pass
-
-def derivative(crval, cdelt, intype, outtype, rest=None):
+def cdelt_derivative(crval, cdelt, intype, outtype, rest=None):
     if set(outtype,intype) == set('wave','freq'):
         # Symmetric equations!
         return -constants.c / crval**2 * cdelt
