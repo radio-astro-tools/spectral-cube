@@ -648,15 +648,18 @@ class SpectralCube(object):
         try:
             value = value.to(spectral_axis.unit, equivalencies=u.spectral())
         except u.UnitsError:
-            if rest_frequency is None:
-                raise u.UnitsError("{0} cannot be converted to {1} without a "
-                                   "rest frequency".format(value.unit, spectral_axis.unit))
+            if value.unit.is_equivalent(spectral_axis.unit, equivalencies=u.doppler_radio(None)):
+                if rest_frequency is None:
+                    raise u.UnitsError("{0} cannot be converted to {1} without a "
+                                       "rest frequency".format(value.unit, spectral_axis.unit))
+                else:
+                    try:
+                        value = value.to(spectral_axis.unit,
+                                         equivalencies=u.doppler_radio(rest_frequency))
+                    except u.UnitsError:
+                        raise u.UnitsError("{0} cannot be converted to {1}".format(value.unit, spectral_axis.unit))
             else:
-                try:
-                    value = value.to(spectral_axis.unit,
-                                     equivalencies=u.doppler_radio(rest_frequency))
-                except u.UnitsError:
-                    raise u.UnitsError("{0} cannot be converted to {1}".format(value.unit, spectral_axis.unit))
+                raise u.UnitsError("'value' should be in frequency equivalent or velocity units (got {0})".format(value.unit))
 
         # TODO: optimize the next line - just brute force for now
         return np.argmin(np.abs(spectral_axis - value))
