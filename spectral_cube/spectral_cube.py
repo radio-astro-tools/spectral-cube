@@ -181,9 +181,10 @@ class SpectralCube(object):
         """
         return self._mask.include(data=self._data, wcs=self._wcs)
 
-    def get_mask(self):
+    @property
+    def mask(self):
         """
-        Return the underling mask
+        The underling mask
         """
         return self._mask
 
