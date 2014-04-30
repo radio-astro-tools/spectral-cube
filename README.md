@@ -18,7 +18,7 @@ This package is developed by:
 Build and coverage status
 =========================
 
-[![Build Status](https://travis-ci.org/radio-tools/spectral-cube.png?branch=master)](https://travis-ci.org/radio-tools/spectral-cube)
+[![Build Status](https://travis-ci.org/radio-astro-tools/spectral-cube.png?branch=master)](https://travis-ci.org/radio-astro-tools/spectral-cube)
 
-[![Coverage Status](https://coveralls.io/repos/radio-tools/spectral-cube/badge.png?branch=master)](https://coveralls.io/r/radio-tools/spectral-cube?branch=master)
+[![Coverage Status](https://coveralls.io/repos/radio-astro-tools/spectral-cube/badge.png?branch=master)](https://coveralls.io/r/radio-astro-tools/spectral-cube?branch=master)
 
