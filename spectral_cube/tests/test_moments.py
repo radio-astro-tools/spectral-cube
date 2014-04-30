@@ -1,9 +1,13 @@
 import pytest
 import numpy as np
+
 from astropy.wcs import WCS
 from astropy import units as u
 from astropy.io import fits
+
 from ..io import fits as spfits
+
+from .helpers import assert_allclose
 
 # the back of the book
 dv = 3e-2 * u.Unit('m/s')
@@ -71,8 +75,8 @@ def test_strategies_consistent(axis, order):
     cwise = sc.moment(axis=axis, order=order, how='cube')
     swise = sc.moment(axis=axis, order=order, how='slice')
     rwise = sc.moment(axis=axis, order=order, how='ray')
-    np.testing.assert_array_almost_equal(cwise, swise)
-    np.testing.assert_array_almost_equal(cwise, rwise)
+    assert_allclose(cwise, swise)
+    assert_allclose(cwise, rwise)
 
 
 @pytest.mark.parametrize(('order', 'axis', 'how'),
@@ -84,8 +88,7 @@ def test_reference(order, axis, how):
     mc_hdu = moment_cube()
     sc = spfits.load_fits_hdu(mc_hdu)
     mom_sc = sc.moment(order=order, axis=axis, how=how)
-    np.testing.assert_array_almost_equal(mom_sc,
-                                         MOMENTS[order][axis])
+    assert_allclose(mom_sc, MOMENTS[order][axis])
 
 
 @axis_order
@@ -97,17 +100,14 @@ def test_consistent_mask_handling(axis, order):
     cwise = sc.moment(axis=axis, order=order, how='cube')
     swise = sc.moment(axis=axis, order=order, how='slice')
     rwise = sc.moment(axis=axis, order=order, how='ray')
-    np.testing.assert_array_almost_equal(cwise, swise)
-    np.testing.assert_array_almost_equal(cwise, rwise)
+    assert_allclose(cwise, swise)
+    assert_allclose(cwise, rwise)
 
 
 def test_convenience_methods():
     mc_hdu = moment_cube()
     sc = spfits.load_fits_hdu(mc_hdu)
 
-    np.testing.assert_array_almost_equal(sc.moment0(axis=0),
-                                         MOMENTS[0][0])
-    np.testing.assert_array_almost_equal(sc.moment1(axis=2),
-                                         MOMENTS[1][2])
-    np.testing.assert_array_almost_equal(sc.moment2(axis=1),
-                                         MOMENTS[2][1])
+    assert_allclose(sc.moment0(axis=0), MOMENTS[0][0])
+    assert_allclose(sc.moment1(axis=2), MOMENTS[1][2])
+    assert_allclose(sc.moment2(axis=1), MOMENTS[2][1])

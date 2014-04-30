@@ -7,7 +7,10 @@ from astropy.wcs import WCS
 import numpy as np
 
 from .. import SpectralCube, BooleanArrayMask, FunctionMask, read
+
 from . import path
+from .helpers import assert_allclose
+
 
 
 def cube_and_raw(filename):
@@ -17,14 +20,6 @@ def cube_and_raw(filename):
 
     c = read(p, format='fits')
     return c, d
-
-
-def assert_almost_equal(arr1, arr2):
-    if hasattr(arr1, 'to') and hasattr(arr2, 'to'):
-        x = arr1.to(arr2.unit)
-        np.testing.assert_array_almost_equal_nulp(x.value, arr2.value)
-    else:
-        np.testing.assert_array_almost_equal_nulp(arr1, arr2)
 
 
 class BaseTest(object):
@@ -53,7 +48,7 @@ class TestSpectralCube(object):
         """data() should return velocity axis first, then world 1, then world 0"""
         c, d = cube_and_raw(name + '.fits')
         expected = np.squeeze(d.transpose(trans))
-        np.testing.assert_allclose(c._get_filled_data(), expected)
+        assert_allclose(c._get_filled_data(), expected)
 
     @pytest.mark.parametrize(('file', 'view'), (
                              ('adv.fits', np.s_[:, :,:]),
@@ -77,7 +72,7 @@ class TestSpectralCube(object):
 
         w2 = c.world[view]
         for result, expected in zip(w2, world):
-            np.testing.assert_allclose(result, expected)
+            assert_allclose(result, expected)
 
     @pytest.mark.parametrize('view', (np.s_[:, :,:],
                              np.s_[:2, :3, ::2]))
@@ -86,7 +81,7 @@ class TestSpectralCube(object):
         c2, d2 = cube_and_raw('vad.fits')
 
         for w1, w2 in zip(c1.world[view], c2.world[view]):
-            np.testing.assert_allclose(w1, w2)
+            assert_allclose(w1, w2)
 
     @pytest.mark.parametrize('view',
                              (np.s_[:, :,:],
@@ -97,7 +92,7 @@ class TestSpectralCube(object):
         c1, d1 = cube_and_raw('advs.fits')
         c2, d2 = cube_and_raw('sadv.fits')
         for w1, w2 in zip(c1.world[view], c2.world[view]):
-            np.testing.assert_allclose(w1, w2)
+            assert_allclose(w1, w2)
 
 
 class TestFilters(BaseTest):
@@ -105,20 +100,20 @@ class TestFilters(BaseTest):
     def test_mask_data(self):
         c, d = self.c, self.d
         expected = np.where(d > .5, d, np.nan)
-        np.testing.assert_allclose(c._get_filled_data(), expected)
+        assert_allclose(c._get_filled_data(), expected)
 
         expected = np.where(d > .5, d, 0)
-        np.testing.assert_allclose(c._get_filled_data(fill=0), expected)
+        assert_allclose(c._get_filled_data(fill=0), expected)
 
     def test_flatten(self):
         c, d = self.c, self.d
         expected = d[d > 0.5]
-        np.testing.assert_allclose(c.flattened(), expected)
+        assert_allclose(c.flattened(), expected)
 
     def test_flatten_weights(self):
         c, d = self.c, self.d
         expected = d[d > 0.5] ** 2
-        np.testing.assert_allclose(c.flattened(weights=d), expected)
+        assert_allclose(c.flattened(weights=d), expected)
 
     @pytest.mark.xfail
     def test_slice(self):
@@ -126,7 +121,7 @@ class TestFilters(BaseTest):
 
         expected = d[:3, :2, ::2]
         expected = expected[expected > 0.5]
-        np.testing.assert_allclose(c[0:3, 0:2, 0::2].flattened(), expected)
+        assert_allclose(c[0:3, 0:2, 0::2].flattened(), expected)
 
 
 class TestNumpyMethods(BaseTest):
@@ -135,7 +130,7 @@ class TestNumpyMethods(BaseTest):
         for axis in [None, 0, 1, 2]:
             expected = func(array, axis=axis)
             actual = cubemethod(axis=axis)
-            np.testing.assert_allclose(actual, expected)
+            assert_allclose(actual, expected)
 
     def test_sum(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
@@ -164,7 +159,7 @@ class TestNumpyMethods(BaseTest):
                 ray = self.d[:, y, x]
                 ray = ray[ray > 0.5]
                 m[y, x] = np.median(ray)
-        np.testing.assert_allclose(self.c.median(axis=0), m)
+        assert_allclose(self.c.median(axis=0), m)
 
     def test_percentile(self):
         m = np.empty(self.d.sum(axis=0).shape)
@@ -173,7 +168,7 @@ class TestNumpyMethods(BaseTest):
                 ray = self.d[:, y, x]
                 ray = ray[ray > 0.5]
                 m[y, x] = np.percentile(ray, 3)
-        np.testing.assert_allclose(self.c.percentile(3, axis=0), m)
+        assert_allclose(self.c.percentile(3, axis=0), m)
 
     @pytest.mark.parametrize('method', ('sum', 'min', 'max',
                              'median', 'argmin', 'argmax'))
@@ -181,7 +176,7 @@ class TestNumpyMethods(BaseTest):
         c1, d1 = cube_and_raw('adv.fits')
         c2, d2 = cube_and_raw('vad.fits')
         for axis in [None, 0, 1, 2]:
-            np.testing.assert_allclose(getattr(c1, method)(axis=axis),
+            assert_allclose(getattr(c1, method)(axis=axis),
                                        getattr(c2, method)(axis=axis))
 
 
@@ -211,13 +206,13 @@ class TestSlab(BaseTest):
     def test_slab(self):
         ms = u.m / u.s
         c2 = self.c.spectral_slab(-320000 * ms, -318600 * ms)
-        np.testing.assert_allclose(c2._data, self.d[1:3])
+        assert_allclose(c2._data, self.d[1:3])
         assert c2._mask is not None
 
     def test_slab_reverse_limits(self):
         ms = u.m / u.s
         c2 = self.c.spectral_slab(-318600 * ms, -320000 * ms)
-        np.testing.assert_allclose(c2._data, self.d[1:3])
+        assert_allclose(c2._data, self.d[1:3])
         assert c2._mask is not None
 
     def test_slab_preserves_wcs(self):
@@ -255,7 +250,7 @@ def test_read_write_rountrip(tmpdir):
     cube2 = read(tmp_file)
 
     assert cube.shape == cube.shape
-    np.testing.assert_allclose(cube._data, cube2._data)
+    assert_allclose(cube._data, cube2._data)
     assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
 
@@ -283,8 +278,8 @@ def test_with_mask():
     cube = _dummy_cube()
     cube2 = cube.with_mask(m2)
 
-    np.testing.assert_allclose(cube._get_filled_data(), [[[np.nan, 1, 2, 3, 4]]])
-    np.testing.assert_allclose(cube2._get_filled_data(), [[[np.nan, 1, 2, np.nan, np.nan]]])
+    assert_allclose(cube._get_filled_data(), [[[np.nan, 1, 2, 3, 4]]])
+    assert_allclose(cube2._get_filled_data(), [[[np.nan, 1, 2, np.nan, np.nan]]])
 
 
 def test_with_mask_with_boolean_array():
@@ -318,4 +313,4 @@ class TestMasks(BaseTest):
 
         expected = self.d[op(self.d, thresh)]
         actual = self.c.flattened()
-        np.testing.assert_array_equal(actual, expected)
+        assert_allclose(actual, expected)
