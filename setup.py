@@ -25,10 +25,12 @@ class PyTest(Command):
         errno = subprocess.call([sys.executable, 'runtests.py'])
         raise SystemExit(errno)
 
-from spectral_cube.version import __version__
+# We have to set the version number here rather than import it, otherwise
+# running setup.py requires all spectral_cube dependencis to be installed.
+VERSION = "0.1.dev"
 
 setup(name='spectral_cube',
-      version=__version__,
+      version=VERSION,
       description='Spectral Cube object',
       long_description=long_description,
       author='Chris Beaumont, Adam Leroy, Adam Ginsburg, Erik Rosolowsky, and Tom Robitaille',
