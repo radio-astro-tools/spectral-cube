@@ -1,4 +1,4 @@
-from ..spectral_axis import convert_spectral_axis
+from ..spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
 from astropy import wcs
 from astropy.io import fits
 from astropy import units as u
@@ -140,3 +140,24 @@ def test_byhand_vopt():
     # Disagreement is 2.5e-7: good, but not really great...
     assert np.abs((crvalv_computed-crvalv)/crvalv) < 1e-6
     np.testing.assert_almost_equal(cdeltv_computed, cdeltv, decimal=2)
+
+@pytest.mark.parametrize(('ctype','unit','velocity_convention','result'),
+                         (('VELO-F2V', "Hz", None, 'FREQ'),
+                          ('VELO-F2V', "m", None, 'WAVE-F2W'),
+                          ('FREQ', 'm/s', None, ValueError('A velocity convention must be specified')),
+                          ('FREQ', 'm/s', u.doppler_radio, 'VRAD'),
+                          ('FREQ', 'm/s', u.doppler_optical, 'VOPT-F2W'),
+                          ('FREQ', 'm/s', u.doppler_relativistic, 'VELO-F2V'),
+                          ('WAVE', 'm/s', u.doppler_radio, 'VRAD-W2F')))
+def test_ctype_determinator(ctype,unit,velocity_convention,result):
+
+    if isinstance(result, Exception):
+        with pytest.raises(Exception) as exc:
+            determine_ctype_from_vconv(ctype, unit,
+                                       velocity_convention=velocity_convention)
+        assert exc.value.args[0] == result.args[0]
+        assert type(exc.value) == type(result)
+    else:
+        outctype = determine_ctype_from_vconv(ctype, unit,
+                                              velocity_convention=velocity_convention)
+        assert outctype == result

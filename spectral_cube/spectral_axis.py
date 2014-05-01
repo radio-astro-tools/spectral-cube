@@ -4,26 +4,31 @@ from astropy import constants
 import warnings
 
 def _parse_velocity_convention(vc):
-    if vc in (u.doppler_radio, 'radio', 'RADIO', 'VRAD', 'F'):
+    if vc in (u.doppler_radio, 'radio', 'RADIO', 'VRAD', 'F', 'FREQ'):
         return u.doppler_radio
-    elif vc in (u.doppler_optical, 'optical', 'OPTICAL', 'VOPT', 'W'):
+    elif vc in (u.doppler_optical, 'optical', 'OPTICAL', 'VOPT', 'W', 'WAVE'):
         return u.doppler_optical
-    elif vc in (u.doppler_relativistic, 'relativistic', 'RELATIVE', 'VREL', 'speed', 'V'):
+    elif vc in (u.doppler_relativistic, 'relativistic', 'RELATIVE', 'VREL', 'speed', 'V', 'VELO'):
         return u.doppler_relativistic
     #else:
     #    raise ValueError("Unrecognized velocity (doppler) convention")
 
 # These are the only linear transformations allowed
-linear_ctypes = {u.doppler_optical: 'VOPT', u.doppler_radio: 'VRAD'}
+linear_ctypes = {u.doppler_optical: 'VOPT', u.doppler_radio: 'VRAD',
+                 u.doppler_relativistic: 'VELO'}
+linear_ctype_chars = {u.doppler_optical: 'W', u.doppler_radio: 'F',
+                      u.doppler_relativistic: 'V'}
 
 all_ctypes = {'speed': linear_ctypes,
               'frequency': 'FREQ',
               'length': 'WAVE'}
 
-ctype_to_physicaltype = {'W': 'wavelength',
+ctype_to_physicaltype = {'W': 'length',
                          'A': 'air wavelength', # unsupported
                          'F': 'frequency',
                          'V': 'speed'}
+
+physical_type_to_ctype = dict([(v,k) for k,v in ctype_to_physicaltype.iteritems()])
 
 
 def _get_linear_transformation(unit1, unit2):
@@ -48,8 +53,56 @@ def _get_linear_transformation(unit1, unit2):
           unit2.physical_type in ('length','speed')):
         return u.doppler_optical
 
-def _get_transformation(unit1, unit2):
-    pass
+def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
+    """
+    Given a CTYPE describing the current WCS and an output unit and velocity
+    convention, determine the appropriate output CTYPE
+
+    Examples
+    --------
+    >>> determine_ctype_from_vconv('VELO-F2V', u.Hz)
+    'FREQ'
+    >>> determine_ctype_from_vconv('VELO-F2V', u.m)
+    'WAVE-F2W'
+    >>> determine_ctype_from_vconv('FREQ', u.m/u.s)
+    ValueError('A velocity convention must be specified')
+    >>> determine_ctype_from_vconv('FREQ', u.m/u.s, velocity_convention=u.doppler_radio)
+    'VRAD'
+    >>> determine_ctype_from_vconv('FREQ', u.m/u.s, velocity_convention=u.doppler_optical)
+    'VOPT-F2W'
+    >>> determine_ctype_from_vconv('FREQ', u.m/u.s, velocity_convention=u.doppler_relativistic)
+    'VELO-F2V'
+    """
+    unit = u.Unit(unit)
+
+    in_physchar = (ctype[0]if len(ctype)<=4 else
+                   ctype[5])
+
+    if unit.physical_type == 'speed':
+        if velocity_convention is None:
+            raise ValueError('A velocity convention must be specified')
+        vcin = _parse_velocity_convention(ctype[:4])
+        vcout = _parse_velocity_convention(velocity_convention)
+        if vcin == vcout:
+            return linear_ctypes[vcout]
+        else:
+            return "{type}-{s1}2{s2}".format(type=linear_ctypes[vcout],
+                                             s1=in_physchar,
+                                             s2=linear_ctype_chars[vcout])
+            
+    else:
+        in_phystype = ctype_to_physicaltype[in_physchar]
+        if in_phystype == unit.physical_type:
+            # Linear case
+            return all_ctypes[in_phystype]
+        else:
+            # Nonlinear case
+            out_physchar = physical_type_to_ctype[unit.physical_type]
+            return "{type}-{s1}2{s2}".format(type=all_ctypes[unit.physical_type],
+                                             s1=in_physchar,
+                                             s2=out_physchar)
+
+
 
 def get_restfreq_from_wcs(mywcs):
     if mywcs.wcs.restfrq:
@@ -153,10 +206,8 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     # Compute the X_r value, using eqns 6,8..16 in Greisein 2006
     # (the velocity conversions are all "apparent velocity", i.e. relativistic
     # convention)
-    #crval_lin = crval_in.to(lin_cunit, u.doppler_relativistic(ref_value) + u.spectral())
-    #crval_out = crval_lin.to(outunit,
-    #                         _parse_velocity_convention(out_ctype[:4])(ref_value)
-    #                         + u.spectral())
+    # The "_lin" things refer to X_r coordinates, i.e. these are the base unit
+    # from which velocities would be considered to be linear...
 
     # 1. Convert velocity to frequency or wavelength (or leave freq/wav alone)
     #try:
@@ -194,10 +245,13 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
         crval_out = crval_lin.to(outunit, u.spectral())
         cdelt_out = cdelt_lin.to(outunit, u.spectral())
 
-    assert crval_out.unit == cdelt_out.unit
+    if crval_out.unit != cdelt_out.unit:
+        # this should not be possible, but it's a sanity check
+        raise ValueError("Conversion failed: the units of cdelt and crval don't match.")
 
     # A cdelt of 0 would be meaningless
-    assert cdelt_out.value != 0
+    if cdelt_out.value == 0:
+        raise ValueError("Conversion failed: the output CDELT would be 0.")
 
     newwcs = mywcs.deepcopy()
     newwcs.wcs.cdelt[newwcs.wcs.spec] = cdelt_out.value
@@ -209,14 +263,14 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
 
 def cdelt_derivative(crval, cdelt, intype, outtype, rest=None, equivalencies=[],
                      convention=None):
-    if set((outtype,intype)) == set(('wavelength','frequency')):
+    if set((outtype,intype)) == set(('length','frequency')):
         # Symmetric equations!
         return -constants.c / crval**2 * cdelt
-    elif outtype in ('frequency','wavelength') and intype == 'speed':
+    elif outtype in ('frequency','length') and intype == 'speed':
         numer = cdelt * constants.c * rest.to(cdelt.unit, u.spectral())
         denom = (constants.c + crval)*(constants.c**2 - crval**2)**0.5
         return numer / denom
-    elif outtype == 'speed' and intype in ('frequency','wavelength'):
+    elif outtype == 'speed' and intype in ('frequency','length'):
         numer = 4 * constants.c * crval * rest.to(crval.unit, u.spectral())**2 * cdelt
         denom = (crval**2 + rest.to(crval.unit)**2)**2
         if intype == 'frequency':
