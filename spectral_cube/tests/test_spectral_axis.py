@@ -33,6 +33,8 @@ def test_cube_wcs_freqtovopt():
 
 @pytest.mark.parametrize('wcstype',('Z','W','R','V'))
 def test_greisen2006(wcstype):
+    # This is the header extracted from Greisen 2006, including many examples
+    # of valid transforms.  It should be the gold standard (in principle)
     hdr = fits.Header.fromtextfile(data_path('greisen2006.hdr'))
 
     # We have not implemented frame conversions, so we can only convert bary
