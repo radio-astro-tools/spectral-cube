@@ -25,10 +25,8 @@ def test_cube_wcs_freqtovopt():
     w1 = wcs.WCS(header)
 
     with pytest.raises(ValueError) as exc:
-        newwcs = convert_spectral_axis(w1, 'km/s', 'VOPT')
+        convert_spectral_axis(w1, 'km/s', 'VOPT')
 
-    #assert exc.value.args[0] == ("There is no linear transformation from "
-    #                             "FREQ to km / s")
     assert exc.value.args[0] == 'If converting from wavelength/frequency to speed, a reference wavelength/frequency is required.'
 
 @pytest.mark.parametrize('wcstype',('Z','W','R','V'))
@@ -65,6 +63,17 @@ def test_greisen2006(wcstype):
                                    decimal=2)
     assert wcs2.wcs.ctype[wcs2.wcs.spec] == wcs1.wcs.ctype[wcs1.wcs.spec]
     assert wcs2.wcs.cunit[wcs2.wcs.spec] == wcs1.wcs.cunit[wcs1.wcs.spec]
+
+    # round trip test:
+    inunit = u.Unit(wcs0.wcs.cunit[wcs0.wcs.spec])
+    in_ctype = wcs0.wcs.ctype[wcs0.wcs.spec]
+    wcs3 = convert_spectral_axis(wcs2,
+                                 inunit,
+                                 in_ctype,
+                                 rest_value=rest)
+
+    assert wcs3.wcs.ctype[wcs3.wcs.spec] == wcs0.wcs.ctype[wcs0.wcs.spec]
+    assert wcs3.wcs.cunit[wcs3.wcs.spec] == wcs0.wcs.cunit[wcs0.wcs.spec]
 
 def test_byhand_f2v():
     # VELO-F2V
