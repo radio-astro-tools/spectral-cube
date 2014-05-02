@@ -1,9 +1,13 @@
 import pytest
 import numpy as np
+
 from astropy.wcs import WCS
 from astropy import units as u
 from astropy.io import fits
+
 from ..io import fits as spfits
+
+from .helpers import assert_allclose
 
 # the back of the book
 dv = 3e-2 * u.Unit('m/s')
@@ -35,12 +39,12 @@ m1x = np.array([[1.66666667, 1.16666667, 1.0952381],
 m2v = np.array([[0.22222222, 0.30666667, 0.36914601],
                [0.41666667, 0.45364892, 0.4829932],
                [0.50666667, 0.52604167, 0.54209919]]) * dv ** 2
-m2y = np.array([[0.55498866, 0.67748321, 0.71274853],
-               [1.04478458, 0.92386751, 0.85756517],
-               [1.11475543, 0.96866465, 0.88904704]]) * dy ** 2
-m2x = np.array([[0.55498866, 0.66798888, 0.66732808],
-               [1.14274376, 0.68064513, 0.67065028],
-               [1.17367824, 0.68294627, 0.6715805]]) * dx ** 2
+m2y = np.array([[0.22222222, 0.41666667, 0.50666667],
+                [0.63888889, 0.64299803, 0.6462585],
+                [0.65759637, 0.6584022, 0.65910523]]) * dy ** 2
+m2x = np.array([[0.22222222, 0.63888889, 0.65759637],
+                [0.66222222, 0.66403682, 0.66493056],
+                [0.66543552, 0.66574839, 0.66595556]]) * dx ** 2
 MOMENTS = [[m0v, m0y, m0x], [m1v, m1y, m1x], [m2v, m2y, m2x]]
 
 
@@ -71,8 +75,8 @@ def test_strategies_consistent(axis, order):
     cwise = sc.moment(axis=axis, order=order, how='cube')
     swise = sc.moment(axis=axis, order=order, how='slice')
     rwise = sc.moment(axis=axis, order=order, how='ray')
-    np.testing.assert_array_almost_equal(cwise, swise)
-    np.testing.assert_array_almost_equal(cwise, rwise)
+    assert_allclose(cwise, swise)
+    assert_allclose(cwise, rwise)
 
 
 @pytest.mark.parametrize(('order', 'axis', 'how'),
@@ -84,8 +88,7 @@ def test_reference(order, axis, how):
     mc_hdu = moment_cube()
     sc = spfits.load_fits_hdu(mc_hdu)
     mom_sc = sc.moment(order=order, axis=axis, how=how)
-    np.testing.assert_array_almost_equal(mom_sc,
-                                         MOMENTS[order][axis])
+    assert_allclose(mom_sc, MOMENTS[order][axis])
 
 
 @axis_order
@@ -97,17 +100,14 @@ def test_consistent_mask_handling(axis, order):
     cwise = sc.moment(axis=axis, order=order, how='cube')
     swise = sc.moment(axis=axis, order=order, how='slice')
     rwise = sc.moment(axis=axis, order=order, how='ray')
-    np.testing.assert_array_almost_equal(cwise, swise)
-    np.testing.assert_array_almost_equal(cwise, rwise)
+    assert_allclose(cwise, swise)
+    assert_allclose(cwise, rwise)
 
 
 def test_convenience_methods():
     mc_hdu = moment_cube()
     sc = spfits.load_fits_hdu(mc_hdu)
 
-    np.testing.assert_array_almost_equal(sc.moment0(axis=0),
-                                         MOMENTS[0][0])
-    np.testing.assert_array_almost_equal(sc.moment1(axis=2),
-                                         MOMENTS[1][2])
-    np.testing.assert_array_almost_equal(sc.moment2(axis=1),
-                                         MOMENTS[2][1])
+    assert_allclose(sc.moment0(axis=0), MOMENTS[0][0])
+    assert_allclose(sc.moment1(axis=2), MOMENTS[1][2])
+    assert_allclose(sc.moment2(axis=1), MOMENTS[2][1])
