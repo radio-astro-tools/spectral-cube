@@ -8,7 +8,8 @@ def _parse_velocity_convention(vc):
         return u.doppler_radio
     elif vc in (u.doppler_optical, 'optical', 'OPTICAL', 'VOPT', 'W', 'WAVE'):
         return u.doppler_optical
-    elif vc in (u.doppler_relativistic, 'relativistic', 'RELATIVE', 'VREL', 'speed', 'V', 'VELO'):
+    elif vc in (u.doppler_relativistic, 'relativistic', 'RELATIVE', 'VREL',
+                'speed', 'V', 'VELO'):
         return u.doppler_relativistic
 
 # These are the only linear transformations allowed
@@ -129,6 +130,8 @@ def get_rest_value_from_wcs(mywcs):
 
 def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=False):
     """
+    Convert a spectral axis from its unit to a specified out unit with a given output
+    ctype
 
     Only VACUUM units are supported (not air)
 
@@ -144,6 +147,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
     # If the input unit is not linearly sampled, its linear equivalent will be
     # the 8th character in the ctype, and the linearly-sampled ctype will be
     # the 6th character
+    # e.g.: VOPT-F2V
     lin_ctype = (in_spec_ctype[7] if len(in_spec_ctype) > 4 else in_spec_ctype[:4])
     lin_cunit = (LINEAR_CUNIT_DICT[lin_ctype] if lin_ctype in LINEAR_CUNIT_DICT
                  else mywcs.wcs.cunit[mywcs.wcs.spec])

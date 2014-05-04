@@ -77,10 +77,10 @@ def test_greisen2006(wcstype, debug=False):
                                  rest_value=rest, debug=debug)
     np.testing.assert_almost_equal(wcs2.wcs.cdelt[wcs2.wcs.spec],
                                    wcs1.wcs.cdelt[wcs1.wcs.spec],
-                                   decimal=2)
+                                   decimal=3)
     np.testing.assert_almost_equal(wcs2.wcs.crval[wcs2.wcs.spec],
                                    wcs1.wcs.crval[wcs1.wcs.spec],
-                                   decimal=2)
+                                   decimal=3)
     assert wcs2.wcs.ctype[wcs2.wcs.spec] == wcs1.wcs.ctype[wcs1.wcs.spec]
     assert wcs2.wcs.cunit[wcs2.wcs.spec] == wcs1.wcs.cunit[wcs1.wcs.spec]
 
@@ -94,10 +94,10 @@ def test_greisen2006(wcstype, debug=False):
 
     np.testing.assert_almost_equal(wcs3.wcs.crval[wcs3.wcs.spec],
                                    wcs0.wcs.crval[wcs0.wcs.spec],
-                                   decimal=2)
+                                   decimal=3)
     np.testing.assert_almost_equal(wcs3.wcs.cdelt[wcs3.wcs.spec],
                                    wcs0.wcs.cdelt[wcs0.wcs.spec],
-                                   decimal=2)
+                                   decimal=3)
     assert wcs3.wcs.ctype[wcs3.wcs.spec] == wcs0.wcs.ctype[wcs0.wcs.spec]
     assert wcs3.wcs.cunit[wcs3.wcs.spec] == wcs0.wcs.cunit[wcs0.wcs.spec]
 
@@ -148,8 +148,8 @@ def test_byhand_f2v():
                         ((constants.c+crvalv_computed)*(constants.c**2 -
                                                crvalv_computed**2)**0.5))
     
-    np.testing.assert_almost_equal(crvalf_computed, crvalf, decimal=1)
-    np.testing.assert_almost_equal(cdeltf_computed, cdeltf, decimal=1)
+    np.testing.assert_almost_equal(crvalf_computed, crvalf, decimal=2)
+    np.testing.assert_almost_equal(cdeltf_computed, cdeltf, decimal=2)
 
     cdeltf_computed_byfunction = cdelt_derivative(crvalv_computed, cdeltv_computed,
                                                   intype='speed',
@@ -220,6 +220,7 @@ def test_byhand_vopt():
     # cdelt: (<Quantity 97647.75 Hz>, <Quantity 97647.75 Hz>, <Quantity -1.540591649098696e-05 m>, <Quantity -21882.652554887027 m / s>)
     #crvalv_computed = crvalf.to(CUNIT3R, u.doppler_radio(restwav))
     crvalw_computed = crvalf.to(u.m, u.spectral())
+    crvalw_computed32 = crvalf.astype('float32').to(u.m, u.spectral())
     cdeltw_computed = -(cdeltf / crvalf**2)*constants.c
     cdeltw_computed_byfunction = cdelt_derivative(crvalf, cdeltf,
                                                   intype='frequency',
@@ -229,6 +230,7 @@ def test_byhand_vopt():
     assert cdeltw_computed == cdeltw_computed_byfunction
 
     crvalv_computed = crvalw_computed.to(CUNIT3Z, u.doppler_optical(restwav))
+    crvalv_computed32 = crvalw_computed32.astype('float32').to(CUNIT3Z, u.doppler_optical(restwav))
     #cdeltv_computed = (cdeltw_computed *
     #                   4*constants.c*crvalw_computed*restwav**2 /
     #                   (restwav**2+crvalw_computed**2)**2)
