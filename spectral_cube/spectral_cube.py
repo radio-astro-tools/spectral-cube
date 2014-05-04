@@ -35,6 +35,29 @@ def cached(func):
 
     return wrapper
 
+_NP_DOC = """
+Ignores excluded mask elements.
+
+Parameters
+----------
+axis : int (optional)
+   The axis to collapse, or None to perform a global aggregation
+how : cube | slice | ray | auto
+   How to compute the aggregation. All strategies give the same
+   result, but certain strategies are more efficient depending
+   on data size and layout. Cube/slice/ray iterate over
+   decreasing subsets of the data, to conserve memory.
+   Default='auto'
+""".replace('\n', '\n         ')
+
+
+def aggregation_docstring(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    wrapper.__doc__ += _NP_DOC
+    return wrapper
 
 # convenience structures to keep track of the reversed index
 # conventions between WCS and numpy
@@ -66,6 +89,7 @@ class SpectralCube(object):
 
     @property
     def unit(self):
+        """ The flux unit """
         if self._unit:
             return self._unit
         else:
@@ -73,14 +97,17 @@ class SpectralCube(object):
 
     @property
     def shape(self):
+        """ Length of cube along each axis """
         return self._data.shape
 
     @property
     def size(self):
+        """ Number of elements in the cube """
         return self._data.size
 
     @property
     def ndim(self):
+        """ Dimensionality of the data """
         return self._data.ndim
 
     def __repr__(self):
@@ -95,67 +122,124 @@ class SpectralCube(object):
         return s
 
     def _apply_numpy_function(self, function, fill=np.nan,
+                              reduce=True, how='auto',
                               check_endian=False, **kwargs):
         """
         Apply a numpy function to the cube
         """
+
+        # reduce indicates whether this is a reduce-like operation,
+        # that can be accumulated one slice at a time.
+        # sum/max/min are like this. argmax/argmin are not
+
+        if how == 'auto':
+            strategy = cube_utils.iterator_strategy(self, kwargs.get('axis', None))
+        else:
+            strategy = how
+
+        if strategy == 'slice' and reduce:
+            try:
+                return self._reduce_slicewise(function, fill,
+                                              check_endian,
+                                              **kwargs)
+            except NotImplementedError:
+                pass
+
+        if how not in ['auto', 'cube']:
+            warnings.warn("Cannot use how=%s. Using how=cube" % how)
+
         return function(self._get_filled_data(fill=fill,
-                                             check_endian=check_endian),
+                                              check_endian=check_endian),
                         **kwargs)
 
+    def _reduce_slicewise(self, function, fill, check_endian, **kwargs):
+        """
+        Compute a numpy aggregation by grabbing one slice at a time
+        """
+
+        ax = kwargs.pop('axis', None)
+        full_reduce = ax is None
+        ax = ax or 0
+
+        if isinstance(ax, tuple):
+            raise NotImplementedError("Multi-axis reductions are not "
+                                      "supported with how='slice'")
+
+        planes = self._iter_slices(ax, fill=fill, check_endian=check_endian)
+        result = next(planes)
+        for plane in planes:
+            result = function(np.dstack((result, plane)), axis=2, **kwargs)
+
+        if full_reduce:
+            result = function(result)
+
+        return result
+
     def get_mask_array(self):
+        """
+        Convert the mask to a boolean numpy array
+        """
         return self._mask.include(data=self._data, wcs=self._wcs)
 
-    def get_mask(self):
+    @property
+    def mask(self):
+        """
+        The underling mask
+        """
         return self._mask
 
-    def sum(self, axis=None):
+    @aggregation_docstring
+    def sum(self, axis=None, how='auto'):
+        """
+        Return the sum of the cube, optionally over an axis.
+        """
+
         # use nansum, and multiply by mask to add zero each time there is badness
         return u.Quantity(self._apply_numpy_function(np.nansum, fill=np.nan,
-                                                     axis=axis), self.unit,
+                                                     how=how, axis=axis), self.unit,
                           copy=False)
 
-    def max(self, axis=None):
+    @aggregation_docstring
+    def max(self, axis=None, how='auto'):
+        """
+        Return the maximum data value of the cube, optionally over an axis.
+        """
         return u.Quantity(self._apply_numpy_function(np.nanmax, fill=np.nan,
-                                                     axis=axis), self.unit,
+                                                     how=how, axis=axis), self.unit,
                           copy=False)
 
-    def min(self, axis=None):
+    @aggregation_docstring
+    def min(self, axis=None, how='auto'):
+        """
+        Return the minimum data value of the cube, optionally over an axis.
+        """
         return u.Quantity(self._apply_numpy_function(np.nanmin, fill=np.nan,
-                                                     axis=axis), self.unit,
+                                                     how=how, axis=axis), self.unit,
                           copy=False)
 
-    def argmax(self, axis=None):
+    @aggregation_docstring
+    def argmax(self, axis=None, how='auto'):
         """
         Return the index of the maximum data value.
 
-        Parameters
-        ----------
-        axis : int or None
-            The axis to operate on
-
-        Notes
-        -----
         The return value is arbitrary if all pixels along ``axis`` are
-        excluded from the mask
+        excluded from the mask.
         """
-        return self._apply_numpy_function(np.nanargmax, fill=-np.inf, axis=axis)
+        return self._apply_numpy_function(np.nanargmax, fill=-np.inf,
+                                          reduce=False,
+                                          how=how, axis=axis)
 
-    def argmin(self, axis=None):
+    @aggregation_docstring
+    def argmin(self, axis=None, how='auto'):
         """
         Return the index of the minimum data value.
 
-        Parameters
-        ----------
-        axis : int or None
-            The axis to operate on
-
-        Notes
-        -----
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask
         """
-        return self._apply_numpy_function(np.nanargmin, fill=np.inf, axis=axis)
+        return self._apply_numpy_function(np.nanargmin, fill=np.inf,
+                                          reduce=False,
+                                          how=how, axis=axis)
 
     def chunked(self, chunksize=1000):
         """
@@ -233,6 +317,17 @@ class SpectralCube(object):
                 slc.insert(axis, slice(None))
                 yield x, y, slc
 
+    def _iter_slices(self, axis, fill=np.nan, check_endian=False):
+        """
+        Iterate over the cube one slice at a time,
+        replacing masked elements with fill
+        """
+        view = [slice(None)] * 3
+        for x in range(self.shape[axis]):
+            view[axis] = x
+            yield self._get_filled_data(view=view, fill=fill,
+                                        check_endian=check_endian)
+
     def flattened(self, slice=(), weights=None):
         """
         Return a slice of the cube giving only the valid data (i.e., removing
@@ -255,6 +350,21 @@ class SpectralCube(object):
             return u.Quantity(data, self.unit, copy=False)
 
     def median(self, axis=None, **kwargs):
+        """
+        Compute the median of an array, optionally along an axis.
+
+        Ignores excluded mask elements.
+
+        Parameters
+        ----------
+        axis : int (optional)
+            The axis to collapse
+
+        Returns
+        -------
+        med : ndarray
+            The median
+        """
         try:
             from bottleneck import nanmedian
             return u.Quantity(self._apply_numpy_function(nanmedian, axis=axis,
@@ -343,6 +453,11 @@ class SpectralCube(object):
         """
         Return a portion of the data array, with excluded mask values
         replaced by `fill_value`.
+
+        Returns
+        -------
+        data : Quantity
+            The masked data.
         """
         return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
                           self.unit, copy=False)
@@ -387,10 +502,22 @@ class SpectralCube(object):
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
+        """
+        Return a view of the subset of the underlying data,
+        ignoring the mask.
+
+        Returns
+        -------
+        data : Quantity instance
+            The unmasked data
+        """
         return u.Quantity(self._data[view], self.unit, copy=False)
 
     @property
     def wcs(self):
+        """
+        The WCS describing the cube
+        """
         return self._wcs
 
     @cached
@@ -411,7 +538,7 @@ class SpectralCube(object):
         this is implicit (e.g., they are not astropy Quantity arrays)
         """
         # Start off by extracting the world coordinates of the pixels
-        _, lat, lon = self.world[0, :,:]
+        _, lat, lon = self.world[0, :, :]
         spectral, _, _ = self.world[:, 0, 0]
 
         # Convert to radians
@@ -422,8 +549,8 @@ class SpectralCube(object):
         from astropy.coordinates.angle_utilities import angular_separation
         dx = angular_separation(lon[:, :-1], lat[:, :-1],
                                 lon[:, 1:], lat[:, :-1])
-        dy = angular_separation(lon[:-1, :], lat[:-1,:],
-                                lon[1:, :], lat[1:,:])
+        dy = angular_separation(lon[:-1, :], lat[:-1, :],
+                                lon[1:, :], lat[1:, :])
 
         # Find the cumulative offset - need to add a zero at the start
         x = np.zeros(self._data.shape[1:])
@@ -491,8 +618,8 @@ class SpectralCube(object):
 
         # Find the dx and dy arrays
         from astropy.coordinates.angle_utilities import angular_separation
-        dy = angular_separation(lon[:-1, :], lat[:-1,:],
-                                lon[1:, :], lat[1:,:])
+        dy = angular_separation(lon[:-1, :], lat[:-1, :],
+                                lon[1:, :], lat[1:, :])
 
         # Next, spectral coordinates
         zpix = np.linspace(-0.5, self._data.shape[0] - 0.5,
@@ -544,7 +671,7 @@ class SpectralCube(object):
         how : cube | slice | ray | auto
            How to compute the moment. All strategies give the same
            result, but certain strategies are more efficient depending
-           on data size and layout. Cube/slice/ray work iterate over
+           on data size and layout. Cube/slice/ray iterate over
            decreasing subsets of the data, to conserve memory.
            Default='auto'
 
@@ -590,7 +717,7 @@ class SpectralCube(object):
         # special case: for order=1, axis=1, you usually want
         # the absolute velocity and not the offset
         if order == 1 and axis == 0:
-            out += self.world[0, :,:][0]
+            out += self.world[0, :, :][0]
 
         if wcs:
             newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
@@ -627,7 +754,7 @@ class SpectralCube(object):
 
     @property
     def spatial_coordinate_map(self):
-        return self.world[0, :,:][1:]
+        return self.world[0, :, :][1:]
 
     def closest_spectral_channel(self, value, rest_frequency=None):
         """
@@ -693,7 +820,7 @@ class SpectralCube(object):
             mask_slab = None
         else:
             try:
-                mask_slab = self._mask[ilo:ihi, :,:]
+                mask_slab = self._mask[ilo:ihi, :, :]
             except NotImplementedError:
                 warnings.warn("Mask slicing not implemented for {0} - dropping mask".format(self._mask.__class__.__name__))
                 mask_slab = None
@@ -758,11 +885,6 @@ class SpectralCube(object):
 
         Extract every other pixel along all axes
         >>> v, y, x = c.world[::2, ::2, ::2]
-
-        Note
-        ----
-        Calling world with view is efficient in the sense that it
-        only computes pixels within the view.
         """
 
         # note: view is a tuple of view

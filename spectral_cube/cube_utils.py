@@ -114,8 +114,21 @@ def slice_syntax(f):
         result = SliceIndexer(f, self)
         result.__doc__ = f.__doc__
         return result
+
+    wrapper.__doc__ = slice_doc.format(f.__doc__ or '',
+                                       f.__name__)
+
     result = property(wrapper)
     return result
+
+slice_doc = """
+{0}
+
+Notes
+-----
+Supports efficient Numpy slice notation,
+like ``{1}[0:3, :, 2:4]``
+"""
 
 
 class SliceIndexer(object):
@@ -126,3 +139,30 @@ class SliceIndexer(object):
 
     def __getitem__(self, view):
         return self._func(self._other, view)
+
+
+def iterator_strategy(cube, axis=None):
+    """
+    Guess the most efficient iteration strategy
+    for iterating over a cube, given its size and layout
+
+    Parameters
+    ----------
+    cube : SpectralCube instance
+        The cube to iterate over
+    axis : [0, 1, 2]
+        For reduction methods, the axis that is
+        being collapsed
+
+    Returns
+    -------
+    strategy : ['cube' | 'ray' | 'slice']
+        The recommended iteration strategy.
+        *cube* recommends working with the entire array in memory
+        *slice* recommends working with one slice at a time
+        *ray*  recommends working with one ray at a time
+    """
+    # pretty simple for now
+    if np.product(cube.shape) < 1e8:  # smallish
+        return 'cube'
+    return 'slice'
