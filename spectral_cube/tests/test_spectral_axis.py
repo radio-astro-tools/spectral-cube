@@ -12,12 +12,14 @@ def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     return os.path.join(data_dir, filename)
 
-def test_cube_wcs_freqtovel():
+def test_cube_wcs_freqtovel(debug=False):
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
     w1 = wcs.WCS(header)
+    # CTYPE3 = 'FREQ'
 
     newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD',
-                                   rest_value=w1.wcs.restfrq*u.Hz)
+                                   rest_value=w1.wcs.restfrq*u.Hz,
+                                   debug=debug)
     assert newwcs.wcs.ctype[2] == 'VRAD'
     assert newwcs.wcs.crval[2] == 305.2461585938794
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
@@ -73,11 +75,11 @@ def test_greisen2006(wcstype, debug=False):
                                  outunit,
                                  out_ctype,
                                  rest_value=rest, debug=debug)
-    np.testing.assert_almost_equal(wcs2.wcs.cdelt[wcs2.wcs.spec]/1e3,
-                                   wcs1.wcs.cdelt[wcs1.wcs.spec]/1e3,
+    np.testing.assert_almost_equal(wcs2.wcs.cdelt[wcs2.wcs.spec],
+                                   wcs1.wcs.cdelt[wcs1.wcs.spec],
                                    decimal=2)
-    np.testing.assert_almost_equal(wcs2.wcs.crval[wcs2.wcs.spec]/1e3,
-                                   wcs1.wcs.crval[wcs1.wcs.spec]/1e3,
+    np.testing.assert_almost_equal(wcs2.wcs.crval[wcs2.wcs.spec],
+                                   wcs1.wcs.crval[wcs1.wcs.spec],
                                    decimal=2)
     assert wcs2.wcs.ctype[wcs2.wcs.spec] == wcs1.wcs.ctype[wcs1.wcs.spec]
     assert wcs2.wcs.cunit[wcs2.wcs.spec] == wcs1.wcs.cunit[wcs1.wcs.spec]
@@ -115,18 +117,46 @@ def test_byhand_f2v():
     cdeltf = CDELT3F * u.Unit(CUNIT3F)
     cdeltv = CDELT3V * u.Unit(CUNIT3V)
 
-    #crvalv_computed = crvalf.to(CUNIT3V, u.doppler_radio(restfreq))
+    # (Pdb) crval_in,crval_lin1,crval_lin2,crval_out
+    # (<Quantity 1378471216.43 Hz>, <Quantity 1378471216.43 Hz>, <Quantity
+    # 8981342.29795544 m / s>, <Quantity 8981342.29795544 m / s>) (Pdb)
+    # cdelt_in, cdelt_lin1, cdelt_lin2, cdelt_out
+    # (<Quantity 97647.75 Hz>, <Quantity 97647.75 Hz>, <Quantity
+    # -21217.552294728768 m / s>, <Quantity -21217.552294728768 m / s>)
     crvalv_computed = crvalf.to(CUNIT3V, u.doppler_relativistic(restfreq))
     cdeltv_computed = -4*constants.c*cdeltf*crvalf*restfreq**2 / (crvalf**2+restfreq**2)**2
+    cdeltv_computed_byfunction = cdelt_derivative(crvalf, cdeltf,
+                                                  intype='frequency',
+                                                  outtype='speed',
+                                                  rest=restfreq)
+    # this should be EXACT
+    assert cdeltv_computed == cdeltv_computed_byfunction
     
     np.testing.assert_almost_equal(crvalv_computed, crvalv, decimal=3)
     np.testing.assert_almost_equal(cdeltv_computed, cdeltv, decimal=3)
 
-    crvalf_computed = crvalv.to(CUNIT3F, u.doppler_relativistic(restfreq))
-    cdeltf_computed = -cdeltv * constants.c * restfreq / ((constants.c+crvalv)*(constants.c**2 - crvalv**2)**0.5)
+    # round trip
+    # (Pdb) crval_in,crval_lin1,crval_lin2,crval_out
+    # (<Quantity 8981342.29795544 m / s>, <Quantity 8981342.29795544 m / s>,
+    # <Quantity 1377852479.159838 Hz>, <Quantity 1377852479.159838 Hz>)
+    # (Pdb) cdelt_in, cdelt_lin1, cdelt_lin2, cdelt_out
+    # (<Quantity -21217.552294728768 m / s>, <Quantity -21217.552294728768 m /
+    # s>, <Quantity 97647.74999999997 Hz>, <Quantity 97647.74999999997 Hz>)
+
+    crvalf_computed = crvalv_computed.to(CUNIT3F, u.doppler_relativistic(restfreq))
+    cdeltf_computed = -(cdeltv_computed * constants.c * restfreq /
+                        ((constants.c+crvalv_computed)*(constants.c**2 -
+                                               crvalv_computed**2)**0.5))
     
     np.testing.assert_almost_equal(crvalf_computed, crvalf, decimal=1)
     np.testing.assert_almost_equal(cdeltf_computed, cdeltf, decimal=1)
+
+    cdeltf_computed_byfunction = cdelt_derivative(crvalv_computed, cdeltv_computed,
+                                                  intype='speed',
+                                                  outtype='frequency',
+                                                  rest=restfreq)
+    # this should be EXACT
+    assert cdeltf_computed == cdeltf_computed_byfunction
 
 def test_byhand_vrad():
     # VRAD
@@ -165,6 +195,8 @@ def test_byhand_vrad():
     # (<Quantity 8850750.904040769 m / s>, <Quantity 8850750.904040769 m / s>, <Quantity 1378471216.43 Hz>, <Quantity 1378471216.43 Hz>)
     # (Pdb) cdelt_in, cdelt_lin1, cdelt_lin2, cdelt_out
     # (<Quantity -20609.645482954576 m / s>, <Quantity -20609.645482954576 m / s>, <Quantity 94888.9338036023 Hz>, <Quantity 94888.9338036023 Hz>)
+    # (Pdb) myunit,lin_cunit,out_lin_cunit,outunit
+    # WRONG (Unit("m / s"), Unit("m / s"), Unit("Hz"), Unit("Hz"))
 
 def test_byhand_vopt():
     # VOPT: case "Z"
@@ -192,7 +224,7 @@ def test_byhand_vopt():
     cdeltw_computed_byfunction = cdelt_derivative(crvalf, cdeltf,
                                                   intype='frequency',
                                                   outtype='length',
-                                                  convention=None, rest=None)
+                                                  rest=None)
     # this should be EXACT
     assert cdeltw_computed == cdeltw_computed_byfunction
 
@@ -205,7 +237,6 @@ def test_byhand_vopt():
                                                   cdeltw_computed,
                                                   intype='length',
                                                   outtype='speed',
-                                                  convention=u.doppler_optical,
                                                   rest=restwav,
                                                   linear=True)
     
@@ -224,7 +255,6 @@ def test_byhand_vopt():
                                                   cdeltv_computed,
                                                   intype='speed',
                                                   outtype='length',
-                                                  convention=u.doppler_optical,
                                                   rest=restwav,
                                                   linear=True)
     assert cdeltw_computed == cdeltw_computed_byfunction
@@ -238,7 +268,7 @@ def test_byhand_vopt():
     cdeltf_computed_byfunction = cdelt_derivative(crvalw_computed, cdeltw_computed,
                                                   intype='length',
                                                   outtype='frequency',
-                                                  convention=None, rest=None)
+                                                  rest=None)
     assert cdeltf_computed == cdeltf_computed_byfunction
 
     # Fails intentionally (but not really worth testing)

@@ -43,6 +43,8 @@ PHYSICAL_TYPE_TO_CTYPE = dict([(v,k) for k,v in
 WCS_UNIT_DICT = {'F': u.Hz, 'W': u.m, 'V': u.m/u.s}
 PHYS_UNIT_DICT = {'length': u.m, 'frequency': u.Hz, 'speed': u.m/u.s}
 
+LINEAR_CUNIT_DICT = {'VRAD': u.Hz, 'VOPT': u.m}
+LINEAR_CUNIT_DICT.update(WCS_UNIT_DICT)
 
 def _get_linear_equivalency(unit1, unit2):
     """
@@ -189,17 +191,15 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
     # If the input unit is not linearly sampled, its linear equivalent will be
     # the 8th character in the ctype, and the linearly-sampled ctype will be
     # the 6th character
-    lin_ctype = (in_spec_ctype[7] if len(in_spec_ctype) > 4 else ' ')
-    lin_cunit = (WCS_UNIT_DICT[lin_ctype] if lin_ctype in WCS_UNIT_DICT
+    lin_ctype = (in_spec_ctype[7] if len(in_spec_ctype) > 4 else in_spec_ctype[:4])
+    lin_cunit = (LINEAR_CUNIT_DICT[lin_ctype] if lin_ctype in LINEAR_CUNIT_DICT
                  else mywcs.wcs.cunit[mywcs.wcs.spec])
-    if lin_ctype == ' ':
-        lin_ctype = in_spec_ctype[:4]
 
     in_vcequiv = _parse_velocity_convention(in_spec_ctype[:4])
 
     out_ctype_conv = out_ctype[7] if len(out_ctype) > 4 else out_ctype[:4]
-    out_lin_cunit = (WCS_UNIT_DICT[out_ctype_conv] if out_ctype_conv in
-                     WCS_UNIT_DICT else outunit)
+    out_lin_cunit = (LINEAR_CUNIT_DICT[out_ctype_conv] if out_ctype_conv in
+                     LINEAR_CUNIT_DICT else outunit)
     vcequiv = _parse_velocity_convention(out_ctype_conv)
 
     #if ((_get_linear_equivalency(myunit, outunit) == vcequiv)):
@@ -248,7 +248,6 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
                                   # equivalent: myunit.physical_type
                                   intype=CTYPE_TO_PHYSICALTYPE[in_spec_ctype[:4]],
                                   outtype=CTYPE_TO_PHYSICALTYPE[lin_ctype],
-                                  convention=in_vcequiv,
                                   rest=ref_value,
                                   linear=True
                                   )
@@ -259,8 +258,10 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
             pass # consider raising a ValueError here; not clear if this is valid
         crval_lin2 = crval_lin1.to(out_lin_cunit, u.spectral())
     else:
+        # at this stage, the transition can ONLY be relativistic, because the V
+        # frame (as a linear frame) is only defined as "apparent velocity"
         crval_lin2 = crval_lin1.to(out_lin_cunit, u.spectral() +
-                                in_vcequiv(ref_value))
+                                   u.doppler_relativistic(ref_value))
 
     # For cases like VRAD <-> FREQ and VOPT <-> WAVE, this will be linear too:
     linear_middle = in_vcequiv == vcequiv
@@ -269,7 +270,6 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
                                   intype=CTYPE_TO_PHYSICALTYPE[lin_ctype],
                                   outtype=CTYPE_TO_PHYSICALTYPE[out_ctype_conv],
                                   rest=ref_value,
-                                  convention=vcequiv,
                                   linear=linear_middle)
 
     # 3. Convert output, linear to output
@@ -280,7 +280,6 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
                                      cdelt_lin2,
                                      intype=CTYPE_TO_PHYSICALTYPE[out_ctype_conv],
                                      outtype=outunit.physical_type,
-                                     convention=vcequiv,
                                      rest=ref_value,
                                      linear=True
                                      ).to(outunit)
@@ -314,8 +313,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
 
     return newwcs
 
-def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None,
-                     convention=None):
+def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None):
     if intype == outtype:
         return cdelt
     elif set((outtype,intype)) == set(('length','frequency')):
@@ -333,12 +331,6 @@ def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None,
         else:
             return (numer/denom).to(PHYS_UNIT_DICT[outtype], u.spectral())
     elif outtype == 'speed' and intype in ('frequency','length'):
-
-        # If a velocity convention is specified, a rest frequency is required
-        if convention in LINEAR_CTYPES:
-            if rest is None:
-                raise ValueError("Can't do doppler conversion without reference value.")
-            crval = rest
 
         if linear:
             numer = cdelt * constants.c
