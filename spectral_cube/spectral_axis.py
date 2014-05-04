@@ -128,7 +128,7 @@ def get_rest_value_from_wcs(mywcs):
         ref_value = mywcs.wcs.restwav*u.m
         return ref_value
 
-def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=False):
+def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     """
     Convert a spectral axis from its unit to a specified out unit with a given output
     ctype
@@ -184,12 +184,6 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
     # Load the input values
     crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit)
     cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * inunit)
-
-    # Compute the X_r value, using eqns 6,8..16 in Greisen 2006
-    # (the velocity conversions are all "apparent velocity", i.e. relativistic
-    # convention)
-    # The "_lin" things refer to X_r coordinates, i.e. these are the base unit
-    # from which velocities would be considered to be linear...
 
     # 1. Convert input to input, linear
     if in_vcequiv is not None and ref_value is not None:
@@ -260,9 +254,6 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
             newwcs.wcs.restwav = rest_value.to(u.m).value
         else:
             raise ValueError("Rest Value was specified, but not in frequency or length units")
-
-    if debug:
-        import pdb; pdb.set_trace()
 
     return newwcs
 

@@ -12,14 +12,13 @@ def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     return os.path.join(data_dir, filename)
 
-def test_cube_wcs_freqtovel(debug=False):
+def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
     w1 = wcs.WCS(header)
     # CTYPE3 = 'FREQ'
 
     newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD',
-                                   rest_value=w1.wcs.restfrq*u.Hz,
-                                   debug=debug)
+                                   rest_value=w1.wcs.restfrq*u.Hz)
     assert newwcs.wcs.ctype[2] == 'VRAD'
     assert newwcs.wcs.crval[2] == 305.2461585938794
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
@@ -50,7 +49,7 @@ def test_cube_wcs_freqtovopt():
     assert exc.value.args[0] == 'If converting from wavelength/frequency to speed, a reference wavelength/frequency is required.'
 
 @pytest.mark.parametrize('wcstype',('Z','W','R','V'))
-def test_greisen2006(wcstype, debug=False):
+def test_greisen2006(wcstype):
     # This is the header extracted from Greisen 2006, including many examples
     # of valid transforms.  It should be the gold standard (in principle)
     hdr = fits.Header.fromtextfile(data_path('greisen2006.hdr'))
@@ -74,7 +73,7 @@ def test_greisen2006(wcstype, debug=False):
     wcs2 = convert_spectral_axis(wcs0,
                                  outunit,
                                  out_ctype,
-                                 rest_value=rest, debug=debug)
+                                 rest_value=rest)
     np.testing.assert_almost_equal(wcs2.wcs.cdelt[wcs2.wcs.spec],
                                    wcs1.wcs.cdelt[wcs1.wcs.spec],
                                    decimal=3)
@@ -90,7 +89,7 @@ def test_greisen2006(wcstype, debug=False):
     wcs3 = convert_spectral_axis(wcs2,
                                  inunit,
                                  in_ctype,
-                                 rest_value=rest, debug=debug)
+                                 rest_value=rest)
 
     np.testing.assert_almost_equal(wcs3.wcs.crval[wcs3.wcs.spec],
                                    wcs0.wcs.crval[wcs0.wcs.spec],
