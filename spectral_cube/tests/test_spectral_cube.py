@@ -128,10 +128,10 @@ class TestNumpyMethods(BaseTest):
 
     def _check_numpy(self, cubemethod, array, func):
         for axis in [None, 0, 1, 2]:
-			for how in ['auto', 'slice', 'cube', 'ray']:
-	            expected = func(array, axis=axis)
-    	        actual = cubemethod(axis=axis)
-        	    assert_allclose(actual, expected)
+            for how in ['auto', 'slice', 'cube', 'ray']:
+                expected = func(array, axis=axis)
+                actual = cubemethod(axis=axis)
+                assert_allclose(actual, expected)
 
     def test_sum(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
