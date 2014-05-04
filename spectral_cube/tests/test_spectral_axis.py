@@ -241,7 +241,8 @@ def test_byhand_vopt():
                                                   linear=True)
     
     # Disagreement is 2.5e-7: good, but not really great...
-    assert np.abs((crvalv_computed-crvalv)/crvalv) < 1e-6
+    #assert np.abs((crvalv_computed-crvalv)/crvalv) < 1e-6
+    np.testing.assert_almost_equal(crvalv_computed, crvalv, decimal=2)
     np.testing.assert_almost_equal(cdeltv_computed, cdeltv, decimal=2)
 
     # Round=trip test:

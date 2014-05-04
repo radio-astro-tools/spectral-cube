@@ -127,53 +127,6 @@ def get_rest_value_from_wcs(mywcs):
         ref_value = mywcs.wcs.restwav*u.m
         return ref_value
 
-def convert_spectral_axis_linear(mywcs, outunit, rest_value=None):
-    """
-    Conversions between two equivalent LINEAR WCS systems
-
-    Does not support energy -> frequency, even though these are linear
-    equivalent systems
-    """
-    spwcs = mywcs.sub([wcs.WCSSUB_SPECTRAL])
-    myunit = u.Unit(spwcs.wcs.cunit[0])
-    outunit = u.Unit(outunit)
-    equiv = _get_linear_equivalency(myunit, outunit)
-
-    if equiv is None:
-        raise ValueError("There is no linear transformation from "
-                         "{0} to {1}".format(str(myunit),
-                                             str(outunit)))
-
-    if outunit.physical_type == 'speed':
-        if rest_value is None:
-            ref_value = get_rest_value_from_wcs(mywcs)
-            if ref_value is None:
-                raise ValueError("If converting from wavelength/frequency to speed, "
-                                 "a reference wavelength/frequency is required.")
-        else:
-            ref_value = rest_value.to(u.Hz, u.spectral())
-    elif myunit.physical_type == 'speed':
-        # The rest frequency and wavelength should be equivalent
-        ref_value = get_rest_value_from_wcs(mywcs)
-        if ref_value is None:
-            raise ValueError("If converting from speed to wavelength/frequency, "
-                             "a reference wavelength/frequency is required.")
-
-    crval = (spwcs.wcs.crval[0] * myunit)
-    new_crval = crval.to(outunit, equiv(ref_value))
-    cdelt = (spwcs.wcs.cdelt[0] * myunit)
-    delt1 = (crval + cdelt).to(outunit, equiv(ref_value))
-    new_cdelt = (delt1 - new_crval)
-
-    new_wcs = mywcs.deepcopy()
-
-    new_wcs.wcs.crval[mywcs.wcs.spec] = new_crval.value
-    new_wcs.wcs.cdelt[mywcs.wcs.spec] = new_cdelt.value
-    new_wcs.wcs.ctype[mywcs.wcs.spec] = LINEAR_CTYPES[equiv]
-    new_wcs.wcs.cunit[mywcs.wcs.spec] = str(outunit)
-
-    return new_wcs
-
 def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=False):
     """
 
@@ -185,7 +138,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
         3. Convert the output linear unit to the output unit
     """
     outunit = u.Unit(outunit)
-    myunit = u.Unit(mywcs.wcs.cunit[mywcs.wcs.spec])
+    inunit = u.Unit(mywcs.wcs.cunit[mywcs.wcs.spec])
     in_spec_ctype = mywcs.wcs.ctype[mywcs.wcs.spec]
 
     # If the input unit is not linearly sampled, its linear equivalent will be
@@ -194,16 +147,12 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
     lin_ctype = (in_spec_ctype[7] if len(in_spec_ctype) > 4 else in_spec_ctype[:4])
     lin_cunit = (LINEAR_CUNIT_DICT[lin_ctype] if lin_ctype in LINEAR_CUNIT_DICT
                  else mywcs.wcs.cunit[mywcs.wcs.spec])
-
     in_vcequiv = _parse_velocity_convention(in_spec_ctype[:4])
 
     out_ctype_conv = out_ctype[7] if len(out_ctype) > 4 else out_ctype[:4]
     out_lin_cunit = (LINEAR_CUNIT_DICT[out_ctype_conv] if out_ctype_conv in
                      LINEAR_CUNIT_DICT else outunit)
-    vcequiv = _parse_velocity_convention(out_ctype_conv)
-
-    #if ((_get_linear_equivalency(myunit, outunit) == vcequiv)):
-    #    return convert_spectral_axis_linear(mywcs, outunit, rest_value=rest_value)
+    out_vcequiv = _parse_velocity_convention(out_ctype_conv)
 
     ref_value = None
     if outunit.physical_type == 'speed':
@@ -216,7 +165,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
                 warnings.warn("Using WCS built-in rest frequency even though the "
                               "WCS system was originally {0}".format(in_spec_ctype))
         ref_value = rest_value.to(u.Hz, u.spectral())
-    elif myunit.physical_type == 'speed':
+    elif inunit.physical_type == 'speed':
         # The rest frequency and wavelength should be equivalent
         wcs_rv = get_rest_value_from_wcs(mywcs)
         if rest_value is not None:
@@ -229,8 +178,8 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
                              "a reference wavelength/frequency is required.")
 
     # Load the input values
-    crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * myunit)
-    cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * myunit)
+    crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit)
+    cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * inunit)
 
     # Compute the X_r value, using eqns 6,8..16 in Greisen 2006
     # (the velocity conversions are all "apparent velocity", i.e. relativistic
@@ -245,7 +194,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
         crval_lin1 = crval_in.to(lin_cunit, u.spectral())
     cdelt_lin1 = cdelt_derivative(crval_in,
                                   cdelt_in,
-                                  # equivalent: myunit.physical_type
+                                  # equivalent: inunit.physical_type
                                   intype=CTYPE_TO_PHYSICALTYPE[in_spec_ctype[:4]],
                                   outtype=CTYPE_TO_PHYSICALTYPE[lin_ctype],
                                   rest=ref_value,
@@ -264,7 +213,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
                                    u.doppler_relativistic(ref_value))
 
     # For cases like VRAD <-> FREQ and VOPT <-> WAVE, this will be linear too:
-    linear_middle = in_vcequiv == vcequiv
+    linear_middle = in_vcequiv == out_vcequiv
 
     cdelt_lin2 = cdelt_derivative(crval_lin1, cdelt_lin1,
                                   intype=CTYPE_TO_PHYSICALTYPE[lin_ctype],
@@ -273,9 +222,9 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None, debug=Fals
                                   linear=linear_middle)
 
     # 3. Convert output, linear to output
-    if vcequiv is not None and ref_value is not None:
-        crval_out = crval_lin2.to(outunit, vcequiv(ref_value) + u.spectral())
-        #cdelt_out = cdelt_lin2.to(outunit, vcequiv(ref_value) + u.spectral())
+    if out_vcequiv is not None and ref_value is not None:
+        crval_out = crval_lin2.to(outunit, out_vcequiv(ref_value) + u.spectral())
+        #cdelt_out = cdelt_lin2.to(outunit, out_vcequiv(ref_value) + u.spectral())
         cdelt_out = cdelt_derivative(crval_lin2,
                                      cdelt_lin2,
                                      intype=CTYPE_TO_PHYSICALTYPE[out_ctype_conv],
