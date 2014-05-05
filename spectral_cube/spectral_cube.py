@@ -476,6 +476,45 @@ class SpectralCube(object):
                             fill_value=self.fill_value,
                             meta=self._meta)
 
+    def with_spectral_unit(self, unit, velocity_convention=None,
+                           rest_value=None):
+        """
+        Returns a new Cube with a different Spectral Axis unit
+
+        Parameters
+        ----------
+        unit : u.Unit
+            Any valid spectral unit: velocity, (wave)length, or frequency.
+            Only vacuum units are supported.
+        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+            The velocity convention to use for the output velocity axis.
+            Required if the output type is velocity.
+        rest_value : u.Quantity
+            A rest wavelength or frequency with appropriate units.  Required if
+            output type is velocity.  The cube's WCS should include this
+            already if the *input* type is velocity, but the WCS's rest
+            wavelength/frequency can be overridden with this parameter.
+
+        """
+        from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
+
+        meta = self._meta.copy()
+        if 'Original Unit' not in self._meta:
+            meta['Original Unit'] = self._wcs.wcs.cunit[self._wcs.wcs.spec]
+            meta['Original Type'] = self._wcs.wcs.ctype[self._wcs.wcs.spec]
+
+        out_ctype = determine_ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
+                                               unit,
+                                               velocity_convention=velocity_convention)
+
+        newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
+                                       rest_value=rest_value)
+        # TODO: What is the best way to create an identical mask with a new WCS?
+        # This approach won't work on LazyMasks:
+        # newmask = SpectralCubeMask(self._mask, wcs=newwcs)
+        return SpectralCube(data=self._data, wcs=newwcs, mask=self._mask,
+                            fill_value=self.fill_value, meta=meta)
+
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
         """
         Return the underlying data as a numpy array.
