@@ -204,7 +204,8 @@ def test_byhand_vopt():
     CUNIT3F = 'Hz'
     RESTWAVZ= 0.211061139
     #CTYPE3Z = 'VOPT-F2W'
-    CRVAL3Z = 9.120000E+06
+    # This comes from Greisen 2006, but appears to be wrong: CRVAL3Z = 9.120000E+06
+    CRVAL3Z = 9.120002206E+06
     CDELT3Z = -2.1882651E+04
     CUNIT3Z = 'm/s'
 
