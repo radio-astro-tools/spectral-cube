@@ -38,7 +38,7 @@ CTYPE_CHAR_TO_PHYSICALTYPE = {'W': 'length',
 CTYPE_TO_PHYSICALTYPE.update(CTYPE_CHAR_TO_PHYSICALTYPE)
 
 PHYSICAL_TYPE_TO_CTYPE = dict([(v,k) for k,v in
-                               CTYPE_CHAR_TO_PHYSICALTYPE.iteritems()])
+                               CTYPE_CHAR_TO_PHYSICALTYPE.items()])
 
 # Used to indicate the intial / final sampling system
 WCS_UNIT_DICT = {'F': u.Hz, 'W': u.m, 'V': u.m/u.s}
