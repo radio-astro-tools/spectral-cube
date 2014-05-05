@@ -26,7 +26,7 @@ def test_cube_wcs_freqtovel():
     with warnings.catch_warnings(record=True) as w:
         newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD')
     assert len(w) == 1
-    assert w[0].message.message == 'Using WCS built-in rest frequency even though the WCS system was originally FREQ'
+    assert w[0].message.args[0] == 'Using WCS built-in rest frequency even though the WCS system was originally FREQ'
     assert newwcs.wcs.ctype[2] == 'VRAD'
     assert newwcs.wcs.crval[2] == 305.2461585938794
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
