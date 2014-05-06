@@ -24,7 +24,8 @@ def is_fits(input, **kwargs):
     """
     if isinstance(input, six.string_types):
         if input.lower().endswith(('.fits', '.fits.gz',
-                                      '.fit', '.fit.gz')):
+                                      '.fit', '.fit.gz',
+                                      '.fits.Z', '.fit.Z')):
             return True
     elif isinstance(input, (fits.HDUList, fits.PrimaryHDU, fits.ImageHDU)):
         return True
