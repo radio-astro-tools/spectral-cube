@@ -67,6 +67,59 @@ def aggregation_docstring(func):
 np2wcs = {2: 0, 1: 1, 0: 2}
 
 
+class Projection(u.Quantity):
+
+    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None, meta=None):
+
+        if value.ndim != 2:
+            raise ValueError("value should be a 2-d array")
+
+        if wcs is not None and wcs.wcs.naxis != 2:
+            raise ValueError("wcs should have two dimension")
+
+        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype, copy=copy).view(cls)
+        self._wcs = wcs
+        self._meta = meta
+
+        return self
+
+    @property
+    def wcs(self):
+        return self._wcs
+
+    @property
+    def meta(self):
+        return self._meta
+
+    @property
+    def hdu(self):
+        from astropy.io import fits
+        hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
+        hdu.header['BUNIT'] = self.unit.to_string(format='fits')
+        return hdu
+
+    def write(self, filename, format=None, clobber=False):
+        """
+        Write the moment map to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The path to write the file to
+        format : str
+            The kind of file to write. (Currently limited to 'fits')
+        clobber : bool
+            If True, overwrite `filename` if it exists
+        """
+        if format is None:
+            format = determine_format_from_filename(filename)
+        if format == 'fits':
+            self.hdu.writeto(filename, clobber=clobber)
+        else:
+            raise ValueError("Unknown format '{0}' - the only available "
+                             "format at this time is 'fits'")
+
+
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan):
@@ -680,7 +733,7 @@ class SpectralCube(object):
 
         return dspectral, dy, dx
 
-    def moment(self, order=0, axis=0, wcs=False, how='auto'):
+    def moment(self, order=0, axis=0, how='auto'):
         """
         Compute moments along the spectral axis.
 
@@ -705,10 +758,6 @@ class SpectralCube(object):
 
         axis : int
            The axis along which to compute the moment. Default=0
-
-        wcs : bool
-           If true, return the WCS of the moment map along with the data.
-           Default=False
 
         how : cube | slice | ray | auto
            How to compute the moment. All strategies give the same
@@ -756,15 +805,18 @@ class SpectralCube(object):
             unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
             out = u.Quantity(out, unit, copy=False)
 
-        # special case: for order=1, axis=1, you usually want
+        # special case: for order=1, axis=0, you usually want
         # the absolute velocity and not the offset
         if order == 1 and axis == 0:
             out += self.world[0, :, :][0]
 
-        if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-            return out, newwcs
-        return out
+        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+        meta = {'moment_order': order,
+                'moment_axis': axis,
+                'moment_method': how}
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta)
 
     def moment0(self, axis=0, how='auto'):
         """Compute the zeroth moment along an axis.
