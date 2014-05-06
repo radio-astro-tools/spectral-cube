@@ -98,7 +98,7 @@ class Projection(u.Quantity):
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
         return hdu
 
-    def write(self, filename, format=None, clobber=False):
+    def write(self, filename, format=None, overwrite=False):
         """
         Write the moment map to a file.
 
@@ -108,13 +108,13 @@ class Projection(u.Quantity):
             The path to write the file to
         format : str
             The kind of file to write. (Currently limited to 'fits')
-        clobber : bool
+        overwrite : bool
             If True, overwrite `filename` if it exists
         """
         if format is None:
             format = determine_format(filename)
         if format == 'fits':
-            self.hdu.writeto(filename, clobber=clobber)
+            self.hdu.writeto(filename, clobber=overwrite)
         else:
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
