@@ -6,12 +6,15 @@ import warnings
 from functools import wraps
 
 from astropy import units as u
+from astropy.extern import six
+from astropy.io.fits import PrimaryHDU, ImageHDU
+
 import numpy as np
 
 from . import cube_utils
 from . import wcs_utils
 from .masks import LazyMask, BooleanArrayMask
-
+from .io.core import determine_format
 
 __all__ = ['SpectralCube']
 
@@ -966,7 +969,7 @@ class SpectralCube(object):
     def __lt__(self, value):
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
-    def write(self, filename, format=None, include_stokes=False, clobber=False):
+    def write(self, filename, overwrite=False, format=None):
         """
         Write the cube to a file.
 
@@ -981,14 +984,8 @@ class SpectralCube(object):
         clobber : bool
             If True, overwrite `filename` if it exists
         """
-        if format is None:
-            format = determine_format_from_filename(filename)
-        if format == 'fits':
-            from .io.fits import write_fits_cube
-            write_fits_cube(filename, self,
-                            include_stokes=include_stokes, clobber=clobber)
-        else:
-            raise NotImplementedError("Try FITS instead")
+        from .io.core import write
+        write(filename, self, overwrite=overwrite, format=format)
 
     def to_yt(self, spectral_factor=1.0, center=None, nprocs=1):
         """
@@ -1054,35 +1051,4 @@ class StokesSpectralCube(SpectralCube):
         # TODO: deal with the other stokes parameters here
 
 
-def read(filename, format=None):
-    """
-    Read a file into a :class:`SpectralCube` instance.
 
-    Parameters
-    ----------
-    filename : str
-        File to read
-    format : str
-        File format. Currently resricted to 'fits'
-
-    Returns
-    -------
-    cube : :class:`SpectralCube`
-    """
-    if format is None:
-        format = determine_format_from_filename(filename)
-    if format == 'fits':
-        from .io.fits import load_fits_cube
-        return load_fits_cube(filename)
-    elif format == 'casa_image':
-        from .io.casa_image import load_casa_image
-        return load_casa_image(filename)
-    else:
-        raise ValueError("Format {0} not implemented".format(format))
-
-
-def determine_format_from_filename(filename):
-    if filename[-4:] == 'fits':
-        return 'fits'
-    elif filename[-5:] == 'image':
-        return 'casa_image'

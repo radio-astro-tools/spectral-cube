@@ -4,8 +4,7 @@ import numpy as np
 from astropy.wcs import WCS
 from astropy import units as u
 from astropy.io import fits
-
-from ..io import fits as spfits
+from ..io.core import read
 
 from .helpers import assert_allclose
 
@@ -70,7 +69,7 @@ axis_order = pytest.mark.parametrize(('axis', 'order'),
 @axis_order
 def test_strategies_consistent(axis, order):
     mc_hdu = moment_cube()
-    sc = spfits.load_fits_hdu(mc_hdu)
+    sc = read(mc_hdu)
 
     cwise = sc.moment(axis=axis, order=order, how='cube')
     swise = sc.moment(axis=axis, order=order, how='slice')
@@ -86,7 +85,7 @@ def test_strategies_consistent(axis, order):
                           for h in ['cube', 'slice', 'auto', 'ray']])
 def test_reference(order, axis, how):
     mc_hdu = moment_cube()
-    sc = spfits.load_fits_hdu(mc_hdu)
+    sc = read(mc_hdu)
     mom_sc = sc.moment(order=order, axis=axis, how=how)
     assert_allclose(mom_sc, MOMENTS[order][axis])
 
@@ -94,7 +93,7 @@ def test_reference(order, axis, how):
 @axis_order
 def test_consistent_mask_handling(axis, order):
     mc_hdu = moment_cube()
-    sc = spfits.load_fits_hdu(mc_hdu)
+    sc = read(mc_hdu)
     sc._mask = sc > 4
 
     cwise = sc.moment(axis=axis, order=order, how='cube')
@@ -106,7 +105,7 @@ def test_consistent_mask_handling(axis, order):
 
 def test_convenience_methods():
     mc_hdu = moment_cube()
-    sc = spfits.load_fits_hdu(mc_hdu)
+    sc = read(mc_hdu)
 
     assert_allclose(sc.moment0(axis=0), MOMENTS[0][0])
     assert_allclose(sc.moment1(axis=2), MOMENTS[1][2])
