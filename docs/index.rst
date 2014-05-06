@@ -7,9 +7,9 @@ spectral dimension, optionally with Stokes parameters.
 
 Here's a simple script demonstrating ``spectral_cube``::
 
-    >>> from spectral_cube import read
     >>> import astropy.units as u
-    >>> cube = read('data.fits')
+    >>> from spectral_cube import SpectralCube
+    >>> cube = SpectralCube.read('data.fits')
     >>> print cube
     SpectralCube with shape=(563, 640, 640) and unit=K:
     n_x: 640  type_x: RA---SIN  unit_x: deg
@@ -51,6 +51,7 @@ cubes to files.
 .. toctree::
    :maxdepth: 1
 
+   installing.rst
    creating_reading.rst
    masking.rst
    accessing.rst
