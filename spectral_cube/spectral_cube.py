@@ -112,7 +112,7 @@ class Projection(u.Quantity):
             If True, overwrite `filename` if it exists
         """
         if format is None:
-            format = determine_format_from_filename(filename)
+            format = determine_format(filename)
         if format == 'fits':
             self.hdu.writeto(filename, clobber=clobber)
         else:
