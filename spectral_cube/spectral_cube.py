@@ -969,19 +969,44 @@ class SpectralCube(object):
     def __lt__(self, value):
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
+    @classmethod
+    def read(cls, filename, format=None, hdu=None):
+        """
+        Read a spectral cube from a file.
+
+        If the file contains Stokes axes, they will automatically be dropped.
+        If you want to read in all Stokes informtion, use
+        :meth:`~spectral_cube.StokesSpectralCube.read` instead.
+
+        Parameters
+        ----------
+        filename : str
+            The file to read the cube from
+        format : str
+            The format of the file to read. (Currently limited to 'fits' and 'casa_image')
+        hdu : int or str
+            For FITS files, the HDU to read in (can be the ID or name of an
+            HDU).
+        """
+        from .io.core import read
+        cube = read(filename, format=format, hdu=hdu)
+        if isinstance(cube, SpectralCube):
+            return cube
+        else:  # StokesSpectralCube
+            return SpectralCube(data=cube._data, wcs=cube._wcs,
+                                meta=cube._meta, mask=cube._mask)
+
     def write(self, filename, overwrite=False, format=None):
         """
-        Write the cube to a file.
+        Write the spectral cube to a file.
 
         Parameters
         ----------
         filename : str
             The path to write the file to
         format : str
-            The kind fo file to write. (Currently limited to 'fits')
-        include_stokes : bool
-            If True, write out stokes parameters
-        clobber : bool
+            The format of the file to write. (Currently limited to 'fits')
+        overwrite : bool
             If True, overwrite `filename` if it exists
         """
         from .io.core import write
@@ -1050,5 +1075,38 @@ class StokesSpectralCube(SpectralCube):
 
         # TODO: deal with the other stokes parameters here
 
+    @classmethod
+    def read(cls, filename, format=None, hdu=None):
+        """
+        Read a spectral cube from a file.
 
+        If the file contains Stokes axes, they will be read in. If you are
+        only interested in the unpolarized emission (I), you can use
+        :meth:`~spectral_cube.SpectralCube.read` instead.
 
+        Parameters
+        ----------
+        filename : str
+            The file to read the cube from
+        format : str
+            The format of the file to read. (Currently limited to 'fits' and 'casa_image')
+        hdu : int or str
+            For FITS files, the HDU to read in (can be the ID or name of an
+            HDU).
+        """
+        raise NotImplementedError("")
+
+    def write(self, filename, overwrite=False, format=None):
+        """
+        Write the spectral cube to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The path to write the file to
+        format : str
+            The format of the file to write. (Currently limited to 'fits')
+        overwrite : bool
+            If True, overwrite `filename` if it exists
+        """
+        raise NotImplementedError("")
