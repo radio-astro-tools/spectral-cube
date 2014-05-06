@@ -6,12 +6,15 @@ import warnings
 from functools import wraps
 
 from astropy import units as u
+from astropy.extern import six
+from astropy.io.fits import PrimaryHDU, ImageHDU
+
 import numpy as np
 
 from . import cube_utils
 from . import wcs_utils
 from .masks import LazyMask, BooleanArrayMask
-
+from .io.core import determine_format
 
 __all__ = ['SpectralCube']
 
@@ -914,7 +917,7 @@ class SpectralCube(object):
 
         Examples
         --------
-        >>> c = read('xyv.fits')
+        >>> c = SpectralCube.read('xyv.fits')
 
         Extract the first 3 velocity channels of the cube:
         >>> v, y, x = c.world[0:3]
@@ -966,29 +969,51 @@ class SpectralCube(object):
     def __lt__(self, value):
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
-    def write(self, filename, format=None, include_stokes=False, clobber=False):
+    @classmethod
+    def read(cls, filename, format=None, hdu=None, **kwargs):
         """
-        Write the cube to a file.
+        Read a spectral cube from a file.
+
+        If the file contains Stokes axes, they will automatically be dropped.
+        If you want to read in all Stokes informtion, use
+        :meth:`~spectral_cube.StokesSpectralCube.read` instead.
+
+        Parameters
+        ----------
+        filename : str
+            The file to read the cube from
+        format : str
+            The format of the file to read. (Currently limited to 'fits' and 'casa_image')
+        hdu : int or str
+            For FITS files, the HDU to read in (can be the ID or name of an
+            HDU).
+        kwargs : dict
+            If the format is 'fits', the kwargs are passed to
+            :func:`~astropy.io.fits.open`.
+        """
+        from .io.core import read
+        cube = read(filename, format=format, hdu=hdu, **kwargs)
+        if isinstance(cube, SpectralCube):
+            return cube
+        else:  # StokesSpectralCube
+            return SpectralCube(data=cube._data, wcs=cube._wcs,
+                                meta=cube._meta, mask=cube._mask)
+
+    def write(self, filename, overwrite=False, format=None):
+        """
+        Write the spectral cube to a file.
 
         Parameters
         ----------
         filename : str
             The path to write the file to
         format : str
-            The kind fo file to write. (Currently limited to 'fits')
-        include_stokes : bool
-            If True, write out stokes parameters
-        clobber : bool
+            The format of the file to write. (Currently limited to 'fits')
+        overwrite : bool
             If True, overwrite `filename` if it exists
         """
-        if format is None:
-            format = determine_format_from_filename(filename)
-        if format == 'fits':
-            from .io.fits import write_fits_cube
-            write_fits_cube(filename, self,
-                            include_stokes=include_stokes, clobber=clobber)
-        else:
-            raise NotImplementedError("Try FITS instead")
+        from .io.core import write
+        write(filename, self, overwrite=overwrite, format=format)
 
     def to_yt(self, spectral_factor=1.0, center=None, nprocs=1):
         """
@@ -1053,36 +1078,38 @@ class StokesSpectralCube(SpectralCube):
 
         # TODO: deal with the other stokes parameters here
 
+    @classmethod
+    def read(cls, filename, format=None, hdu=None):
+        """
+        Read a spectral cube from a file.
 
-def read(filename, format=None):
-    """
-    Read a file into a :class:`SpectralCube` instance.
+        If the file contains Stokes axes, they will be read in. If you are
+        only interested in the unpolarized emission (I), you can use
+        :meth:`~spectral_cube.SpectralCube.read` instead.
 
-    Parameters
-    ----------
-    filename : str
-        File to read
-    format : str
-        File format. Currently resricted to 'fits'
+        Parameters
+        ----------
+        filename : str
+            The file to read the cube from
+        format : str
+            The format of the file to read. (Currently limited to 'fits' and 'casa_image')
+        hdu : int or str
+            For FITS files, the HDU to read in (can be the ID or name of an
+            HDU).
+        """
+        raise NotImplementedError("")
 
-    Returns
-    -------
-    cube : :class:`SpectralCube`
-    """
-    if format is None:
-        format = determine_format_from_filename(filename)
-    if format == 'fits':
-        from .io.fits import load_fits_cube
-        return load_fits_cube(filename)
-    elif format == 'casa_image':
-        from .io.casa_image import load_casa_image
-        return load_casa_image(filename)
-    else:
-        raise ValueError("Format {0} not implemented".format(format))
+    def write(self, filename, overwrite=False, format=None):
+        """
+        Write the spectral cube to a file.
 
-
-def determine_format_from_filename(filename):
-    if filename[-4:] == 'fits':
-        return 'fits'
-    elif filename[-5:] == 'image':
-        return 'casa_image'
+        Parameters
+        ----------
+        filename : str
+            The path to write the file to
+        format : str
+            The format of the file to write. (Currently limited to 'fits')
+        overwrite : bool
+            If True, overwrite `filename` if it exists
+        """
+        raise NotImplementedError("")

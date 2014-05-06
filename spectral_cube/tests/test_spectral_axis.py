@@ -8,6 +8,8 @@ import warnings
 import os
 import numpy as np
 
+from .helpers import assert_allclose
+
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     return os.path.join(data_dir, filename)
@@ -74,12 +76,12 @@ def test_greisen2006(wcstype):
                                  outunit,
                                  out_ctype,
                                  rest_value=rest)
-    np.testing.assert_almost_equal(wcs2.wcs.cdelt[wcs2.wcs.spec],
+    assert_allclose(wcs2.wcs.cdelt[wcs2.wcs.spec],
                                    wcs1.wcs.cdelt[wcs1.wcs.spec],
-                                   decimal=3)
-    np.testing.assert_almost_equal(wcs2.wcs.crval[wcs2.wcs.spec],
+                                   rtol=1.e-3)
+    assert_allclose(wcs2.wcs.crval[wcs2.wcs.spec],
                                    wcs1.wcs.crval[wcs1.wcs.spec],
-                                   decimal=3)
+                                   rtol=1.e-3)
     assert wcs2.wcs.ctype[wcs2.wcs.spec] == wcs1.wcs.ctype[wcs1.wcs.spec]
     assert wcs2.wcs.cunit[wcs2.wcs.spec] == wcs1.wcs.cunit[wcs1.wcs.spec]
 
@@ -91,12 +93,12 @@ def test_greisen2006(wcstype):
                                  in_ctype,
                                  rest_value=rest)
 
-    np.testing.assert_almost_equal(wcs3.wcs.crval[wcs3.wcs.spec],
+    assert_allclose(wcs3.wcs.crval[wcs3.wcs.spec],
                                    wcs0.wcs.crval[wcs0.wcs.spec],
-                                   decimal=3)
-    np.testing.assert_almost_equal(wcs3.wcs.cdelt[wcs3.wcs.spec],
+                                   rtol=1.e-3)
+    assert_allclose(wcs3.wcs.cdelt[wcs3.wcs.spec],
                                    wcs0.wcs.cdelt[wcs0.wcs.spec],
-                                   decimal=3)
+                                   rtol=1.e-3)
     assert wcs3.wcs.ctype[wcs3.wcs.spec] == wcs0.wcs.ctype[wcs0.wcs.spec]
     assert wcs3.wcs.cunit[wcs3.wcs.spec] == wcs0.wcs.cunit[wcs0.wcs.spec]
 
@@ -131,8 +133,8 @@ def test_byhand_f2v():
     # this should be EXACT
     assert cdeltv_computed == cdeltv_computed_byfunction
     
-    np.testing.assert_almost_equal(crvalv_computed, crvalv, decimal=3)
-    np.testing.assert_almost_equal(cdeltv_computed, cdeltv, decimal=3)
+    assert_allclose(crvalv_computed, crvalv, rtol=1.e-3)
+    assert_allclose(cdeltv_computed, cdeltv, rtol=1.e-3)
 
     # round trip
     # (Pdb) crval_in,crval_lin1,crval_lin2,crval_out
@@ -147,8 +149,8 @@ def test_byhand_f2v():
                         ((constants.c+crvalv_computed)*(constants.c**2 -
                                                crvalv_computed**2)**0.5))
     
-    np.testing.assert_almost_equal(crvalf_computed, crvalf, decimal=2)
-    np.testing.assert_almost_equal(cdeltf_computed, cdeltf, decimal=2)
+    assert_allclose(crvalf_computed, crvalf, rtol=1.e-2)
+    assert_allclose(cdeltf_computed, cdeltf, rtol=1.e-2)
 
     cdeltf_computed_byfunction = cdelt_derivative(crvalv_computed, cdeltv_computed,
                                                   intype='speed',
@@ -180,14 +182,14 @@ def test_byhand_vrad():
     crvalv_computed = crvalf.to(CUNIT3R, u.doppler_radio(restfreq))
     cdeltv_computed = -(cdeltf / restfreq)*constants.c
     
-    np.testing.assert_almost_equal(crvalv_computed, crvalv, decimal=3)
-    np.testing.assert_almost_equal(cdeltv_computed, cdeltv, decimal=3)
+    assert_allclose(crvalv_computed, crvalv, rtol=1.e-3)
+    assert_allclose(cdeltv_computed, cdeltv, rtol=1.e-3)
 
     crvalf_computed = crvalv_computed.to(CUNIT3F, u.doppler_radio(restfreq))
     cdeltf_computed = -(cdeltv_computed/constants.c) * restfreq
 
-    np.testing.assert_almost_equal(crvalf_computed, crvalf, decimal=3)
-    np.testing.assert_almost_equal(cdeltf_computed, cdeltf, decimal=3)
+    assert_allclose(crvalf_computed, crvalf, rtol=1.e-3)
+    assert_allclose(cdeltf_computed, cdeltf, rtol=1.e-3)
 
     # round trip:
     # (Pdb) crval_in,crval_lin1,crval_lin2,crval_out
@@ -244,8 +246,8 @@ def test_byhand_vopt():
     
     # Disagreement is 2.5e-7: good, but not really great...
     #assert np.abs((crvalv_computed-crvalv)/crvalv) < 1e-6
-    np.testing.assert_almost_equal(crvalv_computed, crvalv, decimal=2)
-    np.testing.assert_almost_equal(cdeltv_computed, cdeltv, decimal=2)
+    assert_allclose(crvalv_computed, crvalv, rtol=1.e-2)
+    assert_allclose(cdeltv_computed, cdeltv, rtol=1.e-2)
 
     # Round=trip test:
     # from velo_opt -> freq
@@ -265,8 +267,8 @@ def test_byhand_vopt():
     crvalf_computed = crvalw_computed.to(CUNIT3F, u.spectral())
     cdeltf_computed = -cdeltw_computed * constants.c / crvalw_computed**2
 
-    np.testing.assert_almost_equal(crvalf_computed, crvalf, decimal=3)
-    np.testing.assert_almost_equal(cdeltf_computed, cdeltf, decimal=3)
+    assert_allclose(crvalf_computed, crvalf, rtol=1.e-3)
+    assert_allclose(cdeltf_computed, cdeltf, rtol=1.e-3)
     
     cdeltf_computed_byfunction = cdelt_derivative(crvalw_computed, cdeltw_computed,
                                                   intype='length',
@@ -278,8 +280,8 @@ def test_byhand_vopt():
     #crvalf_computed = crvalv_computed.to(CUNIT3F, u.spectral()+u.doppler_optical(restwav))
     #cdeltf_computed = -(cdeltv_computed / constants.c) * restwav.to(u.Hz, u.spectral())
 
-    #np.testing.assert_almost_equal(crvalf_computed, crvalf, decimal=3)
-    #np.testing.assert_almost_equal(cdeltf_computed, cdeltf, decimal=3)
+    #assert_allclose(crvalf_computed, crvalf, rtol=1.e-3)
+    #assert_allclose(cdeltf_computed, cdeltf, rtol=1.e-3)
 
 
 def test_byhand_f2w():
@@ -299,8 +301,8 @@ def test_byhand_f2w():
     crvalf_computed = crvalw.to(CUNIT3F, u.spectral())
     cdeltf_computed = -constants.c * cdeltw / crvalw**2
     
-    np.testing.assert_almost_equal(crvalf_computed, crvalf, decimal=1)
-    np.testing.assert_almost_equal(cdeltf_computed, cdeltf, decimal=1)
+    assert_allclose(crvalf_computed, crvalf, rtol=0.1)
+    assert_allclose(cdeltf_computed, cdeltf, rtol=0.1)
 
 @pytest.mark.parametrize(('ctype','unit','velocity_convention','result'),
                          (('VELO-F2V', "Hz", None, 'FREQ'),

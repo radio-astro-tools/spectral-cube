@@ -1,5 +1,6 @@
 import warnings
 from astropy.io import fits
+from astropy.extern import six
 from astropy.wcs import WCS
 import numpy as np
 from spectral_cube import SpectralCube, BooleanArrayMask
@@ -12,6 +13,13 @@ from spectral_cube import SpectralCube, BooleanArrayMask
 # 4th without a clear expectation). We need to replicate these
 # when writing but don't want them in memory. By default, try to
 # yield the same array in memory that we would get from astropy.
+
+
+def is_casa_image(input, **kwargs):
+    if isinstance(input, six.string_types):
+        if input.endswith('.image'):
+            return True
+    return False
 
 
 def wcs_casa2astropy(casa_wcs):
@@ -74,20 +82,20 @@ def wcs_casa2astropy(casa_wcs):
 
     return wcs
 
-try:
-    from taskinit import ia
-except ImportError:
-    raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
-
 
 def load_casa_image(filename, skipdata=False,
-                    skipvalid=False, skipcs=False):
+                    skipvalid=False, skipcs=False, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can
     be suppressed. The object holds the coordsys object from the image in
     memory.
     """
+
+    try:
+        from taskinit import ia
+    except ImportError:
+        raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
 
     # use the ia tool to get the file contents
     ia.open(filename)

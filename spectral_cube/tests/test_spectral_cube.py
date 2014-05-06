@@ -6,7 +6,7 @@ from astropy import units as u
 from astropy.wcs import WCS
 import numpy as np
 
-from .. import SpectralCube, BooleanArrayMask, FunctionMask, read
+from .. import SpectralCube, BooleanArrayMask, FunctionMask
 
 from . import path
 from .helpers import assert_allclose
@@ -18,7 +18,7 @@ def cube_and_raw(filename):
 
     d = fits.getdata(p)
 
-    c = read(p, format='fits')
+    c = SpectralCube.read(p, format='fits')
     return c, d
 
 
@@ -245,10 +245,10 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
 
 
 def test_read_write_rountrip(tmpdir):
-    cube = read(path('adv.fits'))
+    cube = SpectralCube.read(path('adv.fits'))
     tmp_file = str(tmpdir.join('test.fits'))
     cube.write(tmp_file)
-    cube2 = read(tmp_file)
+    cube2 = SpectralCube.read(tmp_file)
 
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
