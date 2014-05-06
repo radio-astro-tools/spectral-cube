@@ -917,7 +917,7 @@ class SpectralCube(object):
 
         Examples
         --------
-        >>> c = read('xyv.fits')
+        >>> c = SpectralCube.read('xyv.fits')
 
         Extract the first 3 velocity channels of the cube:
         >>> v, y, x = c.world[0:3]
