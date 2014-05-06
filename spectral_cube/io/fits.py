@@ -1,15 +1,17 @@
+import warnings
+
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.extern import six
 from astropy.utils import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
-from astropy.io.fits.util import first as first_hdu
-
-
 
 import numpy as np
 from .. import SpectralCube, StokesSpectralCube, LazyMask
 from .. import cube_utils
+
+def first(iterable):
+    return next(iter(iterable))
 
 
 # FITS registry code - once Astropy includes a proper extensible I/O base
@@ -56,7 +58,7 @@ def read_data_fits(input, hdu=None):
 
         if len(arrays) > 1:
             if hdu is None:
-                hdu = first_dhu(arrays)
+                hdu = first(arrays)
                 warnings.warn("hdu= was not specified but multiple arrays"
                               " are present, reading in first available"
                               " array (hdu={0})".format(hdu))
@@ -71,7 +73,7 @@ def read_data_fits(input, hdu=None):
                 raise ValueError("No array found in hdu={0}".format(hdu))
 
         elif len(arrays) == 1:
-            array_hdu = arrays[first_hdu(arrays)]
+            array_hdu = arrays[first(arrays)]
         else:
             raise ValueError("No table found")
 
