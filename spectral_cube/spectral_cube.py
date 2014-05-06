@@ -74,7 +74,7 @@ class Projection(u.Quantity):
         if value.ndim != 2:
             raise ValueError("value should be a 2-d array")
 
-        if wcs.wcs.naxis != 2:
+        if wcs is not None and wcs.wcs.naxis != 2:
             raise ValueError("wcs should have two dimension")
 
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype, copy=copy).view(cls)
