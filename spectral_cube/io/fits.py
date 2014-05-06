@@ -32,7 +32,7 @@ def is_fits(input, **kwargs):
         return False
 
 
-def read_data_fits(input, hdu=None):
+def read_data_fits(input, hdu=None, **kwargs):
     """
     Read an array and header from an FITS file.
 
@@ -83,7 +83,7 @@ def read_data_fits(input, hdu=None):
 
     else:
 
-        hdulist = fits_open(input)
+        hdulist = fits_open(input, **kwargs)
 
         try:
             return read_data_fits(hdulist, hdu=hdu)

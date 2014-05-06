@@ -84,7 +84,7 @@ def wcs_casa2astropy(casa_wcs):
 
 
 def load_casa_image(filename, skipdata=False,
-                    skipvalid=False, skipcs=False):
+                    skipvalid=False, skipcs=False, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can

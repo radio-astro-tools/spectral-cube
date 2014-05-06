@@ -1,4 +1,4 @@
-def read(input, format=None, hdu=None):
+def read(input, format=None, hdu=None, **kwargs):
     """
     Read a file into a :class:`SpectralCube` or :class:`StokesSpectralCube`
     instance.
@@ -12,6 +12,9 @@ def read(input, format=None, hdu=None):
     hdu : int or str
         For FITS files, the HDU to read in (can be the ID or name of an
         HDU).
+    kwargs : dict
+        If the format is 'fits', the kwargs are passed to
+        :func:`~astropy.io.fits.open`.
 
     Returns
     -------
@@ -24,10 +27,10 @@ def read(input, format=None, hdu=None):
 
     if format == 'fits':
         from .fits import load_fits_cube
-        return load_fits_cube(input, hdu=hdu)
+        return load_fits_cube(input, hdu=hdu, **kwargs)
     elif format == 'casa_image':
         from .casa_image import load_casa_image
-        return load_casa_image(input)
+        return load_casa_image(input, **kwargs)
     else:
         raise ValueError("Format {0} not implemented. Supported formats are 'fits' and 'casa_image'".format(format))
 

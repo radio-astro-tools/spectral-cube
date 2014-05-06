@@ -970,7 +970,7 @@ class SpectralCube(object):
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
     @classmethod
-    def read(cls, filename, format=None, hdu=None):
+    def read(cls, filename, format=None, hdu=None, **kwargs):
         """
         Read a spectral cube from a file.
 
@@ -987,9 +987,12 @@ class SpectralCube(object):
         hdu : int or str
             For FITS files, the HDU to read in (can be the ID or name of an
             HDU).
+        kwargs : dict
+            If the format is 'fits', the kwargs are passed to
+            :func:`~astropy.io.fits.open`.
         """
         from .io.core import read
-        cube = read(filename, format=format, hdu=hdu)
+        cube = read(filename, format=format, hdu=hdu, **kwargs)
         if isinstance(cube, SpectralCube):
             return cube
         else:  # StokesSpectralCube
