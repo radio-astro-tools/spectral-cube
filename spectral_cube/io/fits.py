@@ -109,6 +109,9 @@ def load_fits_cube(input, hdu=0):
     data, header = read_data_fits(input, hdu=hdu)
     meta = {}
 
+    if 'BUNIT' in header:
+        meta['bunit'] = header['BUNIT']
+
     wcs = WCS(header)
 
     if wcs.wcs.naxis == 3:
