@@ -10,6 +10,7 @@ from astropy.extern import six
 from astropy.io.fits import PrimaryHDU, ImageHDU
 
 import numpy as np
+import copy
 
 from . import cube_utils
 from . import wcs_utils
@@ -565,10 +566,14 @@ class SpectralCube(object):
 
         newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
                                        rest_value=rest_value)
-        # TODO: What is the best way to create an identical mask with a new WCS?
-        # This approach won't work on LazyMasks:
-        # newmask = SpectralCubeMask(self._mask, wcs=newwcs)
-        return SpectralCube(data=self._data, wcs=newwcs, mask=self._mask,
+
+        # regular copy, not deepcopy, to avoid data duplication
+        # cannot simply do newmask = self._mask.__class__(...) because there
+        # are many possible mask classes
+        newmask = copy.copy(self._mask)
+        newmask._wcs = newwcs
+
+        return SpectralCube(data=self._data, wcs=newwcs, mask=newmask,
                             fill_value=self.fill_value, meta=meta)
 
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
