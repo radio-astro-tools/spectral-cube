@@ -57,5 +57,6 @@ cubes to files.
    subsets.rst
    moments.rst
    stokes.rst
+   yt_example.rst
    big_data.rst
    api.rst
