@@ -110,6 +110,35 @@ class MaskBase(object):
     def __getitem__(self):
         raise NotImplementedError("Slicing not supported by mask class {0}".format(self.__class__.__name__))
 
+    def _get_new_wcs(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Returns a new WCS with a different Spectral Axis unit
+
+        Parameters
+        ----------
+        unit : u.Unit
+            Any valid spectral unit: velocity, (wave)length, or frequency.
+            Only vacuum units are supported.
+        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+            The velocity convention to use for the output velocity axis.
+            Required if the output type is velocity.
+        rest_value : u.Quantity
+            A rest wavelength or frequency with appropriate units.  Required if
+            output type is velocity.  The cube's WCS should include this
+            already if the *input* type is velocity, but the WCS's rest
+            wavelength/frequency can be overridden with this parameter.
+        """
+        from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
+
+        out_ctype = determine_ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
+                                               unit,
+                                               velocity_convention=velocity_convention)
+
+        newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
+                                       rest_value=rest_value)
+
+        return newwcs
+
 
 class InvertedMask(MaskBase):
 
@@ -188,6 +217,29 @@ class BooleanArrayMask(MaskBase):
     def __getitem__(self, view):
         return BooleanArrayMask(self._mask[view], wcs_utils.slice_wcs(self._wcs, view))
 
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get a mask with a WCS in the modified unit
+
+        Parameters
+        ----------
+        unit : u.Unit
+            Any valid spectral unit: velocity, (wave)length, or frequency.
+            Only vacuum units are supported.
+        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+            The velocity convention to use for the output velocity axis.
+            Required if the output type is velocity.
+        rest_value : u.Quantity
+            A rest wavelength or frequency with appropriate units.  Required if
+            output type is velocity.  The cube's WCS should include this
+            already if the *input* type is velocity, but the WCS's rest
+            wavelength/frequency can be overridden with this parameter.
+        """
+        newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
+
+        newmask = super(BooleanArrayMask, self)(self._mask, newwcs,
+                                                self._mask_type=='include')
+        return newmask
 
 class LazyMask(MaskBase):
 
@@ -242,6 +294,30 @@ class LazyMask(MaskBase):
 
     def __getitem__(self, view):
         return LazyMask(self._function, data=self._data[view], wcs=wcs_utils.slice_wcs(self._wcs, view))
+
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get a mask with a WCS in the modified unit
+
+        Parameters
+        ----------
+        unit : u.Unit
+            Any valid spectral unit: velocity, (wave)length, or frequency.
+            Only vacuum units are supported.
+        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+            The velocity convention to use for the output velocity axis.
+            Required if the output type is velocity.
+        rest_value : u.Quantity
+            A rest wavelength or frequency with appropriate units.  Required if
+            output type is velocity.  The cube's WCS should include this
+            already if the *input* type is velocity, but the WCS's rest
+            wavelength/frequency can be overridden with this parameter.
+        """
+        newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
+
+        newmask = super(LazyMask, self)(self._function, data=self._data,
+                                        wcs=newwcs)
+        return newmask
 
 
 class FunctionMask(MaskBase):
