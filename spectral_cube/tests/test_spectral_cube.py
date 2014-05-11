@@ -95,6 +95,40 @@ class TestSpectralCube(object):
             assert_allclose(w1, w2)
 
 
+    @pytest.mark.parametrize(('name'),
+                             (('advs'),
+                              ('dvsa'),
+                              ('sdav'),
+                              ('sadv'),
+                              ('vsad'),
+                              ('vad'),
+                              ('adv'),
+                              ))
+    def test_width_spectral_unit(self, name):
+        cube, data = cube_and_raw(name + '.fits')
+        cube_freq = cube.with_spectral_unit(u.Hz)
+
+        mask = BooleanArrayMask(data>0, wcs=cube._wcs)
+        cube2 = cube.with_mask(mask)
+        cube_masked_freq = cube2.with_spectral_unit(u.Hz)
+
+        assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ-W2F'
+        assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ-W2F'
+        assert cube_masked_freq._mask._wcs.wcs.ctype[cube_masked_freq._mask._wcs.wcs.spec] == 'FREQ-W2F'
+
+        # values taken from header
+        rest = 1.42040571841E+09*u.Hz
+        crval = -3.21214698632E+05*u.m/u.s
+        outcv = crval.to(u.m, u.doppler_optical(rest)).to(u.Hz, u.spectral())
+
+        assert_allclose(cube_freq._wcs.wcs.crval[cube_freq._wcs.wcs.spec],
+                        outcv.to(u.Hz).value)
+        assert_allclose(cube_masked_freq._wcs.wcs.crval[cube_masked_freq._wcs.wcs.spec],
+                        outcv.to(u.Hz).value)
+        assert_allclose(cube_masked_freq._mask._wcs.wcs.crval[cube_masked_freq._mask._wcs.wcs.spec],
+                        outcv.to(u.Hz).value)
+
+
 class TestFilters(BaseTest):
 
     def test_mask_data(self):
