@@ -1,4 +1,3 @@
-from ..spectral_axis import convert_spectral_axis,determine_ctype_from_vconv,cdelt_derivative
 from astropy import wcs
 from astropy.io import fits
 from astropy import units as u
@@ -9,6 +8,8 @@ import os
 import numpy as np
 
 from .helpers import assert_allclose
+from . import path as data_path
+from ..spectral_axis import convert_spectral_axis,determine_ctype_from_vconv,cdelt_derivative
 
 def data_path(filename):
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
@@ -307,6 +308,10 @@ def test_byhand_f2w():
 @pytest.mark.parametrize(('ctype','unit','velocity_convention','result'),
                          (('VELO-F2V', "Hz", None, 'FREQ'),
                           ('VELO-F2V', "m", None, 'WAVE-F2W'),
+                          ('VOPT', "m", None, 'WAVE'),
+                          ('VOPT', "Hz", None, 'FREQ-W2F'),
+                          ('VELO', "Hz", None, 'FREQ-V2F'),
+                          ('WAVE', "Hz", None, 'FREQ-W2F'),
                           ('FREQ', 'm/s', None, ValueError('A velocity convention must be specified')),
                           ('FREQ', 'm/s', u.doppler_radio, 'VRAD'),
                           ('FREQ', 'm/s', u.doppler_optical, 'VOPT-F2W'),
@@ -324,3 +329,26 @@ def test_ctype_determinator(ctype,unit,velocity_convention,result):
         outctype = determine_ctype_from_vconv(ctype, unit,
                                               velocity_convention=velocity_convention)
         assert outctype == result
+
+
+@pytest.mark.parametrize(('name'),
+                         (('advs'),
+                          ('dvsa'),
+                          ('sdav'),
+                          ('sadv'),
+                          ('vsad'),
+                          ('vad'),
+                          ('adv'),
+                          ))
+def test_vopt_to_freq(name):
+    h = fits.getheader(data_path(name+".fits"))
+    wcs0 = wcs.WCS(h)
+
+    # check to make sure astropy.wcs's "fix" changes VELO-HEL to VOPT
+    assert wcs0.wcs.ctype[wcs0.wcs.spec] == 'VOPT'
+
+    out_ctype = determine_ctype_from_vconv('VOPT', u.Hz)
+    
+    wcs1 = convert_spectral_axis(wcs0, u.Hz, out_ctype)
+
+    assert wcs1.wcs.ctype[wcs1.wcs.spec] == 'FREQ-W2F'

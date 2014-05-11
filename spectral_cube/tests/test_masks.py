@@ -190,4 +190,4 @@ def test_mask_spectral_unit(name):
     mask = BooleanArrayMask(data, cube._wcs)
     mask_freq = mask.with_spectral_unit(u.Hz)
 
-    assert mask_freq._wcs.wcs.ctype[mask_freq._wcs.wcs.spec] == 'FREQ-V2F'
+    assert mask_freq._wcs.wcs.ctype[mask_freq._wcs.wcs.spec] == 'FREQ-W2F'
