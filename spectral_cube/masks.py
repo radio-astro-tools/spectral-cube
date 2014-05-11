@@ -129,20 +129,6 @@ class MaskBase(object):
     def _get_new_wcs(self, unit, velocity_convention=None, rest_value=None):
         """
         Returns a new WCS with a different Spectral Axis unit
-
-        Parameters
-        ----------
-        unit : u.Unit
-            Any valid spectral unit: velocity, (wave)length, or frequency.
-            Only vacuum units are supported.
-        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
-            The velocity convention to use for the output velocity axis.
-            Required if the output type is velocity.
-        rest_value : u.Quantity
-            A rest wavelength or frequency with appropriate units.  Required if
-            output type is velocity.  The cube's WCS should include this
-            already if the *input* type is velocity, but the WCS's rest
-            wavelength/frequency can be overridden with this parameter.
         """
         from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
 
@@ -154,6 +140,8 @@ class MaskBase(object):
                                        rest_value=rest_value)
 
         return newwcs
+
+    _get_new_wcs.__doc__ += with_spectral_unit_docs
 
 
 class InvertedMask(MaskBase):
