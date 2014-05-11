@@ -567,10 +567,9 @@ class SpectralCube(object):
         newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
                                        rest_value=rest_value)
 
-        # regular copy, not deepcopy, to avoid data duplication
-        # cannot simply do newmask = self._mask.__class__(...) because there
-        # are many possible mask classes
-        newmask = copy.copy(self._mask)
+        newmask = self._mask.with_spectral_unit(unit,
+                                                velocity_convention=velocity_convention,
+                                                rest_value=rest_value)
         newmask._wcs = newwcs
 
         return SpectralCube(data=self._data, wcs=newwcs, mask=newmask,
