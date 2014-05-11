@@ -10,7 +10,6 @@ from astropy.extern import six
 from astropy.io.fits import PrimaryHDU, ImageHDU
 
 import numpy as np
-import copy
 
 from . import cube_utils
 from . import wcs_utils
