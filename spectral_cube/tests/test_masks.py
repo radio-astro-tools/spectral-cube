@@ -191,3 +191,11 @@ def test_mask_spectral_unit(name):
     mask_freq = mask.with_spectral_unit(u.Hz)
 
     assert mask_freq._wcs.wcs.ctype[mask_freq._wcs.wcs.spec] == 'FREQ-W2F'
+
+    # values taken from header
+    rest = 1.42040571841E+09*u.Hz
+    crval = -3.21214698632E+05*u.m/u.s
+    outcv = crval.to(u.m, u.doppler_optical(rest)).to(u.Hz, u.spectral())
+
+    assert_allclose(mask_freq._wcs.wcs.crval[mask_freq._wcs.wcs.spec],
+                    outcv.to(u.Hz).value)
