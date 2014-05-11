@@ -11,10 +11,6 @@ from .helpers import assert_allclose
 from . import path as data_path
 from ..spectral_axis import convert_spectral_axis,determine_ctype_from_vconv,cdelt_derivative
 
-def data_path(filename):
-    data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    return os.path.join(data_dir, filename)
-
 def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
     w1 = wcs.WCS(header)
