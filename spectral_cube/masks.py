@@ -174,7 +174,7 @@ class InvertedMask(MaskBase):
         newmask = self._mask.with_spectral_unit(unit,
                                                 velocity_convention=velocity_convention,
                                                 rest_value=rest_value)
-        return super(InvertedMask, self)(newmask)
+        return InvertedMask(newmask)
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
 
@@ -225,7 +225,7 @@ class CompositeMask(MaskBase):
         newmask2 = self._mask2.with_spectral_unit(unit,
                                                   velocity_convention=velocity_convention,
                                                   rest_value=rest_value)
-        return super(CompositeMask, self)(newmask1, newmask2, self._operation)
+        return CompositeMask(newmask1, newmask2, self._operation)
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
 
@@ -271,8 +271,8 @@ class BooleanArrayMask(MaskBase):
         """
         newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
 
-        newmask = super(BooleanArrayMask, self)(self._mask, newwcs,
-                                                self._mask_type=='include')
+        newmask = BooleanArrayMask(self._mask, newwcs,
+                                   self._mask_type=='include')
         return newmask
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
@@ -337,8 +337,7 @@ class LazyMask(MaskBase):
         """
         newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
 
-        newmask = super(LazyMask, self)(self._function, data=self._data,
-                                        wcs=newwcs)
+        newmask = LazyMask(self._function, data=self._data, wcs=newwcs)
         return newmask
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
@@ -386,4 +385,4 @@ class FunctionMask(MaskBase):
         of the current mask in order to be consistent with
         ``with_spectral_unit`` from other Masks
         """
-        return super(FunctionMask, self)(self._function)
+        return FunctionMask(self._function)

@@ -194,7 +194,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
                                   cdelt_in,
                                   # equivalent: inunit.physical_type
                                   intype=CTYPE_TO_PHYSICALTYPE[in_spec_ctype[:4]],
-                                  outtype=CTYPE_TO_PHYSICALTYPE[lin_ctype],
+                                  outtype=lin_cunit.physical_type,
                                   rest=ref_value,
                                   linear=True
                                   )
@@ -214,7 +214,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     linear_middle = in_vcequiv == out_vcequiv
 
     cdelt_lin2 = cdelt_derivative(crval_lin1, cdelt_lin1,
-                                  intype=CTYPE_TO_PHYSICALTYPE[lin_ctype],
+                                  intype=lin_cunit.physical_type,
                                   outtype=CTYPE_TO_PHYSICALTYPE[out_ctype_conv],
                                   rest=ref_value,
                                   linear=linear_middle)

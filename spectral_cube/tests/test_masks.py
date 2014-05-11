@@ -2,7 +2,9 @@ import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 from astropy.wcs import WCS
+from astropy import units as u
 
+from .test_spectral_cube import cube_and_raw
 from .. import (BooleanArrayMask, SpectralCube, LazyMask,
                 FunctionMask, CompositeMask)
 
@@ -173,3 +175,19 @@ def test_mask_logic():
 
     m = (m1 | m3) & m2
     assert_allclose(m.include(data, wcs), [[[1, 1, 1, 1, 0]]])
+
+@pytest.mark.parametrize(('name'),
+                         (('advs'),
+                          ('dvsa'),
+                          ('sdav'),
+                          ('sadv'),
+                          ('vsad'),
+                          ('vad'),
+                          ('adv'),
+                          ))
+def test_mask_spectral_unit(name):
+    cube, data = cube_and_raw(name + '.fits')
+    mask = BooleanArrayMask(data, cube._wcs)
+    mask_freq = mask.with_spectral_unit(u.Hz)
+
+    assert mask_freq._wcs.wcs.ctype[mask_freq._wcs.wcs.spec] == 'FREQ-V2F'
