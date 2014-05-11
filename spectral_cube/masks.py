@@ -6,6 +6,22 @@ from . import wcs_utils
 __all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
            'LazyMask', 'FunctionMask']
 
+# Global version of the with_spectral_unit docs to avoid duplicating them
+with_spectral_unit_docs = """
+        Parameters
+        ----------
+        unit : u.Unit
+            Any valid spectral unit: velocity, (wave)length, or frequency.
+            Only vacuum units are supported.
+        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+            The velocity convention to use for the output velocity axis.
+            Required if the output type is velocity.
+        rest_value : u.Quantity
+            A rest wavelength or frequency with appropriate units.  Required if
+            output type is velocity.  The cube's WCS should include this
+            already if the *input* type is velocity, but the WCS's rest
+            wavelength/frequency can be overridden with this parameter.
+        """
 
 class MaskBase(object):
 
@@ -150,13 +166,30 @@ class InvertedMask(MaskBase):
 
     def __getitem__(self, view):
         return InvertedMask(self._mask[view])
+    
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get an InvertedMask copy with a WCS in the modified unit
+        """
+        newmask = self._mask.with_spectral_unit(unit,
+                                                velocity_convention=velocity_convention,
+                                                rest_value=rest_value)
+        return super(InvertedMask, self)(newmask)
+
+    with_spectral_unit.__doc__ += with_spectral_unit_docs
 
 
 class CompositeMask(MaskBase):
-
     """
-    A combination of several masks. This does an 'and' operation on the
-    include masks.
+    A combination of several masks.  The included masks are treated with the specified
+    operation.
+
+    Parameters
+    ----------
+    mask1, mask2 : Masks
+        The two masks to composite
+    operation : str
+        Either 'and' or 'or'; the operation used to combine the masks
     """
 
     def __init__(self, mask1, mask2, operation='and'):
@@ -180,6 +213,21 @@ class CompositeMask(MaskBase):
 
     def __getitem__(self, view):
         return CompositeMask(self._mask1[view], self._mask2[view], operation=self._operation)
+
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get a CompositeMask copy in which each component has a WCS in the
+        modified unit
+        """
+        newmask1 = self._mask1.with_spectral_unit(unit,
+                                                  velocity_convention=velocity_convention,
+                                                  rest_value=rest_value)
+        newmask2 = self._mask2.with_spectral_unit(unit,
+                                                  velocity_convention=velocity_convention,
+                                                  rest_value=rest_value)
+        return super(CompositeMask, self)(newmask1, newmask2, self._operation)
+
+    with_spectral_unit.__doc__ += with_spectral_unit_docs
 
 
 class BooleanArrayMask(MaskBase):
@@ -219,27 +267,15 @@ class BooleanArrayMask(MaskBase):
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """
-        Get a mask with a WCS in the modified unit
-
-        Parameters
-        ----------
-        unit : u.Unit
-            Any valid spectral unit: velocity, (wave)length, or frequency.
-            Only vacuum units are supported.
-        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
-            The velocity convention to use for the output velocity axis.
-            Required if the output type is velocity.
-        rest_value : u.Quantity
-            A rest wavelength or frequency with appropriate units.  Required if
-            output type is velocity.  The cube's WCS should include this
-            already if the *input* type is velocity, but the WCS's rest
-            wavelength/frequency can be overridden with this parameter.
+        Get a BooleanArrayMask copy with a WCS in the modified unit
         """
         newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
 
         newmask = super(BooleanArrayMask, self)(self._mask, newwcs,
                                                 self._mask_type=='include')
         return newmask
+
+    with_spectral_unit.__doc__ += with_spectral_unit_docs
 
 class LazyMask(MaskBase):
 
@@ -297,21 +333,7 @@ class LazyMask(MaskBase):
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """
-        Get a mask with a WCS in the modified unit
-
-        Parameters
-        ----------
-        unit : u.Unit
-            Any valid spectral unit: velocity, (wave)length, or frequency.
-            Only vacuum units are supported.
-        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
-            The velocity convention to use for the output velocity axis.
-            Required if the output type is velocity.
-        rest_value : u.Quantity
-            A rest wavelength or frequency with appropriate units.  Required if
-            output type is velocity.  The cube's WCS should include this
-            already if the *input* type is velocity, but the WCS's rest
-            wavelength/frequency can be overridden with this parameter.
+        Get a LazyMask copy with a WCS in the modified unit
         """
         newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
 
@@ -319,6 +341,7 @@ class LazyMask(MaskBase):
                                         wcs=newwcs)
         return newmask
 
+    with_spectral_unit.__doc__ += with_spectral_unit_docs
 
 class FunctionMask(MaskBase):
 
@@ -356,3 +379,11 @@ class FunctionMask(MaskBase):
 
     def __getitem__(self, slice):
         return self
+
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Functional masks do not have WCS defined, so this simply returns a copy
+        of the current mask in order to be consistent with
+        ``with_spectral_unit`` from other Masks
+        """
+        return super(FunctionMask, self)(self._function)
