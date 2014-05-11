@@ -104,7 +104,7 @@ class TestSpectralCube(object):
                               ('vad'),
                               ('adv'),
                               ))
-    def test_width_spectral_unit(self, name):
+    def test_with_spectral_unit(self, name):
         cube, data = cube_and_raw(name + '.fits')
         cube_freq = cube.with_spectral_unit(u.Hz)
 
