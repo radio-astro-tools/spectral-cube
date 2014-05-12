@@ -140,17 +140,12 @@ class SpectralCube(object):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
-<<<<<<< HEAD
         if 'BUNIT' in self._meta:
             try:
                 self._unit = u.Unit(self._meta['BUNIT'])
             except ValueError:
                 warnings.warn("Could not parse unit {0}".format(self._meta['BUNIT']))
                 self._unit = None
-=======
-        if 'bunit' in self._meta:
-            self._unit = u.Unit(self._meta['bunit'])
->>>>>>> cd49c0a... First pass at getting spectral-cube's yt interface up to speed with the latest changes in yt 3.0.
         elif hasattr(data, 'unit'):
             self._unit = data.unit
             # strip the unit so that it can be treated as cube metadata
