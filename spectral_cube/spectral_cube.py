@@ -140,12 +140,17 @@ class SpectralCube(object):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
+<<<<<<< HEAD
         if 'BUNIT' in self._meta:
             try:
                 self._unit = u.Unit(self._meta['BUNIT'])
             except ValueError:
                 warnings.warn("Could not parse unit {0}".format(self._meta['BUNIT']))
                 self._unit = None
+=======
+        if 'bunit' in self._meta:
+            self._unit = u.Unit(self._meta['bunit'])
+>>>>>>> cd49c0a... First pass at getting spectral-cube's yt interface up to speed with the latest changes in yt 3.0.
         elif hasattr(data, 'unit'):
             self._unit = data.unit
             # strip the unit so that it can be treated as cube metadata
@@ -1260,48 +1265,26 @@ class SpectralCube(object):
         from .io.core import write
         write(filename, self, overwrite=overwrite, format=format)
 
-    def to_yt(self, spectral_factor=1.0, center=None, nprocs=1):
+    def to_yt(self, **kwargs):
         """
         Convert a spectral cube to a yt object that can be further analyzed in yt.
 
-        By default, the yt object returned will be defined in the default yt
-        spatial units (1 spatial pixel = 1 cm) centered on the center of the
-        spectral cube in all directions. If the ``center`` argument is passed,
-        then the cube is still returned in the default yt spatial units, but
-        shifted so that the specified coordinates are at the origin in the
-        returned object.
-
-        Parameters
-        ----------
-        spectral_factor : float, optional
-            Factor by which to stretch the spectral axis. If set to 1, one pixel
-            in spectral coordinates is equivalent to one pixel in spatial
-            coordinates.
-        center : iterable
-            Tuple or list containing the three coordinates for the center. These
-            should be given as ``(lon, lat, spectral)``.
+        Additional keyword arguments will be passed onto yt's ``FITSDataset`` constructor. See
+        the yt documentation for details on options for reading FITS data.
         """
 
-        from yt.mods import load_uniform_grid
+        from yt.frontends.fits.api import FITSDataset
+        from astropy.io import fits
 
-        data = {'flux': self._get_filled_data(fill=0.)}
+        hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
+                              header=self.wcs.to_header())
 
-        nz, ny, nx = self.shape
+        hdu.header["BUNIT"] = str(self.unit.to_string(format='fits'))
+        hdu.header["BTYPE"] = "flux"
 
-        dx = nx / 2.
-        dy = ny / 2.
-        dz = nz / 2. * spectral_factor
+        ds = FITSDataset(hdu, **kwargs)
 
-        # Determine center in pixel coordinates
-        center = self.wcs.wcs_world2pix([center], 0)[0]
-
-        pf = load_uniform_grid(data, self.shape, 1.,
-                               bbox=np.array([[(-0.5 - center[2]) * spectral_factor, (nz - 0.5 - center[2]) * spectral_factor],
-                                              [-0.5 - center[1], ny - 0.5 - center[1]],
-                                              [-0.5 - center[0], nx - 0.5 - center[0]]]),
-                               nprocs=nprocs, periodicity=(False, False, False))
-
-        return pf
+        return ds
 
     @property
     def header(self):
