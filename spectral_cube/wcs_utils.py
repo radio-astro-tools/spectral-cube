@@ -1,5 +1,8 @@
+from __future__ import print_function
 import numpy as np
 from astropy.wcs import WCS
+import warnings
+from astropy import units as u
 
 wcs_parameters_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
                               'latpole', 'lonpole', 'mjdavg', 'mjdobs', 'name',
@@ -181,3 +184,59 @@ def slice_wcs(wcs, view):
             wcs_index = wcs.wcs.naxis - 1 - i
             wcs_new.wcs.crpix[wcs_index] -= iview.start
     return wcs_new
+
+def check_equality(wcs1, wcs2, warn_missing=False, verbose=False):
+    """
+    Check if two WCSs are equal
+    """
+
+    # naive version:
+    # return str(wcs1.to_header()) != str(wcs2.to_header())
+
+    h1 = wcs1.to_header()
+    h2 = wcs2.to_header()
+
+    # Default to headers equal; everything below changes to false if there are
+    # any inequalities
+    OK = True
+    # to keep track of keywords in both
+    matched = []
+
+    for c1 in h1.cards:
+        key = c1[0]
+        if key in h2:
+            matched.append(key)
+            c2 = h2.cards[key]
+            # special check for units: "m/s" = "m s-1"
+            if 'UNIT' in key:
+                u1 = u.Unit(c1[1])
+                u2 = u.Unit(c2[1])
+                if u1 != u2:
+                    OK = False
+                    if verbose:
+                        print("Header 1, {0}: {1} != {2}".format(key,u1,u2))
+            elif c1[1] != c2[1]:
+                if verbose:
+                    print("Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
+                OK = False
+        else:
+            if warn_missing:
+                warnings.warn("WCS2 is missing card {0}".format(key))
+            else:
+                OK = False
+
+    # Check that there aren't any cards in header 2 that were missing from
+    # header 1
+    for c2 in h2.cards:
+        key = c2[0]
+        if key not in matched:
+            if warn_missing:
+                warnings.warn("WCS1 is missing card {0}".format(key))
+            else:
+                OK = False
+
+    return OK
+
+
+
+

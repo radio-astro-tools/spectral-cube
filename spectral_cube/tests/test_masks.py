@@ -199,3 +199,11 @@ def test_mask_spectral_unit(name):
 
     assert_allclose(mask_freq._wcs.wcs.crval[mask_freq._wcs.wcs.spec],
                     outcv.to(u.Hz).value)
+
+def test_wcs_validity_check():
+    cube, data = cube_and_raw('adv.fits')
+    mask = BooleanArrayMask(data, cube._wcs)
+    cube = cube.with_mask(mask)
+    s2 = cube.spectral_slab(-2 * u.km / u.s, 2 * u.km / u.s)
+    s3 = s2.with_spectral_unit(u.km / u.s, velocity_convention=u.doppler_radio)
+    moment_map = s3.moment(order=1)
