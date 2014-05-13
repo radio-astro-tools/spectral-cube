@@ -1,12 +1,13 @@
 import pytest
 import operator
+import itertools
 
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
 import numpy as np
 
-from .. import SpectralCube, BooleanArrayMask, FunctionMask
+from .. import SpectralCube, BooleanArrayMask, FunctionMask, LazyMask, CompositeMask
 
 from . import path
 from .helpers import assert_allclose
@@ -95,20 +96,25 @@ class TestSpectralCube(object):
             assert_allclose(w1, w2)
 
 
-    @pytest.mark.parametrize(('name'),
-                             (('advs'),
-                              ('dvsa'),
-                              ('sdav'),
-                              ('sadv'),
-                              ('vsad'),
-                              ('vad'),
-                              ('adv'),
-                              ))
-    def test_with_spectral_unit(self, name):
+    @pytest.mark.parametrize(('name','masktype'),
+                             itertools.product(('advs', 'dvsa', 'sdav', 'sadv', 'vsad', 'vad', 'adv',),
+                                               (BooleanArrayMask, LazyMask, FunctionMask, CompositeMask))
+                            )
+    def test_with_spectral_unit(self, name, masktype):
         cube, data = cube_and_raw(name + '.fits')
         cube_freq = cube.with_spectral_unit(u.Hz)
 
-        mask = BooleanArrayMask(data>0, wcs=cube._wcs)
+        if masktype == BooleanArrayMask:
+            mask = BooleanArrayMask(data>0, wcs=cube._wcs)
+        elif masktype == LazyMask:
+            mask = LazyMask(lambda x: x>0, cube=cube)
+        elif masktype == FunctionMask:
+            mask = FunctionMask(lambda x: x>0)
+        elif masktype == CompositeMask:
+            mask1 = FunctionMask(lambda x: x>0)
+            mask2 = LazyMask(lambda x: x>0, cube)
+            mask = CompositeMask(mask1, mask2)
+
         cube2 = cube.with_mask(mask)
         cube_masked_freq = cube2.with_spectral_unit(u.Hz)
 
