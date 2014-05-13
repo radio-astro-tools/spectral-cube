@@ -39,12 +39,16 @@ CTYPE_TO_PHYSICALTYPE.update(CTYPE_CHAR_TO_PHYSICALTYPE)
 
 PHYSICAL_TYPE_TO_CTYPE = dict([(v,k) for k,v in
                                CTYPE_CHAR_TO_PHYSICALTYPE.items()])
+PHYSICAL_TYPE_TO_CHAR = {'speed': 'V',
+                         'frequency': 'F',
+                         'length': 'W'}
 
 # Used to indicate the intial / final sampling system
 WCS_UNIT_DICT = {'F': u.Hz, 'W': u.m, 'V': u.m/u.s}
 PHYS_UNIT_DICT = {'length': u.m, 'frequency': u.Hz, 'speed': u.m/u.s}
 
-LINEAR_CUNIT_DICT = {'VRAD': u.Hz, 'VOPT': u.m}
+LINEAR_CUNIT_DICT = {'VRAD': u.Hz, 'VOPT': u.m, 'FREQ': u.Hz, 'WAVE': u.m,
+                     'VELO': u.m/u.s}
 LINEAR_CUNIT_DICT.update(WCS_UNIT_DICT)
 
 def _get_linear_equivalency(unit1, unit2):
@@ -91,8 +95,11 @@ def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
     """
     unit = u.Unit(unit)
 
-    in_physchar = (ctype[0]if len(ctype)<=4 else
-                   ctype[5])
+    if len(ctype) > 4:
+        in_physchar = ctype[5]
+    else:
+        lin_cunit = LINEAR_CUNIT_DICT[ctype]
+        in_physchar = PHYSICAL_TYPE_TO_CHAR[lin_cunit.physical_type]
 
     if unit.physical_type == 'speed':
         if velocity_convention is None:
@@ -107,7 +114,7 @@ def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
                                              s2=LINEAR_CTYPE_CHARS[vcout])
             
     else:
-        in_phystype = CTYPE_CHAR_TO_PHYSICALTYPE[in_physchar]
+        in_phystype = CTYPE_TO_PHYSICALTYPE[in_physchar]
         if in_phystype == unit.physical_type:
             # Linear case
             return ALL_CTYPES[in_phystype]
@@ -194,7 +201,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
                                   cdelt_in,
                                   # equivalent: inunit.physical_type
                                   intype=CTYPE_TO_PHYSICALTYPE[in_spec_ctype[:4]],
-                                  outtype=CTYPE_TO_PHYSICALTYPE[lin_ctype],
+                                  outtype=lin_cunit.physical_type,
                                   rest=ref_value,
                                   linear=True
                                   )
@@ -214,7 +221,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     linear_middle = in_vcequiv == out_vcequiv
 
     cdelt_lin2 = cdelt_derivative(crval_lin1, cdelt_lin1,
-                                  intype=CTYPE_TO_PHYSICALTYPE[lin_ctype],
+                                  intype=lin_cunit.physical_type,
                                   outtype=CTYPE_TO_PHYSICALTYPE[out_ctype_conv],
                                   rest=ref_value,
                                   linear=linear_middle)

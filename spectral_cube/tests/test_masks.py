@@ -2,7 +2,9 @@ import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 from astropy.wcs import WCS
+from astropy import units as u
 
+from .test_spectral_cube import cube_and_raw
 from .. import (BooleanArrayMask, SpectralCube, LazyMask,
                 FunctionMask, CompositeMask)
 
@@ -173,3 +175,67 @@ def test_mask_logic():
 
     m = (m1 | m3) & m2
     assert_allclose(m.include(data, wcs), [[[1, 1, 1, 1, 0]]])
+
+@pytest.mark.parametrize(('name'),
+                         (('advs'),
+                          ('dvsa'),
+                          ('sdav'),
+                          ('sadv'),
+                          ('vsad'),
+                          ('vad'),
+                          ('adv'),
+                          ))
+def test_mask_spectral_unit(name):
+    cube, data = cube_and_raw(name + '.fits')
+    mask = BooleanArrayMask(data, cube._wcs)
+    mask_freq = mask.with_spectral_unit(u.Hz)
+
+    assert mask_freq._wcs.wcs.ctype[mask_freq._wcs.wcs.spec] == 'FREQ-W2F'
+
+    # values taken from header
+    rest = 1.42040571841E+09*u.Hz
+    crval = -3.21214698632E+05*u.m/u.s
+    outcv = crval.to(u.m, u.doppler_optical(rest)).to(u.Hz, u.spectral())
+
+    assert_allclose(mask_freq._wcs.wcs.crval[mask_freq._wcs.wcs.spec],
+                    outcv.to(u.Hz).value)
+
+def test_wcs_validity_check():
+    cube, data = cube_and_raw('adv.fits')
+    mask = BooleanArrayMask(data>0, cube._wcs)
+    cube = cube.with_mask(mask)
+    s2 = cube.spectral_slab(-2 * u.km / u.s, 2 * u.km / u.s)
+    s3 = s2.with_spectral_unit(u.km / u.s, velocity_convention=u.doppler_radio)
+    # just checking that this works, not that it does anything in particular
+    moment_map = s3.moment(order=1)
+
+def test_mask_spectral_unit_functions():
+    cube, data = cube_and_raw('adv.fits')
+
+    # function mask should do nothing
+    mask1 = FunctionMask(lambda x: x>0)
+    mask_freq1 = mask1.with_spectral_unit(u.Hz)
+
+    # lazy mask behaves like booleanarraymask
+    mask2 = LazyMask(lambda x: x>0, cube=cube)
+    mask_freq2 = mask2.with_spectral_unit(u.Hz)
+
+    assert mask_freq2._wcs.wcs.ctype[mask_freq2._wcs.wcs.spec] == 'FREQ-W2F'
+
+    # values taken from header
+    rest = 1.42040571841E+09*u.Hz
+    crval = -3.21214698632E+05*u.m/u.s
+    outcv = crval.to(u.m, u.doppler_optical(rest)).to(u.Hz, u.spectral())
+
+    assert_allclose(mask_freq2._wcs.wcs.crval[mask_freq2._wcs.wcs.spec],
+                    outcv.to(u.Hz).value)
+
+    # again, test that it works
+    mask3 = CompositeMask(mask1,mask2)
+    mask_freq3 = mask3.with_spectral_unit(u.Hz)
+
+    mask_freq3 = CompositeMask(mask_freq1,mask_freq2)
+    mask_freq_freq3 = mask_freq3.with_spectral_unit(u.Hz)
+
+    # this one should fail
+    #failedmask = CompositeMask(mask_freq1,mask2)

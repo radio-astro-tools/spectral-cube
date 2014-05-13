@@ -1,12 +1,13 @@
 import pytest
 import operator
+import itertools
 
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
 import numpy as np
 
-from .. import SpectralCube, BooleanArrayMask, FunctionMask
+from .. import SpectralCube, BooleanArrayMask, FunctionMask, LazyMask, CompositeMask
 
 from . import path
 from .helpers import assert_allclose
@@ -93,6 +94,45 @@ class TestSpectralCube(object):
         c2, d2 = cube_and_raw('sadv.fits')
         for w1, w2 in zip(c1.world[view], c2.world[view]):
             assert_allclose(w1, w2)
+
+
+    @pytest.mark.parametrize(('name','masktype'),
+                             itertools.product(('advs', 'dvsa', 'sdav', 'sadv', 'vsad', 'vad', 'adv',),
+                                               (BooleanArrayMask, LazyMask, FunctionMask, CompositeMask))
+                            )
+    def test_with_spectral_unit(self, name, masktype):
+        cube, data = cube_and_raw(name + '.fits')
+        cube_freq = cube.with_spectral_unit(u.Hz)
+
+        if masktype == BooleanArrayMask:
+            mask = BooleanArrayMask(data>0, wcs=cube._wcs)
+        elif masktype == LazyMask:
+            mask = LazyMask(lambda x: x>0, cube=cube)
+        elif masktype == FunctionMask:
+            mask = FunctionMask(lambda x: x>0)
+        elif masktype == CompositeMask:
+            mask1 = FunctionMask(lambda x: x>0)
+            mask2 = LazyMask(lambda x: x>0, cube)
+            mask = CompositeMask(mask1, mask2)
+
+        cube2 = cube.with_mask(mask)
+        cube_masked_freq = cube2.with_spectral_unit(u.Hz)
+
+        assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ-W2F'
+        assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ-W2F'
+        assert cube_masked_freq._mask._wcs.wcs.ctype[cube_masked_freq._mask._wcs.wcs.spec] == 'FREQ-W2F'
+
+        # values taken from header
+        rest = 1.42040571841E+09*u.Hz
+        crval = -3.21214698632E+05*u.m/u.s
+        outcv = crval.to(u.m, u.doppler_optical(rest)).to(u.Hz, u.spectral())
+
+        assert_allclose(cube_freq._wcs.wcs.crval[cube_freq._wcs.wcs.spec],
+                        outcv.to(u.Hz).value)
+        assert_allclose(cube_masked_freq._wcs.wcs.crval[cube_masked_freq._wcs.wcs.spec],
+                        outcv.to(u.Hz).value)
+        assert_allclose(cube_masked_freq._mask._wcs.wcs.crval[cube_masked_freq._mask._wcs.wcs.spec],
+                        outcv.to(u.Hz).value)
 
 
 class TestFilters(BaseTest):
