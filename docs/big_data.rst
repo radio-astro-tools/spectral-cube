@@ -14,7 +14,7 @@ three ideas in mind:
 - Minimize the number of passes over the data.
 
 Work with small subsets of data at a time
-=========================================
+-----------------------------------------
 
 Numpy supports a *memory-mapping* mode which means that the data is stored
 on disk and the array elements are only loaded into memory when needed.
@@ -64,7 +64,8 @@ in smaller chunks if possible.
 
 
 Minimize Data Copying
-=====================
+---------------------
+
 Methods in :meth:`SpectralCube` avoid copying as much as possible. For example, all of the following operations create new cubes or masks
 without copying any data::
 
@@ -75,7 +76,8 @@ without copying any data::
     >>> cube2 = cube.apply_mask(mask)
 
 Minimize the number of passes over the data
-===========================================
+-------------------------------------------
+
 Accessing memory-mapped arrays is much slower than a normal
 array, due to the overhead of reading from disk. Because of this,
 it is more efficient to perform computations that iterate over the
