@@ -94,7 +94,10 @@ class Projection(u.Quantity):
     @property
     def hdu(self):
         from astropy.io import fits
-        hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
+        if self.wcs is None:
+            hdu = fits.PrimaryHDU(self.value)
+        else:
+            hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
         return hdu
 
@@ -112,7 +115,7 @@ class Projection(u.Quantity):
             If True, overwrite `filename` if it exists
         """
         if format is None:
-            format = determine_format_from_filename(filename)
+            format = determine_format(filename)
         if format == 'fits':
             self.hdu.writeto(filename, clobber=clobber)
         else:
