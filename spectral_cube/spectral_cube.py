@@ -583,7 +583,7 @@ class SpectralCube(object):
                                                 rest_value=rest_value)
         newmask._wcs = newwcs
 
-        cube = self._new_cube_with(wcs=newwcs, mask=newmask)
+        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta)
         cube._spectral_unit = unit
 
         return cube
