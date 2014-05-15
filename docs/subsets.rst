@@ -17,7 +17,7 @@ bounds and the rest frequency (if applicable) should be given as Astropy
 
     >>> from astropy import units as u
     >>> co_1_0 = cube.spectral_slab(-50 * u.km / u.s, +50 * u.km / u.s,
-                                    rest_frequency=115.27120 * u.GHz)
+                                    rest_value=115.27120 * u.GHz)
 
 Regardless of what units the original cube was in, the
 :meth:`~spectral_cube.SpectralCube.spectral_slab` can determine

@@ -237,7 +237,7 @@ class TestSlab(BaseTest):
     def test_spectral_channel_bad_units(self):
 
         with pytest.raises(u.UnitsError) as exc:
-            self.c.closest_spectral_channel(1 * u.s, rest_frequency=1 / u.s)
+            self.c.closest_spectral_channel(1 * u.s, rest_value=1 / u.s)
         assert exc.value.args[0] == "'value' should be in frequency equivalent or velocity units (got s)"
 
         with pytest.raises(u.UnitsError) as exc:

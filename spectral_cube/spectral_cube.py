@@ -871,7 +871,7 @@ class SpectralCube(object):
     def spatial_coordinate_map(self):
         return self.world[0, :, :][1:]
 
-    def closest_spectral_channel(self, value, rest_frequency=None):
+    def closest_spectral_channel(self, value, rest_value=None):
         """
         Find the index of the closest spectral channel to the specified
         spectral coordinate.
@@ -880,7 +880,7 @@ class SpectralCube(object):
         ----------
         value : :class:`~astropy.units.Quantity`
             The value of the spectral coordinate to search for.
-        rest_frequency : :class:`~astropy.units.Quantity`
+        rest_value : :class:`~astropy.units.Quantity`
             The rest frequency for any Doppler conversions
         """
 
@@ -891,13 +891,13 @@ class SpectralCube(object):
             value = value.to(spectral_axis.unit, equivalencies=u.spectral())
         except u.UnitsError:
             if value.unit.is_equivalent(spectral_axis.unit, equivalencies=u.doppler_radio(None)):
-                if rest_frequency is None:
+                if rest_value is None:
                     raise u.UnitsError("{0} cannot be converted to {1} without a "
                                        "rest frequency".format(value.unit, spectral_axis.unit))
                 else:
                     try:
                         value = value.to(spectral_axis.unit,
-                                         equivalencies=u.doppler_radio(rest_frequency))
+                                         equivalencies=u.doppler_radio(rest_value))
                     except u.UnitsError:
                         raise u.UnitsError("{0} cannot be converted to {1}".format(value.unit, spectral_axis.unit))
             else:
@@ -906,7 +906,7 @@ class SpectralCube(object):
         # TODO: optimize the next line - just brute force for now
         return np.argmin(np.abs(spectral_axis - value))
 
-    def spectral_slab(self, lo, hi, rest_frequency=None):
+    def spectral_slab(self, lo, hi, rest_value=None):
         """
         Extract a new cube between two spectral coordinates
 
@@ -914,13 +914,13 @@ class SpectralCube(object):
         ----------
         lo, hi : :class:`~astropy.units.Quantity`
             The lower and upper spectral coordinate for the slab range
-        rest_frequency : :class:`~astropy.units.Quantity`
+        rest_value : :class:`~astropy.units.Quantity`
             The rest frequency for any Doppler conversions
         """
 
         # Find range of values for spectral axis
-        ilo = self.closest_spectral_channel(lo, rest_frequency=rest_frequency)
-        ihi = self.closest_spectral_channel(hi, rest_frequency=rest_frequency)
+        ilo = self.closest_spectral_channel(lo, rest_value=rest_value)
+        ihi = self.closest_spectral_channel(hi, rest_value=rest_value)
 
         if ilo > ihi:
             ilo, ihi = ihi, ilo
@@ -950,7 +950,7 @@ class SpectralCube(object):
 
         return slab
 
-    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_frequency=None):
+    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_value=None):
         """
         Extract a sub-cube spatially and spectrally.
 
