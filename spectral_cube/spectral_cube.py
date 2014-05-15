@@ -24,6 +24,12 @@ except NameError:
     xrange = range
 
 
+DOPPLER_CONVENTIONS = {}
+DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
+DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
+DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
+
+
 def cached(func):
     """
     Decorator to cache function calls
@@ -559,9 +565,10 @@ class SpectralCube(object):
         unit : u.Unit
             Any valid spectral unit: velocity, (wave)length, or frequency.
             Only vacuum units are supported.
-        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+        velocity_convention : 'relativistic', 'radio', or 'optical'
             The velocity convention to use for the output velocity axis.
-            Required if the output type is velocity.
+            Required if the output type is velocity. This can be either one
+            of the above strings, or an `astropy.units` equivalency.
         rest_value : u.Quantity
             A rest wavelength or frequency with appropriate units.  Required if
             output type is velocity.  The cube's WCS should include this
@@ -570,6 +577,9 @@ class SpectralCube(object):
 
         """
         from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
+
+        if velocity_convention in DOPPLER_CONVENTIONS:
+            velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
 
         meta = self._meta.copy()
         if 'Original Unit' not in self._meta:
