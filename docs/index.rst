@@ -5,6 +5,20 @@ The ``spectral_cube`` package provides an easy way to read, manipulate,
 analyze, and write data cubes with two positional dimensions and one
 spectral dimension, optionally with Stokes parameters.
 
+``spectral_cube`` aims to be a versatile data container for building
+custom analysis routines. It provides the following main features:
+
+- A uniform interface to spectral cubes, robust to the
+  wide range of conventions of axis order, spatial projections,
+  and spectral units that exist in the wild.
+- Easy extraction of cube sub-regions using physical coordinates.
+- Ability to easily create, combine, and apply masks to datasets.
+- Basic summary statistic methods like moments and array aggregates.
+- Designed to work with datasets too large to load into memory.
+
+Quick start
+-----------
+
 Here's a simple script demonstrating ``spectral_cube``::
 
     >>> import astropy.units as u
@@ -25,17 +39,6 @@ Here's a simple script demonstrating ``spectral_cube``::
     # Compute the first moment and write to file
     >>> m1 = masked_slab.moment(order=1)
     >>> m1.write('moment_1.fits')
-
-``spectral_cube`` aims to be a versatile data container for building
-custom analysis routines. It provides the following main features:
-
-- A uniform interface to spectral cubes, robust to the
-  wide range of conventions of axis order, spatial projections,
-  and spectral units that exist in the wild.
-- Easy extraction of cube sub-regions using physical coordinates.
-- Ability to easily create, combine, and apply masks to datasets.
-- Basic summary statistic methods like moments and array aggregates.
-- Designed to work with datasets too large to load into memory.
 
 Using ``spectral_cube``
 -----------------------
