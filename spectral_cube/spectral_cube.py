@@ -146,6 +146,29 @@ class SpectralCube(object):
         #assert mask._wcs == self._wcs
         self._fill_value = fill_value
 
+        # We don't pass the spectral unit via the initializer since the user
+        # should be using ``with_spectral_unit`` if they want to set it.
+        # However, we do want to keep track of what units the spectral axis
+        # should be returned in, otherwise astropy's WCS can change the units,
+        # e.g. km/s -> m/s.
+        self._spectral_unit = None
+
+    def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
+                       fill_value=None, spectral_unit=None):
+
+        data = self._data if data is None else data
+        wcs = self._wcs if wcs is None else wcs
+        mask = self._mask if mask is None else mask
+        meta = self._meta if meta is None else meta
+        fill_value = self._fill_value if fill_value is None else fill_value
+        spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
+
+        cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
+                            fill_value=fill_value)
+        cube._spectral_unit = spectral_unit
+
+        return cube
+
     @property
     def unit(self):
         """ The flux unit """
@@ -481,22 +504,17 @@ class SpectralCube(object):
                                  "%s vs %s" % (mask.shape, self._data.shape))
             mask = BooleanArrayMask(mask, self._wcs)
 
-        cube = SpectralCube(self._data, wcs=self._wcs,
-                            mask=self._mask & mask if inherit_mask else mask,
-                            fill_value=self.fill_value,
-                            meta=self._meta)
-        return cube
+        return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
 
     def __getitem__(self, view):
         meta = {}
         meta.update(self._meta)
         meta['slice'] = [(s.start, s.stop, s.step) for s in view]
 
-        return SpectralCube(self._data[view],
-                            wcs_utils.slice_wcs(self._wcs, view),
-                            mask=self._mask[view],
-                            fill_value=self.fill_value,
-                            meta=meta)
+        return self._new_cube_with(data=self._data[view],
+                                   wcs=wcs_utils.slice_wcs(self._wcs, view),
+                                   mask=self._mask[view],
+                                   meta=meta)
 
     @property
     def fill_value(self):
@@ -529,11 +547,7 @@ class SpectralCube(object):
         ----
         This method is fast (it does not copy any data)
         """
-        return SpectralCube(data=self._data,
-                            wcs=self._wcs,
-                            mask=self._mask,
-                            fill_value=self.fill_value,
-                            meta=self._meta)
+        return self._new_cube_with(fill_value=fill_value)
 
     def with_spectral_unit(self, unit, velocity_convention=None,
                            rest_value=None):
@@ -574,8 +588,9 @@ class SpectralCube(object):
                                                 rest_value=rest_value)
         newmask._wcs = newwcs
 
-        return SpectralCube(data=self._data, wcs=newwcs, mask=newmask,
-                            fill_value=self.fill_value, meta=meta)
+        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta, spectral_unit=unit)
+
+        return cube
 
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
         """
@@ -926,9 +941,7 @@ class SpectralCube(object):
                 mask_slab = None
 
         # Create new spectral cube
-        slab = SpectralCube(self._data[ilo:ihi], wcs_slab,
-                            fill_value=self.fill_value,
-                            mask=mask_slab, meta=self._meta)
+        slab = self._new_cube_with(data=self._data[ilo:ihi], wcs=wcs_slab, mask=mask_slab)
 
         # TODO: we could change the WCS to give a spectral axis in the
         # correct units as requested - so if the initial cube is in Hz and we
@@ -1005,6 +1018,11 @@ class SpectralCube(object):
         # apply units
         world = [w * u.Unit(self._wcs.wcs.cunit[i])
                  for i, w in enumerate(world)]
+
+        # convert spectral unit if needed
+        if self._spectral_unit is not None:
+            world[2] = world[2].to(self._spectral_unit)
+
         return world[::-1]  # reverse WCS -> numpy order
 
     def __gt__(self, value):
