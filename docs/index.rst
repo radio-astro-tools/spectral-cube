@@ -68,7 +68,7 @@ Advanced
 .. toctree::
    :maxdepth: 1
 
-   stokes.rst
+   .. stokes.rst
    yt_example.rst
    big_data.rst
    api.rst
