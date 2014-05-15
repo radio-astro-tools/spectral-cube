@@ -151,16 +151,18 @@ class SpectralCube(object):
         self._spectral_unit = None
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
-                       fill_value=None):
+                       fill_value=None, spectral_unit=None):
 
         data = self._data if data is None else data
         wcs = self._wcs if wcs is None else wcs
         mask = self._mask if mask is None else mask
-        wcs = self._wcs if wcs is None else wcs
+        meta = self._meta if meta is None else meta
         fill_value = self._fill_value if fill_value is None else fill_value
+        spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
 
         cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
                             fill_value=fill_value)
+        cube._spectral_unit = spectral_unit
 
         return cube
 
@@ -583,8 +585,7 @@ class SpectralCube(object):
                                                 rest_value=rest_value)
         newmask._wcs = newwcs
 
-        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta)
-        cube._spectral_unit = unit
+        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta, spectral_unit=unit)
 
         return cube
 
