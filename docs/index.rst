@@ -61,6 +61,7 @@ Getting started
    accessing.rst
    subsets.rst
    moments.rst
+   spectral.rst
 
 Advanced
 ^^^^^^^^
