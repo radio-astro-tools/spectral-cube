@@ -48,6 +48,9 @@ sections, we look at how to read data into this class, manipulate spectral
 cubes, extract moment maps or subsets of spectral cubes, and write spectral
 cubes to files.
 
+Getting started
+^^^^^^^^^^^^^^^
+
 .. toctree::
    :maxdepth: 1
 
@@ -57,6 +60,13 @@ cubes to files.
    accessing.rst
    subsets.rst
    moments.rst
+
+Advanced
+^^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+
    stokes.rst
    yt_example.rst
    big_data.rst
