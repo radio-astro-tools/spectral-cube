@@ -1069,8 +1069,7 @@ class SpectralCube(object):
             return cube
         else:  # StokesSpectralCube
             return SpectralCube(data=cube._data, wcs=cube._wcs,
-                                meta=cube._meta, mask=cube._mask,
-                                spectral_unit=self._spectral_unit)
+                                meta=cube._meta, mask=cube._mask)
 
     def write(self, filename, overwrite=False, format=None):
         """
