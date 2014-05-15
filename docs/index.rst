@@ -20,13 +20,11 @@ Here's a simple script demonstrating ``spectral_cube``::
     >>> slab = cube.spectral_slab(98 * u.GHz, 100 * u.GHz)
 
     # Ignore elements fainter than 1K
-    >>> thresh = slab > 1
-    >>> thresh
-    <spectral_cube.masks.LazyMask at 0x104ddab50>
-    >>> masked_slab = slab.with_mask(thresh)
+    >>> masked_slab = slab.with_mask(slab > 1)
 
-    # Compute the first moment
-    >>> m1 = masked_slab.moment1(axis=0)
+    # Compute the first moment and write to file
+    >>> m1 = masked_slab.moment(order=1)
+    >>> m1.write('moment_1.fits')
 
 ``spectral_cube`` aims to be a versatile data container for building
 custom analysis routines. It provides the following main features:
