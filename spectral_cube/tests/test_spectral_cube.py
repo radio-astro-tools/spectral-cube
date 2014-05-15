@@ -362,7 +362,9 @@ def test_preserve_spectral_unit():
     # m/s, so we have a workaround - check that it works.
 
     cube, data = cube_and_raw('advs.fits')
+
     cube_freq = cube.with_spectral_unit(u.GHz)
+    assert cube_freq.wcs.wcs.cunit[2] == 'Hz'  # check internal
     assert cube_freq.spectral_axis.unit is u.GHz
 
     # Check that this preferred unit is propagated
