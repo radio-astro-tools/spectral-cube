@@ -483,7 +483,7 @@ class SpectralCube(object):
             return self._apply_numpy_function(nanmedian, axis=axis,
                                               check_endian=True, **kwargs)
         except ImportError:
-            return self.apply_along_axis(np.median, axis=axis, **kwargs),
+            return self.apply_function(np.median, axis=axis, **kwargs),
 
     def percentile(self, q, axis=None, **kwargs):
         """
@@ -496,7 +496,7 @@ class SpectralCube(object):
         axis : int, or None
             Which axis to compute percentiles over
         """
-        return self.apply_along_axis(np.percentile, q=q, axis=axis, **kwargs)
+        return self.apply_function(np.percentile, q=q, axis=axis, **kwargs)
 
     def with_mask(self, mask, inherit_mask=True):
         """
