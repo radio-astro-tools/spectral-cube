@@ -9,7 +9,8 @@ import numpy as np
 
 from .helpers import assert_allclose
 from . import path as data_path
-from ..spectral_axis import convert_spectral_axis,determine_ctype_from_vconv,cdelt_derivative
+from ..spectral_axis import (convert_spectral_axis, determine_ctype_from_vconv,
+                             cdelt_derivative, determine_vconv_from_ctype)
 
 def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
@@ -326,6 +327,20 @@ def test_ctype_determinator(ctype,unit,velocity_convention,result):
                                               velocity_convention=velocity_convention)
         assert outctype == result
 
+@pytest.mark.parametrize(('ctype','vconv'),
+                         (('VELO-F2W', u.doppler_optical),
+                          ('VELO-F2V', u.doppler_relativistic),
+                          ('VRAD', u.doppler_radio),
+                          ('VOPT', u.doppler_optical),
+                          ('VELO', u.doppler_relativistic),
+                          ('WAVE', u.doppler_optical),
+                          ('WAVE-F2W', u.doppler_optical),
+                          ('WAVE-V2W', u.doppler_optical),
+                          ('FREQ', u.doppler_radio),
+                          ('FREQ-V2F', u.doppler_radio),
+                          ('FREQ-W2F', u.doppler_radio),))
+def test_vconv_determinator(ctype, vconv):
+    assert determine_vconv_from_ctype(ctype) == vconv
 
 @pytest.mark.parametrize(('name'),
                          (('advs'),
