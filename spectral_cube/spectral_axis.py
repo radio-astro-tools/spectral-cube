@@ -73,6 +73,23 @@ def _get_linear_equivalency(unit1, unit2):
           unit2.physical_type in ('length','speed')):
         return u.doppler_optical
 
+def determine_vconv_from_ctype(ctype):
+    """
+    Given a CTYPE, say what velocity convention it is associated with,
+    i.e. what unit the velocity is linearly proportional to
+
+    Parameters
+    ----------
+    ctype : str
+        The spectral CTYPE
+    """
+    if len(ctype) < 5:
+        return _parse_velocity_convention(ctype)
+    elif len(ctype) == 8:
+        return _parse_velocity_convention(ctype[7])
+    else:
+        raise ValueError("A valid ctype must either have 4 or 8 characters.")
+
 def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
     """
     Given a CTYPE describing the current WCS and an output unit and velocity
