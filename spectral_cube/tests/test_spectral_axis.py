@@ -10,7 +10,8 @@ import numpy as np
 from .helpers import assert_allclose
 from . import path as data_path
 from ..spectral_axis import (convert_spectral_axis, determine_ctype_from_vconv,
-                             cdelt_derivative, determine_vconv_from_ctype)
+                             cdelt_derivative, determine_vconv_from_ctype,
+                             get_rest_value_from_wcs)
 
 def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
@@ -364,29 +365,27 @@ def test_vopt_to_freq(name):
 
 
 @pytest.mark.parametrize('wcstype',('Z','W','R','V','F'))
-def change_rest_frequency(wcstype):
+def test_change_rest_frequency(wcstype):
     # This is the header extracted from Greisen 2006, including many examples
     # of valid transforms.  It should be the gold standard (in principle)
     hdr = fits.Header.fromtextfile(data_path('greisen2006.hdr'))
 
-    old_rest = 1.420405752E+09*u.Hz
-    new_rest = 1.42*u.Hz
-    vconv = determine_vconv_from_ctype(hdr['CTYPE3'])
-    new_velocity = old_rest.to(u.km/u.s,
-                               equivalencies=vconv(new_rest))
-
     wcs0 = wcs.WCS(hdr, key=wcstype)
+
+    old_rest = get_rest_value_from_wcs(wcs0)
+    if old_rest is None:
+        # This test doesn't matter if there was no rest frequency in the first
+        # place but I prefer to keep the option open in case we want to try
+        # forcing a rest frequency on some of the non-velocity frames at some
+        # point
+        return
+    vconv1 = determine_vconv_from_ctype(hdr['CTYPE3'+wcstype])
+    new_rest = (100*u.km/u.s).to(u.Hz, vconv1(old_rest))
+
     wcs1 = wcs.WCS(hdr, key='V')
+    vconv2 = determine_vconv_from_ctype(hdr['CTYPE3V'])
 
-    if wcstype in ('R','V','Z'):
-        if wcs1.wcs.restfrq:
-            rest = wcs1.wcs.restfrq*u.Hz
-        elif wcs1.wcs.restwav:
-            rest = wcs1.wcs.restwav*u.m
-    else:
-        rest = None
-
-    # km/s
+    inunit = u.Unit(wcs0.wcs.cunit[wcs0.wcs.spec])
     outunit = u.Unit(wcs1.wcs.cunit[wcs1.wcs.spec])
     # VELO-F2V
     out_ctype = wcs1.wcs.ctype[wcs1.wcs.spec]
@@ -394,9 +393,15 @@ def change_rest_frequency(wcstype):
     wcs2 = convert_spectral_axis(wcs0,
                                  outunit,
                                  out_ctype,
-                                 rest_value=rest)
+                                 rest_value=new_rest)
 
-    v = wcs2.sub(wcs.WCSSUB_SPECTRAL).wcs_pix2world(1,0)
+    sp1 = wcs1.sub([wcs.WCSSUB_SPECTRAL])
+    sp2 = wcs2.sub([wcs.WCSSUB_SPECTRAL])
 
-    assert v == new_velocity
-    raise dead
+    p_old = sp1.wcs_world2pix([old_rest.to(inunit, vconv1(old_rest)).value,
+                               new_rest.to(inunit, vconv1(old_rest)).value],0)
+    p_new = sp2.wcs_world2pix([old_rest.to(outunit, vconv2(new_rest)).value,
+                               new_rest.to(outunit, vconv2(new_rest)).value],0)
+
+    assert_allclose(p_old, p_new, rtol=1e-3)
+    assert_allclose(p_old, p_new, rtol=1e-3)
