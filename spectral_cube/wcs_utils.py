@@ -215,6 +215,13 @@ def check_equality(wcs1, wcs2, warn_missing=False, verbose=False):
                     OK = False
                     if verbose:
                         print("Header 1, {0}: {1} != {2}".format(key,u1,u2))
+            elif isinstance(c1[1], (float, np.float)):
+                try:
+                    np.testing.assert_almost_equal(c1[1], c2[1])
+                except AssertionError:
+                    if verbose:
+                        print("Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
+                    OK = False
             elif c1[1] != c2[1]:
                 if verbose:
                     print("Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
