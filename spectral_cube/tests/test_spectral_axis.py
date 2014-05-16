@@ -23,10 +23,8 @@ def test_cube_wcs_freqtovel():
     assert newwcs.wcs.crval[2] == 305.2461585938794
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
 
-    with warnings.catch_warnings(record=True) as w:
-        newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD')
-    assert len(w) == 1
-    assert w[0].message.args[0] == 'Using WCS built-in rest frequency even though the WCS system was originally FREQ'
+    newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD')
+
     assert newwcs.wcs.ctype[2] == 'VRAD'
     assert newwcs.wcs.crval[2] == 305.2461585938794
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
@@ -363,3 +361,42 @@ def test_vopt_to_freq(name):
     wcs1 = convert_spectral_axis(wcs0, u.Hz, out_ctype)
 
     assert wcs1.wcs.ctype[wcs1.wcs.spec] == 'FREQ-W2F'
+
+
+@pytest.mark.parametrize('wcstype',('Z','W','R','V','F'))
+def change_rest_frequency(wcstype):
+    # This is the header extracted from Greisen 2006, including many examples
+    # of valid transforms.  It should be the gold standard (in principle)
+    hdr = fits.Header.fromtextfile(data_path('greisen2006.hdr'))
+
+    old_rest = 1.420405752E+09*u.Hz
+    new_rest = 1.42*u.Hz
+    vconv = determine_vconv_from_ctype(hdr['CTYPE3'])
+    new_velocity = old_rest.to(u.km/u.s,
+                               equivalencies=vconv(new_rest))
+
+    wcs0 = wcs.WCS(hdr, key=wcstype)
+    wcs1 = wcs.WCS(hdr, key='V')
+
+    if wcstype in ('R','V','Z'):
+        if wcs1.wcs.restfrq:
+            rest = wcs1.wcs.restfrq*u.Hz
+        elif wcs1.wcs.restwav:
+            rest = wcs1.wcs.restwav*u.m
+    else:
+        rest = None
+
+    # km/s
+    outunit = u.Unit(wcs1.wcs.cunit[wcs1.wcs.spec])
+    # VELO-F2V
+    out_ctype = wcs1.wcs.ctype[wcs1.wcs.spec]
+
+    wcs2 = convert_spectral_axis(wcs0,
+                                 outunit,
+                                 out_ctype,
+                                 rest_value=rest)
+
+    v = wcs2.sub(wcs.WCSSUB_SPECTRAL).wcs_pix2world(1,0)
+
+    assert v == new_velocity
+    raise dead
