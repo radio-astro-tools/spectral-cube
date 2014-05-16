@@ -349,8 +349,7 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
-    def _apply_along_axes(self, function, axis=None, weights=None, wcs=False,
-                          **kwargs):
+    def apply_along_axis(self, function, axis=None, weights=None, **kwargs):
         """
         Apply a function to valid data along the specified axis, optionally
         using a weight array that is the same shape (or at least can be sliced
@@ -358,14 +357,16 @@ class SpectralCube(object):
 
         Parameters
         ----------
-        function: function
+        function : function
             A function that can be applied to a numpy array.  Does not need to
             be nan-aware
-        axis: int
+        axis : int
             The axis to operate along
-        weights: (optional) np.ndarray
+        weights : (optional) np.ndarray
             An array with the same shape (or slicing abilities/results) as the
             data cube
+        wcs : bool
+            Optionally, return the associated WCS with th
         """
         if axis is None:
             return function(self.flattened(), **kwargs)
@@ -384,11 +385,11 @@ class SpectralCube(object):
                 # store result in array
                 out[x, y] = function(data, **kwargs)
 
-        if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-            return out, newwcs
+        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
-        return out
+        meta = {'collapse_axis': axis}
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta)
 
     def _iter_rays(self, axis=None):
         """
@@ -455,14 +456,10 @@ class SpectralCube(object):
         """
         try:
             from bottleneck import nanmedian
-            return u.Quantity(self._apply_numpy_function(nanmedian, axis=axis,
-                                                         check_endian=True,
-                                                         **kwargs), self.unit,
-                              copy=False)
+            return self._apply_numpy_function(nanmedian, axis=axis,
+                                              check_endian=True, **kwargs)
         except ImportError:
-            return u.Quantity(self._apply_along_axes(np.median, axis=axis,
-                                                     **kwargs), self.unit,
-                              copy=False)
+            return self.apply_along_axis(np.median, axis=axis, **kwargs),
 
     def percentile(self, q, axis=None, **kwargs):
         """
@@ -475,9 +472,7 @@ class SpectralCube(object):
         axis : int, or None
             Which axis to compute percentiles over
         """
-        return u.Quantity(self._apply_along_axes(np.percentile, q=q, axis=axis,
-                                                 **kwargs), self.unit,
-                          copy=False)
+        return self.apply_along_axis(np.percentile, q=q, axis=axis, **kwargs)
 
     def with_mask(self, mask, inherit_mask=True):
         """
