@@ -349,27 +349,40 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
-    def apply_along_axis(self, function, axis=None, weights=None, **kwargs):
+    def apply_function(self, function, axis=None, weights=None, unit=None,
+                       **kwargs):
         """
-        Apply a function to valid data along the specified axis, optionally
-        using a weight array that is the same shape (or at least can be sliced
-        in the same way)
+        Apply a function to valid data along the specified axis or to the whole
+        cube, optionally using a weight array that is the same shape (or at
+        least can be sliced in the same way)
 
         Parameters
         ----------
         function : function
             A function that can be applied to a numpy array.  Does not need to
             be nan-aware
-        axis : int
-            The axis to operate along
+        axis : 1, 2, 3, or None
+            The axis to operate along.  If None, the return is scalar.
         weights : (optional) np.ndarray
             An array with the same shape (or slicing abilities/results) as the
             data cube
-        wcs : bool
-            Optionally, return the associated WCS with th
+        unit : (optional) `~astropy.units.Unit`
+            The unit of the output projection or value.  Not all functions
+            should return quantities with units.
+
+        Returns
+        -------
+        result : `Projection` or `~astropy.units.Quantity` or float
+            The result depends on the value of ``axis`` and ``unit``.  If
+            ``axis`` is None, the return will be a scalar with or without
+            units.  If axis is an integer, the return will be a `Projection`
         """
         if axis is None:
-            return function(self.flattened(), **kwargs)
+            out = function(self.flattened(), **kwargs)
+            if unit is not None:
+                return u.Quantity(out, unit=unit)
+            else:
+                return out
 
         # determine the output array shape
         nx, ny = self._get_flat_shape(axis)
@@ -389,7 +402,7 @@ class SpectralCube(object):
 
         meta = {'collapse_axis': axis}
 
-        return Projection(out, copy=False, wcs=new_wcs, meta=meta)
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
 
     def _iter_rays(self, axis=None):
         """
