@@ -535,8 +535,21 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
+    def apply_everywhere(self, function):
+        """
+        Return a new cube with ``function`` applied to all pixels
+        """
+
+        # First, check that function returns same # of dims?
+        assert function(np.ones([1,1,1])).shape == (1,1,1)
+
+        return self._new_cube_with(data=function(self._data))
+
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False, **kwargs):
+    # not clear if this should be removed?
+    # def _apply_along_axes(self, function, axis=None, weights=None, wcs=False,
+    #                       **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
