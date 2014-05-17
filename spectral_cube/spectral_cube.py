@@ -61,6 +61,11 @@ def cached(func):
 
     return wrapper
 
+def warn_slow(function):
+    warnings.warn("This function requires loading the entire cube into memory "
+                  "and may therefore be slow.")
+    return function
+
 _NP_DOC = """
 Ignores excluded mask elements.
 
@@ -535,6 +540,7 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
+    @warn_slow
     def apply_everywhere(self, function):
         """
         Return a new cube with ``function`` applied to all pixels
