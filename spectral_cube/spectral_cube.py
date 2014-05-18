@@ -1067,7 +1067,7 @@ class SpectralCube(object):
         from .io.core import write
         write(filename, self, overwrite=overwrite, format=format)
 
-    def to_yt(self, **kwargs):
+    def to_yt(self, spectral_factor=None, center=None, nprocs=None, **kwargs):
         """
         Convert a spectral cube to a yt object that can be further analyzed in yt.
 
@@ -1075,16 +1075,45 @@ class SpectralCube(object):
         the yt documentation for details on options for reading FITS data.
         """
 
-        from yt.frontends.fits.api import FITSDataset
-        from astropy.io import fits
+        import yt
+        yt_version = float(yt.__version__.split("-")[0])
 
-        hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
-                              header=self.wcs.to_header())
+        if yt_version >= 3.0:
 
-        hdu.header["BUNIT"] = str(self.unit.to_string(format='fits'))
-        hdu.header["BTYPE"] = "flux"
+            from yt.frontends.fits.api import FITSDataset
+            from astropy.io import fits
 
-        ds = FITSDataset(hdu, **kwargs)
+            hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
+                                  header=self.wcs.to_header())
+
+            hdu.header["BUNIT"] = str(self.unit.to_string(format='fits'))
+            hdu.header["BTYPE"] = "flux"
+
+            ds = FITSDataset(hdu, nprocs=nprocs, spectral_factor=spectral_factor, **kwargs)
+
+        else:
+
+            from yt.mods import load_uniform_grid
+
+            data = {'flux': self._get_filled_data(fill=0.)}
+
+            nz, ny, nx = self.shape
+
+            if center is None:
+                center = [0.5*(nz-1.0),0.5*(ny-1.0),0.5*(nx-1.0)]
+            else:
+                # Determine center in pixel coordinates
+                center = self.wcs.wcs_world2pix([center], 0)[0]
+
+            if nprocs is None: nprocs = 1
+            if spectral_factor is None: spectral_factor = 1.0
+
+            ds = load_uniform_grid(data, self.shape, 1.,
+                                   bbox=np.array([[(-0.5 - center[2]) * spectral_factor,
+                                                   (nz - 0.5 - center[2]) * spectral_factor],
+                                                  [-0.5 - center[1], ny - 0.5 - center[1]],
+                                                  [-0.5 - center[0], nx - 0.5 - center[0]]]),
+                                   nprocs=nprocs, periodicity=(False, False, False))
 
         return ds
 
