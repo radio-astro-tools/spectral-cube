@@ -27,16 +27,22 @@ When working with datasets in yt, it may be useful to convert world coordinates
 to pixel coordinates, so that whenever you may have to input a position in yt
 (e.g., for slicing or volume rendering) you can get the pixel coordinate that
 corresponds to the desired world coordinate. For this purpose, the method
-:meth:`~spectral_cube.SpectralCube.world2pixel` is provided::
+:meth:`~spectral_cube.SpectralCube.world2yt` is provided::
 
     >>> import astropy.units as u
-    >>> pix_coord = cube.world2pixel([51.424522 * u.deg,
-                                      30.723611 * u.deg,
-                                      5205.18071 * u.m / u.s],
-                                      spectral_factor=0.5)
+    >>> pix_coord = cube.world2yt([51.424522, # deg
+                                   30.723611, # deg
+                                   5205.18071 # m/s])
 
-where ``spectral_factor`` may be optionally supplied if it was used when constructing
-the yt dataset.
+which handles a non-unity ``spectral_factor`` automatically if it was included in the
+call to :meth:`~spectral_cube.SpectralCube.to_yt`.
+
+There is also a reverse method provided, :meth:`~spectral_cube.SpectralCube.yt2world`::
+
+    >>> world_coord = cube.yt2world([ds.domain_center])
+
+which in this case would return the world coordinates of the center of the dataset
+in yt.
 
 .. TODO: add a way to center it on a specific coordinate and return in world
 .. coordinate offset.
