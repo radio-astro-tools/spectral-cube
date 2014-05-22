@@ -1067,7 +1067,7 @@ class SpectralCube(object):
         from .io.core import write
         write(filename, self, overwrite=overwrite, format=format)
 
-    def to_yt(self, spectral_factor=None, center=None, nprocs=None, **kwargs):
+    def to_yt(self, spectral_factor=1.0, nprocs=None, **kwargs):
         """
         Convert a spectral cube to a yt object that can be further analyzed in yt.
 
@@ -1077,6 +1077,8 @@ class SpectralCube(object):
 
         import yt
         yt_version = float(yt.__version__.split("-")[0])
+
+        self.yt_spectral_factor = spectral_factor
 
         if yt_version >= 3.0:
 
@@ -1095,28 +1097,34 @@ class SpectralCube(object):
 
             from yt.mods import load_uniform_grid
 
-            data = {'flux': self._get_filled_data(fill=0.)}
+            data = {'flux': self._get_filled_data(fill=0.).transpose()}
 
             nz, ny, nx = self.shape
 
-            if center is None:
-                center = [0.5*(nz-1.0),0.5*(ny-1.0),0.5*(nx-1.0)]
-            else:
-                # Determine center in pixel coordinates
-                center = self.wcs.wcs_world2pix([center], 0)[0]
-
             if nprocs is None: nprocs = 1
-            if spectral_factor is None: spectral_factor = 1.0
 
-            ds = load_uniform_grid(data, self.shape, 1.,
-                                   bbox=np.array([[(-0.5 - center[2]) * spectral_factor,
-                                                   (nz - 0.5 - center[2]) * spectral_factor],
-                                                  [-0.5 - center[1], ny - 0.5 - center[1]],
-                                                  [-0.5 - center[0], nx - 0.5 - center[0]]]),
+            bbox = np.array([[0.5,float(nx)+0.5],
+                             [0.5,float(ny)+0.5],
+                             [0.5,spectral_factor*float(nz)+0.5]])
+
+            ds = load_uniform_grid(data, [nx,ny,nz], 1., bbox=bbox,
                                    nprocs=nprocs, periodicity=(False, False, False))
 
         return ds
 
+    def world2yt(self, world):
+        """
+        Convert a position in world coordinates to pixel coordinates.
+        To be used with ``to_yt`` to find pixel coordinates for analysis and
+        visualization in yt. The changing of the aspect of the spectral axis
+        (via the parameter ``spectral_factor`` in ``to_yt``) is handled
+        automatically.
+        """
+        if not hasattr(self, "yt_spectral_factor"):
+            raise ValueError("Please create a yt dataset with to_yt before using this method.")
+        pixel = self.wcs.wcs_world2pix([world], 1)[0]
+        pixel[2] = (pixel[2] - 0.5)*self.yt_spectral_factor+0.5
+        return pixel
 
 class StokesSpectralCube(SpectralCube):
 
