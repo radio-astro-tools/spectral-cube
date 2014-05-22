@@ -1275,7 +1275,7 @@ class SpectralCube(object):
             Factor by which to stretch the spectral axis. If set to 1, one pixel
             in spectral coordinates is equivalent to one pixel in spatial
             coordinates.
-            
+
         If using yt 3.0 or later, additional keyword arguments will be passed onto yt's
         ``FITSDataset`` constructor. See the yt documentation for details on options
         for reading FITS data.
