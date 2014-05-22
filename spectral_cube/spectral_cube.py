@@ -1269,8 +1269,16 @@ class SpectralCube(object):
         """
         Convert a spectral cube to a yt object that can be further analyzed in yt.
 
-        Additional keyword arguments will be passed onto yt's ``FITSDataset`` constructor. See
-        the yt documentation for details on options for reading FITS data.
+        Parameters
+        ----------
+        spectral_factor : float, optional
+            Factor by which to stretch the spectral axis. If set to 1, one pixel
+            in spectral coordinates is equivalent to one pixel in spatial
+            coordinates.
+            
+        If using yt 3.0 or later, additional keyword arguments will be passed onto yt's
+        ``FITSDataset`` constructor. See the yt documentation for details on options
+        for reading FITS data.
         """
 
         import yt
@@ -1310,7 +1318,6 @@ class SpectralCube(object):
 
         return ds
 
-<<<<<<< HEAD
     @property
     def header(self):
         header = self.wcs.to_header()
@@ -1327,21 +1334,32 @@ class SpectralCube(object):
         hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
-=======
-    def world2yt(self, world):
+    def world2yt(self, world_coord):
         """
-        Convert a position in world coordinates to pixel coordinates.
-        To be used with ``to_yt`` to find pixel coordinates for analysis and
-        visualization in yt. The changing of the aspect of the spectral axis
-        (via the parameter ``spectral_factor`` in ``to_yt``) is handled
-        automatically.
+        Convert a position in world coordinates to the coordinates used by a
+        yt dataset that has been generated using the ``to_yt`` method. The
+        changing of the aspect of the spectral axis (via the parameter
+        ``spectral_factor`` in ``to_yt``) is handled automatically.
         """
         if not hasattr(self, "yt_spectral_factor"):
             raise ValueError("Please create a yt dataset with to_yt before using this method.")
-        pixel = self.wcs.wcs_world2pix([world], 1)[0]
-        pixel[2] = (pixel[2] - 0.5)*self.yt_spectral_factor+0.5
-        return pixel
->>>>>>> a37bc90... Attempting to get better convergence between yt 2.x and 3.0 implementations of to_yt
+        yt_coord = self.wcs.wcs_world2pix([world_coord], 1)[0]
+        yt_coord[2] = (yt_coord[2] - 0.5)*self.yt_spectral_factor+0.5
+        return yt_coord
+
+    def yt2world(self, yt_coord):
+        """
+        Convert a position in yt's coordinates to world coordinates from a
+        yt dataset that has been generated using the ``to_yt`` method. The
+        changing of the aspect of the spectral axis (via the parameter
+        ``spectral_factor`` in ``to_yt``) is handled automatically.
+        """
+        if not hasattr(self, "yt_spectral_factor"):
+            raise ValueError("Please create a yt dataset with to_yt before using this method.")
+        yt_coord = np.array(yt_coord) # stripping off units
+        yt_coord[2] = (yt_coord[2] - 0.5)/self.yt_spectral_factor+0.5
+        world_coord = self.wcs.wcs_pix2world([yt_coord], 1)[0]
+        return world_coord
 
 class StokesSpectralCube(SpectralCube):
 
