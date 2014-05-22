@@ -53,8 +53,8 @@ in yt.
     The :meth:`~spectral_cube.SpectralCube.to_yt` method and its associated coordinate methods
     are compatible with both yt v. 2.x and v. 3.0 and following, but use of version 3.0 or later
     is recommended due to substantial improvements in support for FITS data. For more information
-    on how yt handles FITS datasets, see `the yt docs <http://yt-project
-    .org/docs/3.0/examining/loading_data.html#fits-data>`_.
+    on how yt handles FITS datasets, see
+    `the yt docs <http://yt-project.org/docs/3.0/examining/loading_data.html#fits-data>`_.
 
 Visualization example
 ---------------------
