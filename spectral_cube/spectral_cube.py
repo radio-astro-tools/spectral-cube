@@ -1279,6 +1279,8 @@ class SpectralCube(object):
         import yt
         yt_version = float(yt.__version__.split("-")[0])
 
+        self.yt_spectral_factor = spectral_factor
+
         if yt_version >= 3.0:
 
             from yt.frontends.fits.api import FITSDataset
