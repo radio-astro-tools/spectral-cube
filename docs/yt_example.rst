@@ -30,9 +30,9 @@ corresponds to the desired world coordinate. For this purpose, the method
 :meth:`~spectral_cube.SpectralCube.world2yt` is provided::
 
     >>> import astropy.units as u
-    >>> pix_coord = cube.world2yt([51.424522, # deg
-                                   30.723611, # deg
-                                   5205.18071 # m/s])
+    >>> pix_coord = cube.world2yt([51.424522,
+                                   30.723611,
+                                   5205.18071]) # units of deg, deg, m/s
 
 which handles a non-unity ``spectral_factor`` automatically if it was included in the
 call to :meth:`~spectral_cube.SpectralCube.to_yt`.
@@ -46,6 +46,13 @@ in yt.
 
 .. TODO: add a way to center it on a specific coordinate and return in world
 .. coordinate offset.
+
+.. note::
+
+    The :meth:`~spectral_cube.SpectralCube.to_yt` method and its associated coordinate methods
+    are compatible with both yt v. 2.x and v. 3.0 and following, but use of version 3.0 or later
+    is recommended due to substantial improvements in support for FITS data. For more information
+    on how yt handles FITS datasets, see `the yt docs <http://yt-project.org/docs/dev-3.0/examining/loading_data.html#fits-data>`_.
 
 Visualization example
 ---------------------
@@ -80,9 +87,9 @@ produce a 3-d isocontour visualization using an object returned by
 
     # Derive the pixel coordinate of the desired center
     # from the corresponding world coordinate
-    center = cube.world2yt([51.424522 * u.deg,
-                            30.723611 * u.deg,
-                            5205.18071 * u.m / u.s])
+    center = cube.world2yt([51.424522,
+                            30.723611,
+                            5205.18071])
     direction = np.array([1.0, 0.0, 0.0])
     width = 100.  # pixels
     size = 1024
