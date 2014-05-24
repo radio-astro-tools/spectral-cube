@@ -1090,11 +1090,11 @@ class SpectralCube(object):
         """
         from .io.core import read
         cube = read(filename, format=format, hdu=hdu, **kwargs)
-        if isinstance(cube, SpectralCube):
-            return cube
-        else:  # StokesSpectralCube
+        if isinstance(cube, StokesSpectralCube):
             return SpectralCube(data=cube._data, wcs=cube._wcs,
                                 meta=cube._meta, mask=cube._mask)
+        else:
+            return cube
 
     def write(self, filename, overwrite=False, format=None):
         """

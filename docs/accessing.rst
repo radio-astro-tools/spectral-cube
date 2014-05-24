@@ -8,12 +8,12 @@ data values and the world coordinate information.
 Data values
 -----------
 
-You can access the underlying data using the ``data_unmasked`` array which is
+You can access the underlying data using the ``unmasked_data`` array which is
 a Numpy-like array::
 
-    >>> slice_unmasked = cube.data_unmasked[0,:,:]
+    >>> slice_unmasked = cube.unmasked_data[0,:,:]
 
-The order of the dimensions of the ``data_unmasked`` array is deterministic -
+The order of the dimensions of the ``unmasked_data`` array is deterministic -
 it is always ``(n_spectral, n_y, n_x)`` irrespective of how the cube was
 stored on disk.
 

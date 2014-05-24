@@ -54,7 +54,7 @@ Accessing masked data
 ---------------------
 
 As mention in :doc:`accessing`, the raw and unmasked data can be accessed
-with the :attr:`~spectral_cube.SpectralCube.data_unmasked` attribute.
+with the :attr:`~spectral_cube.SpectralCube.unmasked_data` attribute.
 You can access the masked data using ``filled_data``. This array is a
 copy of the original data with any masked value replaced by a fill value
 (which is ``np.nan`` by default but can be changed using the ``fill_value``
