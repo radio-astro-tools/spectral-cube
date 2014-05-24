@@ -57,8 +57,8 @@ Getting started
 
    installing.rst
    creating_reading.rst
-   masking.rst
    accessing.rst
+   masking.rst
    manipulating.rst
    moments.rst
 

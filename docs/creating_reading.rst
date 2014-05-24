@@ -16,7 +16,7 @@ Reading from a file
 -------------------
 
 In most cases, you are likely to read in an existing spectral cube from a
-file. The reader in ``spectral_cube`` is designed to be able to deal with any
+file. The reader is designed to be able to deal with any
 arbitrary axis order and always return a consistently oriented spectral cube
 (see :doc:`accessing`). To read in a file, use the
 :meth:`~spectral_cube.SpectralCube.read` method as follows::

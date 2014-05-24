@@ -2,53 +2,24 @@ Accessing data
 ==============
 
 Once you have initialized a :meth:`~spectral_cube.SpectralCube`
-instance, either directly or by reading in a file, there are a number of
-ways of accessing the data.
+instance, either directly or by reading in a file, you can easily access the
+data values and the world coordinate information.
 
-Data cube
----------
+Data values
+-----------
 
-Unmasked data
-^^^^^^^^^^^^^
-
-First, you can access the underlying data using the ``data_unmasked`` array
-which is a Numpy-like array that has not had the mask applied::
+You can access the underlying data using the ``data_unmasked`` array which is
+a Numpy-like array::
 
     >>> slice_unmasked = cube.data_unmasked[0,:,:]
-
-.. TODO: show example output
 
 The order of the dimensions of the ``data_unmasked`` array is deterministic -
 it is always ``(n_spectral, n_y, n_x)`` irrespective of how the cube was
 stored on disk.
 
-Masked data
-^^^^^^^^^^^
-
-You can also access the masked data using ``filled_data``. This array is a
-copy of the original data with any masked value replaced by a fill value
-(which is ``np.nan`` by default but can be changed using the ``fill_value``
-option in the :class:`~spectral_cube.SpectralCube`
-initializer). The 'filled' data is accessed with e.g.::
-
-    >>> slice_filled = cube.filled_data[0,:,:]
-
-.. TODO: show example output
-
-Note that accessing the filled data should still be efficient because the data
-are loaded and filled only once you access the actual data values, so this
-should still be efficient for large datasets.
-
-Flattened data
-^^^^^^^^^^^^^^
-
-If you are only interested in getting a flat (i.e. 1-d) array of all the
-non-masked values, you can also make use of the
-:meth:`~spectral_cube.SpectralCube.flattened` method::
-
-   >>> flat_array = cube.flattened()
-
-.. TODO: show example output
+.. note:: The term ``unmasked`` indicates that the data is the raw original
+          data from the file. :meth:`~spectral_cube.SpectralCube` also allows
+          masking of values, which is discussed in :doc:`masking`.
 
 World coordinates
 -----------------
@@ -66,3 +37,27 @@ spectral axis::
 The default units of a spectral axis are determined from the FITS header or
 WCS object used to initialize the cube, but it is also possible to change the
 spectral axis (see :doc:`manipulating`).
+
+More generally, it is possible to extract the world coordinates of all the
+pixels using the :attr:`~spectral_cube.SpectralCube.world` property, which
+returns the spectral axis then the two positional coordinates in reverse
+order (in the same order as the data indices).
+
+   >>> velo, dec, ra = cube.world[:]
+
+In order to extract coordinates, a slice (such as ``[:]`` above) is required.
+Using ``[:]`` will return three 3-d arrays with the coordinates for all
+pixels. Using e.g. ``[0,:,:]`` will return three 2-d arrays of coordinates for
+the first spectral slice.
+
+If you forget to specify a slice, you will get the following error:
+
+   >>> velo, dec, ra = cube.world
+   ...
+   Exception: You need to specify a slice (e.g. ``[:]`` or ``[0,:,:]`` in order to access this property.
+
+In the case of large data cubes, requesting the coordinates of all pixels
+would likely be too slow, so the slicing allows you to compute only a subset
+of the pixel coordinates (see :doc:`big_data` for more information on dealing
+with large data cubes).
+

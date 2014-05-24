@@ -50,6 +50,29 @@ and the data match
 
     >>> cube2 = cube.with_mask(boolean_array)
 
+Accessing masked data
+---------------------
+
+As mention in :doc:`accessing`, the raw and unmasked data can be accessed
+with the :attr:`~spectral_cube.SpectralCube.data_unmasked` attribute.
+You can access the masked data using ``filled_data``. This array is a
+copy of the original data with any masked value replaced by a fill value
+(which is ``np.nan`` by default but can be changed using the ``fill_value``
+option in the :class:`~spectral_cube.SpectralCube`
+initializer). The 'filled' data is accessed with e.g.::
+
+    >>> slice_filled = cube.filled_data[0,:,:]
+
+Note that accessing the filled data should still be efficient because the data
+are loaded and filled only once you access the actual data values, so this
+should still be efficient for large datasets.
+
+If you are only interested in getting a flat (i.e. 1-d) array of all the
+non-masked values, you can also make use of the
+:meth:`~spectral_cube.SpectralCube.flattened` method::
+
+   >>> flat_array = cube.flattened()
+
 Fill values
 -----------
 
