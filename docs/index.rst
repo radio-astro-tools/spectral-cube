@@ -59,9 +59,8 @@ Getting started
    creating_reading.rst
    masking.rst
    accessing.rst
-   subsets.rst
+   manipulating.rst
    moments.rst
-   spectral.rst
 
 Advanced
 ^^^^^^^^

@@ -1,5 +1,5 @@
-Creating and/or reading a spectral cube
-=======================================
+Creating/reading spectral cubes
+===============================
 
 Importing
 ---------
