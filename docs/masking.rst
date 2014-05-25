@@ -1,8 +1,8 @@
 Masking
 =======
 
-Simple boolean masking
-----------------------
+Getting started
+---------------
 
 In addition to supporting the representation of data and associated WCS, it
 is also possible to attach a boolean mask to the
@@ -11,54 +11,27 @@ various forms, but one of the more common ones is a cube with the same
 dimensions as the data, and that contains e.g. the boolean value ``True`` where
 data should be used, and the value ``False`` when the data should be ignored
 (though it is also possible to flip the convention around). To create a
-boolean mask from a boolean array ``mask_array``, simply use::
+boolean mask from a boolean array ``mask_array``, you can for example use::
 
     >>> from spectral_cube import BooleanArrayMask
     >>> mask = BooleanArrayMask(mask=mask_array, wcs=cube.wcs)
 
-Advanced masking
-----------------
-
 Using a pure boolean array may not always be the most efficient solution,
-because it may require a large amount of memory. Other types of mask that can
-be used include masks based on simple conditions (e.g. the data values should
-be larger than 5) or masks based on the values that they are called with.
+because it may require a large amount of memory.
 
-Masks based on simple functions that operate on the initial data can be
-defined using the :class:`~spectral_cube.LazyMask` class. The motivation
-behind the :class:`~spectral_cube.LazyMask` class is that it is essentially
-equivalent to a boolean array, but the boolean values are computed on-the-fly
-as needed, meaning that the whole boolean array does not ever necessarily
-need to be computed or stored in memory, making it ideal for very large
-datasets. The function passed to :class:`~spectral_cube.LazyMask` should be a
-simple function taking one argument - the dataset itself::
+You can also create a mask using simple conditions directly on the cube
+values themselves, for example::
 
-    >>> from spectral_cube import LazyMask
-    >>> cube = read(...)
-    >>> LazyMask(np.isfinite, cube=cube)
+    >>> mask = cube > 1.3
 
-or for example::
-
-    >>> def threshold(data):
-    ...     return data > 3.
-    >>> LazyMask(threshold, cube=cube)
-
-:class:`~spectral_cube.LazyMask` instances can also be defined directly by
-specifying conditions on :class:`~spectral_cube.SpectralCube` objects:
-
-   >>> cube > 5
-       LazyMask(...)
-
-Combining and applying masks
-----------------------------
+This is more efficient, because the condition is actually evaluated
+on-the-fly as needed.
 
 Masks can be combined using standard boolean comparison operators::
 
-   >>> background_mask = valid_mask & ~signal_mask
+   >>> new_mask = (cube > 1.3) & (cube < 100.)
 
-The ``&`` operator is used as an *and* operator, the ``|`` operator is used
-as an *or* operator, and the ``~`` operator is used to indicate the *not*
-logical operator.
+The available operators are ``&`` (and), ``|`` (or), and ``~`` (not).
 
 To apply a new mask to a :class:`~spectral_cube.SpectralCube` class, use the
 :meth:`~spectral_cube.SpectralCube.with_mask` method, which can take a mask
@@ -76,6 +49,29 @@ Boolean arrays can also be used as input to
 and the data match
 
     >>> cube2 = cube.with_mask(boolean_array)
+
+Accessing masked data
+---------------------
+
+As mention in :doc:`accessing`, the raw and unmasked data can be accessed
+with the :attr:`~spectral_cube.SpectralCube.unmasked_data` attribute.
+You can access the masked data using ``filled_data``. This array is a
+copy of the original data with any masked value replaced by a fill value
+(which is ``np.nan`` by default but can be changed using the ``fill_value``
+option in the :class:`~spectral_cube.SpectralCube`
+initializer). The 'filled' data is accessed with e.g.::
+
+    >>> slice_filled = cube.filled_data[0,:,:]
+
+Note that accessing the filled data should still be efficient because the data
+are loaded and filled only once you access the actual data values, so this
+should still be efficient for large datasets.
+
+If you are only interested in getting a flat (i.e. 1-d) array of all the
+non-masked values, you can also make use of the
+:meth:`~spectral_cube.SpectralCube.flattened` method::
+
+   >>> flat_array = cube.flattened()
 
 Fill values
 -----------
@@ -105,5 +101,34 @@ from :meth:`~spectral_cube.masks.MaskBase.exclude`
 indicate the pixel is excluded/invalid, and will be filled/filtered.
 The inclusion/exclusion behavior of any mask can be inverted via
 ``mask_inverse = ~mask``.
+
+Advanced masking
+----------------
+
+Masks based on simple functions that operate on the initial data can be
+defined using the :class:`~spectral_cube.LazyMask` class. The motivation
+behind the :class:`~spectral_cube.LazyMask` class is that it is essentially
+equivalent to a boolean array, but the boolean values are computed on-the-fly
+as needed, meaning that the whole boolean array does not ever necessarily
+need to be computed or stored in memory, making it ideal for very large
+datasets. The function passed to :class:`~spectral_cube.LazyMask` should be a
+simple function taking one argument - the dataset itself::
+
+    >>> from spectral_cube import LazyMask
+    >>> cube = read(...)
+    >>> LazyMask(np.isfinite, cube=cube)
+
+or for example::
+
+    >>> def threshold(data):
+    ...     return data > 3.
+    >>> LazyMask(threshold, cube=cube)
+
+As shown in `Getting Started`_, :class:`~spectral_cube.LazyMask` instances
+can also be defined directly by specifying conditions on
+:class:`~spectral_cube.SpectralCube` objects:
+
+   >>> cube > 5
+       LazyMask(...)
 
 .. TODO: add example for FunctionalMask

@@ -24,6 +24,12 @@ except NameError:
     xrange = range
 
 
+DOPPLER_CONVENTIONS = {}
+DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
+DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
+DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
+
+
 def cached(func):
     """
     Decorator to cache function calls
@@ -556,13 +562,14 @@ class SpectralCube(object):
 
         Parameters
         ----------
-        unit : u.Unit
+        unit : :class:`~astropy.units.Unit`
             Any valid spectral unit: velocity, (wave)length, or frequency.
             Only vacuum units are supported.
-        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+        velocity_convention : 'relativistic', 'radio', or 'optical'
             The velocity convention to use for the output velocity axis.
-            Required if the output type is velocity.
-        rest_value : u.Quantity
+            Required if the output type is velocity. This can be either one
+            of the above strings, or an `astropy.units` equivalency.
+        rest_value : :class:`~astropy.units.Quantity`
             A rest wavelength or frequency with appropriate units.  Required if
             output type is velocity.  The cube's WCS should include this
             already if the *input* type is velocity, but the WCS's rest
@@ -570,6 +577,9 @@ class SpectralCube(object):
 
         """
         from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
+
+        if velocity_convention in DOPPLER_CONVENTIONS:
+            velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
 
         meta = self._meta.copy()
         if 'Original Unit' not in self._meta:
@@ -878,7 +888,7 @@ class SpectralCube(object):
     def spatial_coordinate_map(self):
         return self.world[0, :, :][1:]
 
-    def closest_spectral_channel(self, value, rest_frequency=None):
+    def closest_spectral_channel(self, value):
         """
         Find the index of the closest spectral channel to the specified
         spectral coordinate.
@@ -887,8 +897,6 @@ class SpectralCube(object):
         ----------
         value : :class:`~astropy.units.Quantity`
             The value of the spectral coordinate to search for.
-        rest_frequency : :class:`~astropy.units.Quantity`
-            The rest frequency for any Doppler conversions
         """
 
         # TODO: we have to not compute this every time
@@ -897,37 +905,50 @@ class SpectralCube(object):
         try:
             value = value.to(spectral_axis.unit, equivalencies=u.spectral())
         except u.UnitsError:
-            if value.unit.is_equivalent(spectral_axis.unit, equivalencies=u.doppler_radio(None)):
-                if rest_frequency is None:
-                    raise u.UnitsError("{0} cannot be converted to {1} without a "
-                                       "rest frequency".format(value.unit, spectral_axis.unit))
+            if value.unit.is_equivalent(u.Hz, equivalencies=u.spectral()):
+                if spectral_axis.unit.is_equivalent(u.m / u.s):
+                    raise u.UnitsError("Spectral axis is in velocity units and "
+                                       "'value' is in frequency-equivalent units "
+                                       "- use SpectralCube.with_spectral_unit "
+                                       "first to convert the cube to frequency-"
+                                       "equivalent units, or search for a "
+                                       "velocity instead")
                 else:
-                    try:
-                        value = value.to(spectral_axis.unit,
-                                         equivalencies=u.doppler_radio(rest_frequency))
-                    except u.UnitsError:
-                        raise u.UnitsError("{0} cannot be converted to {1}".format(value.unit, spectral_axis.unit))
+                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectal_axis.unit))
+            elif value.unit.is_equivalent(u.m / u.s):
+                if spectral_axis.unit.is_equivalent(u.Hz, equivalencies=u.spectral()):
+                    raise u.UnitsError("Spectral axis is in frequency-equivalent "
+                                       "units and 'value' is in velocity units "
+                                       "- use SpectralCube.with_spectral_unit "
+                                       "first to convert the cube to frequency-"
+                                       "equivalent units, or search for a "
+                                       "velocity instead")
+                else:
+                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectal_axis.unit))
             else:
                 raise u.UnitsError("'value' should be in frequency equivalent or velocity units (got {0})".format(value.unit))
 
         # TODO: optimize the next line - just brute force for now
         return np.argmin(np.abs(spectral_axis - value))
 
-    def spectral_slab(self, lo, hi, rest_frequency=None):
+    def spectral_slab(self, lo, hi):
         """
         Extract a new cube between two spectral coordinates
 
         Parameters
         ----------
         lo, hi : :class:`~astropy.units.Quantity`
-            The lower and upper spectral coordinate for the slab range
-        rest_frequency : :class:`~astropy.units.Quantity`
-            The rest frequency for any Doppler conversions
+            The lower and upper spectral coordinate for the slab range. The
+            units should be compatible with the units of the spectral axis.
+            If the spectral axis is in frequency-equivalent units and you
+            want to select a range in velocity, or vice-versa, you should
+            first use :meth:`~spectral_cube.SpectralCube.with_spectral_unit`
+            to convert the units of the spectral axis.
         """
 
         # Find range of values for spectral axis
-        ilo = self.closest_spectral_channel(lo, rest_frequency=rest_frequency)
-        ihi = self.closest_spectral_channel(hi, rest_frequency=rest_frequency)
+        ilo = self.closest_spectral_channel(lo)
+        ihi = self.closest_spectral_channel(hi)
 
         if ilo > ihi:
             ilo, ihi = ihi, ilo
@@ -957,7 +978,7 @@ class SpectralCube(object):
 
         return slab
 
-    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_frequency=None):
+    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_value=None):
         """
         Extract a sub-cube spatially and spectrally.
 
@@ -1076,11 +1097,11 @@ class SpectralCube(object):
         """
         from .io.core import read
         cube = read(filename, format=format, hdu=hdu, **kwargs)
-        if isinstance(cube, SpectralCube):
-            return cube
-        else:  # StokesSpectralCube
+        if isinstance(cube, StokesSpectralCube):
             return SpectralCube(data=cube._data, wcs=cube._wcs,
                                 meta=cube._meta, mask=cube._mask)
+        else:
+            return cube
 
     def write(self, filename, overwrite=False, format=None):
         """
