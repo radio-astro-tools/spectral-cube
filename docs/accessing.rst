@@ -25,8 +25,8 @@ If a slice is not specified, the object returned is not strictly a Numpy
 array, and will not work with all functions outside of the ``spectral_cube``
 package that expect Numpy arrays. In order to extract a normal Numpy array,
 instead specify a mask of ``[:]`` which will force the object to be converted
-to a Numpy array (the compulstory slicing is necessary in order to avoid
-issues with large data cubes).
+to a Numpy array (the compulsory slicing is necessary in order to avoid
+memory-related issues with large data cubes).
 
 World coordinates
 -----------------

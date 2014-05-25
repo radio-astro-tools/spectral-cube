@@ -55,7 +55,7 @@ optional rest frequency, and returns a new
 :class:`~spectral_cube.SpectralCube` instance. The bounds can
 be specified as a frequency, wavelength, or a velocity but the units have to
 match the type of the spectral units in the cube (if they do not match, first
-use :meth:`~spectral_cube.SpectralCube.with_spectral_unit` to ensure thaty
+use :meth:`~spectral_cube.SpectralCube.with_spectral_unit` to ensure that they
 are in the same units). The bounds should be given as Astropy
 :class:`Quantities <astropy.units.Quantity>` as follows:
 
