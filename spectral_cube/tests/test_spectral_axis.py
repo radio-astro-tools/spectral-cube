@@ -9,7 +9,9 @@ import numpy as np
 
 from .helpers import assert_allclose
 from . import path as data_path
-from ..spectral_axis import convert_spectral_axis,determine_ctype_from_vconv,cdelt_derivative
+from ..spectral_axis import (convert_spectral_axis, determine_ctype_from_vconv,
+                             cdelt_derivative, determine_vconv_from_ctype,
+                             get_rest_value_from_wcs)
 
 def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
@@ -22,10 +24,8 @@ def test_cube_wcs_freqtovel():
     assert newwcs.wcs.crval[2] == 305.2461585938794
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
 
-    with warnings.catch_warnings(record=True) as w:
-        newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD')
-    assert len(w) == 1
-    assert w[0].message.args[0] == 'Using WCS built-in rest frequency even though the WCS system was originally FREQ'
+    newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD')
+
     assert newwcs.wcs.ctype[2] == 'VRAD'
     assert newwcs.wcs.crval[2] == 305.2461585938794
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
@@ -326,6 +326,20 @@ def test_ctype_determinator(ctype,unit,velocity_convention,result):
                                               velocity_convention=velocity_convention)
         assert outctype == result
 
+@pytest.mark.parametrize(('ctype','vconv'),
+                         (('VELO-F2W', u.doppler_optical),
+                          ('VELO-F2V', u.doppler_relativistic),
+                          ('VRAD', u.doppler_radio),
+                          ('VOPT', u.doppler_optical),
+                          ('VELO', u.doppler_relativistic),
+                          ('WAVE', u.doppler_optical),
+                          ('WAVE-F2W', u.doppler_optical),
+                          ('WAVE-V2W', u.doppler_optical),
+                          ('FREQ', u.doppler_radio),
+                          ('FREQ-V2F', u.doppler_radio),
+                          ('FREQ-W2F', u.doppler_radio),))
+def test_vconv_determinator(ctype, vconv):
+    assert determine_vconv_from_ctype(ctype) == vconv
 
 @pytest.mark.parametrize(('name'),
                          (('advs'),
@@ -348,3 +362,46 @@ def test_vopt_to_freq(name):
     wcs1 = convert_spectral_axis(wcs0, u.Hz, out_ctype)
 
     assert wcs1.wcs.ctype[wcs1.wcs.spec] == 'FREQ-W2F'
+
+
+@pytest.mark.parametrize('wcstype',('Z','W','R','V','F'))
+def test_change_rest_frequency(wcstype):
+    # This is the header extracted from Greisen 2006, including many examples
+    # of valid transforms.  It should be the gold standard (in principle)
+    hdr = fits.Header.fromtextfile(data_path('greisen2006.hdr'))
+
+    wcs0 = wcs.WCS(hdr, key=wcstype)
+
+    old_rest = get_rest_value_from_wcs(wcs0)
+    if old_rest is None:
+        # This test doesn't matter if there was no rest frequency in the first
+        # place but I prefer to keep the option open in case we want to try
+        # forcing a rest frequency on some of the non-velocity frames at some
+        # point
+        return
+    vconv1 = determine_vconv_from_ctype(hdr['CTYPE3'+wcstype])
+    new_rest = (100*u.km/u.s).to(u.Hz, vconv1(old_rest))
+
+    wcs1 = wcs.WCS(hdr, key='V')
+    vconv2 = determine_vconv_from_ctype(hdr['CTYPE3V'])
+
+    inunit = u.Unit(wcs0.wcs.cunit[wcs0.wcs.spec])
+    outunit = u.Unit(wcs1.wcs.cunit[wcs1.wcs.spec])
+    # VELO-F2V
+    out_ctype = wcs1.wcs.ctype[wcs1.wcs.spec]
+
+    wcs2 = convert_spectral_axis(wcs0,
+                                 outunit,
+                                 out_ctype,
+                                 rest_value=new_rest)
+
+    sp1 = wcs1.sub([wcs.WCSSUB_SPECTRAL])
+    sp2 = wcs2.sub([wcs.WCSSUB_SPECTRAL])
+
+    p_old = sp1.wcs_world2pix([old_rest.to(inunit, vconv1(old_rest)).value,
+                               new_rest.to(inunit, vconv1(old_rest)).value],0)
+    p_new = sp2.wcs_world2pix([old_rest.to(outunit, vconv2(new_rest)).value,
+                               new_rest.to(outunit, vconv2(new_rest)).value],0)
+
+    assert_allclose(p_old, p_new, rtol=1e-3)
+    assert_allclose(p_old, p_new, rtol=1e-3)

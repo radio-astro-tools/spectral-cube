@@ -868,6 +868,13 @@ class SpectralCube(object):
         return self.world[:, 0, 0][0].ravel()
 
     @property
+    def velocity_convention(self):
+        """
+        The `~astropy.units.equivalencies` that describes the spectral axis
+        """
+        return wcs_utils.determine_vconv_from_ctype(self.wcs.wcs.ctype[self.wcs.wcs.spec])
+
+    @property
     def spatial_coordinate_map(self):
         return self.world[0, :, :][1:]
 

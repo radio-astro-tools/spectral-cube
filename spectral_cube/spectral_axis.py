@@ -73,6 +73,23 @@ def _get_linear_equivalency(unit1, unit2):
           unit2.physical_type in ('length','speed')):
         return u.doppler_optical
 
+def determine_vconv_from_ctype(ctype):
+    """
+    Given a CTYPE, say what velocity convention it is associated with,
+    i.e. what unit the velocity is linearly proportional to
+
+    Parameters
+    ----------
+    ctype : str
+        The spectral CTYPE
+    """
+    if len(ctype) < 5:
+        return _parse_velocity_convention(ctype)
+    elif len(ctype) == 8:
+        return _parse_velocity_convention(ctype[7])
+    else:
+        raise ValueError("A valid ctype must either have 4 or 8 characters.")
+
 def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
     """
     Given a CTYPE describing the current WCS and an output unit and velocity
@@ -147,9 +164,41 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
         2. Convert the input linear unit to the output linear unit
         3. Convert the output linear unit to the output unit
     """
-    outunit = u.Unit(outunit)
+
+    # If the WCS includes a rest frequency/wavelength, convert it to frequency
+    # or wavelength first.  This allows the possibility of changing the rest
+    # frequency
+    wcs_rv = get_rest_value_from_wcs(mywcs)
     inunit = u.Unit(mywcs.wcs.cunit[mywcs.wcs.spec])
+    outunit = u.Unit(outunit)
+
+    if (inunit.physical_type == 'speed' and outunit.physical_type == 'speed'):
+        mywcs = convert_spectral_axis(mywcs, wcs_rv.unit,
+                                      ALL_CTYPES[wcs_rv.unit.physical_type],
+                                      rest_value=wcs_rv)
+        inunit = u.Unit(mywcs.wcs.cunit[mywcs.wcs.spec])
+
     in_spec_ctype = mywcs.wcs.ctype[mywcs.wcs.spec]
+
+    # Check whether we need to convert the rest value first
+    ref_value = None
+    if outunit.physical_type == 'speed':
+        if rest_value is None:
+            rest_value = wcs_rv
+            if rest_value is None:
+                raise ValueError("If converting from wavelength/frequency to speed, "
+                                 "a reference wavelength/frequency is required.")
+        ref_value = rest_value.to(u.Hz, u.spectral())
+    elif inunit.physical_type == 'speed':
+        # The rest frequency and wavelength should be equivalent
+        if rest_value is not None:
+            ref_value = rest_value
+        elif wcs_rv is not None:
+            ref_value = wcs_rv
+        else:
+            raise ValueError("If converting from speed to wavelength/frequency, "
+                             "a reference wavelength/frequency is required.")
+
 
     # If the input unit is not linearly sampled, its linear equivalent will be
     # the 8th character in the ctype, and the linearly-sampled ctype will be
@@ -164,29 +213,6 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     out_lin_cunit = (LINEAR_CUNIT_DICT[out_ctype_conv] if out_ctype_conv in
                      LINEAR_CUNIT_DICT else outunit)
     out_vcequiv = _parse_velocity_convention(out_ctype_conv)
-
-    ref_value = None
-    if outunit.physical_type == 'speed':
-        if rest_value is None:
-            rest_value = get_rest_value_from_wcs(mywcs)
-            if rest_value is None:
-                raise ValueError("If converting from wavelength/frequency to speed, "
-                                 "a reference wavelength/frequency is required.")
-            else:
-                warnings.warn("Using WCS built-in rest frequency even though the "
-                              "WCS system was originally {0}".format(in_spec_ctype))
-        ref_value = rest_value.to(u.Hz, u.spectral())
-    elif inunit.physical_type == 'speed':
-        # The rest frequency and wavelength should be equivalent
-        wcs_rv = get_rest_value_from_wcs(mywcs)
-        if rest_value is not None:
-            warnings.warn("Overriding the reference value specified in the WCS.")
-            ref_value = rest_value
-        elif wcs_rv is not None:
-            ref_value = wcs_rv
-        else:
-            raise ValueError("If converting from speed to wavelength/frequency, "
-                             "a reference wavelength/frequency is required.")
 
     # Load the input values
     crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit)
