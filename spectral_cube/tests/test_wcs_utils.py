@@ -74,3 +74,17 @@ def test_wcs_slice():
     wcs.wcs.crpix = [50., 45., 30.]
     wcs_new = slice_wcs(wcs, (slice(10,20), slice(None), slice(20,30)))
     np.testing.assert_allclose(wcs_new.wcs.crpix, [30., 45., 20.])
+
+
+def test_wcs_comparison():
+    wcs1 = WCS(naxis=3)
+    wcs1.wcs.crpix = np.array([50., 45., 30.], dtype='float32')
+    
+    wcs2 = WCS(naxis=3)
+    wcs2.wcs.crpix = np.array([50., 45., 30.], dtype='float64')
+
+    wcs3 = WCS(naxis=3)
+    wcs3.wcs.crpix = np.array([50., 45., 31.], dtype='float64')
+
+    assert check_equality(wcs1,wcs2)
+    assert not check_equality(wcs1,wcs3)

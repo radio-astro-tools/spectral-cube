@@ -234,7 +234,8 @@ class BooleanArrayMask(MaskBase):
         if new_data.shape != self._mask.shape:
             raise ValueError("data shape does not match mask shape")
         if new_wcs not in self._wcs_whitelist:
-            if not wcs_utils.check_equality(new_wcs, self._wcs):
+            if not wcs_utils.check_equality(new_wcs, self._wcs,
+                                            warn_missing=True):
                 raise ValueError("WCS does not match mask WCS")
         self._wcs_whitelist.add(new_wcs)
 
@@ -308,7 +309,8 @@ class LazyMask(MaskBase):
         if new_data.shape != self._data.shape:
             raise ValueError("data shape does not match mask shape")
         if new_wcs not in self._wcs_whitelist:
-            if not wcs_utils.check_equality(new_wcs, self._wcs):
+            if not wcs_utils.check_equality(new_wcs, self._wcs,
+                                            warn_missing=True):
                 raise ValueError("WCS does not match mask WCS")
         self._wcs_whitelist.add(new_wcs)
 
