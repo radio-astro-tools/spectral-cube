@@ -57,7 +57,7 @@ how : cube | slice | ray | auto
    on data size and layout. Cube/slice/ray iterate over
    decreasing subsets of the data, to conserve memory.
    Default='auto'
-""".replace('\n', '\n         ')
+""".replace('\n', '\n        ')
 
 
 def aggregation_docstring(func):
@@ -500,8 +500,8 @@ class SpectralCube(object):
         new_cube : :class:`SpectralCube`
             A cube with the new mask applied.
 
-        Note
-        ----
+        Notes
+        -----
         This operation returns a view into the data, and not a copy.
         """
         if isinstance(mask, np.ndarray):
@@ -549,8 +549,8 @@ class SpectralCube(object):
         """
         Create a new :class:`SpectralCube` with a different `fill_value`.
 
-        Note
-        ----
+        Notes
+        -----
         This method is fast (it does not copy any data)
         """
         return self._new_cube_with(fill_value=fill_value)

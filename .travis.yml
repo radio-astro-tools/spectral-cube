@@ -81,7 +81,7 @@ matrix:
         # one documentation build
         # TODO: add -w back
         - python: 2.7
-          env: NUMPY_VERSION=$LATEST_NUMPY_STABLE SETUP_CMD='build_sphinx -n'
+          env: NUMPY_VERSION=$LATEST_NUMPY_STABLE SETUP_CMD='build_sphinx -n -w'
 
 before_install:
     - pip install --upgrade setuptools

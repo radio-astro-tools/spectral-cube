@@ -60,6 +60,7 @@ Getting started
    accessing.rst
    masking.rst
    manipulating.rst
+   writing.rst
    moments.rst
 
 Advanced
@@ -68,7 +69,6 @@ Advanced
 .. toctree::
    :maxdepth: 1
 
-   .. stokes.rst
    yt_example.rst
    big_data.rst
    api.rst
