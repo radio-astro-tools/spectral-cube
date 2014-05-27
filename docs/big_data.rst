@@ -50,7 +50,7 @@ of relevant data, to make writing code like this easier:
 Many methods in :class:`SpectralCube` iterate over smaller chunks of data, to avoid large memory allocations when working with
 big cubes. Some of these have a ``how`` keyword parameter, for
 fine-grained control over how much memory is accessed at once.
- ``how='cube'`` works with the entire array in memory, ``how='slice'``
+``how='cube'`` works with the entire array in memory, ``how='slice'``
  works with one slice at a time, and ``how='ray'`` works with one ray at a time.
 
 As a user, your best strategy for working with large datasets is to rely on

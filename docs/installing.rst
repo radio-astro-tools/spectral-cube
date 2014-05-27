@@ -8,7 +8,7 @@ This package has the following dependencies:
 
 * `Python <http://www.python.org>`_ 2.6 or later (Python 3.x is supported)
 * `Numpy <http://www.numpy.org>`_ 1.5.1 or later
-* `Astropy <http://www.astropy.org>`_ 0.3.0 or later
+* `Astropy <http://www.astropy.org>`__ 0.3.0 or later
 * `Bottleneck <http://berkeleyanalytics.com/bottleneck/>`_, optional (speeds
   up median and percentile operations on cubes with missing data)
 
