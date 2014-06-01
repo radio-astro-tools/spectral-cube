@@ -90,7 +90,7 @@ for root, dirs, files in os.walk(PACKAGENAME):
                     os.path.relpath(root, PACKAGENAME), filename))
 package_info['package_data'][PACKAGENAME].extend(c_files)
 
-setup(name=PACKAGENAME,
+setup(name='spectral-cube',
       version=VERSION,
       description=DESCRIPTION,
       scripts=scripts,
