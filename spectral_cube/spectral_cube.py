@@ -276,7 +276,7 @@ class SpectralCube(object):
     @property
     def mask(self):
         """
-        The underling mask
+        The underlying mask
         """
         return self._mask
 
