@@ -1,6 +1,8 @@
 import abc
 
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
+
 from . import wcs_utils
 
 __all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
@@ -22,6 +24,20 @@ with_spectral_unit_docs = """
             already if the *input* type is velocity, but the WCS's rest
             wavelength/frequency can be overridden with this parameter.
         """
+
+
+def is_broadcastable(shp1, shp2):
+    """
+    Test whether an array shape can be broadcast to another
+    """
+    x = np.array([1])
+    a = as_strided(x, shape=shp1, strides=[0] * len(shp1))
+    b = as_strided(x, shape=shp2, strides=[0] * len(shp2))
+    try:
+        c = np.broadcast_arrays(a, b)
+        return True
+    except ValueError:
+        return False
 
 class MaskBase(object):
 
@@ -231,8 +247,8 @@ class BooleanArrayMask(MaskBase):
         self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
-        if new_data.shape != self._mask.shape:
-            raise ValueError("data shape does not match mask shape")
+        if not is_broadcastable(new_data.shape, self._data.shape):
+            raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs not in self._wcs_whitelist:
             if not wcs_utils.check_equality(new_wcs, self._wcs,
                                             warn_missing=True):
@@ -306,8 +322,8 @@ class LazyMask(MaskBase):
         self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
-        if new_data.shape != self._data.shape:
-            raise ValueError("data shape does not match mask shape")
+        if not is_broadcastable(new_data.shape, self._data.shape):
+            raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs not in self._wcs_whitelist:
             if not wcs_utils.check_equality(new_wcs, self._wcs,
                                             warn_missing=True):
