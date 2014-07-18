@@ -49,7 +49,7 @@ WCS_UNIT_DICT = {'F': u.Hz, 'W': u.m, 'V': u.m/u.s}
 PHYS_UNIT_DICT = {'length': u.m, 'frequency': u.Hz, 'speed': u.m/u.s}
 
 LINEAR_CUNIT_DICT = {'VRAD': u.Hz, 'VOPT': u.m, 'FREQ': u.Hz, 'WAVE': u.m,
-                     'VELO': u.m/u.s}
+                     'VELO': u.m/u.s, 'AWAV': u.m}
 LINEAR_CUNIT_DICT.update(WCS_UNIT_DICT)
 
 def _get_linear_equivalency(unit1, unit2):
