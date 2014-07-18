@@ -331,7 +331,7 @@ def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None):
     elif intype == 'air wavelength': # Redundant: not used
         return cdelt_derivative(air_to_vac(crval),
                                 air_to_vac_deriv(crval)*cdelt,
-                                intype='wavelength',
+                                intype='length',
                                 outtype=outtype,
                                 linear=linear,
                                 rest=rest)
@@ -339,7 +339,7 @@ def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None):
         cdelt2 = cdelt_derivative(crval,
                                   cdelt,
                                   intype=intype,
-                                  outtype='wavelength',
+                                  outtype='length',
                                   linear=linear,
                                   rest=rest)
         return air_to_vac_deriv(crval) * cdelt2
