@@ -222,6 +222,8 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * inunit)
 
     if in_spec_ctype == 'air wavelength':
+        warnings.warn("Support for air wavelengths is experimental and only "
+                      "works in the forward direction (air->vac, not vac->air).")
         cdelt_in = air_to_vac_deriv(crval_in) * cdelt_in
         crval_in = air_to_vac(crval_in)
         in_spec_ctype = 'wavelength'
