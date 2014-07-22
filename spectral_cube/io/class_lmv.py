@@ -3,6 +3,7 @@ import warnings
 r2deg = 180/np.pi
 import string
 from .fits import load_fits_cube
+
 """
 .. TODO::
     When any section length is zero, that means the following values are to be
@@ -44,17 +45,17 @@ def read_lmv(filename):
         # We are indexing bytes from here; CLASS indices are higher by 12
         # pos 17
         header['CRPIX1'] = np.fromfile(lf,count=1,dtype='float64')[0]
-        header['CROTA1'] = np.fromfile(lf,count=1,dtype='float64')[0]
-        header['CRVAL1'] = np.fromfile(lf,count=1,dtype='float64')[0] * r2deg
+        header['CRVAL1'] = np.fromfile(lf,count=1,dtype='float64')[0]
+        header['CDELT1'] = np.fromfile(lf,count=1,dtype='float64')[0] * r2deg
         header['CRPIX2'] = np.fromfile(lf,count=1,dtype='float64')[0]
-        header['CROTA2'] = np.fromfile(lf,count=1,dtype='float64')[0]
-        header['CRVAL2'] = np.fromfile(lf,count=1,dtype='float64')[0] * r2deg
+        header['CRVAL2'] = np.fromfile(lf,count=1,dtype='float64')[0]
+        header['CDELT2'] = np.fromfile(lf,count=1,dtype='float64')[0] * r2deg
         header['CRPIX3'] = np.fromfile(lf,count=1,dtype='float64')[0]
-        header['CROTA3'] = np.fromfile(lf,count=1,dtype='float64')[0]
         header['CRVAL3'] = np.fromfile(lf,count=1,dtype='float64')[0]
+        header['CDELT3'] = np.fromfile(lf,count=1,dtype='float64')[0]
         header['CRPIX4'] = np.fromfile(lf,count=1,dtype='float64')[0]
-        header['CROTA4'] = np.fromfile(lf,count=1,dtype='float64')[0]
         header['CRVAL4'] = np.fromfile(lf,count=1,dtype='float64')[0]
+        header['CDELT4'] = np.fromfile(lf,count=1,dtype='float64')[0]
         # pos 41
         #print "Post-crval",lf.tell()
         blank_section_length = np.fromfile(lf,count=1,dtype='int32')
@@ -129,6 +130,13 @@ def read_lmv(filename):
         header['MURA'] = np.fromfile(lf,count=1,dtype='float32')[0] # 118
         header['MUDEC'] = np.fromfile(lf,count=1,dtype='float32')[0] # 119
         header['PARALLAX'] = np.fromfile(lf,count=1,dtype='float32')[0] # 120
+
+        # Apparently CLASS headers aren't required to fill the 'value at
+        # reference pixel' column
+        if (header['CTYPE1'].strip() == 'RA' and header['CRVAL1'] == 0 and
+            header['RA'] != 0):
+            header['CRVAL1'] = header['RA']
+            header['CRVAL2'] = header['DEC']
 
         other_info = np.fromfile(lf, count=7, dtype='float32') # 121-end
         if not np.all(other_info == 0):
