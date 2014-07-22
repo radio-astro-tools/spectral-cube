@@ -1,7 +1,8 @@
 import numpy as np
 import warnings
 r2deg = 180/np.pi
-from .fits import load_fits_hdu
+import string
+from .fits import load_fits_cube
 """
 .. TODO::
     When any section length is zero, that means the following values are to be
@@ -164,14 +165,21 @@ def read_lmv(filename):
 def read_lmv_tofits(filename):
     from astropy.io import fits
     data,header = read_lmv(filename)
+    # LMV may contain extra dimensions that are improperly labeled
+    data = data.squeeze()
+    bad_kws = ['NAXIS4','CRVAL4','CRPIX4','CDELT4','CROTA4','CUNIT4','CTYPE4']
 
-    cards = [fits.header.Card(k,v) for k,v in header.iteritems()]
+    cards = [fits.header.Card(''.join(s for s in k if s in string.printable),
+                              ''.join(s for s in v if s in string.printable)
+                              if isinstance(v, str) else v)
+             for k,v in header.iteritems()
+             if k not in bad_kws]
     Header = fits.Header(cards)
     hdu = fits.PrimaryHDU(data=data, header=Header)
     return hdu
 
 def load_lmv_cube(filename):
-    hdu = read_lmv_tofits
+    hdu = read_lmv_tofits(filename)
     meta = {'filename':filename}
 
-    return load_fits_hdu(hdu, meta=meta)
+    return load_fits_cube(hdu, meta=meta)
