@@ -247,7 +247,7 @@ class BooleanArrayMask(MaskBase):
         self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
-        if not is_broadcastable(new_data.shape, self._data.shape):
+        if not is_broadcastable(new_data.shape, self._mask.shape):
             raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs not in self._wcs_whitelist:
             if not wcs_utils.check_equality(new_wcs, self._wcs,
