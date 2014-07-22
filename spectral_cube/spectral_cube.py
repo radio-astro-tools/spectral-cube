@@ -830,10 +830,16 @@ class SpectralCube(object):
 
         # apply units
         if order == 0:
-            axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
+            if axis == 0:
+                axunit = unit = self._spectral_unit
+            else:
+                axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
             out = u.Quantity(out, self.unit * axunit, copy=False)
         else:
-            unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
+            if axis == 0:
+                unit = self._spectral_unit ** max(order, 1)
+            else:
+                unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
             out = u.Quantity(out, unit, copy=False)
 
         # special case: for order=1, axis=0, you usually want
