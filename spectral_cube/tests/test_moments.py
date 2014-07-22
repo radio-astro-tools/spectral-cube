@@ -116,5 +116,7 @@ def test_preserve_unit():
     sc = SpectralCube.read(mc_hdu)
     sc_kms = sc.with_spectral_unit(u.km/u.s)
     m0 = sc_kms.moment0(axis=0)
+    m1 = sc_kms.moment1(axis=0)
 
     assert_allclose(m0, MOMENTS[0][0].to(u.km/u.s))
+    assert_allclose(m1, MOMENTS[1][0].to(u.km/u.s))

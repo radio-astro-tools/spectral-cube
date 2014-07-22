@@ -692,9 +692,6 @@ class SpectralCube(object):
         spectral = spectral.reshape(-1, 1, 1) - spectral.ravel()[0]
         x, y, spectral = np.broadcast_arrays(x, y, spectral)
 
-        # take spectral units into account
-        spectral = spectral * self._spectral_scale
-
         return spectral, y, x
 
     @cached
