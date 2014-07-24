@@ -13,6 +13,7 @@ import numpy as np
 
 from . import cube_utils
 from . import wcs_utils
+from . import spectral_axis
 from .masks import LazyMask, BooleanArrayMask
 from .io.core import determine_format
 
@@ -161,7 +162,8 @@ class SpectralCube(object):
         # However, we do want to keep track of what units the spectral axis
         # should be returned in, otherwise astropy's WCS can change the units,
         # e.g. km/s -> m/s.
-        self._spectral_unit = None
+        self._spectral_unit = u.Unit(self._wcs.wcs.cunit[2])
+        self._spectral_scale = 1.0
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None):
@@ -176,6 +178,7 @@ class SpectralCube(object):
         cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
                             fill_value=fill_value)
         cube._spectral_unit = spectral_unit
+        cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 
         return cube
 
@@ -708,6 +711,7 @@ class SpectralCube(object):
         y = y.reshape(1, y.shape[0], y.shape[1])
         spectral = spectral.reshape(-1, 1, 1) - spectral.ravel()[0]
         x, y, spectral = np.broadcast_arrays(x, y, spectral)
+
         return spectral, y, x
 
     @cached
@@ -782,6 +786,9 @@ class SpectralCube(object):
         dspectral = np.abs(dspectral.reshape(-1, 1, 1))
         dx, dy, dspectral = np.broadcast_arrays(dx, dy, dspectral)
 
+        # Take spectral units into account
+        dspectral = dspectral * self._spectral_scale
+
         return dspectral, dy, dx
 
     def moment(self, order=0, axis=0, how='auto'):
@@ -850,10 +857,16 @@ class SpectralCube(object):
 
         # apply units
         if order == 0:
-            axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
+            if axis == 0 and self._spectral_unit is not None:
+                axunit = unit = self._spectral_unit
+            else:
+                axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
             out = u.Quantity(out, self.unit * axunit, copy=False)
         else:
-            unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
+            if axis == 0 and self._spectral_unit is not None:
+                unit = self._spectral_unit ** max(order, 1)
+            else:
+                unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
             out = u.Quantity(out, unit, copy=False)
 
         # special case: for order=1, axis=0, you usually want
@@ -902,7 +915,7 @@ class SpectralCube(object):
         """
         The `~astropy.units.equivalencies` that describes the spectral axis
         """
-        return wcs_utils.determine_vconv_from_ctype(self.wcs.wcs.ctype[self.wcs.wcs.spec])
+        return spectral_axis.determine_vconv_from_ctype(self.wcs.wcs.ctype[self.wcs.wcs.spec])
 
     @property
     def spatial_coordinate_map(self):

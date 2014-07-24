@@ -52,6 +52,14 @@ LINEAR_CUNIT_DICT = {'VRAD': u.Hz, 'VOPT': u.m, 'FREQ': u.Hz, 'WAVE': u.m,
                      'VELO': u.m/u.s, 'AWAV': u.m}
 LINEAR_CUNIT_DICT.update(WCS_UNIT_DICT)
 
+def wcs_unit_scale(unit):
+    """
+    Determine the appropriate scaling factor to get to the equivalent WCS unit
+    """
+    for wu in WCS_UNIT_DICT.values():
+        if wu.is_equivalent(unit):
+            return wu.to(unit)
+
 def _get_linear_equivalency(unit1, unit2):
     """
     Determin the default / "natural" convention
@@ -120,7 +128,10 @@ def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
         in_physchar = PHYSICAL_TYPE_TO_CHAR[lin_cunit.physical_type]
 
     if unit.physical_type == 'speed':
-        if velocity_convention is None:
+        if velocity_convention is None and ctype[0] == 'V':
+            # Special case: velocity <-> velocity doesn't care about convention
+            return ctype
+        elif velocity_convention is None:
             raise ValueError('A velocity convention must be specified')
         vcin = _parse_velocity_convention(ctype[:4])
         vcout = _parse_velocity_convention(velocity_convention)
@@ -173,11 +184,27 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     inunit = u.Unit(mywcs.wcs.cunit[mywcs.wcs.spec])
     outunit = u.Unit(outunit)
 
-    if (inunit.physical_type == 'speed' and outunit.physical_type == 'speed'):
+    # If wcs_rv is set and speed -> speed, then we're changing the reference
+    # location and we need to convert to meters or Hz first
+    if (inunit.physical_type == 'speed' and outunit.physical_type == 'speed'
+        and wcs_rv is not None):
         mywcs = convert_spectral_axis(mywcs, wcs_rv.unit,
                                       ALL_CTYPES[wcs_rv.unit.physical_type],
                                       rest_value=wcs_rv)
         inunit = u.Unit(mywcs.wcs.cunit[mywcs.wcs.spec])
+    elif (inunit.physical_type == 'speed' and outunit.physical_type == 'speed'
+          and wcs_rv is None):
+        # If there is no reference change, we want an identical WCS, since
+        # WCS doesn't know about units *at all*
+        newwcs = mywcs.deepcopy()
+        return newwcs 
+        #crval_out = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit).to(outunit)
+        #cdelt_out = (mywcs.wcs.cdelt[mywcs.wcs.spec] * inunit).to(outunit)
+        #newwcs.wcs.cdelt[newwcs.wcs.spec] = cdelt_out.value
+        #newwcs.wcs.cunit[newwcs.wcs.spec] = cdelt_out.unit.to_string(format='fits')
+        #newwcs.wcs.crval[newwcs.wcs.spec] = crval_out.value
+        #newwcs.wcs.ctype[newwcs.wcs.spec] = out_ctype
+        #return newwcs
 
     in_spec_ctype = mywcs.wcs.ctype[mywcs.wcs.spec]
 
