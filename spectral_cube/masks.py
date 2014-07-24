@@ -1,6 +1,7 @@
 import abc
 
 import numpy as np
+
 from . import wcs_utils
 
 __all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
@@ -22,6 +23,14 @@ with_spectral_unit_docs = """
             already if the *input* type is velocity, but the WCS's rest
             wavelength/frequency can be overridden with this parameter.
         """
+
+def is_broadcastable(shp1, shp2):
+    for a, b in zip(shp1[::-1], shp2[::-1]):
+        if a == 1 or b == 1 or a == b:
+            pass
+        else:
+            return False
+    return True
 
 class MaskBase(object):
 
@@ -231,8 +240,8 @@ class BooleanArrayMask(MaskBase):
         self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
-        if new_data.shape != self._mask.shape:
-            raise ValueError("data shape does not match mask shape")
+        if not is_broadcastable(new_data.shape, self._mask.shape):
+            raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs not in self._wcs_whitelist:
             if not wcs_utils.check_equality(new_wcs, self._wcs,
                                             warn_missing=True):
@@ -306,8 +315,8 @@ class LazyMask(MaskBase):
         self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
-        if new_data.shape != self._data.shape:
-            raise ValueError("data shape does not match mask shape")
+        if not is_broadcastable(new_data.shape, self._data.shape):
+            raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs not in self._wcs_whitelist:
             if not wcs_utils.check_equality(new_wcs, self._wcs,
                                             warn_missing=True):
