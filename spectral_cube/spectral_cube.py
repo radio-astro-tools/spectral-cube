@@ -225,6 +225,7 @@ class SpectralCube(object):
         s += " n_s: {0}  type_s: {1:8s}  unit_s: {2}".format(self.shape[0], self.wcs.wcs.ctype[2], self.wcs.wcs.cunit[2])
         return s
 
+    @warn_slow
     def apply_numpy_function(self, function, fill=np.nan,
                               reduce=True, how='auto',
                               projection=False,
@@ -406,6 +407,7 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
+    @warn_slow
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        **kwargs):
         """
@@ -526,7 +528,7 @@ class SpectralCube(object):
         """
         try:
             from bottleneck import nanmedian
-            result = self._apply_numpy_function(nanmedian, axis=axis,
+            result = self.apply_numpy_function(nanmedian, axis=axis,
                                                 projection=True,
                                                 check_endian=True, **kwargs)
         except ImportError:
