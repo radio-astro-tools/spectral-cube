@@ -110,7 +110,7 @@ def load_fits_cube(input, hdu=0):
     meta = {}
 
     if 'BUNIT' in header:
-        meta['bunit'] = header['BUNIT']
+        meta['BUNIT'] = header['BUNIT']
 
     wcs = WCS(header)
 
