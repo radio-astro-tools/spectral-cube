@@ -23,7 +23,8 @@ ALL_CTYPES = {'speed': LINEAR_CTYPES,
               'length': 'WAVE'}
 
 CTYPE_TO_PHYSICALTYPE = {'WAVE': 'length',
-                         'AIR': 'air wavelength', # unsupported
+                         'AIR': 'air wavelength',
+                         'AWAV': 'air wavelength',
                          'FREQ': 'frequency',
                          'VELO': 'speed',
                          'VRAD': 'speed',
@@ -31,7 +32,7 @@ CTYPE_TO_PHYSICALTYPE = {'WAVE': 'length',
                          }
 
 CTYPE_CHAR_TO_PHYSICALTYPE = {'W': 'length',
-                              'A': 'air wavelength', # unsupported
+                              'A': 'air wavelength',
                               'F': 'frequency',
                               'V': 'speed'}
 
@@ -48,7 +49,7 @@ WCS_UNIT_DICT = {'F': u.Hz, 'W': u.m, 'V': u.m/u.s}
 PHYS_UNIT_DICT = {'length': u.m, 'frequency': u.Hz, 'speed': u.m/u.s}
 
 LINEAR_CUNIT_DICT = {'VRAD': u.Hz, 'VOPT': u.m, 'FREQ': u.Hz, 'WAVE': u.m,
-                     'VELO': u.m/u.s}
+                     'VELO': u.m/u.s, 'AWAV': u.m}
 LINEAR_CUNIT_DICT.update(WCS_UNIT_DICT)
 
 def _get_linear_equivalency(unit1, unit2):
@@ -210,6 +211,8 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     in_vcequiv = _parse_velocity_convention(in_spec_ctype[:4])
 
     out_ctype_conv = out_ctype[7] if len(out_ctype) > 4 else out_ctype[:4]
+    if CTYPE_TO_PHYSICALTYPE[out_ctype_conv] == 'air wavelength':
+        raise NotImplementedError("Conversion to air wavelength is not supported.")
     out_lin_cunit = (LINEAR_CUNIT_DICT[out_ctype_conv] if out_ctype_conv in
                      LINEAR_CUNIT_DICT else outunit)
     out_vcequiv = _parse_velocity_convention(out_ctype_conv)
@@ -217,6 +220,13 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     # Load the input values
     crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit)
     cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * inunit)
+
+    if in_spec_ctype == 'air wavelength':
+        warnings.warn("Support for air wavelengths is experimental and only "
+                      "works in the forward direction (air->vac, not vac->air).")
+        cdelt_in = air_to_vac_deriv(crval_in) * cdelt_in
+        crval_in = air_to_vac(crval_in)
+        in_spec_ctype = 'wavelength'
 
     # 1. Convert input to input, linear
     if in_vcequiv is not None and ref_value is not None:
@@ -266,6 +276,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     else:
         crval_out = crval_lin2.to(outunit, u.spectral())
         cdelt_out = cdelt_lin2.to(outunit, u.spectral())
+
 
     if crval_out.unit != cdelt_out.unit:
         # this should not be possible, but it's a sanity check
@@ -319,5 +330,38 @@ def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None):
             return (-numer/denom).to(PHYS_UNIT_DICT[outtype], u.spectral())
         else:
             return (numer/denom).to(PHYS_UNIT_DICT[outtype], u.spectral())
+    elif intype == 'air wavelength': # Redundant: not used
+        return cdelt_derivative(air_to_vac(crval),
+                                air_to_vac_deriv(crval)*cdelt,
+                                intype='length',
+                                outtype=outtype,
+                                linear=linear,
+                                rest=rest)
+    elif outtype == 'air wavelength':
+        cdelt2 = cdelt_derivative(crval,
+                                  cdelt,
+                                  intype=intype,
+                                  outtype='length',
+                                  linear=linear,
+                                  rest=rest)
+        return air_to_vac_deriv(crval) * cdelt2
+                                
     else:
         raise ValueError("Invalid in/out frames")
+
+
+def air_to_vac(wavelength):
+    """
+    Implements the air to vacuum wavelength conversion described in eqn 65 of
+    Griesen 2006
+    """
+    wlum = wavelength.to(u.um).value
+    return (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4)) * wavelength
+
+def air_to_vac_deriv(wavelength):
+    """
+    Eqn 66
+    """
+    wlum = wavelength.to(u.um).value
+    return (1+1e-6*(287.6155 - 1.62877/wlum**2 - 0.04080/wlum**4))
+
