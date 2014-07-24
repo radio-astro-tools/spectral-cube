@@ -222,23 +222,34 @@ class SpectralCube(object):
 
     def _apply_numpy_function(self, function, fill=np.nan,
                               reduce=True, how='auto',
+                              projection=False,
+                              unit=None,
                               check_endian=False, **kwargs):
         """
         Apply a numpy function to the cube
+
+        Parameters
+        ----------
         """
 
         # reduce indicates whether this is a reduce-like operation,
         # that can be accumulated one slice at a time.
         # sum/max/min are like this. argmax/argmin are not
 
+        # leave axis in kwargs to avoid overriding numpy defaults, e.g.  if the
+        # default is axis=-1, we don't want to force it to be axis=None by
+        # specifying that in the function definition
+        axis = kwargs.get('axis', None)
+
         if how == 'auto':
-            strategy = cube_utils.iterator_strategy(self, kwargs.get('axis', None))
+            strategy = cube_utils.iterator_strategy(self, axis)
         else:
             strategy = how
 
+
         if strategy == 'slice' and reduce:
             try:
-                return self._reduce_slicewise(function, fill,
+                out = self._reduce_slicewise(function, fill,
                                               check_endian,
                                               **kwargs)
             except NotImplementedError:
@@ -247,9 +258,26 @@ class SpectralCube(object):
         if how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
-        return function(self._get_filled_data(fill=fill,
-                                              check_endian=check_endian),
-                        **kwargs)
+        if 'out' not in locals():
+            out = function(self._get_filled_data(fill=fill,
+                                                 check_endian=check_endian),
+                           **kwargs)
+
+        if axis is None:
+            # return is scalar
+            if unit is not None:
+                return u.Quantity(out, unit=unit)
+            else:
+                return out
+        elif projection and reduce:
+            new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+            meta = {'collapse_axis': axis}
+
+            return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+        else:
+            return out
+
 
     def _reduce_slicewise(self, function, fill, check_endian, **kwargs):
         """
@@ -480,8 +508,9 @@ class SpectralCube(object):
         """
         try:
             from bottleneck import nanmedian
-            return self._apply_numpy_function(nanmedian, axis=axis,
-                                              check_endian=True, **kwargs)
+            result = self._apply_numpy_function(nanmedian, axis=axis,
+                                                projection=True,
+                                                check_endian=True, **kwargs)
         except ImportError:
             return self.apply_function(np.median, axis=axis, **kwargs)
 
