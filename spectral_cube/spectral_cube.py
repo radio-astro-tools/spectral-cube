@@ -128,6 +128,10 @@ class Projection(u.Quantity):
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
 
+# A slice is just like a projection in every way
+class Slice(Projection):
+    pass
+
 
 class SpectralCube(object):
 
@@ -272,7 +276,7 @@ class SpectralCube(object):
     @property
     def mask(self):
         """
-        The underling mask
+        The underlying mask
         """
         return self._mask
 
@@ -515,7 +519,23 @@ class SpectralCube(object):
     def __getitem__(self, view):
         meta = {}
         meta.update(self._meta)
-        meta['slice'] = [(s.start, s.stop, s.step) for s in view]
+        meta['slice'] = [(s.start, s.stop, s.step)
+                         if hasattr(s,'start') else s
+                         for s in view]
+
+        intslices = [ii for ii,s in enumerate(view) if not hasattr(s,'start')]
+
+        if intslices:
+            if len(intslices) > 1:
+                raise NotImplementedError("1D slices are not implemented yet.")
+            newwcs = self._wcs.dropaxis(intslices[0])
+            newwcs = wcs_utils.slice_wcs(newwcs, [s for s in view
+                                                  if hasattr(s,'start')])
+            return Slice(value=self._data[view],
+                         wcs=newwcs,
+                         copy=False,
+                         #mask=self._mask[view],
+                         meta=meta)
 
         return self._new_cube_with(data=self._data[view],
                                    wcs=wcs_utils.slice_wcs(self._wcs, view),
