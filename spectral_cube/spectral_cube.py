@@ -1175,7 +1175,7 @@ class SpectralCube(object):
         HDU version of self
         """
         from astropy.io import fits
-        hdu = fits.PrimaryHDU(self.filled_data[:], header=self.header)
+        hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
 
