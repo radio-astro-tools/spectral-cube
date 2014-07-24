@@ -1,12 +1,15 @@
 import pytest
+import itertools
 import numpy as np
 from numpy.testing import assert_allclose
+from numpy.lib.stride_tricks import as_strided
 from astropy.wcs import WCS
 from astropy import units as u
 
 from .test_spectral_cube import cube_and_raw
 from .. import (BooleanArrayMask, SpectralCube, LazyMask,
                 FunctionMask, CompositeMask)
+from ..masks import is_broadcastable
 
 
 def test_spectral_cube_mask():
@@ -239,3 +242,26 @@ def test_mask_spectral_unit_functions():
 
     # this one should fail
     #failedmask = CompositeMask(mask_freq1,mask2)
+
+def is_broadcastable_try(shp1, shp2):
+    """
+    Test whether an array shape can be broadcast to another
+    (this is the try/fail approach, which is guaranteed right.... right?)
+    http://stackoverflow.com/questions/24743753/test-if-an-array-is-broadcastable-to-a-shape/24745359#24745359
+    """
+    x = np.array([1])
+    a = as_strided(x, shape=shp1, strides=[0] * len(shp1))
+    b = as_strided(x, shape=shp2, strides=[0] * len(shp2))
+    try:
+        c = np.broadcast_arrays(a, b)
+        return True
+    except ValueError:
+        return False
+
+shapes = ([1,5,5], [1,5,1], [5,5,1], [5,5], [5,5,2], 
+          [2,3,4], [4,3,2], [4,2,3], [2,4,3])
+shape_combos = list(itertools.combinations(shapes,2))
+
+@pytest.mark.parametrize(('sh1','sh2'),shape_combos)
+def test_is_broadcastable(sh1, sh2):
+    assert is_broadcastable(sh1,sh2) == is_broadcastable_try(sh1,sh2)

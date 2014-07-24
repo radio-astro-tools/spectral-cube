@@ -1,7 +1,6 @@
 import abc
 
 import numpy as np
-from numpy.lib.stride_tricks import as_strided
 
 from . import wcs_utils
 
@@ -25,19 +24,13 @@ with_spectral_unit_docs = """
             wavelength/frequency can be overridden with this parameter.
         """
 
-
 def is_broadcastable(shp1, shp2):
-    """
-    Test whether an array shape can be broadcast to another
-    """
-    x = np.array([1])
-    a = as_strided(x, shape=shp1, strides=[0] * len(shp1))
-    b = as_strided(x, shape=shp2, strides=[0] * len(shp2))
-    try:
-        c = np.broadcast_arrays(a, b)
-        return True
-    except ValueError:
-        return False
+    for a, b in zip(shp1[::-1], shp2[::-1]):
+        if a == 1 or b == 1 or a == b:
+            pass
+        else:
+            return False
+    return True
 
 class MaskBase(object):
 
