@@ -209,7 +209,7 @@ class SpectralCube(object):
         s += " n_s: {0}  type_s: {1:8s}  unit_s: {2}".format(self.shape[0], self.wcs.wcs.ctype[2], self.wcs.wcs.cunit[2])
         return s
 
-    def _apply_numpy_function(self, function, fill=np.nan,
+    def apply_numpy_function(self, function, fill=np.nan,
                               reduce=True, how='auto',
                               projection=False,
                               unit=None,
@@ -219,11 +219,24 @@ class SpectralCube(object):
 
         Parameters
         ----------
+        function : `numpy.ufunc`
+            A numpy ufunc to apply to the cube
+        fill : float
+            The fill value to use on the data
+        reduce : bool
+            reduce indicates whether this is a reduce-like operation,
+            that can be accumulated one slice at a time.
+            sum/max/min are like this. argmax/argmin are not
+        how : cube | slice | ray | auto
+           How to compute the moment. All strategies give the same
+           result, but certain strategies are more efficient depending
+           on data size and layout. Cube/slice/ray iterate over
+           decreasing subsets of the data, to conserve memory.
+           Default='auto'
+        projection : bool
+            Return a projection if the resulting array is 2D?
         """
 
-        # reduce indicates whether this is a reduce-like operation,
-        # that can be accumulated one slice at a time.
-        # sum/max/min are like this. argmax/argmin are not
 
         # leave axis in kwargs to avoid overriding numpy defaults, e.g.  if the
         # default is axis=-1, we don't want to force it to be axis=None by
@@ -311,27 +324,27 @@ class SpectralCube(object):
         """
 
         # use nansum, and multiply by mask to add zero each time there is badness
-        return u.Quantity(self._apply_numpy_function(np.nansum, fill=np.nan,
-                                                     how=how, axis=axis), self.unit,
-                          copy=False)
+        return self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=True)
 
     @aggregation_docstring
     def max(self, axis=None, how='auto'):
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
-        return u.Quantity(self._apply_numpy_function(np.nanmax, fill=np.nan,
-                                                     how=how, axis=axis), self.unit,
-                          copy=False)
+        return self.apply_numpy_function(np.nanmax, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=True)
 
     @aggregation_docstring
     def min(self, axis=None, how='auto'):
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
-        return u.Quantity(self._apply_numpy_function(np.nanmin, fill=np.nan,
-                                                     how=how, axis=axis), self.unit,
-                          copy=False)
+        return self.apply_numpy_function(np.nanmin, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=True)
 
     @aggregation_docstring
     def argmax(self, axis=None, how='auto'):
@@ -341,9 +354,9 @@ class SpectralCube(object):
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask.
         """
-        return self._apply_numpy_function(np.nanargmax, fill=-np.inf,
-                                          reduce=False,
-                                          how=how, axis=axis)
+        return self.apply_numpy_function(np.nanargmax, fill=-np.inf,
+                                         reduce=False, projection=False,
+                                         how=how, axis=axis)
 
     @aggregation_docstring
     def argmin(self, axis=None, how='auto'):
@@ -353,9 +366,9 @@ class SpectralCube(object):
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask
         """
-        return self._apply_numpy_function(np.nanargmin, fill=np.inf,
-                                          reduce=False,
-                                          how=how, axis=axis)
+        return self.apply_numpy_function(np.nanargmin, fill=np.inf,
+                                         reduce=False, projection=False,
+                                         how=how, axis=axis)
 
     def chunked(self, chunksize=1000):
         """
