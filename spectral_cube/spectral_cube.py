@@ -544,9 +544,11 @@ class SpectralCube(object):
                          #mask=self._mask[view],
                          meta=meta)
 
+        newmask = self._mask[view] if self._mask is not None else None
+
         return self._new_cube_with(data=self._data[view],
                                    wcs=wcs_utils.slice_wcs(self._wcs, view),
-                                   mask=self._mask[view],
+                                   mask=newmask,
                                    meta=meta)
 
     @property
