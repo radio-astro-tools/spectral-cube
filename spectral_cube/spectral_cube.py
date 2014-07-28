@@ -1199,6 +1199,22 @@ class SpectralCube(object):
 
         return pf
 
+    @property
+    def header(self):
+        header = self.wcs.to_header()
+        header['BUNIT'] = self.unit.to_string(format='fits')
+        # TODO: incorporate other relevant metadata here
+        return header
+
+    @property
+    def hdu(self):
+        """
+        HDU version of self
+        """
+        from astropy.io import fits
+        hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
+        return hdu
+
 
 class StokesSpectralCube(SpectralCube):
 
