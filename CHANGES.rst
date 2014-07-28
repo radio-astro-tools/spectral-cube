@@ -10,6 +10,7 @@
 - Bugfix: BUNIT capitalized https://github.com/radio-astro-tools/spectral-cube/pull/112
 - Masks can be any array that is broadcastable to the cube shape
   https://github.com/radio-astro-tools/spectral-cube/pull/115
+- Added `.header` and `.hdu` convenience methods https://github.com/radio-astro-tools/spectral-cube/pull/120
 
 0.1 (2014-06-01)
 ----------------
