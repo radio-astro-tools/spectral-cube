@@ -186,9 +186,20 @@ def slice_wcs(wcs, view):
             wcs_new.wcs.crpix[wcs_index] -= iview.start
     return wcs_new
 
-def check_equality(wcs1, wcs2, warn_missing=False):
+def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',
+                                                                    'VELOSYS']):
     """
     Check if two WCSs are equal
+
+    Parameters
+    ----------
+    wcs1, wcs2: `astropy.wcs.WCS`
+        The WCSs
+    warn_missing: bool
+        Issue warnings if one header is missing a keyword that the other has?
+    ignore_keywords: list of str
+        Keywords that are stored as part of the WCS but do not define part of
+        the coordinate system and therefore can be safely ignored.
     """
 
     # naive version:
@@ -213,8 +224,11 @@ def check_equality(wcs1, wcs2, warn_missing=False):
                 u1 = u.Unit(c1[1])
                 u2 = u.Unit(c2[1])
                 if u1 != u2:
-                    OK = False
-                    log.debug("Header 1, {0}: {1} != {2}".format(key,u1,u2))
+                    if key in ignore_keywords:
+                        log.debug("IGNORED Header 1, {0}: {1} != {2}".format(key,u1,u2))
+                    else:
+                        OK = False
+                        log.debug("Header 1, {0}: {1} != {2}".format(key,u1,u2))
             elif isinstance(c1[1], (float, np.float)):
                 try:
                     np.testing.assert_almost_equal(c1[1], c2[1])
@@ -224,15 +238,21 @@ def check_equality(wcs1, wcs2, warn_missing=False):
                                       "under the assumption that you want to"
                                       " compare velocity cubes.")
                         continue
+                    if key in ignore_keywords:
+                        log.debug("IGNORED Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
+                    else:
+                        log.debug("Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
+                        OK = False
+            elif c1[1] != c2[1]:
+                if key in ignore_keywords:
+                    log.debug("IGNORED Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
+                else:
                     log.debug("Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
                     OK = False
-            elif c1[1] != c2[1]:
-                log.debug("Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
-                OK = False
         else:
             if warn_missing:
                 warnings.warn("WCS2 is missing card {0}".format(key))
-            else:
+            elif key not in ignore_keywords:
                 OK = False
 
     # Check that there aren't any cards in header 2 that were missing from
