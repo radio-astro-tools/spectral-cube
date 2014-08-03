@@ -11,6 +11,8 @@
 - Masks can be any array that is broadcastable to the cube shape
   https://github.com/radio-astro-tools/spectral-cube/pull/115
 - Added `.header` and `.hdu` convenience methods https://github.com/radio-astro-tools/spectral-cube/pull/120
+- Added public functions `apply_function` and `apply_numpy_function` that allow
+  functions to be run on cubes while preserving important metadata (e.g., WCS)
 
 0.1 (2014-06-01)
 ----------------
