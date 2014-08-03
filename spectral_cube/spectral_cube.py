@@ -246,6 +246,26 @@ class SpectralCube(object):
            Default='auto'
         projection : bool
             Return a projection if the resulting array is 2D?
+        unit : None or `astropy.units.Unit`
+            The unit to include for the output array.  For example,
+            `SpectralCube.max` calls `SpectralCube.apply_numpy_function(np.max,
+            unit=self.unit)`, inheriting the unit from the original cube.
+            However, for other numpy functions, e.g. `numpy.argmax`, the return
+            is an index and therefore unitless.
+        check_endian : bool
+            A flag to check the endianness of the data before applying the
+            function.  This is only needed for optimized functions, e.g. those
+            in the `bottleneck` package.
+        kwargs : dict
+            Passed to the numpy function.
+
+        Returns
+        -------
+        result : `Projection` or `~astropy.units.Quantity` or float
+            The result depends on the value of ``axis``, ``projection``, and
+            ``unit``.  If ``axis`` is None, the return will be a scalar with or
+            without units.  If axis is an integer, the return will be a
+            `Projection` if ``projection`` is set
         """
 
 
@@ -265,13 +285,16 @@ class SpectralCube(object):
                 out = self._reduce_slicewise(function, fill,
                                               check_endian,
                                               **kwargs)
+                reduced_slicewise = True
             except NotImplementedError:
-                pass
+                reduced_slicewise = False
+        else:
+            reduced_slicewise = False
 
         if how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
-        if 'out' not in locals():
+        if not reduced_slicewise:
             out = function(self._get_filled_data(fill=fill,
                                                  check_endian=check_endian),
                            **kwargs)
@@ -402,7 +425,7 @@ class SpectralCube(object):
         return nx, ny
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
-                       projection=True, **kwargs):
+                       projection=False, **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
@@ -427,9 +450,10 @@ class SpectralCube(object):
         Returns
         -------
         result : `Projection` or `~astropy.units.Quantity` or float
-            The result depends on the value of ``axis`` and ``unit``.  If
-            ``axis`` is None, the return will be a scalar with or without
-            units.  If axis is an integer, the return will be a `Projection`
+            The result depends on the value of ``axis``, ``projection``, and
+            ``unit``.  If ``axis`` is None, the return will be a scalar with or
+            without units.  If axis is an integer, the return will be a
+            `Projection` if ``projection`` is set
         """
         if axis is None:
             out = function(self.flattened(), **kwargs)
