@@ -279,22 +279,20 @@ class SpectralCube(object):
         else:
             strategy = how
 
+        out = None
 
         if strategy == 'slice' and reduce:
             try:
                 out = self._reduce_slicewise(function, fill,
                                               check_endian,
                                               **kwargs)
-                reduced_slicewise = True
             except NotImplementedError:
-                reduced_slicewise = False
-        else:
-            reduced_slicewise = False
+                pass
 
         if how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
-        if not reduced_slicewise:
+        if out is None:
             out = function(self._get_filled_data(fill=fill,
                                                  check_endian=check_endian),
                            **kwargs)
