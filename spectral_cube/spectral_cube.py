@@ -402,7 +402,7 @@ class SpectralCube(object):
         return nx, ny
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
-                       **kwargs):
+                       projection=True, **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
