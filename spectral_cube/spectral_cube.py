@@ -421,6 +421,8 @@ class SpectralCube(object):
         unit : (optional) `~astropy.units.Unit`
             The unit of the output projection or value.  Not all functions
             should return quantities with units.
+        projection : bool
+            Return a projection if the resulting array is 2D?
 
         Returns
         -------
@@ -450,11 +452,14 @@ class SpectralCube(object):
                 # store result in array
                 out[x, y] = function(data, **kwargs)
 
-        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+        if projection and axis in (0,1,2):
+            new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
-        meta = {'collapse_axis': axis}
+            meta = {'collapse_axis': axis}
 
-        return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+            return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+        else:
+            return out
 
     def _iter_rays(self, axis=None):
         """
