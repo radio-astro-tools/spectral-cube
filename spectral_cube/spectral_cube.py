@@ -349,34 +349,59 @@ class SpectralCube(object):
         """
         return self._mask
 
+    def _naxes_dropped(self, view):
+        """
+        Determine how many axes are being selected given a view.
+
+        (1,2) -> 2
+        None -> 3
+        1 -> 1
+        2 -> 1
+        """
+
+        if hasattr(view,'__len__'):
+            return len(view)
+        elif view is None:
+            return 3
+        else:
+            return 1
+
     @aggregation_docstring
     def sum(self, axis=None, how='auto'):
         """
         Return the sum of the cube, optionally over an axis.
         """
 
+        projection = self._naxes_dropped(axis) == 1
+
         # use nansum, and multiply by mask to add zero each time there is badness
         return self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=True)
+                                         projection=projection)
 
     @aggregation_docstring
     def max(self, axis=None, how='auto'):
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
+
+        projection = self._naxes_dropped(axis) == 1
+
         return self.apply_numpy_function(np.nanmax, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=True)
+                                         projection=projection)
 
     @aggregation_docstring
     def min(self, axis=None, how='auto'):
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
+
+        projection = self._naxes_dropped(axis) == 1
+
         return self.apply_numpy_function(np.nanmin, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=True)
+                                         projection=projection)
 
     @aggregation_docstring
     def argmax(self, axis=None, how='auto'):
