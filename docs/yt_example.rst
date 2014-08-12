@@ -32,14 +32,15 @@ corresponds to the desired world coordinate. For this purpose, the method
     >>> import astropy.units as u
     >>> pix_coord = cube.world2yt([51.424522,
                                    30.723611,
-                                   5205.18071]) # units of deg, deg, m/s
+                                   5205.18071],  # units of deg, deg, m/s
+                                  spectral_factor=0.5)
 
-which handles a non-unity ``spectral_factor`` automatically if it was included in the
-call to :meth:`~spectral_cube.SpectralCube.to_yt`.
+which takes an optional ``spectral_factor`` (set to unity by default) that should be
+the same as in the call to :meth:`~spectral_cube.SpectralCube.to_yt`.
 
 There is also a reverse method provided, :meth:`~spectral_cube.SpectralCube.yt2world`::
 
-    >>> world_coord = cube.yt2world([ds.domain_center])
+    >>> world_coord = cube.yt2world([ds.domain_center], spectral_factor=0.5)
 
 which in this case would return the world coordinates of the center of the dataset
 in yt.
@@ -52,7 +53,8 @@ in yt.
     The :meth:`~spectral_cube.SpectralCube.to_yt` method and its associated coordinate methods
     are compatible with both yt v. 2.x and v. 3.0 and following, but use of version 3.0 or later
     is recommended due to substantial improvements in support for FITS data. For more information
-    on how yt handles FITS datasets, see `the yt docs <http://yt-project.org/docs/dev-3.0/examining/loading_data.html#fits-data>`_.
+    on how yt handles FITS datasets, see `the yt docs <http://yt-project
+    .org/docs/3.0/examining/loading_data.html#fits-data>`_.
 
 Visualization example
 ---------------------
@@ -89,7 +91,7 @@ produce a 3-d isocontour visualization using an object returned by
     # from the corresponding world coordinate
     center = cube.world2yt([51.424522,
                             30.723611,
-                            5205.18071])
+                            5205.18071], spectral_factor=0.75)
     direction = np.array([1.0, 0.0, 0.0])
     width = 100.  # pixels
     size = 1024
