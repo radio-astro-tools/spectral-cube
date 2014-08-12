@@ -10,3 +10,9 @@ def test_copy_false():
     p = Projection(image, copy=False)
     image[3,4] = 2 * u.Jy
     assert_allclose(p[3,4], 2 * u.Jy)
+
+
+def test_write(tmpdir):
+    image = np.ones((12, 12)) * u.Jy
+    p = Projection(image)
+    p.write(tmpdir.join('test.fits').strpath)

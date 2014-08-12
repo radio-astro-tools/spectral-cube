@@ -1,25 +1,26 @@
-Installing ``spectral_cube``
+Installing ``spectral-cube``
 ============================
 
 Requirements
 ------------
 
-This package has the following depdenencies:
+This package has the following dependencies:
 
 * `Python <http://www.python.org>`_ 2.6 or later (Python 3.x is supported)
 * `Numpy <http://www.numpy.org>`_ 1.5.1 or later
-* `Astropy <http://www.astropy.org>`_ 0.3.0 or later
-* `Bottleneck <http://berkeleyanalytics.com/bottleneck/>`_, optional (speeds up median and percentile operations on cubes with missing data)
+* `Astropy <http://www.astropy.org>`__ 0.3.0 or later
+* `Bottleneck <http://berkeleyanalytics.com/bottleneck/>`_, optional (speeds
+  up median and percentile operations on cubes with missing data)
 
 Installation
 ------------
 
 To install the latest stable release, you can type::
 
-    pip install spectral_cube
+    pip install spectral-cube
 
 or you can download the latest tar file from
-`PyPI <https://pypi.python.org/pypi/spectral_cube>`_ and install it using::
+`PyPI <https://pypi.python.org/pypi/spectral-cube>`_ and install it using::
 
     python setup.py install
 

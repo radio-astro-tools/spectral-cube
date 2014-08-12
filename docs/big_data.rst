@@ -14,7 +14,7 @@ three ideas in mind:
 - Minimize the number of passes over the data.
 
 Work with small subsets of data at a time
-=========================================
+-----------------------------------------
 
 Numpy supports a *memory-mapping* mode which means that the data is stored
 on disk and the array elements are only loaded into memory when needed.
@@ -50,8 +50,8 @@ of relevant data, to make writing code like this easier:
 Many methods in :class:`SpectralCube` iterate over smaller chunks of data, to avoid large memory allocations when working with
 big cubes. Some of these have a ``how`` keyword parameter, for
 fine-grained control over how much memory is accessed at once.
- ``how='cube'`` works with the entire array in memory, ``how='slice'``
- works with one slice at a time, and ``how='ray'`` works with one ray at a time.
+``how='cube'`` works with the entire array in memory, ``how='slice'``
+works with one slice at a time, and ``how='ray'`` works with one ray at a time.
 
 As a user, your best strategy for working with large datasets is to rely on
 builtin methods to :class:`SpectralCube`, and to access data from
@@ -64,7 +64,8 @@ in smaller chunks if possible.
 
 
 Minimize Data Copying
-=====================
+---------------------
+
 Methods in :meth:`SpectralCube` avoid copying as much as possible. For example, all of the following operations create new cubes or masks
 without copying any data::
 
@@ -75,7 +76,8 @@ without copying any data::
     >>> cube2 = cube.apply_mask(mask)
 
 Minimize the number of passes over the data
-===========================================
+-------------------------------------------
+
 Accessing memory-mapped arrays is much slower than a normal
 array, due to the overhead of reading from disk. Because of this,
 it is more efficient to perform computations that iterate over the

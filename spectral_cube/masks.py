@@ -1,11 +1,36 @@
 import abc
 
 import numpy as np
+
 from . import wcs_utils
 
 __all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
            'LazyMask', 'FunctionMask']
 
+# Global version of the with_spectral_unit docs to avoid duplicating them
+with_spectral_unit_docs = """
+        Parameters
+        ----------
+        unit : u.Unit
+            Any valid spectral unit: velocity, (wave)length, or frequency.
+            Only vacuum units are supported.
+        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+            The velocity convention to use for the output velocity axis.
+            Required if the output type is velocity.
+        rest_value : u.Quantity
+            A rest wavelength or frequency with appropriate units.  Required if
+            output type is velocity.  The cube's WCS should include this
+            already if the *input* type is velocity, but the WCS's rest
+            wavelength/frequency can be overridden with this parameter.
+        """
+
+def is_broadcastable(shp1, shp2):
+    for a, b in zip(shp1[::-1], shp2[::-1]):
+        if a == 1 or b == 1 or a == b:
+            pass
+        else:
+            return False
+    return True
 
 class MaskBase(object):
 
@@ -110,6 +135,23 @@ class MaskBase(object):
     def __getitem__(self):
         raise NotImplementedError("Slicing not supported by mask class {0}".format(self.__class__.__name__))
 
+    def _get_new_wcs(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Returns a new WCS with a different Spectral Axis unit
+        """
+        from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
+
+        out_ctype = determine_ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
+                                               unit,
+                                               velocity_convention=velocity_convention)
+
+        newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
+                                       rest_value=rest_value)
+
+        return newwcs
+
+    _get_new_wcs.__doc__ += with_spectral_unit_docs
+
 
 class InvertedMask(MaskBase):
 
@@ -121,13 +163,30 @@ class InvertedMask(MaskBase):
 
     def __getitem__(self, view):
         return InvertedMask(self._mask[view])
+    
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get an InvertedMask copy with a WCS in the modified unit
+        """
+        newmask = self._mask.with_spectral_unit(unit,
+                                                velocity_convention=velocity_convention,
+                                                rest_value=rest_value)
+        return InvertedMask(newmask)
+
+    with_spectral_unit.__doc__ += with_spectral_unit_docs
 
 
 class CompositeMask(MaskBase):
-
     """
-    A combination of several masks. This does an 'and' operation on the
-    include masks.
+    A combination of several masks.  The included masks are treated with the specified
+    operation.
+
+    Parameters
+    ----------
+    mask1, mask2 : Masks
+        The two masks to composite
+    operation : str
+        Either 'and' or 'or'; the operation used to combine the masks
     """
 
     def __init__(self, mask1, mask2, operation='and'):
@@ -152,6 +211,21 @@ class CompositeMask(MaskBase):
     def __getitem__(self, view):
         return CompositeMask(self._mask1[view], self._mask2[view], operation=self._operation)
 
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get a CompositeMask copy in which each component has a WCS in the
+        modified unit
+        """
+        newmask1 = self._mask1.with_spectral_unit(unit,
+                                                  velocity_convention=velocity_convention,
+                                                  rest_value=rest_value)
+        newmask2 = self._mask2.with_spectral_unit(unit,
+                                                  velocity_convention=velocity_convention,
+                                                  rest_value=rest_value)
+        return CompositeMask(newmask1, newmask2, self._operation)
+
+    with_spectral_unit.__doc__ += with_spectral_unit_docs
+
 
 class BooleanArrayMask(MaskBase):
 
@@ -166,10 +240,11 @@ class BooleanArrayMask(MaskBase):
         self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
-        if new_data.shape != self._mask.shape:
-            raise ValueError("data shape does not match mask shape")
+        if not is_broadcastable(new_data.shape, self._mask.shape):
+            raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs not in self._wcs_whitelist:
-            if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+            if not wcs_utils.check_equality(new_wcs, self._wcs,
+                                            warn_missing=True):
                 raise ValueError("WCS does not match mask WCS")
         self._wcs_whitelist.add(new_wcs)
 
@@ -188,6 +263,17 @@ class BooleanArrayMask(MaskBase):
     def __getitem__(self, view):
         return BooleanArrayMask(self._mask[view], wcs_utils.slice_wcs(self._wcs, view))
 
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get a BooleanArrayMask copy with a WCS in the modified unit
+        """
+        newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
+
+        newmask = BooleanArrayMask(self._mask, newwcs,
+                                   self._mask_type=='include')
+        return newmask
+
+    with_spectral_unit.__doc__ += with_spectral_unit_docs
 
 class LazyMask(MaskBase):
 
@@ -229,10 +315,11 @@ class LazyMask(MaskBase):
         self._wcs_whitelist = set()
 
     def _validate_wcs(self, new_data, new_wcs):
-        if new_data.shape != self._data.shape:
-            raise ValueError("data shape does not match mask shape")
+        if not is_broadcastable(new_data.shape, self._data.shape):
+            raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs not in self._wcs_whitelist:
-            if str(new_wcs.to_header()) != str(self._wcs.to_header()):
+            if not wcs_utils.check_equality(new_wcs, self._wcs,
+                                            warn_missing=True):
                 raise ValueError("WCS does not match mask WCS")
         self._wcs_whitelist.add(new_wcs)
 
@@ -243,6 +330,16 @@ class LazyMask(MaskBase):
     def __getitem__(self, view):
         return LazyMask(self._function, data=self._data[view], wcs=wcs_utils.slice_wcs(self._wcs, view))
 
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get a LazyMask copy with a WCS in the modified unit
+        """
+        newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
+
+        newmask = LazyMask(self._function, data=self._data, wcs=newwcs)
+        return newmask
+
+    with_spectral_unit.__doc__ += with_spectral_unit_docs
 
 class FunctionMask(MaskBase):
 
@@ -280,3 +377,11 @@ class FunctionMask(MaskBase):
 
     def __getitem__(self, slice):
         return self
+
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Functional masks do not have WCS defined, so this simply returns a copy
+        of the current mask in order to be consistent with
+        ``with_spectral_unit`` from other Masks
+        """
+        return FunctionMask(self._function)

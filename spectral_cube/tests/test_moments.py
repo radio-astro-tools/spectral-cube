@@ -110,3 +110,13 @@ def test_convenience_methods():
     assert_allclose(sc.moment0(axis=0), MOMENTS[0][0])
     assert_allclose(sc.moment1(axis=2), MOMENTS[1][2])
     assert_allclose(sc.moment2(axis=1), MOMENTS[2][1])
+
+def test_preserve_unit():
+    mc_hdu = moment_cube()
+    sc = SpectralCube.read(mc_hdu)
+    sc_kms = sc.with_spectral_unit(u.km/u.s)
+    m0 = sc_kms.moment0(axis=0)
+    m1 = sc_kms.moment1(axis=0)
+
+    assert_allclose(m0, MOMENTS[0][0].to(u.km/u.s))
+    assert_allclose(m1, MOMENTS[1][0].to(u.km/u.s))

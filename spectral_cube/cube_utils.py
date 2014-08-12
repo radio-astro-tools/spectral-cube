@@ -140,6 +140,9 @@ class SliceIndexer(object):
     def __getitem__(self, view):
         return self._func(self._other, view)
 
+    def __iter__(self):
+        raise Exception("You need to specify a slice (e.g. ``[:]`` or ``[0,:,:]`` in order to access this property.")
+
 
 def iterator_strategy(cube, axis=None):
     """

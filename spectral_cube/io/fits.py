@@ -110,7 +110,7 @@ def load_fits_cube(input, hdu=0):
     meta = {}
 
     if 'BUNIT' in header:
-        meta['bunit'] = header['BUNIT']
+        meta['BUNIT'] = header['BUNIT']
 
     wcs = WCS(header)
 
@@ -145,7 +145,6 @@ def write_fits_cube(filename, cube, overwrite=False):
     """
 
     if isinstance(cube, SpectralCube):
-        outhdu = fits.PrimaryHDU(data=cube._data, header=cube._wcs.to_header())
-        outhdu.writeto(filename, clobber=overwrite)
+        cube.hdu.writeto(filename, clobber=overwrite)
     else:
         raise NotImplementedError()

@@ -13,6 +13,7 @@ import numpy as np
 
 from . import cube_utils
 from . import wcs_utils
+from . import spectral_axis
 from .masks import LazyMask, BooleanArrayMask
 from .io.core import determine_format
 
@@ -22,6 +23,12 @@ try:  # TODO replace with six.py
     xrange
 except NameError:
     xrange = range
+
+
+DOPPLER_CONVENTIONS = {}
+DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
+DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
+DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
 
 
 def cached(func):
@@ -51,7 +58,7 @@ how : cube | slice | ray | auto
    on data size and layout. Cube/slice/ray iterate over
    decreasing subsets of the data, to conserve memory.
    Default='auto'
-""".replace('\n', '\n         ')
+""".replace('\n', '\n        ')
 
 
 def aggregation_docstring(func):
@@ -94,11 +101,14 @@ class Projection(u.Quantity):
     @property
     def hdu(self):
         from astropy.io import fits
-        hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
+        if self.wcs is None:
+            hdu = fits.PrimaryHDU(self.value)
+        else:
+            hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
         return hdu
 
-    def write(self, filename, format=None, clobber=False):
+    def write(self, filename, format=None, overwrite=False):
         """
         Write the moment map to a file.
 
@@ -108,16 +118,20 @@ class Projection(u.Quantity):
             The path to write the file to
         format : str
             The kind of file to write. (Currently limited to 'fits')
-        clobber : bool
+        overwrite : bool
             If True, overwrite `filename` if it exists
         """
         if format is None:
-            format = determine_format_from_filename(filename)
+            format = determine_format(filename)
         if format == 'fits':
-            self.hdu.writeto(filename, clobber=clobber)
+            self.hdu.writeto(filename, clobber=overwrite)
         else:
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
+
+# A slice is just like a projection in every way
+class Slice(Projection):
+    pass
 
 
 class SpectralCube(object):
@@ -126,8 +140,12 @@ class SpectralCube(object):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
-        if 'bunit' in self._meta:
-            self._unit = u.Unit(self._meta['bunit'])
+        if 'BUNIT' in self._meta:
+            try:
+                self._unit = u.Unit(self._meta['BUNIT'])
+            except ValueError:
+                warnings.warn("Could not parse unit {0}".format(self._meta['BUNIT']))
+                self._unit = None
         elif hasattr(data, 'unit'):
             self._unit = data.unit
             # strip the unit so that it can be treated as cube metadata
@@ -142,6 +160,31 @@ class SpectralCube(object):
                            # object or array-like object, given that WCS needs to be consistent with data?
         #assert mask._wcs == self._wcs
         self._fill_value = fill_value
+
+        # We don't pass the spectral unit via the initializer since the user
+        # should be using ``with_spectral_unit`` if they want to set it.
+        # However, we do want to keep track of what units the spectral axis
+        # should be returned in, otherwise astropy's WCS can change the units,
+        # e.g. km/s -> m/s.
+        self._spectral_unit = u.Unit(self._wcs.wcs.cunit[2])
+        self._spectral_scale = 1.0
+
+    def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
+                       fill_value=None, spectral_unit=None):
+
+        data = self._data if data is None else data
+        wcs = self._wcs if wcs is None else wcs
+        mask = self._mask if mask is None else mask
+        meta = self._meta if meta is None else meta
+        fill_value = self._fill_value if fill_value is None else fill_value
+        spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
+
+        cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
+                            fill_value=fill_value)
+        cube._spectral_unit = spectral_unit
+        cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
+
+        return cube
 
     @property
     def unit(self):
@@ -240,7 +283,7 @@ class SpectralCube(object):
     @property
     def mask(self):
         """
-        The underling mask
+        The underlying mask
         """
         return self._mask
 
@@ -468,8 +511,8 @@ class SpectralCube(object):
         new_cube : :class:`SpectralCube`
             A cube with the new mask applied.
 
-        Note
-        ----
+        Notes
+        -----
         This operation returns a view into the data, and not a copy.
         """
         if isinstance(mask, np.ndarray):
@@ -478,22 +521,35 @@ class SpectralCube(object):
                                  "%s vs %s" % (mask.shape, self._data.shape))
             mask = BooleanArrayMask(mask, self._wcs)
 
-        cube = SpectralCube(self._data, wcs=self._wcs,
-                            mask=self._mask & mask if inherit_mask else mask,
-                            fill_value=self.fill_value,
-                            meta=self._meta)
-        return cube
+        return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
 
     def __getitem__(self, view):
         meta = {}
         meta.update(self._meta)
-        meta['slice'] = [(s.start, s.stop, s.step) for s in view]
+        meta['slice'] = [(s.start, s.stop, s.step)
+                         if hasattr(s,'start') else s
+                         for s in view]
 
-        return SpectralCube(self._data[view],
-                            wcs_utils.slice_wcs(self._wcs, view),
-                            mask=self._mask[view],
-                            fill_value=self.fill_value,
-                            meta=meta)
+        intslices = [ii for ii,s in enumerate(view) if not hasattr(s,'start')]
+
+        if intslices:
+            if len(intslices) > 1:
+                raise NotImplementedError("1D slices are not implemented yet.")
+            newwcs = self._wcs.dropaxis(intslices[0])
+            newwcs = wcs_utils.slice_wcs(newwcs, [s for s in view
+                                                  if hasattr(s,'start')])
+            return Slice(value=self._data[view],
+                         wcs=newwcs,
+                         copy=False,
+                         #mask=self._mask[view],
+                         meta=meta)
+
+        newmask = self._mask[view] if self._mask is not None else None
+
+        return self._new_cube_with(data=self._data[view],
+                                   wcs=wcs_utils.slice_wcs(self._wcs, view),
+                                   mask=newmask,
+                                   meta=meta)
 
     @property
     def fill_value(self):
@@ -522,15 +578,11 @@ class SpectralCube(object):
         """
         Create a new :class:`SpectralCube` with a different `fill_value`.
 
-        Note
-        ----
+        Notes
+        -----
         This method is fast (it does not copy any data)
         """
-        return SpectralCube(data=self._data,
-                            wcs=self._wcs,
-                            mask=self._mask,
-                            fill_value=self.fill_value,
-                            meta=self._meta)
+        return self._new_cube_with(fill_value=fill_value)
 
     def with_spectral_unit(self, unit, velocity_convention=None,
                            rest_value=None):
@@ -539,13 +591,14 @@ class SpectralCube(object):
 
         Parameters
         ----------
-        unit : u.Unit
+        unit : :class:`~astropy.units.Unit`
             Any valid spectral unit: velocity, (wave)length, or frequency.
             Only vacuum units are supported.
-        velocity_convention : u.doppler_relativistic, u.doppler_radio, or u.doppler_optical
+        velocity_convention : 'relativistic', 'radio', or 'optical'
             The velocity convention to use for the output velocity axis.
-            Required if the output type is velocity.
-        rest_value : u.Quantity
+            Required if the output type is velocity. This can be either one
+            of the above strings, or an `astropy.units` equivalency.
+        rest_value : :class:`~astropy.units.Quantity`
             A rest wavelength or frequency with appropriate units.  Required if
             output type is velocity.  The cube's WCS should include this
             already if the *input* type is velocity, but the WCS's rest
@@ -553,6 +606,9 @@ class SpectralCube(object):
 
         """
         from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
+
+        if velocity_convention in DOPPLER_CONVENTIONS:
+            velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
 
         meta = self._meta.copy()
         if 'Original Unit' not in self._meta:
@@ -565,11 +621,15 @@ class SpectralCube(object):
 
         newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
                                        rest_value=rest_value)
-        # TODO: What is the best way to create an identical mask with a new WCS?
-        # This approach won't work on LazyMasks:
-        # newmask = SpectralCubeMask(self._mask, wcs=newwcs)
-        return SpectralCube(data=self._data, wcs=newwcs, mask=self._mask,
-                            fill_value=self.fill_value, meta=meta)
+
+        newmask = self._mask.with_spectral_unit(unit,
+                                                velocity_convention=velocity_convention,
+                                                rest_value=rest_value)
+        newmask._wcs = newwcs
+
+        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta, spectral_unit=unit)
+
+        return cube
 
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
         """
@@ -657,6 +717,7 @@ class SpectralCube(object):
         y = y.reshape(1, y.shape[0], y.shape[1])
         spectral = spectral.reshape(-1, 1, 1) - spectral.ravel()[0]
         x, y, spectral = np.broadcast_arrays(x, y, spectral)
+
         return spectral, y, x
 
     @cached
@@ -731,6 +792,9 @@ class SpectralCube(object):
         dspectral = np.abs(dspectral.reshape(-1, 1, 1))
         dx, dy, dspectral = np.broadcast_arrays(dx, dy, dspectral)
 
+        # Take spectral units into account
+        dspectral = dspectral * self._spectral_scale
+
         return dspectral, dy, dx
 
     def moment(self, order=0, axis=0, how='auto'):
@@ -799,10 +863,16 @@ class SpectralCube(object):
 
         # apply units
         if order == 0:
-            axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
+            if axis == 0 and self._spectral_unit is not None:
+                axunit = unit = self._spectral_unit
+            else:
+                axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
             out = u.Quantity(out, self.unit * axunit, copy=False)
         else:
-            unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
+            if axis == 0 and self._spectral_unit is not None:
+                unit = self._spectral_unit ** max(order, 1)
+            else:
+                unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
             out = u.Quantity(out, unit, copy=False)
 
         # special case: for order=1, axis=0, you usually want
@@ -847,10 +917,17 @@ class SpectralCube(object):
         return self.world[:, 0, 0][0].ravel()
 
     @property
+    def velocity_convention(self):
+        """
+        The `~astropy.units.equivalencies` that describes the spectral axis
+        """
+        return spectral_axis.determine_vconv_from_ctype(self.wcs.wcs.ctype[self.wcs.wcs.spec])
+
+    @property
     def spatial_coordinate_map(self):
         return self.world[0, :, :][1:]
 
-    def closest_spectral_channel(self, value, rest_frequency=None):
+    def closest_spectral_channel(self, value):
         """
         Find the index of the closest spectral channel to the specified
         spectral coordinate.
@@ -859,8 +936,6 @@ class SpectralCube(object):
         ----------
         value : :class:`~astropy.units.Quantity`
             The value of the spectral coordinate to search for.
-        rest_frequency : :class:`~astropy.units.Quantity`
-            The rest frequency for any Doppler conversions
         """
 
         # TODO: we have to not compute this every time
@@ -869,37 +944,50 @@ class SpectralCube(object):
         try:
             value = value.to(spectral_axis.unit, equivalencies=u.spectral())
         except u.UnitsError:
-            if value.unit.is_equivalent(spectral_axis.unit, equivalencies=u.doppler_radio(None)):
-                if rest_frequency is None:
-                    raise u.UnitsError("{0} cannot be converted to {1} without a "
-                                       "rest frequency".format(value.unit, spectral_axis.unit))
+            if value.unit.is_equivalent(u.Hz, equivalencies=u.spectral()):
+                if spectral_axis.unit.is_equivalent(u.m / u.s):
+                    raise u.UnitsError("Spectral axis is in velocity units and "
+                                       "'value' is in frequency-equivalent units "
+                                       "- use SpectralCube.with_spectral_unit "
+                                       "first to convert the cube to frequency-"
+                                       "equivalent units, or search for a "
+                                       "velocity instead")
                 else:
-                    try:
-                        value = value.to(spectral_axis.unit,
-                                         equivalencies=u.doppler_radio(rest_frequency))
-                    except u.UnitsError:
-                        raise u.UnitsError("{0} cannot be converted to {1}".format(value.unit, spectral_axis.unit))
+                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectal_axis.unit))
+            elif value.unit.is_equivalent(u.m / u.s):
+                if spectral_axis.unit.is_equivalent(u.Hz, equivalencies=u.spectral()):
+                    raise u.UnitsError("Spectral axis is in frequency-equivalent "
+                                       "units and 'value' is in velocity units "
+                                       "- use SpectralCube.with_spectral_unit "
+                                       "first to convert the cube to frequency-"
+                                       "equivalent units, or search for a "
+                                       "velocity instead")
+                else:
+                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectal_axis.unit))
             else:
                 raise u.UnitsError("'value' should be in frequency equivalent or velocity units (got {0})".format(value.unit))
 
         # TODO: optimize the next line - just brute force for now
         return np.argmin(np.abs(spectral_axis - value))
 
-    def spectral_slab(self, lo, hi, rest_frequency=None):
+    def spectral_slab(self, lo, hi):
         """
         Extract a new cube between two spectral coordinates
 
         Parameters
         ----------
         lo, hi : :class:`~astropy.units.Quantity`
-            The lower and upper spectral coordinate for the slab range
-        rest_frequency : :class:`~astropy.units.Quantity`
-            The rest frequency for any Doppler conversions
+            The lower and upper spectral coordinate for the slab range. The
+            units should be compatible with the units of the spectral axis.
+            If the spectral axis is in frequency-equivalent units and you
+            want to select a range in velocity, or vice-versa, you should
+            first use :meth:`~spectral_cube.SpectralCube.with_spectral_unit`
+            to convert the units of the spectral axis.
         """
 
         # Find range of values for spectral axis
-        ilo = self.closest_spectral_channel(lo, rest_frequency=rest_frequency)
-        ihi = self.closest_spectral_channel(hi, rest_frequency=rest_frequency)
+        ilo = self.closest_spectral_channel(lo)
+        ihi = self.closest_spectral_channel(hi)
 
         if ilo > ihi:
             ilo, ihi = ihi, ilo
@@ -920,9 +1008,7 @@ class SpectralCube(object):
                 mask_slab = None
 
         # Create new spectral cube
-        slab = SpectralCube(self._data[ilo:ihi], wcs_slab,
-                            fill_value=self.fill_value,
-                            mask=mask_slab, meta=self._meta)
+        slab = self._new_cube_with(data=self._data[ilo:ihi], wcs=wcs_slab, mask=mask_slab)
 
         # TODO: we could change the WCS to give a spectral axis in the
         # correct units as requested - so if the initial cube is in Hz and we
@@ -931,7 +1017,7 @@ class SpectralCube(object):
 
         return slab
 
-    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_frequency=None):
+    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_value=None):
         """
         Extract a sub-cube spatially and spectrally.
 
@@ -999,6 +1085,11 @@ class SpectralCube(object):
         # apply units
         world = [w * u.Unit(self._wcs.wcs.cunit[i])
                  for i, w in enumerate(world)]
+
+        # convert spectral unit if needed
+        if self._spectral_unit is not None:
+            world[2] = world[2].to(self._spectral_unit)
+
         return world[::-1]  # reverse WCS -> numpy order
 
     def __gt__(self, value):
@@ -1045,11 +1136,11 @@ class SpectralCube(object):
         """
         from .io.core import read
         cube = read(filename, format=format, hdu=hdu, **kwargs)
-        if isinstance(cube, SpectralCube):
-            return cube
-        else:  # StokesSpectralCube
+        if isinstance(cube, StokesSpectralCube):
             return SpectralCube(data=cube._data, wcs=cube._wcs,
                                 meta=cube._meta, mask=cube._mask)
+        else:
+            return cube
 
     def write(self, filename, overwrite=False, format=None):
         """
@@ -1146,6 +1237,22 @@ class SpectralCube(object):
         yt_coord[2] = (yt_coord[2] - 0.5)/self.yt_spectral_factor+0.5
         world_coord = self.wcs.wcs_pix2world([yt_coord], 1)[0]
         return world_coord
+
+    @property
+    def header(self):
+        header = self.wcs.to_header()
+        header['BUNIT'] = self.unit.to_string(format='fits')
+        # TODO: incorporate other relevant metadata here
+        return header
+
+    @property
+    def hdu(self):
+        """
+        HDU version of self
+        """
+        from astropy.io import fits
+        hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
+        return hdu
 
 class StokesSpectralCube(SpectralCube):
 
