@@ -1284,8 +1284,6 @@ class SpectralCube(object):
         import yt
         yt_version = float(yt.__version__.split("-")[0])
 
-        self.yt_spectral_factor = spectral_factor
-
         if yt_version >= 3.0:
 
             from yt.frontends.fits.api import FITSDataset
@@ -1334,30 +1332,26 @@ class SpectralCube(object):
         hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
-    def world2yt(self, world_coord):
+    def world2yt(self, world_coord, spectral_factor=1.0):
         """
         Convert a position in world coordinates to the coordinates used by a
         yt dataset that has been generated using the ``to_yt`` method. The
-        changing of the aspect of the spectral axis (via the parameter
-        ``spectral_factor`` in ``to_yt``) is handled automatically.
+        changing of the aspect of the spectral axis is handled via the parameter
+        ``spectral_factor``.
         """
-        if not hasattr(self, "yt_spectral_factor"):
-            raise ValueError("Please create a yt dataset with to_yt before using this method.")
         yt_coord = self.wcs.wcs_world2pix([world_coord], 1)[0]
-        yt_coord[2] = (yt_coord[2] - 0.5)*self.yt_spectral_factor+0.5
+        yt_coord[2] = (yt_coord[2] - 0.5)*spectral_factor+0.5
         return yt_coord
 
-    def yt2world(self, yt_coord):
+    def yt2world(self, yt_coord, spectral_factor=1.0):
         """
         Convert a position in yt's coordinates to world coordinates from a
         yt dataset that has been generated using the ``to_yt`` method. The
-        changing of the aspect of the spectral axis (via the parameter
-        ``spectral_factor`` in ``to_yt``) is handled automatically.
+        changing of the aspect of the spectral axis is handled via the parameter
+        ``spectral_factor``.
         """
-        if not hasattr(self, "yt_spectral_factor"):
-            raise ValueError("Please create a yt dataset with to_yt before using this method.")
         yt_coord = np.array(yt_coord) # stripping off units
-        yt_coord[2] = (yt_coord[2] - 0.5)/self.yt_spectral_factor+0.5
+        yt_coord[2] = (yt_coord[2] - 0.5)/spectral_factor+0.5
         world_coord = self.wcs.wcs_pix2world([yt_coord], 1)[0]
         return world_coord
 
