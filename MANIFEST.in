@@ -1,7 +1,3 @@
-recursive-include astropy_helpers *
-exclude astropy_helpers/.git
-exclude astropy_helpers/.gitignore
-
 include README.md
 include LICENSE.rst
 include CHANGES.rst
@@ -18,3 +14,7 @@ recursive-include scripts *
 exclude *.pyc *.o
 prune docs/_build
 prune build
+
+recursive-include astropy_helpers *
+exclude astropy_helpers/.git
+exclude astropy_helpers/.gitignore
