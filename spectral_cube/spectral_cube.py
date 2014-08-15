@@ -220,25 +220,70 @@ class SpectralCube(object):
         s += " n_s: {0}  type_s: {1:8s}  unit_s: {2}".format(self.shape[0], self.wcs.wcs.ctype[2], self.wcs.wcs.cunit[2])
         return s
 
-    def _apply_numpy_function(self, function, fill=np.nan,
-                              reduce=True, how='auto',
-                              check_endian=False, **kwargs):
+    def apply_numpy_function(self, function, fill=np.nan,
+                             reduce=True, how='auto',
+                             projection=False,
+                             unit=None,
+                             check_endian=False, **kwargs):
         """
         Apply a numpy function to the cube
+
+        Parameters
+        ----------
+        function : `numpy.ufunc`
+            A numpy ufunc to apply to the cube
+        fill : float
+            The fill value to use on the data
+        reduce : bool
+            reduce indicates whether this is a reduce-like operation,
+            that can be accumulated one slice at a time.
+            sum/max/min are like this. argmax/argmin are not
+        how : cube | slice | ray | auto
+           How to compute the moment. All strategies give the same
+           result, but certain strategies are more efficient depending
+           on data size and layout. Cube/slice/ray iterate over
+           decreasing subsets of the data, to conserve memory.
+           Default='auto'
+        projection : bool
+            Return a projection if the resulting array is 2D?
+        unit : None or `astropy.units.Unit`
+            The unit to include for the output array.  For example,
+            `SpectralCube.max` calls `SpectralCube.apply_numpy_function(np.max,
+            unit=self.unit)`, inheriting the unit from the original cube.
+            However, for other numpy functions, e.g. `numpy.argmax`, the return
+            is an index and therefore unitless.
+        check_endian : bool
+            A flag to check the endianness of the data before applying the
+            function.  This is only needed for optimized functions, e.g. those
+            in the `bottleneck` package.
+        kwargs : dict
+            Passed to the numpy function.
+
+        Returns
+        -------
+        result : `Projection` or `~astropy.units.Quantity` or float
+            The result depends on the value of ``axis``, ``projection``, and
+            ``unit``.  If ``axis`` is None, the return will be a scalar with or
+            without units.  If axis is an integer, the return will be a
+            `Projection` if ``projection`` is set
         """
 
-        # reduce indicates whether this is a reduce-like operation,
-        # that can be accumulated one slice at a time.
-        # sum/max/min are like this. argmax/argmin are not
+
+        # leave axis in kwargs to avoid overriding numpy defaults, e.g.  if the
+        # default is axis=-1, we don't want to force it to be axis=None by
+        # specifying that in the function definition
+        axis = kwargs.get('axis', None)
 
         if how == 'auto':
-            strategy = cube_utils.iterator_strategy(self, kwargs.get('axis', None))
+            strategy = cube_utils.iterator_strategy(self, axis)
         else:
             strategy = how
 
+        out = None
+
         if strategy == 'slice' and reduce:
             try:
-                return self._reduce_slicewise(function, fill,
+                out = self._reduce_slicewise(function, fill,
                                               check_endian,
                                               **kwargs)
             except NotImplementedError:
@@ -247,9 +292,26 @@ class SpectralCube(object):
         if how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
-        return function(self._get_filled_data(fill=fill,
-                                              check_endian=check_endian),
-                        **kwargs)
+        if out is None:
+            out = function(self._get_filled_data(fill=fill,
+                                                 check_endian=check_endian),
+                           **kwargs)
+
+        if axis is None:
+            # return is scalar
+            if unit is not None:
+                return u.Quantity(out, unit=unit)
+            else:
+                return out
+        elif projection and reduce:
+            new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+            meta = {'collapse_axis': axis}
+
+            return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+        else:
+            return out
+
 
     def _reduce_slicewise(self, function, fill, check_endian, **kwargs):
         """
@@ -287,34 +349,59 @@ class SpectralCube(object):
         """
         return self._mask
 
+    def _naxes_dropped(self, view):
+        """
+        Determine how many axes are being selected given a view.
+
+        (1,2) -> 2
+        None -> 3
+        1 -> 1
+        2 -> 1
+        """
+
+        if hasattr(view,'__len__'):
+            return len(view)
+        elif view is None:
+            return 3
+        else:
+            return 1
+
     @aggregation_docstring
     def sum(self, axis=None, how='auto'):
         """
         Return the sum of the cube, optionally over an axis.
         """
 
+        projection = self._naxes_dropped(axis) == 1
+
         # use nansum, and multiply by mask to add zero each time there is badness
-        return u.Quantity(self._apply_numpy_function(np.nansum, fill=np.nan,
-                                                     how=how, axis=axis), self.unit,
-                          copy=False)
+        return self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=projection)
 
     @aggregation_docstring
     def max(self, axis=None, how='auto'):
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
-        return u.Quantity(self._apply_numpy_function(np.nanmax, fill=np.nan,
-                                                     how=how, axis=axis), self.unit,
-                          copy=False)
+
+        projection = self._naxes_dropped(axis) == 1
+
+        return self.apply_numpy_function(np.nanmax, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=projection)
 
     @aggregation_docstring
     def min(self, axis=None, how='auto'):
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
-        return u.Quantity(self._apply_numpy_function(np.nanmin, fill=np.nan,
-                                                     how=how, axis=axis), self.unit,
-                          copy=False)
+
+        projection = self._naxes_dropped(axis) == 1
+
+        return self.apply_numpy_function(np.nanmin, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=projection)
 
     @aggregation_docstring
     def argmax(self, axis=None, how='auto'):
@@ -324,9 +411,9 @@ class SpectralCube(object):
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask.
         """
-        return self._apply_numpy_function(np.nanargmax, fill=-np.inf,
-                                          reduce=False,
-                                          how=how, axis=axis)
+        return self.apply_numpy_function(np.nanargmax, fill=-np.inf,
+                                         reduce=False, projection=False,
+                                         how=how, axis=axis)
 
     @aggregation_docstring
     def argmin(self, axis=None, how='auto'):
@@ -336,9 +423,9 @@ class SpectralCube(object):
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask
         """
-        return self._apply_numpy_function(np.nanargmin, fill=np.inf,
-                                          reduce=False,
-                                          how=how, axis=axis)
+        return self.apply_numpy_function(np.nanargmin, fill=np.inf,
+                                         reduce=False, projection=False,
+                                         how=how, axis=axis)
 
     def chunked(self, chunksize=1000):
         """
@@ -360,26 +447,43 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
-    def _apply_along_axes(self, function, axis=None, weights=None, wcs=False,
-                          **kwargs):
+    def apply_function(self, function, axis=None, weights=None, unit=None,
+                       projection=False, **kwargs):
         """
-        Apply a function to valid data along the specified axis, optionally
-        using a weight array that is the same shape (or at least can be sliced
-        in the same way)
+        Apply a function to valid data along the specified axis or to the whole
+        cube, optionally using a weight array that is the same shape (or at
+        least can be sliced in the same way)
 
         Parameters
         ----------
-        function: function
+        function : function
             A function that can be applied to a numpy array.  Does not need to
             be nan-aware
-        axis: int
-            The axis to operate along
-        weights: (optional) np.ndarray
+        axis : 1, 2, 3, or None
+            The axis to operate along.  If None, the return is scalar.
+        weights : (optional) np.ndarray
             An array with the same shape (or slicing abilities/results) as the
             data cube
+        unit : (optional) `~astropy.units.Unit`
+            The unit of the output projection or value.  Not all functions
+            should return quantities with units.
+        projection : bool
+            Return a projection if the resulting array is 2D?
+
+        Returns
+        -------
+        result : `Projection` or `~astropy.units.Quantity` or float
+            The result depends on the value of ``axis``, ``projection``, and
+            ``unit``.  If ``axis`` is None, the return will be a scalar with or
+            without units.  If axis is an integer, the return will be a
+            `Projection` if ``projection`` is set
         """
         if axis is None:
-            return function(self.flattened(), **kwargs)
+            out = function(self.flattened(), **kwargs)
+            if unit is not None:
+                return u.Quantity(out, unit=unit)
+            else:
+                return out
 
         # determine the output array shape
         nx, ny = self._get_flat_shape(axis)
@@ -395,11 +499,14 @@ class SpectralCube(object):
                 # store result in array
                 out[x, y] = function(data, **kwargs)
 
-        if wcs:
-            newwcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-            return out, newwcs
+        if projection and axis in (0,1,2):
+            new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
-        return out
+            meta = {'collapse_axis': axis}
+
+            return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+        else:
+            return out
 
     def _iter_rays(self, axis=None):
         """
@@ -466,14 +573,11 @@ class SpectralCube(object):
         """
         try:
             from bottleneck import nanmedian
-            return u.Quantity(self._apply_numpy_function(nanmedian, axis=axis,
-                                                         check_endian=True,
-                                                         **kwargs), self.unit,
-                              copy=False)
+            result = self.apply_numpy_function(nanmedian, axis=axis,
+                                                projection=True,
+                                                check_endian=True, **kwargs)
         except ImportError:
-            return u.Quantity(self._apply_along_axes(np.median, axis=axis,
-                                                     **kwargs), self.unit,
-                              copy=False)
+            return self.apply_function(np.median, axis=axis, **kwargs)
 
     def percentile(self, q, axis=None, **kwargs):
         """
@@ -486,9 +590,7 @@ class SpectralCube(object):
         axis : int, or None
             Which axis to compute percentiles over
         """
-        return u.Quantity(self._apply_along_axes(np.percentile, q=q, axis=axis,
-                                                 **kwargs), self.unit,
-                          copy=False)
+        return self.apply_function(np.percentile, q=q, axis=axis, **kwargs)
 
     def with_mask(self, mask, inherit_mask=True):
         """
