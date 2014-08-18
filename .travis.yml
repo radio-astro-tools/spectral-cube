@@ -88,7 +88,7 @@ install:
     - if [[ $SETUP_CMD != egg_info ]] && [[ $ASTROPY_VERSION == stable ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION astropy; fi
 
     # YT
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $TRAVIS_PYTHON_VERSION == 2.7 ]] && [[ $NUMPY_VERSION >= 1.7 ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION yt; fi
+    - if [[ $SETUP_CMD != egg_info ]] && [[ $TRAVIS_PYTHON_VERSION == 2.7 ]] && [[ $NUMPY_VERSION == 1.7 ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION yt; fi
 
     # OPTIONAL DEPENDENCIES
     # Here you can add any dependencies your package may have. You can use
