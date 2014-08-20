@@ -284,6 +284,46 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
         """.strip()
 
 
+def test_yt():
+    cube = SpectralCube.read(path('adv.fits'))
+    # Without any special arguments
+    ds1 = cube.to_yt()
+    # With spectral factor = 0.5
+    spectral_factor = 0.5
+    ds2 = cube.to_yt(spectral_factor=spectral_factor)
+    # With nprocs = 4
+    nprocs = 4
+    ds3 = cube.to_yt(nprocs=nprocs)
+    # The following assertions just make sure everything is
+    # kosher with the datasets generated in different ways
+    assert ds1.domain_dimensions == ds2.domain_dimensions
+    assert ds2.domain_dimensions == ds3.domain_dimensions
+    assert ds1.domain_left_edge == ds2.domain_left_edge
+    assert ds2.domain_left_edge == ds3.domain_left_edge
+    assert ds1.domain_width == ds2.domain_width*spectral_factor
+    assert ds1.domain_width == ds3.domain_width
+    assert nprocs == len(ds3.index.grids)
+    # Now check that we can compute quantities of the flux
+    # and that they are equal
+    dd1 = ds1.all_data()
+    dd2 = ds2.all_data()
+    dd3 = ds2.all_data()
+    flux1 = dd1.quantities.total_quantity("flux")
+    flux2 = dd2.quantities.total_quantity("flux")
+    flux3 = dd3.quantities.total_quantity("flux")
+    assert flux1 == flux2
+    assert flux2 == flux3
+    # Now test round-trip conversions between yt and world coordinates
+    yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
+    world_coord1 = cube.yt2world(yt_coord1)
+    assert cube.world2yt(world_coord1) == yt_coord1
+    yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
+    world_coord2 = cube.yt2world(yt_coord2, spectral_factor=0.5)
+    assert cube.world2yt(world_coord2, spectral_factor=0.5) == yt_coord2
+    yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
+    world_coord3 = cube.yt2world(yt_coord3)
+    assert cube.world2yt(world_coord3) == yt_coord3
+
 def test_read_write_rountrip(tmpdir):
     cube = SpectralCube.read(path('adv.fits'))
     tmp_file = str(tmpdir.join('test.fits'))
