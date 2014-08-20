@@ -10,7 +10,7 @@ import numpy as np
 from .. import SpectralCube, BooleanArrayMask, FunctionMask, LazyMask, CompositeMask
 
 from . import path
-from .helpers import assert_allclose
+from .helpers import assert_allclose, assert_array_equal
 
 
 
@@ -296,12 +296,12 @@ def test_yt():
     ds3 = cube.to_yt(nprocs=nprocs)
     # The following assertions just make sure everything is
     # kosher with the datasets generated in different ways
-    assert ds1.domain_dimensions == ds2.domain_dimensions
-    assert ds2.domain_dimensions == ds3.domain_dimensions
-    assert ds1.domain_left_edge == ds2.domain_left_edge
-    assert ds2.domain_left_edge == ds3.domain_left_edge
-    assert ds1.domain_width == ds2.domain_width*spectral_factor
-    assert ds1.domain_width == ds3.domain_width
+    assert_array_equal(ds1.domain_dimensions, ds2.domain_dimensions)
+    assert_array_equal(ds2.domain_dimensions, ds3.domain_dimensions)
+    assert_allclose(ds1.domain_left_edge, ds2.domain_left_edge)
+    assert_allclose(ds2.domain_left_edge, ds3.domain_left_edge)
+    assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/spectral_factor]))
+    assert_allclose(ds1.domain_width, ds3.domain_width)
     assert nprocs == len(ds3.index.grids)
     # Now check that we can compute quantities of the flux
     # and that they are equal
@@ -316,13 +316,13 @@ def test_yt():
     # Now test round-trip conversions between yt and world coordinates
     yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
     world_coord1 = cube.yt2world(yt_coord1)
-    assert cube.world2yt(world_coord1) == yt_coord1
+    assert_allclose(cube.world2yt(world_coord1), yt_coord1)
     yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
     world_coord2 = cube.yt2world(yt_coord2, spectral_factor=0.5)
-    assert cube.world2yt(world_coord2, spectral_factor=0.5) == yt_coord2
+    assert_allclose(cube.world2yt(world_coord2, spectral_factor=0.5), yt_coord2)
     yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
     world_coord3 = cube.yt2world(yt_coord3)
-    assert cube.world2yt(world_coord3) == yt_coord3
+    assert_allclose(cube.world2yt(world_coord3), yt_coord3)
 
 def test_read_write_rountrip(tmpdir):
     cube = SpectralCube.read(path('adv.fits'))
