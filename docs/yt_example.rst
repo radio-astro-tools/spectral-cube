@@ -72,7 +72,7 @@ produce a 3-d isocontour visualization using an object returned by
     cube = read('L1448_13CO.fits', format='fits')
 
     # Extract the yt object from the SpectralCube instance
-    pf = cube.to_yt(spectral_factor=0.75)
+    ds = cube.to_yt(spectral_factor=0.75)
 
     # Set the number of levels, the minimum and maximum level and the width
     # of the isocontours
@@ -96,7 +96,7 @@ produce a 3-d isocontour visualization using an object returned by
     width = 100.  # pixels
     size = 1024
 
-    camera = pf.h.camera(center, direction, width, size, transfer,
+    camera = ds.h.camera(center, direction, width, size, transfer,
                          fields=['flux'])
 
     # Take a snapshot and save to a file
