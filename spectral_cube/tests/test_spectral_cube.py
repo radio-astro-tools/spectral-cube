@@ -303,16 +303,26 @@ def test_yt():
     assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/spectral_factor]))
     assert_allclose(ds1.domain_width, ds3.domain_width)
     assert nprocs == len(ds3.index.grids)
+    assert ds1.spec_cube
+    assert ds2.spec_cube
+    assert ds3.spec_cube
     # Now check that we can compute quantities of the flux
     # and that they are equal
     dd1 = ds1.all_data()
     dd2 = ds2.all_data()
-    dd3 = ds2.all_data()
-    flux1 = dd1.quantities.total_quantity("flux")
-    flux2 = dd2.quantities.total_quantity("flux")
-    flux3 = dd3.quantities.total_quantity("flux")
-    assert flux1 == flux2
-    assert flux2 == flux3
+    dd3 = ds3.all_data()
+    flux1_tot = dd1.quantities.total_quantity("flux")
+    flux2_tot = dd2.quantities.total_quantity("flux")
+    flux3_tot = dd3.quantities.total_quantity("flux")
+    flux1_min, flux1_max = dd1.quantities.extrema("flux")
+    flux2_min, flux2_max = dd2.quantities.extrema("flux")
+    flux3_min, flux3_max = dd3.quantities.extrema("flux")
+    assert flux1_tot == flux2_tot
+    assert flux1_tot == flux3_tot
+    assert flux1_min == flux2_min
+    assert flux1_min == flux3_min
+    assert flux1_max == flux2_max
+    assert flux1_max == flux3_max
     # Now test round-trip conversions between yt and world coordinates
     yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
     world_coord1 = cube.yt2world(yt_coord1)
