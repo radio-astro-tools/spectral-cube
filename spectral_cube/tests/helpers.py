@@ -1,6 +1,6 @@
 from astropy import units as u
 
-from numpy.testing import assert_allclose as assert_allclose_numpy
+from numpy.testing import assert_allclose as assert_allclose_numpy, assert_array_equal
 
 
 def assert_allclose(q1, q2, **kwargs):
