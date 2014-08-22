@@ -14,7 +14,7 @@ import numpy as np
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .masks import LazyMask, BooleanArrayMask, MaskBase
+from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable
 from .io.core import determine_format
 
 __all__ = ['SpectralCube']
@@ -1133,7 +1133,7 @@ class SpectralCube(object):
         """
         Return the minimum enclosing subcube where the mask is valid
         """
-        return self[self.subcube_from_mask(self, self._mask)]
+        return self[self.subcube_slices_from_mask(self._mask)]
 
     def subcube_from_mask(self, region_mask):
         """
@@ -1145,7 +1145,7 @@ class SpectralCube(object):
             The mask with appropraite WCS or an ndarray with matched
             coordinates
         """
-        return self[self.subcube_from_mask(self, region_mask)]
+        return self[self.subcube_slices_from_mask(region_mask)]
 
 
     def subcube_slices_from_mask(self, region_mask):
@@ -1163,15 +1163,15 @@ class SpectralCube(object):
             raise ImportError("Scipy could not be imported: this function won't work.")
 
         if isinstance(region_mask, np.ndarray):
-            if is_broadcastable(region_mask, self.shape):
-                region_mask = BooleanArrayMask(region_mask)
+            if is_broadcastable(region_mask.shape, self.shape):
+                region_mask = BooleanArrayMask(region_mask, self._wcs)
             else:
                 raise ValueError("Mask shape does not match cube shape.")
 
         include = region_mask.include(self._data, self._wcs)
 
         slices = ndimage.find_objects(np.broadcast_arrays(include,
-                                                          self._data)[0])
+                                                          self._data)[0])[0]
 
         return slices
 
