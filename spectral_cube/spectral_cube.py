@@ -1175,7 +1175,8 @@ class SpectralCube(object):
 
         return slices
 
-    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_value=None):
+    def subcube(self, xlo='min', xhi='max', ylo='min', yhi='max', zlo='min',
+                zhi='max', rest_value=None):
         """
         Extract a sub-cube spatially and spectrally.
 
