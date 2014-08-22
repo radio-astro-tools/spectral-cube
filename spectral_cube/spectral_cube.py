@@ -14,7 +14,7 @@ import numpy as np
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .masks import LazyMask, BooleanArrayMask
+from .masks import LazyMask, BooleanArrayMask, MaskBase
 from .io.core import determine_format
 
 __all__ = ['SpectralCube']
@@ -23,6 +23,12 @@ try:  # TODO replace with six.py
     xrange
 except NameError:
     xrange = range
+
+try:
+    from scipy import ndimage
+    scipyOK = True
+except ImportError:
+    scipyOK = False
 
 
 DOPPLER_CONVENTIONS = {}
@@ -636,6 +642,7 @@ class SpectralCube(object):
 
         if intslices:
             if len(intslices) > 1:
+                # TODO: return a Specutils Spectrum object
                 raise NotImplementedError("1D slices are not implemented yet.")
             newwcs = self._wcs.dropaxis(intslices[0])
             newwcs = wcs_utils.slice_wcs(newwcs, [s for s in view
@@ -1106,11 +1113,14 @@ class SpectralCube(object):
             try:
                 mask_slab = self._mask[ilo:ihi, :, :]
             except NotImplementedError:
-                warnings.warn("Mask slicing not implemented for {0} - dropping mask".format(self._mask.__class__.__name__))
+                warnings.warn("Mask slicing not implemented for "
+                              "{0} - dropping mask".
+                              format(self._mask.__class__.__name__))
                 mask_slab = None
 
         # Create new spectral cube
-        slab = self._new_cube_with(data=self._data[ilo:ihi], wcs=wcs_slab, mask=mask_slab)
+        slab = self._new_cube_with(data=self._data[ilo:ihi], wcs=wcs_slab,
+                                   mask=mask_slab)
 
         # TODO: we could change the WCS to give a spectral axis in the
         # correct units as requested - so if the initial cube is in Hz and we
@@ -1118,6 +1128,52 @@ class SpectralCube(object):
         # instead
 
         return slab
+
+    def minimal_subcube(self):
+        """
+        Return the minimum enclosing subcube where the mask is valid
+        """
+        return self[self.subcube_from_mask(self, self._mask)]
+
+    def subcube_from_mask(self, region_mask):
+        """
+        Given a mask, return the minimal subcube that encloses the mask
+
+        Parameters
+        ----------
+        region_mask: `masks.MaskBase` or boolean `numpy.ndarray`
+            The mask with appropraite WCS or an ndarray with matched
+            coordinates
+        """
+        return self[self.subcube_from_mask(self, region_mask)]
+
+
+    def subcube_slices_from_mask(self, region_mask):
+        """
+        Given a mask, return the slices corresponding to the minimum subcube
+        that encloses the mask
+
+        Parameters
+        ----------
+        region_mask: `masks.MaskBase` or boolean `numpy.ndarray`
+            The mask with appropraite WCS or an ndarray with matched
+            coordinates
+        """
+        if not scipyOK:
+            raise ImportError("Scipy could not be imported: this function won't work.")
+
+        if isinstance(region_mask, np.ndarray):
+            if is_broadcastable(region_mask, self.shape):
+                region_mask = BooleanArrayMask(region_mask)
+            else:
+                raise ValueError("Mask shape does not match cube shape.")
+
+        include = region_mask.include(self._data, self._wcs)
+
+        slices = ndimage.find_objects(np.broadcast_arrays(include,
+                                                          self._data)[0])
+
+        return slices
 
     def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_value=None):
         """
