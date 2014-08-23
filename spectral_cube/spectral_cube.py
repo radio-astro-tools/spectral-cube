@@ -9,6 +9,7 @@ from astropy import units as u
 from astropy.extern import six
 from astropy.io.fits import PrimaryHDU, ImageHDU
 from astropy import log
+from astropy import wcs
 
 import numpy as np
 
@@ -639,19 +640,18 @@ class SpectralCube(object):
                          if hasattr(s,'start') else s
                          for s in view]
 
-        intslices = [ii for ii,s in enumerate(view) if not hasattr(s,'start')]
+        intslices = [2-ii for ii,s in enumerate(view) if not hasattr(s,'start')]
 
         if intslices:
             if len(intslices) > 1:
                 # TODO: return a Specutils Spectrum object
                 raise NotImplementedError("1D slices are not implemented yet.")
-            newwcs = self._wcs.dropaxis(intslices[0])
-            newwcs = wcs_utils.slice_wcs(newwcs, [s for s in view
-                                                  if hasattr(s,'start')])
+            newwcs = wcs_utils.slice_wcs(self._wcs, view)
             return Slice(value=self._data[view],
                          wcs=newwcs,
                          copy=False,
-                         #mask=self._mask[view],
+                         # Can fail with broadcastable but not same shape masks
+                         mask=self._mask[view],
                          meta=meta)
 
         newmask = self._mask[view] if self._mask is not None else None
@@ -1236,6 +1236,49 @@ class SpectralCube(object):
                   for xx in 'zyx']
 
         return self[slices]
+
+    def subcube_from_ds9region(self, ds9region):
+        """
+        Extract a masked subcube from a ds9 region or a pyregion Region object
+        (only functions on celestial dimensions)
+
+        Parameters
+        ----------
+        ds9region: str or `pyregion.Shape`
+            The region to extract
+        """
+        import pyregion
+
+        if isinstance(ds9region, six.string_types):
+            shapelist = pyregion.parse(ds9region)
+        else:
+            shapelist = ds9region
+
+        # Requires astropy >0.4...
+        # pixel_regions = shapelist.as_imagecoord(self.wcs.celestial.to_header())
+        pixel_regions = shapelist.as_imagecoord(self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header())
+
+        # This is a hack to use mpl to determine the outer bounds of the regions
+        mpl_objs = pixel_regions.get_mpl_patches_texts()[0]
+
+        extent = mpl_objs[0].get_extents()
+        xlo, ylo = extent.min
+        xhi, yhi = extent.max
+        all_extents = [obj.get_extents() for obj in mpl_objs]
+        for ext in all_extents:
+            xlo = xlo if xlo < ext.min[0] else ext.min[0]
+            ylo = ylo if ylo < ext.min[1] else ext.min[1]
+            xhi = xhi if xhi > ext.max[0] else ext.max[0]
+            yhi = yhi if yhi > ext.max[1] else ext.max[1]
+
+        subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+
+        mask = shapelist.get_mask(header=subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header(),
+                                  shape=subcube.shape[1:])
+
+        return subcube.with_mask(BooleanArrayMask(mask, subcube.wcs))
+
+
 
     def world_spines(self):
         """
