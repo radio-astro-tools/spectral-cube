@@ -1256,11 +1256,16 @@ class SpectralCube(object):
 
         # Requires astropy >0.4...
         # pixel_regions = shapelist.as_imagecoord(self.wcs.celestial.to_header())
+        # convert the regions to image (pixel) coordinates
         pixel_regions = shapelist.as_imagecoord(self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header())
 
         # This is a hack to use mpl to determine the outer bounds of the regions
+        # (but it's a legit hack - pyregion needs a major internal refactor
+        # before we can approach this any other way, I think -AG)
         mpl_objs = pixel_regions.get_mpl_patches_texts()[0]
 
+        # Find the minimal enclosing box containing all of the regions
+        # (this will speed up the mask creation below)
         extent = mpl_objs[0].get_extents()
         xlo, ylo = extent.min
         xhi, yhi = extent.max
