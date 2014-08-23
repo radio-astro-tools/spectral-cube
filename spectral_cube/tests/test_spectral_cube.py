@@ -370,3 +370,20 @@ def test_preserve_spectral_unit():
     # Check that this preferred unit is propagated
     new_cube = cube_freq.with_fill_value(fill_value=3.4)
     assert new_cube.spectral_axis.unit is u.GHz
+
+def test_subcube():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    sc1 = cube.subcube(xlo=1, xhi=3)
+    sc2 = cube.subcube(xlo=24.06269*u.deg, xhi=24.06206*u.deg)
+
+    assert sc1.shape == (2,3,2)
+    assert sc2.shape == (2,3,2)
+    assert sc1.wcs.wcs.compare(sc2.wcs.wcs)
+
+    sc3 = cube.subcube()
+
+    assert sc3.shape == cube.shape
+    assert sc3.wcs.wcs.compare(cube.wcs.wcs)
+    assert np.all(sc3._data == cube._data)

@@ -1192,9 +1192,9 @@ class SpectralCube(object):
         limit_dict = {'xlo':0 if xlo == 'min' else xlo,
                       'ylo':0 if ylo == 'min' else ylo,
                       'zlo':0 if zlo == 'min' else zlo,
-                      'xhi':self.shape[0] if xhi=='max' else xhi,
+                      'xhi':self.shape[2] if xhi=='max' else xhi,
                       'yhi':self.shape[1] if yhi=='max' else yhi,
-                      'zhi':self.shape[2] if zhi=='max' else zhi}
+                      'zhi':self.shape[0] if zhi=='max' else zhi}
         dims = {'x': 2,
                 'y': 1,
                 'z': 0}
@@ -1225,7 +1225,12 @@ class SpectralCube(object):
                 if limval > spine.max() or limval < spine.min():
                     log.warn("The limit {0} is out of bounds."
                              "  Using min/max instead.".format(lim))
-                limit_dict[lim] = val
+                if lim[1:] == 'hi':
+                    # End-inclusive indexing: need to add one for the high
+                    # slice
+                    limit_dict[lim] = val + 1
+                else:
+                    limit_dict[lim] = val
 
         slices = [slice(limit_dict[xx+'lo'], limit_dict[xx+'hi'])
                   for xx in 'zyx']
