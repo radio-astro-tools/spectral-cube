@@ -1254,10 +1254,16 @@ class SpectralCube(object):
         else:
             shapelist = ds9region
 
-        # Requires astropy >0.4...
-        # pixel_regions = shapelist.as_imagecoord(self.wcs.celestial.to_header())
-        # convert the regions to image (pixel) coordinates
-        pixel_regions = shapelist.as_imagecoord(self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header())
+        if shapelist[0].coord_format not in ('physical','image'):
+            # Requires astropy >0.4...
+            # pixel_regions = shapelist.as_imagecoord(self.wcs.celestial.to_header())
+            # convert the regions to image (pixel) coordinates
+            pixel_regions = shapelist.as_imagecoord(self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header())
+        else:
+            # For this to work, we'd need to change the reference pixel after cropping.
+            # Alternatively, we can just make the full-sized mask... todo....
+            raise NotImplementedError("Can't use non-celestial coordinates with regions.")
+            pixel_regions = shapelist
 
         # This is a hack to use mpl to determine the outer bounds of the regions
         # (but it's a legit hack - pyregion needs a major internal refactor
