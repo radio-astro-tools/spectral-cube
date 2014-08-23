@@ -8,6 +8,7 @@ from functools import wraps
 from astropy import units as u
 from astropy.extern import six
 from astropy.io.fits import PrimaryHDU, ImageHDU
+from astropy import log
 
 import numpy as np
 
@@ -1180,12 +1181,56 @@ class SpectralCube(object):
         """
         Extract a sub-cube spatially and spectrally.
 
-        This method is not yet implemented.
-
-        xlo = 'min' / 'max' should be special keywords
-
+        Parameters
+        ----------
+        [xyz]lo/[xyz]hi : int or `Quantity` or `min`/`max`
+            The endpoints to extract.  If given as a quantity, will be
+            interpreted as World coordinates.  If given as a string or
+            int, will be interpreted as pixel coordinates.
         """
-        raise NotImplementedError()
+
+        limit_dict = {'xlo':0 if xlo == 'min' else xlo,
+                      'ylo':0 if ylo == 'min' else ylo,
+                      'zlo':0 if zlo == 'min' else zlo,
+                      'xhi':self.shape[0] if xhi=='max' else xhi,
+                      'yhi':self.shape[1] if yhi=='max' else yhi,
+                      'zhi':self.shape[2] if zhi=='max' else zhi}
+        dims = {'x': 2,
+                'y': 1,
+                'z': 0}
+
+        # Specific warning for slicing a frequency axis with a velocity or
+        # vice/versa
+        if ((hasattr(zlo, 'unit') and not
+             zlo.unit.is_equivalent(self.spectral_axis.unit)) or
+            (hasattr(zhi, 'unit') and not
+             zhi.unit.is_equivalent(self.spectral_axis.unit))):
+            raise u.UnitsError("Spectral units are not equivalent to the "
+                               "spectral slice.  Use `.with_spectral_unit` "
+                               "to convert to equivalent units first")
+
+        for val in (xlo,ylo,xhi,yhi):
+            if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
+                raise u.UnitsError("The X and Y slices must be specified in "
+                                   "degree-equivalent units.")
+
+        for lim in limit_dict:
+            limval = limit_dict[lim]
+            if hasattr(limval, 'unit'):
+                dim = dims[lim[0]]
+                sl = [slice(0,1)]*2
+                sl.insert(dim, slice(None))
+                spine = self.world[sl][dim]
+                val = np.argmin(np.abs(limval-spine))
+                if limval > spine.max() or limval < spine.min():
+                    log.warn("The limit {0} is out of bounds."
+                             "  Using min/max instead.".format(lim))
+                limit_dict[lim] = val
+
+        slices = [slice(limit_dict[xx+'lo'], limit_dict[xx+'hi'])
+                  for xx in 'zyx']
+
+        return self[slices]
 
     def world_spines(self):
         """
