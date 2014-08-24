@@ -84,7 +84,8 @@ np2wcs = {2: 0, 1: 1, 0: 2}
 
 class Projection(u.Quantity):
 
-    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None, meta=None):
+    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
+                meta=None, mask=None):
 
         if value.ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -95,6 +96,7 @@ class Projection(u.Quantity):
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype, copy=copy).view(cls)
         self._wcs = wcs
         self._meta = meta
+        self._mask = mask
 
         return self
 
@@ -660,11 +662,9 @@ class SpectralCube(object):
                 # TODO: return a Specutils Spectrum object
                 raise NotImplementedError("1D slices are not implemented yet.")
             newwcs = wcs_utils.slice_wcs(self._wcs, view)
-            return Slice(value=self._data[view],
+            return Slice(value=self.filled_data[view],
                          wcs=newwcs,
                          copy=False,
-                         # Can fail with broadcastable but not same shape masks
-                         mask=self._mask[view],
                          meta=meta)
 
         newmask = self._mask[view] if self._mask is not None else None
@@ -1300,7 +1300,8 @@ class SpectralCube(object):
         mask = shapelist.get_mask(header=subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header(),
                                   shape=subcube.shape[1:])
 
-        return subcube.with_mask(BooleanArrayMask(mask, subcube.wcs))
+        return subcube.with_mask(BooleanArrayMask(mask, subcube.wcs,
+                                                  shape=subcube.shape))
 
 
 
