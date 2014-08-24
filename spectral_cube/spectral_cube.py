@@ -141,6 +141,14 @@ class Projection(u.Quantity):
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
 
+    def quicklook(self):
+        """
+        Use aplpy to make a quick-look image of the projection
+        """
+        import aplpy
+        self.FITSFigure = aplpy.FITSFigure(self.hdu)
+        self.show_grayscale()
+
 # A slice is just like a projection in every way
 class Slice(Projection):
     pass
