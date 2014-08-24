@@ -388,6 +388,19 @@ class SpectralCube(object):
                                          projection=projection)
 
     @aggregation_docstring
+    def mean(self, axis=None, how='auto'):
+        """
+        Return the mean of the cube, optionally over an axis.
+        """
+
+        projection = self._naxes_dropped(axis) == 1
+
+        # use nansum, and multiply by mask to add zero each time there is badness
+        return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=projection)
+
+    @aggregation_docstring
     def max(self, axis=None, how='auto'):
         """
         Return the maximum data value of the cube, optionally over an axis.
