@@ -143,10 +143,13 @@ class Projection(u.Quantity):
 
     def quicklook(self):
         """
-        Use aplpy to make a quick-look image of the projection
+        Use aplpy to make a quick-look image of the projection.  This will make
+        the `FITSFigure` attribute available.
         """
-        import aplpy
-        self.FITSFigure = aplpy.FITSFigure(self.hdu)
+        if not hasattr(self, 'FITSFigure'):
+            import aplpy
+            self.FITSFigure = aplpy.FITSFigure(self.hdu)
+
         self.FITSFigure.show_grayscale()
 
 # A slice is just like a projection in every way
