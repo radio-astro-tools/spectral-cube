@@ -265,3 +265,22 @@ shape_combos = list(itertools.combinations(shapes,2))
 @pytest.mark.parametrize(('sh1','sh2'),shape_combos)
 def test_is_broadcastable(sh1, sh2):
     assert is_broadcastable(sh1,sh2) == is_broadcastable_try(sh1,sh2)
+
+def test_flat_mask():
+    cube, data = cube_and_raw('adv.fits')
+
+    mask_array = np.array([[True,False],[False,False],[True,True]])
+    bool_mask_array = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
+                                       shape=cube.shape)
+    mcube = cube.with_mask(bool_mask_array)
+
+    # I think we can use == instead of 'almost equal' here because the
+    # underlying data should be identical (the same in memory)
+
+    assert np.all(cube.sum(axis=0)[mask_array] == mcube.sum(axis=0)[mask_array])
+    assert np.all(np.isnan(mcube.sum(axis=0)[~mask_array]))
+
+    # Broadcast the 2D mask to 3D
+    cubemask = (np.ones(4,dtype='bool')[:,None,None] & mask_array[None,:,:])
+    # Check that spectral masking works too
+    assert np.all((data*cubemask).sum(axis=(1,2)) == mcube.sum(axis=(1,2)))
