@@ -11,6 +11,8 @@ from .. import (BooleanArrayMask, SpectralCube, LazyMask,
                 FunctionMask, CompositeMask)
 from ..masks import is_broadcastable
 
+from distutils.version import StrictVersion
+
 
 def test_spectral_cube_mask():
 
@@ -279,6 +281,16 @@ def test_flat_mask():
 
     assert np.all(cube.sum(axis=0)[mask_array] == mcube.sum(axis=0)[mask_array])
     assert np.all(np.isnan(mcube.sum(axis=0)[~mask_array]))
+
+@pytest.mark.skipif(StrictVersion(np.__version__) < StrictVersion('1.7'),
+                    reason='Numpy <1.7 does not support multi-slice indexing.')
+def test_flat_mask_spectral():
+    cube, data = cube_and_raw('adv.fits')
+
+    mask_array = np.array([[True,False],[False,False],[True,True]])
+    bool_mask_array = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
+                                       shape=cube.shape)
+    mcube = cube.with_mask(bool_mask_array)
 
     # Broadcast the 2D mask to 3D
     cubemask = (np.ones(4,dtype='bool')[:,None,None] & mask_array[None,:,:])
