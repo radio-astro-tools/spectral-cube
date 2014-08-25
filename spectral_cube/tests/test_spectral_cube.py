@@ -290,11 +290,11 @@ class TestYt():
         # Without any special arguments
         self.ds1 = self.cube.to_yt()
         # With spectral factor = 0.5
-        spectral_factor = 0.5
-        self.ds2 = self.cube.to_yt(spectral_factor=spectral_factor)
+        self.spectral_factor = 0.5
+        self.ds2 = self.cube.to_yt(spectral_factor=self.spectral_factor)
         # With nprocs = 4
-        nprocs = 4
-        self.ds3 = self.cube.to_yt(nprocs=nprocs)
+        self.nprocs = 4
+        self.ds3 = self.cube.to_yt(nprocs=self.nprocs)
 
     def test_yt(self):
         # The following assertions just make sure everything is
@@ -304,9 +304,9 @@ class TestYt():
         assert_array_equal(ds2.domain_dimensions, ds3.domain_dimensions)
         assert_allclose(ds1.domain_left_edge, ds2.domain_left_edge)
         assert_allclose(ds2.domain_left_edge, ds3.domain_left_edge)
-        assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/spectral_factor]))
+        assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/self.spectral_factor]))
         assert_allclose(ds1.domain_width, ds3.domain_width)
-        assert nprocs == len(ds3.index.grids)
+        assert self.nprocs == len(ds3.index.grids)
         assert ds1.spec_cube
         assert ds2.spec_cube
         assert ds3.spec_cube
@@ -339,8 +339,8 @@ class TestYt():
         world_coord1 = cube.yt2world(yt_coord1)
         assert_allclose(cube.world2yt(world_coord1), yt_coord1)
         yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
-        world_coord2 = cube.yt2world(yt_coord2, spectral_factor=0.5)
-        assert_allclose(cube.world2yt(world_coord2, spectral_factor=0.5), yt_coord2)
+        world_coord2 = cube.yt2world(yt_coord2, spectral_factor=self.spectral_factor)
+        assert_allclose(cube.world2yt(world_coord2, spectral_factor=self.spectral_factor), yt_coord2)
         yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
         world_coord3 = cube.yt2world(yt_coord3)
         assert_allclose(cube.world2yt(world_coord3), yt_coord3)
