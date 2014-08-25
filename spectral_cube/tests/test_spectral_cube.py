@@ -12,6 +12,14 @@ from .. import SpectralCube, BooleanArrayMask, FunctionMask, LazyMask, Composite
 from . import path
 from .helpers import assert_allclose, assert_array_equal
 
+from distutils.version import StrictVersion
+
+try:
+    import yt
+    ytOK = True
+    yt_version = StrictVersion(yt.__version__)
+except ImportError:
+    ytOK = False
 
 
 def cube_and_raw(filename):
@@ -284,6 +292,7 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
         """.strip()
 
 
+@pytest.mark.skipif(not ytOK, reason='Could not import yt')
 class TestYt():
     def setup_method(self, method):
         self.cube = SpectralCube.read(path('adv.fits'))
@@ -311,6 +320,7 @@ class TestYt():
         assert ds2.spec_cube
         assert ds3.spec_cube
 
+    @pytest.mark.skipif(yt_version < StrictVersion('3.0.1'), reason='yt 3.0 has a FITS-related bug')
     def test_yt_fluxcompare(self):
         # Now check that we can compute quantities of the flux
         # and that they are equal
