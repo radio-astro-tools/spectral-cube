@@ -19,6 +19,7 @@ try:
     ytOK = True
     yt_version = StrictVersion(yt.__version__)
 except ImportError:
+    yt_version = StrictVersion('0.0.0')
     ytOK = False
 
 
@@ -297,18 +298,19 @@ class TestYt():
     def setup_method(self, method):
         self.cube = SpectralCube.read(path('adv.fits'))
         # Without any special arguments
-        self.ds1 = self.cube.to_yt()
+        self.ytc1 = self.cube.to_yt()
         # With spectral factor = 0.5
         self.spectral_factor = 0.5
-        self.ds2 = self.cube.to_yt(spectral_factor=self.spectral_factor)
+        self.ytc2 = self.cube.to_yt(spectral_factor=self.spectral_factor)
         # With nprocs = 4
         self.nprocs = 4
-        self.ds3 = self.cube.to_yt(nprocs=self.nprocs)
+        self.ytc3 = self.cube.to_yt(nprocs=self.nprocs)
 
     def test_yt(self):
         # The following assertions just make sure everything is
         # kosher with the datasets generated in different ways
-        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        ytc1,ytc2,ytc3 = self.ytc1,self.ytc2,self.ytc3
+        ds1,ds2,ds3 = ytc1.dataset, ytc2.dataset, ytc3.dataset
         assert_array_equal(ds1.domain_dimensions, ds2.domain_dimensions)
         assert_array_equal(ds2.domain_dimensions, ds3.domain_dimensions)
         assert_allclose(ds1.domain_left_edge, ds2.domain_left_edge)
@@ -324,7 +326,8 @@ class TestYt():
     def test_yt_fluxcompare(self):
         # Now check that we can compute quantities of the flux
         # and that they are equal
-        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        ytc1,ytc2,ytc3 = self.ytc1,self.ytc2,self.ytc3
+        ds1,ds2,ds3 = ytc1.dataset, ytc2.dataset, ytc3.dataset
         dd1 = ds1.all_data()
         dd2 = ds2.all_data()
         dd3 = ds3.all_data()
@@ -343,17 +346,18 @@ class TestYt():
 
     def test_yt_roundtrip_wcs(self):
         # Now test round-trip conversions between yt and world coordinates
-        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        ytc1,ytc2,ytc3 = self.ytc1,self.ytc2,self.ytc3
+        ds1,ds2,ds3 = ytc1.dataset, ytc2.dataset, ytc3.dataset
         cube = self.cube
         yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
-        world_coord1 = cube._yt2world(yt_coord1)
-        assert_allclose(cube._world2yt(world_coord1), yt_coord1)
+        world_coord1 = ytc1.yt2world(yt_coord1)
+        assert_allclose(ytc1.world2yt(world_coord1), yt_coord1)
         yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
-        world_coord2 = cube._yt2world(yt_coord2, spectral_factor=self.spectral_factor)
-        assert_allclose(cube._world2yt(world_coord2, spectral_factor=self.spectral_factor), yt_coord2)
+        world_coord2 = ytc2.yt2world(yt_coord2)
+        assert_allclose(ytc2.world2yt(world_coord2), yt_coord2)
         yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
-        world_coord3 = cube._yt2world(yt_coord3)
-        assert_allclose(cube._world2yt(world_coord3), yt_coord3)
+        world_coord3 = ytc3.yt2world(yt_coord3)
+        assert_allclose(ytc3.world2yt(world_coord3), yt_coord3)
 
 def test_read_write_rountrip(tmpdir):
     cube = SpectralCube.read(path('adv.fits'))
