@@ -17,6 +17,8 @@ from . import spectral_axis
 from .masks import LazyMask, BooleanArrayMask, MaskBase
 from .io.core import determine_format
 
+from distutils.version import StrictVersion
+
 __all__ = ['SpectralCube']
 
 try:  # TODO replace with six.py
@@ -1316,16 +1318,10 @@ class SpectralCube(object):
         from .io.core import write
         write(filename, self, overwrite=overwrite, format=format)
 
-    def to_yt(self, spectral_factor=1.0, center=None, nprocs=1):
+    def to_yt(self, spectral_factor=1.0, nprocs=None, **kwargs):
         """
-        Convert a spectral cube to a yt object that can be further analyzed in yt.
-
-        By default, the yt object returned will be defined in the default yt
-        spatial units (1 spatial pixel = 1 cm) centered on the center of the
-        spectral cube in all directions. If the ``center`` argument is passed,
-        then the cube is still returned in the default yt spatial units, but
-        shifted so that the specified coordinates are at the origin in the
-        returned object.
+        Convert a spectral cube to a yt object that can be further analyzed in
+        yt.
 
         Parameters
         ----------
@@ -1333,31 +1329,49 @@ class SpectralCube(object):
             Factor by which to stretch the spectral axis. If set to 1, one pixel
             in spectral coordinates is equivalent to one pixel in spatial
             coordinates.
-        center : iterable
-            Tuple or list containing the three coordinates for the center. These
-            should be given as ``(lon, lat, spectral)``.
+
+        If using yt 3.0 or later, additional keyword arguments will be passed
+        onto yt's ``FITSDataset`` constructor. See the yt documentation
+        (http://yt-project.org/docs/3.0/examining/loading_data.html?#fits-data)
+        for details on options for reading FITS data.
         """
 
-        from yt.mods import load_uniform_grid
+        import yt
 
-        data = {'flux': self._get_filled_data(fill=0.)}
+        if StrictVersion(yt.__version__) >= StrictVersion('3.0'):
 
-        nz, ny, nx = self.shape
+            from yt.frontends.fits.api import FITSDataset
+            from astropy.io import fits
 
-        dx = nx / 2.
-        dy = ny / 2.
-        dz = nz / 2. * spectral_factor
+            hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
+                                  header=self.wcs.to_header())
 
-        # Determine center in pixel coordinates
-        center = self.wcs.wcs_world2pix([center], 0)[0]
+            hdu.header["BUNIT"] = str(self.unit.to_string(format='fits'))
+            hdu.header["BTYPE"] = "flux"
 
-        pf = load_uniform_grid(data, self.shape, 1.,
-                               bbox=np.array([[(-0.5 - center[2]) * spectral_factor, (nz - 0.5 - center[2]) * spectral_factor],
-                                              [-0.5 - center[1], ny - 0.5 - center[1]],
-                                              [-0.5 - center[0], nx - 0.5 - center[0]]]),
-                               nprocs=nprocs, periodicity=(False, False, False))
+            ds = FITSDataset(hdu, nprocs=nprocs,
+                             spectral_factor=spectral_factor, **kwargs)
 
-        return pf
+        else:
+
+            from yt.mods import load_uniform_grid
+
+            data = {'flux': self._get_filled_data(fill=0.).transpose()}
+
+            nz, ny, nx = self.shape
+
+            if nprocs is None:
+                nprocs = 1
+
+            bbox = np.array([[0.5,float(nx)+0.5],
+                             [0.5,float(ny)+0.5],
+                             [0.5,spectral_factor*float(nz)+0.5]])
+
+            ds = load_uniform_grid(data, [nx,ny,nz], 1., bbox=bbox,
+                                   nprocs=nprocs, periodicity=(False, False,
+                                                               False))
+
+        return ds
 
     @property
     def header(self):
@@ -1375,6 +1389,28 @@ class SpectralCube(object):
         hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
+    def _world2yt(self, world_coord, spectral_factor=1.0):
+        """
+        Convert a position in world coordinates to the coordinates used by a
+        yt dataset that has been generated using the ``to_yt`` method. The
+        changing of the aspect of the spectral axis is handled via the parameter
+        ``spectral_factor``.
+        """
+        yt_coord = self.wcs.wcs_world2pix([world_coord], 1)[0]
+        yt_coord[2] = (yt_coord[2] - 0.5)*spectral_factor+0.5
+        return yt_coord
+
+    def _yt2world(self, yt_coord, spectral_factor=1.0):
+        """
+        Convert a position in yt's coordinates to world coordinates from a
+        yt dataset that has been generated using the ``to_yt`` method. The
+        changing of the aspect of the spectral axis is handled via the parameter
+        ``spectral_factor``.
+        """
+        yt_coord = np.array(yt_coord) # stripping off units
+        yt_coord[2] = (yt_coord[2] - 0.5)/spectral_factor+0.5
+        world_coord = self.wcs.wcs_pix2world([yt_coord], 1)[0]
+        return world_coord
 
 class StokesSpectralCube(SpectralCube):
 

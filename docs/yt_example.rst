@@ -16,30 +16,45 @@ spectral axis.
 
 The :meth:`~spectral_cube.SpectralCube.to_yt` method is used as follows::
 
-    >>> pf = cube.to_yt(spectral_factor=0.5)
+    >>> ds = cube.to_yt(spectral_factor=0.5)
 
-The ``pf`` object is then a yt object that can be used for rendering! By
-default the dataset is defined in pixel coordinates, going from -n/2 to n/2
-(to ensure that the cube is centered on the origin by default).
+The ``ds`` object is then a yt object that can be used for rendering! By
+default the dataset is defined in pixel coordinates, going from ``0.5`` to ``n+0.5``,
+as would be the case in ds9, for example. Along the spectral axis, this range
+will be modified if ``spectral_factor`` does not equal unity.
 
-It is possible to specify a different center for the cube by passing the
-``center`` argument, which should be a tuple of (x, y, spectral) coordinates.
-If the coordinates are passed without units, then they are assumed to be
-pixel coordinates. If the values passed are Astropy `~astropy.units.Quantity`
-objects with units, then the values are assumed to be world coordinates. For
-example:
+When working with datasets in yt, it may be useful to convert world coordinates
+to pixel coordinates, so that whenever you may have to input a position in yt
+(e.g., for slicing or volume rendering) you can get the pixel coordinate that
+corresponds to the desired world coordinate. For this purpose, the method
+:meth:`~spectral_cube.SpectralCube.world2yt` is provided::
 
-    >>> from astropy import units as u
-    >>> pf = cube.to_yt(spectral_factor=0.5, center=(51.424522 * u.deg,
-                                                     30.723611 * u.deg,
-                                                     5205.18071 * u.m / u.s])
+    >>> import astropy.units as u
+    >>> pix_coord = cube.world2yt([51.424522,
+                                   30.723611,
+                                   5205.18071],  # units of deg, deg, m/s
+                                  spectral_factor=0.5)
 
-will ensure the cube is centered at the specified coordinates. The cube will
-still be defined in pixel coordinates in yt, but the origin will be the one
-corresponding to the above coordinates.
+which takes an optional ``spectral_factor`` (set to unity by default) that should be
+the same as in the call to :meth:`~spectral_cube.SpectralCube.to_yt`.
+
+There is also a reverse method provided, :meth:`~spectral_cube.SpectralCube.yt2world`::
+
+    >>> world_coord = cube.yt2world([ds.domain_center], spectral_factor=0.5)
+
+which in this case would return the world coordinates of the center of the dataset
+in yt.
 
 .. TODO: add a way to center it on a specific coordinate and return in world
 .. coordinate offset.
+
+.. note::
+
+    The :meth:`~spectral_cube.SpectralCube.to_yt` method and its associated coordinate methods
+    are compatible with both yt v. 2.x and v. 3.0 and following, but use of version 3.0 or later
+    is recommended due to substantial improvements in support for FITS data. For more information
+    on how yt handles FITS datasets, see
+    `the yt docs <http://yt-project.org/docs/3.0/examining/loading_data.html#fits-data>`_.
 
 Visualization example
 ---------------------
@@ -51,12 +66,13 @@ produce a 3-d isocontour visualization using an object returned by
     import numpy as np
     from spectral_cube import read
     from yt.mods import ColorTransferFunction, write_bitmap
+    import astropy.units as u
 
     # Read in spectral cube
     cube = read('L1448_13CO.fits', format='fits')
 
     # Extract the yt object from the SpectralCube instance
-    pf = cube.to_yt(spectral_factor=0.75, center=[51.424522, 30.723611, 5205.18071])
+    ds = cube.to_yt(spectral_factor=0.75)
 
     # Set the number of levels, the minimum and maximum level and the width
     # of the isocontours
@@ -70,12 +86,17 @@ produce a 3-d isocontour visualization using an object returned by
     transfer.add_layers(n_v, dv, colormap='RdBu_r')
 
     # Set up the camera parameters
-    center = [0., 0., 0.]  # pixel units relative to current center
+
+    # Derive the pixel coordinate of the desired center
+    # from the corresponding world coordinate
+    center = cube.world2yt([51.424522,
+                            30.723611,
+                            5205.18071], spectral_factor=0.75)
     direction = np.array([1.0, 0.0, 0.0])
     width = 100.  # pixels
     size = 1024
 
-    camera = pf.h.camera(center, direction, width, size, transfer,
+    camera = ds.h.camera(center, direction, width, size, transfer,
                          fields=['flux'])
 
     # Take a snapshot and save to a file

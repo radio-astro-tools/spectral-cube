@@ -10,8 +10,16 @@ import numpy as np
 from .. import SpectralCube, BooleanArrayMask, FunctionMask, LazyMask, CompositeMask
 
 from . import path
-from .helpers import assert_allclose
+from .helpers import assert_allclose, assert_array_equal
 
+from distutils.version import StrictVersion
+
+try:
+    import yt
+    ytOK = True
+    yt_version = StrictVersion(yt.__version__)
+except ImportError:
+    ytOK = False
 
 
 def cube_and_raw(filename):
@@ -283,6 +291,69 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
  n_s: 4  type_s: VOPT      unit_s: m / s
         """.strip()
 
+
+@pytest.mark.skipif(not ytOK, reason='Could not import yt')
+class TestYt():
+    def setup_method(self, method):
+        self.cube = SpectralCube.read(path('adv.fits'))
+        # Without any special arguments
+        self.ds1 = self.cube.to_yt()
+        # With spectral factor = 0.5
+        self.spectral_factor = 0.5
+        self.ds2 = self.cube.to_yt(spectral_factor=self.spectral_factor)
+        # With nprocs = 4
+        self.nprocs = 4
+        self.ds3 = self.cube.to_yt(nprocs=self.nprocs)
+
+    def test_yt(self):
+        # The following assertions just make sure everything is
+        # kosher with the datasets generated in different ways
+        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        assert_array_equal(ds1.domain_dimensions, ds2.domain_dimensions)
+        assert_array_equal(ds2.domain_dimensions, ds3.domain_dimensions)
+        assert_allclose(ds1.domain_left_edge, ds2.domain_left_edge)
+        assert_allclose(ds2.domain_left_edge, ds3.domain_left_edge)
+        assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/self.spectral_factor]))
+        assert_allclose(ds1.domain_width, ds3.domain_width)
+        assert self.nprocs == len(ds3.index.grids)
+        assert ds1.spec_cube
+        assert ds2.spec_cube
+        assert ds3.spec_cube
+
+    @pytest.mark.skipif(yt_version < StrictVersion('3.0.1'), reason='yt 3.0 has a FITS-related bug')
+    def test_yt_fluxcompare(self):
+        # Now check that we can compute quantities of the flux
+        # and that they are equal
+        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        dd1 = ds1.all_data()
+        dd2 = ds2.all_data()
+        dd3 = ds3.all_data()
+        flux1_tot = dd1.quantities.total_quantity("flux")
+        flux2_tot = dd2.quantities.total_quantity("flux")
+        flux3_tot = dd3.quantities.total_quantity("flux")
+        flux1_min, flux1_max = dd1.quantities.extrema("flux")
+        flux2_min, flux2_max = dd2.quantities.extrema("flux")
+        flux3_min, flux3_max = dd3.quantities.extrema("flux")
+        assert flux1_tot == flux2_tot
+        assert flux1_tot == flux3_tot
+        assert flux1_min == flux2_min
+        assert flux1_min == flux3_min
+        assert flux1_max == flux2_max
+        assert flux1_max == flux3_max
+
+    def test_yt_roundtrip_wcs(self):
+        # Now test round-trip conversions between yt and world coordinates
+        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        cube = self.cube
+        yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
+        world_coord1 = cube._yt2world(yt_coord1)
+        assert_allclose(cube._world2yt(world_coord1), yt_coord1)
+        yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
+        world_coord2 = cube._yt2world(yt_coord2, spectral_factor=self.spectral_factor)
+        assert_allclose(cube._world2yt(world_coord2, spectral_factor=self.spectral_factor), yt_coord2)
+        yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
+        world_coord3 = cube._yt2world(yt_coord3)
+        assert_allclose(cube._world2yt(world_coord3), yt_coord3)
 
 def test_read_write_rountrip(tmpdir):
     cube = SpectralCube.read(path('adv.fits'))
