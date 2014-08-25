@@ -19,6 +19,7 @@ try:
     ytOK = True
     yt_version = StrictVersion(yt.__version__)
 except ImportError:
+    yt_version = StrictVersion('0.0.0')
     ytOK = False
 
 
