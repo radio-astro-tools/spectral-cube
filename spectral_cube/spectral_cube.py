@@ -1371,7 +1371,7 @@ class SpectralCube(object):
                                    nprocs=nprocs, periodicity=(False, False,
                                                                False))
 
-        return YtCube(self, ds, spectral_factor=spectral_factor)
+        return ytCube(self, ds, spectral_factor=spectral_factor)
 
     @property
     def header(self):
@@ -1389,7 +1389,7 @@ class SpectralCube(object):
         hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
-class YtCube(object):
+class ytCube(object):
     """ Light wrapper of a yt object with ability to translate yt<->wcs
     coordinates """
 
