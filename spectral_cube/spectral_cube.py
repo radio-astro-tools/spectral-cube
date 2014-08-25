@@ -728,29 +728,35 @@ class SpectralCube(object):
             wavelength/frequency can be overridden with this parameter.
 
         """
-        from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
+        from .spectral_axis import (convert_spectral_axis,
+                                    determine_ctype_from_vconv)
 
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
+
+        # Shorter versions to keep lines under 80
+        ctype_from_vconv = determine_ctype_from_vconv
+        vc = velocity_convention
 
         meta = self._meta.copy()
         if 'Original Unit' not in self._meta:
             meta['Original Unit'] = self._wcs.wcs.cunit[self._wcs.wcs.spec]
             meta['Original Type'] = self._wcs.wcs.ctype[self._wcs.wcs.spec]
 
-        out_ctype = determine_ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
-                                               unit,
-                                               velocity_convention=velocity_convention)
+        out_ctype = ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
+                                     unit,
+                                     velocity_convention=velocity_convention)
 
         newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
                                        rest_value=rest_value)
 
         newmask = self._mask.with_spectral_unit(unit,
-                                                velocity_convention=velocity_convention,
+                                                velocity_convention=vc,
                                                 rest_value=rest_value)
         newmask._wcs = newwcs
 
-        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta, spectral_unit=unit)
+        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta,
+                                   spectral_unit=unit)
 
         return cube
 
