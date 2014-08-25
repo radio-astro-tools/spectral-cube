@@ -284,55 +284,66 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
         """.strip()
 
 
-def test_yt():
-    cube = SpectralCube.read(path('adv.fits'))
-    # Without any special arguments
-    ds1 = cube.to_yt()
-    # With spectral factor = 0.5
-    spectral_factor = 0.5
-    ds2 = cube.to_yt(spectral_factor=spectral_factor)
-    # With nprocs = 4
-    nprocs = 4
-    ds3 = cube.to_yt(nprocs=nprocs)
-    # The following assertions just make sure everything is
-    # kosher with the datasets generated in different ways
-    assert_array_equal(ds1.domain_dimensions, ds2.domain_dimensions)
-    assert_array_equal(ds2.domain_dimensions, ds3.domain_dimensions)
-    assert_allclose(ds1.domain_left_edge, ds2.domain_left_edge)
-    assert_allclose(ds2.domain_left_edge, ds3.domain_left_edge)
-    assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/spectral_factor]))
-    assert_allclose(ds1.domain_width, ds3.domain_width)
-    assert nprocs == len(ds3.index.grids)
-    assert ds1.spec_cube
-    assert ds2.spec_cube
-    assert ds3.spec_cube
-    # Now check that we can compute quantities of the flux
-    # and that they are equal
-    dd1 = ds1.all_data()
-    dd2 = ds2.all_data()
-    dd3 = ds3.all_data()
-    flux1_tot = dd1.quantities.total_quantity("flux")
-    flux2_tot = dd2.quantities.total_quantity("flux")
-    flux3_tot = dd3.quantities.total_quantity("flux")
-    flux1_min, flux1_max = dd1.quantities.extrema("flux")
-    flux2_min, flux2_max = dd2.quantities.extrema("flux")
-    flux3_min, flux3_max = dd3.quantities.extrema("flux")
-    assert flux1_tot == flux2_tot
-    assert flux1_tot == flux3_tot
-    assert flux1_min == flux2_min
-    assert flux1_min == flux3_min
-    assert flux1_max == flux2_max
-    assert flux1_max == flux3_max
-    # Now test round-trip conversions between yt and world coordinates
-    yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
-    world_coord1 = cube.yt2world(yt_coord1)
-    assert_allclose(cube.world2yt(world_coord1), yt_coord1)
-    yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
-    world_coord2 = cube.yt2world(yt_coord2, spectral_factor=0.5)
-    assert_allclose(cube.world2yt(world_coord2, spectral_factor=0.5), yt_coord2)
-    yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
-    world_coord3 = cube.yt2world(yt_coord3)
-    assert_allclose(cube.world2yt(world_coord3), yt_coord3)
+class TestYt():
+    def setup_method(self, method):
+        self.cube = SpectralCube.read(path('adv.fits'))
+        # Without any special arguments
+        self.ds1 = self.cube.to_yt()
+        # With spectral factor = 0.5
+        spectral_factor = 0.5
+        self.ds2 = self.cube.to_yt(spectral_factor=spectral_factor)
+        # With nprocs = 4
+        nprocs = 4
+        self.ds3 = self.cube.to_yt(nprocs=nprocs)
+
+    def test_yt(self):
+        # The following assertions just make sure everything is
+        # kosher with the datasets generated in different ways
+        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        assert_array_equal(ds1.domain_dimensions, ds2.domain_dimensions)
+        assert_array_equal(ds2.domain_dimensions, ds3.domain_dimensions)
+        assert_allclose(ds1.domain_left_edge, ds2.domain_left_edge)
+        assert_allclose(ds2.domain_left_edge, ds3.domain_left_edge)
+        assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/spectral_factor]))
+        assert_allclose(ds1.domain_width, ds3.domain_width)
+        assert nprocs == len(ds3.index.grids)
+        assert ds1.spec_cube
+        assert ds2.spec_cube
+        assert ds3.spec_cube
+
+    def test_yt_fluxcompare(self):
+        # Now check that we can compute quantities of the flux
+        # and that they are equal
+        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        dd1 = ds1.all_data()
+        dd2 = ds2.all_data()
+        dd3 = ds3.all_data()
+        flux1_tot = dd1.quantities.total_quantity("flux")
+        flux2_tot = dd2.quantities.total_quantity("flux")
+        flux3_tot = dd3.quantities.total_quantity("flux")
+        flux1_min, flux1_max = dd1.quantities.extrema("flux")
+        flux2_min, flux2_max = dd2.quantities.extrema("flux")
+        flux3_min, flux3_max = dd3.quantities.extrema("flux")
+        assert flux1_tot == flux2_tot
+        assert flux1_tot == flux3_tot
+        assert flux1_min == flux2_min
+        assert flux1_min == flux3_min
+        assert flux1_max == flux2_max
+        assert flux1_max == flux3_max
+
+    def test_yt_roundtrip_wcs(self):
+        # Now test round-trip conversions between yt and world coordinates
+        ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
+        cube = self.cube
+        yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
+        world_coord1 = cube.yt2world(yt_coord1)
+        assert_allclose(cube.world2yt(world_coord1), yt_coord1)
+        yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
+        world_coord2 = cube.yt2world(yt_coord2, spectral_factor=0.5)
+        assert_allclose(cube.world2yt(world_coord2, spectral_factor=0.5), yt_coord2)
+        yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
+        world_coord3 = cube.yt2world(yt_coord3)
+        assert_allclose(cube.world2yt(world_coord3), yt_coord3)
 
 def test_read_write_rountrip(tmpdir):
     cube = SpectralCube.read(path('adv.fits'))
