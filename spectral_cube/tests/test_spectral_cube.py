@@ -347,14 +347,14 @@ class TestYt():
         ds1,ds2,ds3 = self.ds1,self.ds2,self.ds3
         cube = self.cube
         yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
-        world_coord1 = cube._yt2world(yt_coord1)
-        assert_allclose(cube._world2yt(world_coord1), yt_coord1)
+        world_coord1 = ds1.yt2world(yt_coord1)
+        assert_allclose(ds1.world2yt(world_coord1), yt_coord1)
         yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
-        world_coord2 = cube._yt2world(yt_coord2, spectral_factor=self.spectral_factor)
-        assert_allclose(cube._world2yt(world_coord2, spectral_factor=self.spectral_factor), yt_coord2)
+        world_coord2 = ds2.yt2world(yt_coord2)
+        assert_allclose(ds2.world2yt(world_coord2, spectral_factor=self.spectral_factor), yt_coord2)
         yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
-        world_coord3 = cube._yt2world(yt_coord3)
-        assert_allclose(cube._world2yt(world_coord3), yt_coord3)
+        world_coord3 = ds3.yt2world(yt_coord3)
+        assert_allclose(ds3.world2yt(world_coord3), yt_coord3)
 
 def test_read_write_rountrip(tmpdir):
     cube = SpectralCube.read(path('adv.fits'))

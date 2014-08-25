@@ -1371,7 +1371,7 @@ class SpectralCube(object):
                                    nprocs=nprocs, periodicity=(False, False,
                                                                False))
 
-        return ds
+        return YtCube(self, ds, spectral_factor=spectral_factor)
 
     @property
     def header(self):
@@ -1389,7 +1389,18 @@ class SpectralCube(object):
         hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
-    def _world2yt(self, world_coord, spectral_factor=1.0):
+class YtCube(object):
+    """ Light wrapper of a yt object with ability to translate yt<->wcs
+    coordinates """
+
+    def __init__(self, cube, dataset, spectral_factor=1.0):
+        self.cube = cube
+        self.wcs = cube.wcs
+        self.dataset = dataset
+        self.spectral_factor = spectral_factor
+
+
+    def world2yt(self, world_coord):
         """
         Convert a position in world coordinates to the coordinates used by a
         yt dataset that has been generated using the ``to_yt`` method. The
@@ -1397,10 +1408,10 @@ class SpectralCube(object):
         ``spectral_factor``.
         """
         yt_coord = self.wcs.wcs_world2pix([world_coord], 1)[0]
-        yt_coord[2] = (yt_coord[2] - 0.5)*spectral_factor+0.5
+        yt_coord[2] = (yt_coord[2] - 0.5)*self.spectral_factor+0.5
         return yt_coord
 
-    def _yt2world(self, yt_coord, spectral_factor=1.0):
+    def yt2world(self, yt_coord):
         """
         Convert a position in yt's coordinates to world coordinates from a
         yt dataset that has been generated using the ``to_yt`` method. The
@@ -1408,7 +1419,7 @@ class SpectralCube(object):
         ``spectral_factor``.
         """
         yt_coord = np.array(yt_coord) # stripping off units
-        yt_coord[2] = (yt_coord[2] - 0.5)/spectral_factor+0.5
+        yt_coord[2] = (yt_coord[2] - 0.5)/self.spectral_factor+0.5
         world_coord = self.wcs.wcs_pix2world([yt_coord], 1)[0]
         return world_coord
 
