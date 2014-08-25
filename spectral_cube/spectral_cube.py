@@ -1273,8 +1273,9 @@ class SpectralCube(object):
             coordinates.
 
         If using yt 3.0 or later, additional keyword arguments will be passed
-        onto yt's ``FITSDataset`` constructor. See the yt documentation for
-        details on options for reading FITS data.
+        onto yt's ``FITSDataset`` constructor. See the yt documentation
+        (http://yt-project.org/docs/3.0/examining/loading_data.html?#fits-data)
+        for details on options for reading FITS data.
         """
 
         import yt
