@@ -1407,7 +1407,7 @@ class ytCube(object):
         changing of the aspect of the spectral axis is handled via the parameter
         ``spectral_factor``.
         """
-        yt_coord = self.wcs.wcs_world2pix([world_coord], 1)[0]
+        yt_coord = self.wcs.wcs_world2pix([world_coord], 0)[0]
         yt_coord[2] = (yt_coord[2] - 0.5)*self.spectral_factor+0.5
         return yt_coord
 
@@ -1420,7 +1420,7 @@ class ytCube(object):
         """
         yt_coord = np.array(yt_coord) # stripping off units
         yt_coord[2] = (yt_coord[2] - 0.5)/self.spectral_factor+0.5
-        world_coord = self.wcs.wcs_pix2world([yt_coord], 1)[0]
+        world_coord = self.wcs.wcs_pix2world([yt_coord], 0)[0]
         return world_coord
 
 class StokesSpectralCube(SpectralCube):
