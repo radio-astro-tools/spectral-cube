@@ -1262,7 +1262,8 @@ class SpectralCube(object):
 
     def to_yt(self, spectral_factor=1.0, nprocs=None, **kwargs):
         """
-        Convert a spectral cube to a yt object that can be further analyzed in yt.
+        Convert a spectral cube to a yt object that can be further analyzed in
+        yt.
 
         Parameters
         ----------
@@ -1271,9 +1272,9 @@ class SpectralCube(object):
             in spectral coordinates is equivalent to one pixel in spatial
             coordinates.
 
-        If using yt 3.0 or later, additional keyword arguments will be passed onto yt's
-        ``FITSDataset`` constructor. See the yt documentation for details on options
-        for reading FITS data.
+        If using yt 3.0 or later, additional keyword arguments will be passed
+        onto yt's ``FITSDataset`` constructor. See the yt documentation for
+        details on options for reading FITS data.
         """
 
         import yt
@@ -1290,7 +1291,8 @@ class SpectralCube(object):
             hdu.header["BUNIT"] = str(self.unit.to_string(format='fits'))
             hdu.header["BTYPE"] = "flux"
 
-            ds = FITSDataset(hdu, nprocs=nprocs, spectral_factor=spectral_factor, **kwargs)
+            ds = FITSDataset(hdu, nprocs=nprocs,
+                             spectral_factor=spectral_factor, **kwargs)
 
         else:
 
@@ -1300,14 +1302,16 @@ class SpectralCube(object):
 
             nz, ny, nx = self.shape
 
-            if nprocs is None: nprocs = 1
+            if nprocs is None:
+                nprocs = 1
 
             bbox = np.array([[0.5,float(nx)+0.5],
                              [0.5,float(ny)+0.5],
                              [0.5,spectral_factor*float(nz)+0.5]])
 
             ds = load_uniform_grid(data, [nx,ny,nz], 1., bbox=bbox,
-                                   nprocs=nprocs, periodicity=(False, False, False))
+                                   nprocs=nprocs, periodicity=(False, False,
+                                                               False))
 
         return ds
 
@@ -1327,7 +1331,7 @@ class SpectralCube(object):
         hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
-    def world2yt(self, world_coord, spectral_factor=1.0):
+    def _world2yt(self, world_coord, spectral_factor=1.0):
         """
         Convert a position in world coordinates to the coordinates used by a
         yt dataset that has been generated using the ``to_yt`` method. The
@@ -1338,7 +1342,7 @@ class SpectralCube(object):
         yt_coord[2] = (yt_coord[2] - 0.5)*spectral_factor+0.5
         return yt_coord
 
-    def yt2world(self, yt_coord, spectral_factor=1.0):
+    def _yt2world(self, yt_coord, spectral_factor=1.0):
         """
         Convert a position in yt's coordinates to world coordinates from a
         yt dataset that has been generated using the ``to_yt`` method. The
