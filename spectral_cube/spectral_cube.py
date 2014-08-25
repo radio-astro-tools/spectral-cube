@@ -17,6 +17,8 @@ from . import spectral_axis
 from .masks import LazyMask, BooleanArrayMask
 from .io.core import determine_format
 
+from distutils.version import StrictVersion
+
 __all__ = ['SpectralCube']
 
 try:  # TODO replace with six.py
@@ -1279,9 +1281,8 @@ class SpectralCube(object):
         """
 
         import yt
-        yt_version = float(yt.__version__.split("-")[0])
 
-        if yt_version >= 3.0:
+        if StrictVersion(yt.__version__) >= StrictVersion('3.0'):
 
             from yt.frontends.fits.api import FITSDataset
             from astropy.io import fits
