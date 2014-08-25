@@ -354,7 +354,7 @@ class TestYt():
         assert_allclose(ytc1.world2yt(world_coord1), yt_coord1)
         yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
         world_coord2 = ytc2.yt2world(yt_coord2)
-        assert_allclose(ytc2.world2yt(world_coord2, spectral_factor=self.spectral_factor), yt_coord2)
+        assert_allclose(ytc2.world2yt(world_coord2), yt_coord2)
         yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
         world_coord3 = ytc3.yt2world(yt_coord3)
         assert_allclose(ytc3.world2yt(world_coord3), yt_coord3)
