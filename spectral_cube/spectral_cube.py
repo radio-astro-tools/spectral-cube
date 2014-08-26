@@ -141,6 +141,17 @@ class Projection(u.Quantity):
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
 
+    def quicklook(self):
+        """
+        Use aplpy to make a quick-look image of the projection.  This will make
+        the `FITSFigure` attribute available.
+        """
+        if not hasattr(self, 'FITSFigure'):
+            import aplpy
+            self.FITSFigure = aplpy.FITSFigure(self.hdu)
+
+        self.FITSFigure.show_grayscale()
+
 # A slice is just like a projection in every way
 class Slice(Projection):
     pass
