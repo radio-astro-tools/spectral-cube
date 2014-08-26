@@ -16,6 +16,7 @@ env:
         - ASTROPY_VERSION=stable
         - CONDA_INSTALL='conda install -c astropy-ci-extras --yes'
         - PIP_INSTALL='pip install'
+        - BOTTLENECK=no
     matrix:
         - SETUP_CMD='egg_info'
 
@@ -34,7 +35,7 @@ matrix:
         # Try Astropy development version
         - python: 2.7
           env: ASTROPY_VERSION=development SETUP_CMD='test'
-        - python: 3.3
+        - python: 3.4
           env: ASTROPY_VERSION=development SETUP_CMD='test'
 
         # Try all python versions with the latest numpy
@@ -58,6 +59,12 @@ matrix:
           env: NUMPY_VERSION=1.6 SETUP_CMD='test'
         - python: 2.7
           env: NUMPY_VERSION=1.5 SETUP_CMD='test'
+
+        # Test with bottleneck
+        - python: 2.7
+          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.8
+        - python: 3.4
+          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.8
 
 before_install:
 
@@ -89,6 +96,9 @@ install:
 
     # YT
     - if [[ $SETUP_CMD != egg_info ]] && [[ $TRAVIS_PYTHON_VERSION == 2.7 ]] && [[ $NUMPY_VERSION == 1.8 ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION yt; fi
+
+    # Bottleneck
+    - if [[ $SETUP_CMD != egg_info ]] && [[ $BOTTLENECK == yes ]] && [[ $NUMPY_VERSION == 1.8 ]]; then $CONDA_INSTALL --channel https://conda.binstar.org/public bottleneck; fi
 
     # OPTIONAL DEPENDENCIES
     # Here you can add any dependencies your package may have. You can use
