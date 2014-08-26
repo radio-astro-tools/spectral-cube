@@ -6,7 +6,7 @@ Modifying the spectral axis
 
 As mentioned in :doc:`accessing`, it is straightforward to find the
 coordinates along the spectral axis using the
-:attr:`~spectral_cube.SpectralCube.spectral_axis` attribute:
+:attr:`~spectral_cube.SpectralCube.spectral_axis` attribute::
 
    >>> cube.spectral_axis
    [ -2.97198762e+03  -2.63992044e+03  -2.30785327e+03  -1.97578610e+03
@@ -57,7 +57,7 @@ be specified as a frequency, wavelength, or a velocity but the units have to
 match the type of the spectral units in the cube (if they do not match, first
 use :meth:`~spectral_cube.SpectralCube.with_spectral_unit` to ensure that they
 are in the same units). The bounds should be given as Astropy
-:class:`Quantities <astropy.units.Quantity>` as follows:
+:class:`Quantities <astropy.units.Quantity>` as follows::
 
     >>> from astropy import units as u
     >>> subcube = cube.spectral_slab(-50 * u.km / u.s, +50 * u.km / u.s)
@@ -78,3 +78,33 @@ Numpy slicing notation::
 
 This returns a new :class:`~spectral_cube.SpectralCube` object
 with updated WCS information.
+
+Extracting a subcube from a ds9 region
+--------------------------------------
+
+Starting with spectral_cube v0.2, you can use ds9 regions to extract subcubes.
+The minimal enclosing subcube will be extracted with a two-dimensional mask
+corresponding to the ds9 region.  `pyregion
+<http://leejjoon.github.io/pyregion/>`_ is required for region parsing::
+
+    >>> region_list = pyregion.open('file.reg')
+    >>> sub_cube = cube.subcube_from_ds9region(region_list)
+
+You can also create a region on the fly using ds9 region syntax.  This extracts
+a 0.1 degree circle around the Galactic Center::
+
+    >>> region_list = pyregion.parse("galactic; circle(0,0,0.1)")
+    >>> sub_cube = cube.subcube_from_ds9region(region_list)
+
+Extract the minimal valid subcube
+---------------------------------
+
+If you have a mask that masks out some of the cube edges, such that the
+resulting sub-cube might be smaller in memory, it can be useful to extract the
+minimal enclosing sub-cube::
+
+    >>> sub_cube = cube.minimal_subcube()
+
+You can also shrink any cube by this mechanism::
+
+    >>> sub_cube = cube.with_mask(smaller_region).minimal_subcube()
