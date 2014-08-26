@@ -22,6 +22,12 @@ except ImportError:
     yt_version = StrictVersion('0.0.0')
     ytOK = False
 
+try:
+    import bottleneck
+    bottleneckOK = True
+except ImportError:
+    bottleneckOK = False
+
 
 def cube_and_raw(filename):
     p = path(filename)
@@ -476,6 +482,7 @@ def test_ds9region():
     #region = 'circle(2,2,2)'
     #subcube = cube.subcube_from_ds9region(region)
 
+@pytest.mark.skipif(not bottleneckOK, reason='Bottleneck could not be imported')
 def test_endians():
     """
     Test that the endianness checking returns something in Native form
