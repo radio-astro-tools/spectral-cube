@@ -1290,7 +1290,8 @@ class SpectralCube(object):
             # Requires astropy >0.4...
             # pixel_regions = shapelist.as_imagecoord(self.wcs.celestial.to_header())
             # convert the regions to image (pixel) coordinates
-            pixel_regions = shapelist.as_imagecoord(self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header())
+            celhdr = self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
+            pixel_regions = shapelist.as_imagecoord(celhdr)
         else:
             # For this to work, we'd need to change the reference pixel after cropping.
             # Alternatively, we can just make the full-sized mask... todo....
@@ -1314,9 +1315,16 @@ class SpectralCube(object):
             xhi = xhi if xhi > ext.max[0] else ext.max[0]
             yhi = yhi if yhi > ext.max[1] else ext.max[1]
 
-        subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+        log.debug("Region boundaries: ")
+        log.debug("xlo={xlo}, ylo={ylo}, xhi={xhi}, yhi={yhi}".format(xlo=xlo,
+                                                                      ylo=ylo,
+                                                                      xhi=xhi,
+                                                                      yhi=yhi))
 
-        mask = shapelist.get_mask(header=subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header(),
+        subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+        subhdr = subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
+
+        mask = shapelist.get_mask(header=subhdr,
                                   shape=subcube.shape[1:])
 
         return subcube.with_mask(BooleanArrayMask(mask, subcube.wcs,

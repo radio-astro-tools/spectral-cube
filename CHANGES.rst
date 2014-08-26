@@ -14,6 +14,11 @@
 - Added public functions `apply_function` and `apply_numpy_function` that allow
   functions to be run on cubes while preserving important metadata (e.g., WCS)
 - Added a quicklook tool using aplpy to view slices (https://github.com/radio-astro-tools/spectral-cube/pull/131)
+- Added subcube and ds9 region extraction tools (https://github.com/radio-astro-tools/spectral-cube/pull/128)
+- Added a `to_yt` function for easily converting between SpectralCube and yt
+  datacube/dataset objects
+  (https://github.com/radio-astro-tools/spectral-cube/pull/90,
+  https://github.com/radio-astro-tools/spectral-cube/pull/129)
 
 0.1 (2014-06-01)
 ----------------

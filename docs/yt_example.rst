@@ -16,31 +16,34 @@ spectral axis.
 
 The :meth:`~spectral_cube.SpectralCube.to_yt` method is used as follows::
 
-    >>> ds = cube.to_yt(spectral_factor=0.5)
+    >>> ytcube = cube.to_yt(spectral_factor=0.5)
+    >>> ds = ytcube.dataset
+
+.. WARNING:: The API change in
+   https://github.com/radio-astro-tools/spectral-cube/pull/129 affects the
+   interpretation of the 0-pixel.  There may be a 1-pixel offset between the yt
+   cube and the SpectralCube
 
 The ``ds`` object is then a yt object that can be used for rendering! By
-default the dataset is defined in pixel coordinates, going from ``0.5`` to ``n+0.5``,
-as would be the case in ds9, for example. Along the spectral axis, this range
-will be modified if ``spectral_factor`` does not equal unity.
+default the dataset is defined in pixel coordinates, going from ``0.5`` to
+``n+0.5``, as would be the case in ds9, for example. Along the spectral axis,
+this range will be modified if ``spectral_factor`` does not equal unity.
 
 When working with datasets in yt, it may be useful to convert world coordinates
 to pixel coordinates, so that whenever you may have to input a position in yt
 (e.g., for slicing or volume rendering) you can get the pixel coordinate that
 corresponds to the desired world coordinate. For this purpose, the method
-:meth:`~spectral_cube.SpectralCube.world2yt` is provided::
+:meth:`~spectral_cube.ytCube.world2yt` is provided::
 
     >>> import astropy.units as u
-    >>> pix_coord = cube.world2yt([51.424522,
-                                   30.723611,
-                                   5205.18071],  # units of deg, deg, m/s
-                                  spectral_factor=0.5)
+    >>> pix_coord = ytcube.world2yt([51.424522,
+                                     30.723611,
+                                     5205.18071],  # units of deg, deg, m/s
+                                    )
 
-which takes an optional ``spectral_factor`` (set to unity by default) that should be
-the same as in the call to :meth:`~spectral_cube.SpectralCube.to_yt`.
+There is also a reverse method provided, :meth:`~spectral_cube.ytCube.yt2world`::
 
-There is also a reverse method provided, :meth:`~spectral_cube.SpectralCube.yt2world`::
-
-    >>> world_coord = cube.yt2world([ds.domain_center], spectral_factor=0.5)
+    >>> world_coord = ytcube.yt2world([ds.domain_center])
 
 which in this case would return the world coordinates of the center of the dataset
 in yt.
@@ -50,11 +53,12 @@ in yt.
 
 .. note::
 
-    The :meth:`~spectral_cube.SpectralCube.to_yt` method and its associated coordinate methods
-    are compatible with both yt v. 2.x and v. 3.0 and following, but use of version 3.0 or later
-    is recommended due to substantial improvements in support for FITS data. For more information
-    on how yt handles FITS datasets, see
-    `the yt docs <http://yt-project.org/docs/3.0/examining/loading_data.html#fits-data>`_.
+    The :meth:`~spectral_cube.SpectralCube.to_yt` method and its associated
+    coordinate methods are compatible with both yt v. 2.x and v. 3.0 and
+    following, but use of version 3.0 or later is recommended due to
+    substantial improvements in support for FITS data. For more information on
+    how yt handles FITS datasets, see `the yt docs
+    <http://yt-project.org/docs/3.0/examining/loading_data.html#fits-data>`_.
 
 Visualization example
 ---------------------
@@ -72,7 +76,8 @@ produce a 3-d isocontour visualization using an object returned by
     cube = read('L1448_13CO.fits', format='fits')
 
     # Extract the yt object from the SpectralCube instance
-    ds = cube.to_yt(spectral_factor=0.75)
+    ytcube = cube.to_yt(spectral_factor=0.75)
+    ds = ytcube.dataset
 
     # Set the number of levels, the minimum and maximum level and the width
     # of the isocontours
@@ -89,9 +94,9 @@ produce a 3-d isocontour visualization using an object returned by
 
     # Derive the pixel coordinate of the desired center
     # from the corresponding world coordinate
-    center = cube.world2yt([51.424522,
-                            30.723611,
-                            5205.18071], spectral_factor=0.75)
+    center = ytcube.world2yt([51.424522,
+                              30.723611,
+                              5205.18071])
     direction = np.array([1.0, 0.0, 0.0])
     width = 100.  # pixels
     size = 1024
@@ -102,3 +107,6 @@ produce a 3-d isocontour visualization using an object returned by
     # Take a snapshot and save to a file
     snapshot = camera.snapshot()
     write_bitmap(snapshot, 'cube_rendering.png', transpose=True)
+
+You can move the camera around; see the `yt camera docs
+<http://yt-project.org/docs/dev/reference/api/generated/yt.visualization.volume_rendering.camera.Camera.html>`_.
