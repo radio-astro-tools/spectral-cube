@@ -46,9 +46,13 @@ this operation.
 
 Boolean arrays can also be used as input to
 :meth:`~spectral_cube.SpectralCube.with_mask`, assuming the shape of the mask
-and the data match
+and the data match::
 
     >>> cube2 = cube.with_mask(boolean_array)
+
+Any boolean area that can be `broadcast
+<http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ to the cube
+shape can be used as a boolean array mask.
 
 Accessing masked data
 ---------------------
