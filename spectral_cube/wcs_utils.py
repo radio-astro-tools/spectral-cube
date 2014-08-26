@@ -178,6 +178,14 @@ def slice_wcs(wcs, view):
         raise ValueError("Must have same number of slices as number of WCS axes")
 
     wcs_new = wcs.deepcopy()
+
+    # Indexing the WCS: x,y,z order (not numpy z,y,x order)
+    intslices = [wcs.wcs.naxis-ii-1 for ii,s in enumerate(view) if not hasattr(s,'start')]
+
+    for ii in intslices:
+        wcs_new = wcs_new.dropaxis(ii)
+    view = [s for s in view if hasattr(s,'start')]
+
     for i, iview in enumerate(view):
         if iview.start is not None:
             if iview.step not in (None, 1):

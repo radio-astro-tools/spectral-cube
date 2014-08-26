@@ -8,13 +8,15 @@ from functools import wraps
 from astropy import units as u
 from astropy.extern import six
 from astropy.io.fits import PrimaryHDU, ImageHDU
+from astropy import log
+from astropy import wcs
 
 import numpy as np
 
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .masks import LazyMask, BooleanArrayMask, MaskBase
+from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable
 from .io.core import determine_format
 
 from distutils.version import StrictVersion
@@ -84,7 +86,8 @@ np2wcs = {2: 0, 1: 1, 0: 2}
 
 class Projection(u.Quantity):
 
-    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None, meta=None):
+    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
+                meta=None, mask=None):
 
         if value.ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -95,6 +98,7 @@ class Projection(u.Quantity):
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype, copy=copy).view(cls)
         self._wcs = wcs
         self._meta = meta
+        self._mask = mask
 
         return self
 
@@ -388,6 +392,19 @@ class SpectralCube(object):
                                          projection=projection)
 
     @aggregation_docstring
+    def mean(self, axis=None, how='auto'):
+        """
+        Return the mean of the cube, optionally over an axis.
+        """
+
+        projection = self._naxes_dropped(axis) == 1
+
+        # use nansum, and multiply by mask to add zero each time there is badness
+        return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=projection)
+
+    @aggregation_docstring
     def max(self, axis=None, how='auto'):
         """
         Return the maximum data value of the cube, optionally over an axis.
@@ -640,19 +657,16 @@ class SpectralCube(object):
                          if hasattr(s,'start') else s
                          for s in view]
 
-        intslices = [ii for ii,s in enumerate(view) if not hasattr(s,'start')]
+        intslices = [2-ii for ii,s in enumerate(view) if not hasattr(s,'start')]
 
         if intslices:
             if len(intslices) > 1:
                 # TODO: return a Specutils Spectrum object
                 raise NotImplementedError("1D slices are not implemented yet.")
-            newwcs = self._wcs.dropaxis(intslices[0])
-            newwcs = wcs_utils.slice_wcs(newwcs, [s for s in view
-                                                  if hasattr(s,'start')])
-            return Slice(value=self._data[view],
+            newwcs = wcs_utils.slice_wcs(self._wcs, view)
+            return Slice(value=self.filled_data[view],
                          wcs=newwcs,
                          copy=False,
-                         #mask=self._mask[view],
                          meta=meta)
 
         newmask = self._mask[view] if self._mask is not None else None
@@ -716,29 +730,35 @@ class SpectralCube(object):
             wavelength/frequency can be overridden with this parameter.
 
         """
-        from .spectral_axis import convert_spectral_axis,determine_ctype_from_vconv
+        from .spectral_axis import (convert_spectral_axis,
+                                    determine_ctype_from_vconv)
 
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
+
+        # Shorter versions to keep lines under 80
+        ctype_from_vconv = determine_ctype_from_vconv
+        vc = velocity_convention
 
         meta = self._meta.copy()
         if 'Original Unit' not in self._meta:
             meta['Original Unit'] = self._wcs.wcs.cunit[self._wcs.wcs.spec]
             meta['Original Type'] = self._wcs.wcs.ctype[self._wcs.wcs.spec]
 
-        out_ctype = determine_ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
-                                               unit,
-                                               velocity_convention=velocity_convention)
+        out_ctype = ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
+                                     unit,
+                                     velocity_convention=velocity_convention)
 
         newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
                                        rest_value=rest_value)
 
         newmask = self._mask.with_spectral_unit(unit,
-                                                velocity_convention=velocity_convention,
+                                                velocity_convention=vc,
                                                 rest_value=rest_value)
         newmask._wcs = newwcs
 
-        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta, spectral_unit=unit)
+        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta,
+                                   spectral_unit=unit)
 
         return cube
 
@@ -1135,7 +1155,7 @@ class SpectralCube(object):
         """
         Return the minimum enclosing subcube where the mask is valid
         """
-        return self[self.subcube_from_mask(self, self._mask)]
+        return self[self.subcube_slices_from_mask(self._mask)]
 
     def subcube_from_mask(self, region_mask):
         """
@@ -1147,7 +1167,7 @@ class SpectralCube(object):
             The mask with appropraite WCS or an ndarray with matched
             coordinates
         """
-        return self[self.subcube_from_mask(self, region_mask)]
+        return self[self.subcube_slices_from_mask(region_mask)]
 
 
     def subcube_slices_from_mask(self, region_mask):
@@ -1165,28 +1185,133 @@ class SpectralCube(object):
             raise ImportError("Scipy could not be imported: this function won't work.")
 
         if isinstance(region_mask, np.ndarray):
-            if is_broadcastable(region_mask, self.shape):
-                region_mask = BooleanArrayMask(region_mask)
+            if is_broadcastable(region_mask.shape, self.shape):
+                region_mask = BooleanArrayMask(region_mask, self._wcs)
             else:
                 raise ValueError("Mask shape does not match cube shape.")
 
         include = region_mask.include(self._data, self._wcs)
 
         slices = ndimage.find_objects(np.broadcast_arrays(include,
-                                                          self._data)[0])
+                                                          self._data)[0])[0]
 
         return slices
 
-    def subcube(self, xlo, xhi, ylo, yhi, zlo, zhi, rest_value=None):
+    def subcube(self, xlo='min', xhi='max', ylo='min', yhi='max', zlo='min',
+                zhi='max', rest_value=None):
         """
         Extract a sub-cube spatially and spectrally.
 
-        This method is not yet implemented.
-
-        xlo = 'min' / 'max' should be special keywords
-
+        Parameters
+        ----------
+        [xyz]lo/[xyz]hi : int or `Quantity` or `min`/`max`
+            The endpoints to extract.  If given as a quantity, will be
+            interpreted as World coordinates.  If given as a string or
+            int, will be interpreted as pixel coordinates.
         """
-        raise NotImplementedError()
+
+        limit_dict = {'xlo':0 if xlo == 'min' else xlo,
+                      'ylo':0 if ylo == 'min' else ylo,
+                      'zlo':0 if zlo == 'min' else zlo,
+                      'xhi':self.shape[2] if xhi=='max' else xhi,
+                      'yhi':self.shape[1] if yhi=='max' else yhi,
+                      'zhi':self.shape[0] if zhi=='max' else zhi}
+        dims = {'x': 2,
+                'y': 1,
+                'z': 0}
+
+        # Specific warning for slicing a frequency axis with a velocity or
+        # vice/versa
+        if ((hasattr(zlo, 'unit') and not
+             zlo.unit.is_equivalent(self.spectral_axis.unit)) or
+            (hasattr(zhi, 'unit') and not
+             zhi.unit.is_equivalent(self.spectral_axis.unit))):
+            raise u.UnitsError("Spectral units are not equivalent to the "
+                               "spectral slice.  Use `.with_spectral_unit` "
+                               "to convert to equivalent units first")
+
+        for val in (xlo,ylo,xhi,yhi):
+            if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
+                raise u.UnitsError("The X and Y slices must be specified in "
+                                   "degree-equivalent units.")
+
+        for lim in limit_dict:
+            limval = limit_dict[lim]
+            if hasattr(limval, 'unit'):
+                dim = dims[lim[0]]
+                sl = [slice(0,1)]*2
+                sl.insert(dim, slice(None))
+                spine = self.world[sl][dim]
+                val = np.argmin(np.abs(limval-spine))
+                if limval > spine.max() or limval < spine.min():
+                    log.warn("The limit {0} is out of bounds."
+                             "  Using min/max instead.".format(lim))
+                if lim[1:] == 'hi':
+                    # End-inclusive indexing: need to add one for the high
+                    # slice
+                    limit_dict[lim] = val + 1
+                else:
+                    limit_dict[lim] = val
+
+        slices = [slice(limit_dict[xx+'lo'], limit_dict[xx+'hi'])
+                  for xx in 'zyx']
+
+        return self[slices]
+
+    def subcube_from_ds9region(self, ds9region):
+        """
+        Extract a masked subcube from a ds9 region or a pyregion Region object
+        (only functions on celestial dimensions)
+
+        Parameters
+        ----------
+        ds9region: str or `pyregion.Shape`
+            The region to extract
+        """
+        import pyregion
+
+        if isinstance(ds9region, six.string_types):
+            shapelist = pyregion.parse(ds9region)
+        else:
+            shapelist = ds9region
+
+        if shapelist[0].coord_format not in ('physical','image'):
+            # Requires astropy >0.4...
+            # pixel_regions = shapelist.as_imagecoord(self.wcs.celestial.to_header())
+            # convert the regions to image (pixel) coordinates
+            pixel_regions = shapelist.as_imagecoord(self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header())
+        else:
+            # For this to work, we'd need to change the reference pixel after cropping.
+            # Alternatively, we can just make the full-sized mask... todo....
+            raise NotImplementedError("Can't use non-celestial coordinates with regions.")
+            pixel_regions = shapelist
+
+        # This is a hack to use mpl to determine the outer bounds of the regions
+        # (but it's a legit hack - pyregion needs a major internal refactor
+        # before we can approach this any other way, I think -AG)
+        mpl_objs = pixel_regions.get_mpl_patches_texts()[0]
+
+        # Find the minimal enclosing box containing all of the regions
+        # (this will speed up the mask creation below)
+        extent = mpl_objs[0].get_extents()
+        xlo, ylo = extent.min
+        xhi, yhi = extent.max
+        all_extents = [obj.get_extents() for obj in mpl_objs]
+        for ext in all_extents:
+            xlo = xlo if xlo < ext.min[0] else ext.min[0]
+            ylo = ylo if ylo < ext.min[1] else ext.min[1]
+            xhi = xhi if xhi > ext.max[0] else ext.max[0]
+            yhi = yhi if yhi > ext.max[1] else ext.max[1]
+
+        subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+
+        mask = shapelist.get_mask(header=subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header(),
+                                  shape=subcube.shape[1:])
+
+        return subcube.with_mask(BooleanArrayMask(mask, subcube.wcs,
+                                                  shape=subcube.shape))
+
+
 
     def world_spines(self):
         """

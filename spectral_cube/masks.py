@@ -1,6 +1,7 @@
 import abc
 
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
 
 from . import wcs_utils
 
@@ -231,13 +232,36 @@ class BooleanArrayMask(MaskBase):
 
     """
     A mask defined as an array on a spectral cube WCS
+
+    Parameters
+    ----------
+    mask: `numpy.ndarray`
+        A boolean numpy ndarray
+    wcs: `astropy.wcs.WCS`
+        The WCS object
+    shape: tuple
+        The shape of the region the array is masking.  This is *required* if
+        ``mask.ndim != data.ndim`` to provide rules for how to broadcast the
+        mask
     """
 
-    def __init__(self, mask, wcs, include=True):
-        self._mask = mask
+    def __init__(self, mask, wcs, shape=None, include=True):
         self._mask_type = 'include' if include else 'exclude'
         self._wcs = wcs
         self._wcs_whitelist = set()
+        #if mask.ndim != 3 and (shape is None or len(shape) != 3):
+        #    raise ValueError("When creating a BooleanArrayMask with <3 dimensions, "
+        #                     "the shape of the 3D array must be specified.")
+        if shape is not None and not is_broadcastable(mask.shape, shape):
+            raise ValueError("Mask cannot be broadcast to the specified shape.")
+        self._shape = shape or mask.shape
+        n_extra_dims = (len(self._shape)-mask.ndim)
+        if n_extra_dims > 0:
+            strides = (0,)*n_extra_dims + mask.strides
+            self._mask = as_strided(mask, shape=self.shape,
+                                    strides=strides)
+        else:
+            self._mask = mask
 
     def _validate_wcs(self, new_data, new_wcs):
         if not is_broadcastable(new_data.shape, self._mask.shape):
@@ -258,10 +282,12 @@ class BooleanArrayMask(MaskBase):
 
     @property
     def shape(self):
-        return self._include_mask.shape
+        return self._shape
 
     def __getitem__(self, view):
-        return BooleanArrayMask(self._mask[view], wcs_utils.slice_wcs(self._wcs, view))
+        return BooleanArrayMask(self._mask[view],
+                                wcs_utils.slice_wcs(self._wcs, view),
+                                shape=self._mask[view].shape)
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """
@@ -270,7 +296,7 @@ class BooleanArrayMask(MaskBase):
         newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
 
         newmask = BooleanArrayMask(self._mask, newwcs,
-                                   self._mask_type=='include')
+                                   include=self._mask_type=='include')
         return newmask
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
