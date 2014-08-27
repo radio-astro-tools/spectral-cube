@@ -110,3 +110,41 @@ produce a 3-d isocontour visualization using an object returned by
 
 You can move the camera around; see the `yt camera docs
 <http://yt-project.org/docs/dev/reference/api/generated/yt.visualization.volume_rendering.camera.Camera.html>`_.
+
+Movie Making
+------------
+
+There is a simple utility for quick movie making.  The default movie is a rotation
+of the cube around one of the spatial axes, going from PP -> PV space and back.::
+
+    >>> ytcube = cube.to_yt()
+    >>> images = ytcube.quick_render_movie('outdir')
+
+The movie only does rotation, but it is a useful stepping-stone if you wish to
+learn how to use yt's rendering system.
+
+SketchFab Isosurface Contours
+-----------------------------
+
+For data exploration, making movies can be tedious - it is difficult to control
+the camera and expensive to generate new renderings.  Instead, creating a 'model'
+from the data and exporting that to SketchFab can be very useful.  Only
+grayscale figures will be created with the quicklook code.
+
+You need an account on sketchfab.com for this to work.::
+
+   >>> ytcube.quick_isocontour(title='GRS l=49 13CO 1 K contours', level=1.0)
+
+
+Here's an example:
+
+.. raw:: html
+
+   <iframe width="640" height="480" src="https://sketchfab.com/models/4933bb846b374e71a2765373a0be9fef/embed" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" onmousewheel=""></iframe>
+
+   <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4A4A4A;">
+       <a href="https://sketchfab.com/models/4933bb846b374e71a2765373a0be9fef" style="font-weight: bold; color: #1CAAD9;">GRS l=49 13CO 1 K contours</a>
+       by <a href="https://sketchfab.com/keflavich" style="font-weight: bold; color: #1CAAD9;">keflavich</a>
+       on <a href="https://sketchfab.com" style="font-weight: bold; color: #1CAAD9;">Sketchfab</a>
+   </p>
+

@@ -1,8 +1,9 @@
+import os
+import subprocess
 import numpy as np
 from astropy.utils.console import ProgressBar
-import os
 from astropy import log
-import subprocess
+from astropy.extern import six
 
 try:
     import yt
@@ -59,8 +60,8 @@ class ytCube(object):
 
 
     def quick_render_movie(self, outdir, size=256, nframes=30,
-                           camera_angle=[0,0,1], north_vector = [1, 0, 0],
-                           rot_vector=[1,0,0],
+                           camera_angle=(0,0,1), north_vector=(0,0,1),
+                           rot_vector=(1,0,0),
                            colormap='doom',
                            cmap_range='auto',
                            log=False,
@@ -72,6 +73,32 @@ class ytCube(object):
         Parameters
         ----------
         outdir: str
+            The output directory in which the individual image frames and the
+            resulting output mp4 file should be stored
+        size: int
+            The size of the individual output frame in pixels (i.e., size=256
+            will result in a 256x256 image)
+        nframes: int
+            The number of frames in the resulting movie
+        camera_angle: 3-tuple
+            The initial angle of the camera
+        north_vector: 3-tuple
+            The vector of 'north' in the data cube.  Default is coincident with
+            the spectral axis
+        rot_vector: 3-tuple
+            The vector around which the camera will be rotated
+        colormap: str
+            A valid colormap.  See `yt.show_colormaps`
+        log: bool
+            Should the colormap be log scaled?
+        rescale: bool
+            If True, the images will be rescaled to have a common 95th
+            percentile brightness, which can help reduce flickering from having
+            a single bright pixel in some projections
+
+        Returns
+        -------
+
 
         """
         if not ytOK:
@@ -116,6 +143,46 @@ class ytCube(object):
         pipe = _make_movie(outdir)
         
         return images
+
+    def quick_isocontour(self, level='3 sigma', title='', description='',
+                         color_map='hot', color_log=False):
+        """
+        Export isocontours to sketchfab
+
+        Requires that you have an account on https://sketchfab.com and are
+        logged in
+
+        Parameters
+        ----------
+        level: str or float
+            The level of the isocontours to create.  Can be specified as
+            n-sigma with strings like '3.3 sigma' or '2 sigma' (there must be a
+            space between the number and the word)
+        title: str
+            A title for the uploaded figure
+        description: str
+            A short description for the uploaded figure
+        color_map: str
+            Any valid colormap.  See `yt.show_colormaps`
+        color_log: bool
+            Whether the colormap should be log scaled.  With the default
+            parameters, this has no effect.
+
+        Returns
+        -------
+        The result of the `yt.surface.export_sketchfab` function
+        """
+        if isinstance(level, six.string_types):
+            sigma = self.cube.std().value
+            level = float(level.split()[0]) * sigma
+
+        self.dataset.periodicity = (True,True,True)
+        surface = self.dataset.surface(self.dataset.all_data(),
+                                       "flux",
+                                       level)
+        return surface.export_sketchfab(title=title, description=description,
+                                        color_map=color_map,
+                                        color_log=color_log)
 
 def _rescale_images(images, prefix):
     """
