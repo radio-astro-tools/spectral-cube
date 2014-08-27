@@ -7,6 +7,8 @@ from astropy.utils import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
 
 import numpy as np
+import datetime
+from .. import version
 from .. import SpectralCube, StokesSpectralCube, LazyMask
 from .. import cube_utils
 
@@ -139,12 +141,19 @@ def load_fits_cube(input, hdu=0):
     return cube
 
 
-def write_fits_cube(filename, cube, overwrite=False):
+def write_fits_cube(filename, cube, overwrite=False,
+                    include_origin_notes=True):
     """
     Write a FITS cube with a WCS to a filename
     """
 
     if isinstance(cube, SpectralCube):
-        cube.hdu.writeto(filename, clobber=overwrite)
+        hdu = cube.hdu
+        now = datetime.datetime.strftime(datetime.datetime.now(),
+                                         "%Y/%m/%d-%H:%M:%S")
+        hdu.header.add_history("Written by spectral_cube v{version} on "
+                               "{date}".format(version=version.version,
+                               date=now))
+        hdu.writeto(filename, clobber=overwrite)
     else:
         raise NotImplementedError()
