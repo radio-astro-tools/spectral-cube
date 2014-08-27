@@ -398,7 +398,6 @@ class SpectralCube(object):
 
         projection = self._naxes_dropped(axis) == 1
 
-        # use nansum, and multiply by mask to add zero each time there is badness
         return self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
@@ -411,7 +410,6 @@ class SpectralCube(object):
 
         projection = self._naxes_dropped(axis) == 1
 
-        # use nansum, and multiply by mask to add zero each time there is badness
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
@@ -424,7 +422,6 @@ class SpectralCube(object):
 
         projection = self._naxes_dropped(axis) == 1
 
-        # use nansum, and multiply by mask to add zero each time there is badness
         return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
