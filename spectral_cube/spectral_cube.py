@@ -7,7 +7,7 @@ from functools import wraps
 
 from astropy import units as u
 from astropy.extern import six
-from astropy.io.fits import PrimaryHDU, ImageHDU
+from astropy.io.fits import PrimaryHDU, ImageHDU, Header
 from astropy import log
 from astropy import wcs
 
@@ -159,7 +159,8 @@ class Slice(Projection):
 
 class SpectralCube(object):
 
-    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan):
+    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
+                 header=None):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
@@ -191,6 +192,10 @@ class SpectralCube(object):
         # e.g. km/s -> m/s.
         self._spectral_unit = u.Unit(self._wcs.wcs.cunit[2])
         self._spectral_scale = 1.0
+
+        self._header = Header() if header is None else header
+        if not isinstance(self._header, Header):
+            raise TypeError("If a header is given, it must be a fits.Header")
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None):
@@ -1591,14 +1596,16 @@ class StokesSpectralCube(SpectralCube):
     parameters can be accessed with attribute notation.
     """
 
-    def __init__(self, data, wcs, mask=None, meta=None):
+    def __init__(self, data, wcs, mask=None, meta=None, header=None):
 
         # WCS should be 3-d, data should be dict of 3-d, mask should be disk
         # of 3-d
 
         # XXX: For now, let's just extract I and work with that
 
-        super(StokesSpectralCube, self).__init__(data["I"], wcs, mask=mask["I"], meta=meta)
+        super(StokesSpectralCube, self).__init__(data["I"], wcs,
+                                                 mask=mask["I"], meta=meta,
+                                                 header=header)
 
         # TODO: deal with the other stokes parameters here
 

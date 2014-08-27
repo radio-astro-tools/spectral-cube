@@ -121,7 +121,7 @@ def load_fits_cube(input, hdu=0):
         data, wcs = cube_utils._orient(data, wcs)
 
         mask = LazyMask(np.isfinite, data=data, wcs=wcs)
-        cube = SpectralCube(data, wcs, mask, meta=meta)
+        cube = SpectralCube(data, wcs, mask, meta=meta, header=header)
 
     elif wcs.wcs.naxis == 4:
 
@@ -132,13 +132,11 @@ def load_fits_cube(input, hdu=0):
             data[component], wcs_slice = cube_utils._orient(data[component], wcs)
             mask[component] = LazyMask(np.isfinite, data=data[component], wcs=wcs_slice)
 
-        cube = StokesSpectralCube(data, wcs_slice, mask, meta=meta)
+        cube = StokesSpectralCube(data, wcs_slice, mask, meta=meta, header=header)
 
     else:
 
         raise Exception("Data should be 3- or 4-dimensional")
-
-    cube._header = header
 
     return cube
 
