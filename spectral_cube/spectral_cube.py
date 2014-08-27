@@ -613,7 +613,9 @@ class SpectralCube(object):
                                                 projection=True,
                                                 check_endian=True, **kwargs)
         except ImportError:
-            return self.apply_function(np.median, axis=axis, **kwargs)
+            result = self.apply_function(np.median, axis=axis, **kwargs)
+
+        return result
 
     def percentile(self, q, axis=None, **kwargs):
         """

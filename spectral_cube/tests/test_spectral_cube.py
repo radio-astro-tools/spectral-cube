@@ -22,6 +22,12 @@ except ImportError:
     yt_version = StrictVersion('0.0.0')
     ytOK = False
 
+try:
+    import bottleneck
+    bottleneckOK = True
+except ImportError:
+    bottleneckOK = False
+
 
 def cube_and_raw(filename):
     p = path(filename)
@@ -475,3 +481,37 @@ def test_ds9region():
     
     #region = 'circle(2,2,2)'
     #subcube = cube.subcube_from_ds9region(region)
+
+@pytest.mark.skipif(not bottleneckOK, reason='Bottleneck could not be imported')
+def test_endians():
+    """
+    Test that the endianness checking returns something in Native form
+    (this is only needed for non-numpy functions that worry about the
+    endianness of their data)
+
+    WARNING: Because the endianness is machine-dependent, this may fail on
+    different architectures!  This is because numpy automatically converts
+    little-endian to native in the dtype parameter; I need a workaround for
+    this.
+    """
+    big = np.array([[[1],[2]]], dtype='>f4')
+    lil = np.array([[[1],[2]]], dtype='<f4')
+    mywcs = WCS(naxis=3)
+    mywcs.wcs.ctype[0] = 'RA'
+    mywcs.wcs.ctype[1] = 'DEC'
+    mywcs.wcs.ctype[2] = 'VELO'
+    
+    bigcube = SpectralCube(data=big, wcs=mywcs)
+    xbig = bigcube._get_filled_data(check_endian=True)
+
+    lilcube = SpectralCube(data=lil, wcs=mywcs)
+    xlil = lilcube._get_filled_data(check_endian=True)
+
+    assert xbig.dtype.byteorder == '='
+    assert xlil.dtype.byteorder == '='
+
+    xbig = bigcube._get_filled_data(check_endian=False)
+    xlil = lilcube._get_filled_data(check_endian=False)
+
+    assert xbig.dtype.byteorder == '>'
+    assert xlil.dtype.byteorder == '='
