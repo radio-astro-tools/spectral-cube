@@ -126,7 +126,7 @@ learn how to use yt's rendering system.
 Example:
 
 .. raw:: html
-   
+
    <iframe src="http://player.vimeo.com/video/104489207" width=500 height=281
    frameborder=0 webkitallowfullscreen mozallowfullscreen allowfullscreen>
    </iframe>
