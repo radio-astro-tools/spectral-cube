@@ -123,6 +123,14 @@ of the cube around one of the spatial axes, going from PP -> PV space and back.:
 The movie only does rotation, but it is a useful stepping-stone if you wish to
 learn how to use yt's rendering system.
 
+Example:
+
+.. raw:: html
+   
+   <iframe src="http://player.vimeo.com/video/104489207" width=500 height=281
+   frameborder=0 webkitallowfullscreen mozallowfullscreen allowfullscreen>
+   </iframe>
+
 SketchFab Isosurface Contours
 -----------------------------
 
