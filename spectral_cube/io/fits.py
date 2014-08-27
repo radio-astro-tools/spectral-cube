@@ -138,6 +138,8 @@ def load_fits_cube(input, hdu=0):
 
         raise Exception("Data should be 3- or 4-dimensional")
 
+    cube._header = header
+
     return cube
 
 

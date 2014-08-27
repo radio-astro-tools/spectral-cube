@@ -1521,7 +1521,9 @@ class SpectralCube(object):
 
     @property
     def header(self):
-        header = self.wcs.to_header()
+        # Preserve non-WCS information from previous header iteration
+        header = self._header.copy()
+        header.update(self.wcs.to_header())
         header['BUNIT'] = self.unit.to_string(format='fits')
         # TODO: incorporate other relevant metadata here
         return header
