@@ -1,11 +1,15 @@
 import numpy as np
-import yt
-from yt.visualization.volume_rendering.transfer_function_helper import TransferFunctionHelper
 from astropy.utils.console import ProgressBar
 import os
 from astropy import log
 import subprocess
 
+try:
+    import yt
+    from yt.visualization.volume_rendering.transfer_function_helper import TransferFunctionHelper
+    ytOK = True
+except ImportError:
+    ytOK = False
 
 class ytCube(object):
     """ Light wrapper of a yt object with ability to translate yt<->wcs
@@ -70,6 +74,8 @@ class ytCube(object):
         outdir: str
 
         """
+        if not ytOK:
+            raise IOError("yt could not be imported.  Cube renderings are not possible.")
 
         scale = np.max(self.cube.shape)
 
