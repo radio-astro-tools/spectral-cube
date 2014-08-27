@@ -211,6 +211,7 @@ class SpectralCube(object):
                             fill_value=fill_value)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
+        cube._header = self._header
 
         return cube
 
