@@ -18,6 +18,7 @@ from . import wcs_utils
 from . import spectral_axis
 from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable
 from .io.core import determine_format
+from .ytcube import ytCube
 
 from distutils.version import StrictVersion
 
@@ -274,7 +275,7 @@ class SpectralCube(object):
            decreasing subsets of the data, to conserve memory.
            Default='auto'
         projection : bool
-            Return a projection if the resulting array is 2D?
+            Return a `Projection` if the resulting array is 2D?
         unit : None or `astropy.units.Unit`
             The unit to include for the output array.  For example,
             `SpectralCube.max` calls `SpectralCube.apply_numpy_function(np.max,
@@ -403,7 +404,6 @@ class SpectralCube(object):
 
         projection = self._naxes_dropped(axis) == 1
 
-        # use nansum, and multiply by mask to add zero each time there is badness
         return self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
@@ -416,10 +416,22 @@ class SpectralCube(object):
 
         projection = self._naxes_dropped(axis) == 1
 
-        # use nansum, and multiply by mask to add zero each time there is badness
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
+
+    @aggregation_docstring
+    def std(self, axis=None, how='auto'):
+        """
+        Return the standard deviation of the cube, optionally over an axis.
+        """
+
+        projection = self._naxes_dropped(axis) == 1
+
+        return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
+                                         axis=axis, unit=self.unit,
+                                         projection=projection)
+
 
     @aggregation_docstring
     def max(self, axis=None, how='auto'):
@@ -1542,52 +1554,6 @@ class SpectralCube(object):
         from astropy.io import fits
         hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
-
-class ytCube(object):
-    """ Light wrapper of a yt object with ability to translate yt<->wcs
-    coordinates """
-
-    def __init__(self, cube, dataset, spectral_factor=1.0):
-        self.cube = cube
-        self.wcs = cube.wcs
-        self.dataset = dataset
-        self.spectral_factor = spectral_factor
-
-
-    def world2yt(self, world_coord, first_index=0):
-        """
-        Convert a position in world coordinates to the coordinates used by a
-        yt dataset that has been generated using the ``to_yt`` method.
-
-        Parameters
-        ----------
-        world_coord: `astropy.wcs.WCS.wcs_world2pix`-valid input
-            The world coordinates
-        first_index: 0 or 1
-            The first index of the data.  In python and yt, this should be
-            zero, but for the FITS coordinates, use 1
-        """
-        yt_coord = self.wcs.wcs_world2pix([world_coord], first_index)[0]
-        yt_coord[2] = (yt_coord[2] - 0.5)*self.spectral_factor+0.5
-        return yt_coord
-
-    def yt2world(self, yt_coord, first_index=0):
-        """
-        Convert a position in yt's coordinates to world coordinates from a
-        yt dataset that has been generated using the ``to_yt`` method.
-
-        Parameters
-        ----------
-        world_coord: `astropy.wcs.WCS.wcs_pix2world`-valid input
-            The yt pixel coordinates to convert back to world coordinates
-        first_index: 0 or 1
-            The first index of the data.  In python and yt, this should be
-            zero, but for the FITS coordinates, use 1
-        """
-        yt_coord = np.array(yt_coord) # stripping off units
-        yt_coord[2] = (yt_coord[2] - 0.5)/self.spectral_factor+0.5
-        world_coord = self.wcs.wcs_pix2world([yt_coord], first_index)[0]
-        return world_coord
 
 class StokesSpectralCube(SpectralCube):
 
