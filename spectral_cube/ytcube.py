@@ -64,6 +64,7 @@ class ytCube(object):
                            rot_vector=(1,0,0),
                            colormap='doom',
                            cmap_range='auto',
+                           transfer_function='auto',
                            log=False,
                            rescale=True):
         """
@@ -89,6 +90,9 @@ class ytCube(object):
             The vector around which the camera will be rotated
         colormap: str
             A valid colormap.  See `yt.show_colormaps`
+        transfer_function: 'auto' or `yt.visualization.volume_rendering.TransferFunction`
+            Either 'auto' to use the colormap specified, or a valid
+            TransferFunction instance
         log: bool
             Should the colormap be log scaled?
         rescale: bool
@@ -116,15 +120,15 @@ class ytCube(object):
             lower = self.cube.std().value * 3
             cmap_range = [lower,upper]
 
-        tfh = TransferFunctionHelper(self.dataset)
-        tfh.set_field('flux')
-        tfh.set_bounds(bounds=cmap_range)
-        tfh.set_log(log)
-        tfh.build_transfer_function()
-        tfh.tf.map_to_colormap(cmap_range[0], cmap_range[1], colormap=colormap)
+        if transfer_function == 'auto':
+            tfh = self.auto_transfer_function(cmap_range, log=log)
+            tfh.tf.map_to_colormap(cmap_range[0], cmap_range[1], colormap=colormap)
+            tf = tfh.tf
+        else:
+            tf = transfer_function
 
-        center = self.dataset.domain_dimensions / 2.
-        cam = self.dataset.h.camera(center, camera_angle, scale, size, tfh.tf,
+        center = self.dataset.domain_center
+        cam = self.dataset.h.camera(center, camera_angle, scale, size, tf,
                                     north_vector=north_vector, fields='flux')
 
         im  = cam.snapshot()
@@ -143,6 +147,16 @@ class ytCube(object):
         pipe = _make_movie(outdir)
         
         return images
+
+    def auto_transfer_function(self, cmap_range, log=False, colormap='doom',
+                               **kwargs):
+
+        tfh = TransferFunctionHelper(self.dataset)
+        tfh.set_field('flux')
+        tfh.set_bounds(bounds=cmap_range)
+        tfh.set_log(log)
+        tfh.build_transfer_function()
+        return tfh
 
     def quick_isocontour(self, level='3 sigma', title='', description='',
                          color_map='hot', color_log=False):

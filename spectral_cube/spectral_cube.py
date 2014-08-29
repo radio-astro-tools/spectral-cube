@@ -152,6 +152,7 @@ class Projection(u.Quantity):
             self.FITSFigure = aplpy.FITSFigure(self.hdu)
 
         self.FITSFigure.show_grayscale()
+        self.FITSFigure.add_colorbar()
 
 # A slice is just like a projection in every way
 class Slice(Projection):
