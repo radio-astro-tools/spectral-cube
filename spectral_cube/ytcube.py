@@ -221,14 +221,14 @@ def _make_movie(moviepath, overwrite=True):
     if os.path.exists(outpath) and overwrite:
         command = ['ffmpeg', '-y', '-r','5','-i',
                    os.path.join(moviepath,'%04d.png'),
-                   '-c:v','libx264','-r','30','-pix_fmt', 'yuv420p',
+                   '-r','30','-pix_fmt', 'yuv420p',
                    outpath]
     elif os.path.exists(outpath):
         log.info("File {0} exists - skipping".format(outpath))
     else:
         command = ['ffmpeg', '-r', '5', '-i',
                    os.path.join(moviepath,'%04d.png'),
-                   '-c:v','libx264','-r','30','-pix_fmt', 'yuv420p',
+                   '-r','30','-pix_fmt', 'yuv420p',
                    outpath]
 
     pipe = subprocess.Popen(command, stdout=subprocess.PIPE, close_fds=True)
