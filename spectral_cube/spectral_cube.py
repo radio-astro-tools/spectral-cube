@@ -1351,12 +1351,12 @@ class SpectralCube(object):
         return subcube.with_mask(BooleanArrayMask(mask, subcube.wcs,
                                                   shape=subcube.shape))
 
-    def subcube_from_aperture(self, aperture):
+    def subcube_from_apertures(self, apertures):
         """
-        Extract a subcube from a `photutils` aperture
+        Extract subcubes from `photutils` apertures
         """
-        xlo,xhi,ylo,yhi = aperture.extent()
-        return self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+        return [self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+                for (xlo,xhi,ylo,yhi) in apertures.extent()]
 
 
     def world_spines(self):
