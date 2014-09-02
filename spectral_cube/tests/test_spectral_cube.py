@@ -535,3 +535,18 @@ def test_slicing():
     assert cube[:1,:1,:1].shape == (1,1,1)
 
 
+@pytest.mark.parametrize(('view','naxis'),
+                         [( (slice(None), 1, slice(None)), 2 ),
+                          ( (1, slice(None), slice(None)), 2 ),
+                          ( (slice(None), slice(None), 1), 2 ),
+                          ( (slice(None), slice(None), slice(1)), 3 ),
+                          ( (slice(1), slice(1), slice(1)), 3 ),
+                         ])
+def test_slice_wcs(view, naxis):
+
+    cube, data = cube_and_raw('advs.fits')
+
+    sl = cube[view]
+    assert sl.wcs.naxis == naxis
+
+
