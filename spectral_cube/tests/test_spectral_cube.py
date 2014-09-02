@@ -515,3 +515,23 @@ def test_endians():
 
     assert xbig.dtype.byteorder == '>'
     assert xlil.dtype.byteorder == '='
+
+def test_slicing():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    # just to check that we're starting in the right place
+    assert cube.shape == (2,3,4)
+
+    sl = cube[:,1,:]
+    assert sl.shape == (2,4)
+    
+    v = cube[1:2,:,:]
+    assert v.shape == (1,3,4)
+
+    assert cube[:,:,:].shape == (2,3,4)
+    assert cube[:,:].shape == (2,3,4)
+    assert cube[:].shape == (2,3,4)
+    assert cube[:1,:1,:1].shape == (1,1,1)
+
+
