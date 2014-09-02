@@ -160,7 +160,7 @@ def axis_names(wcs):
     return names
 
 
-def slice(mywcs, view, numpy_order=True):
+def slice_wcs(mywcs, view, numpy_order=True):
     """
     Slice a WCS instance using a Numpy slice. The order of the slice should
     be reversed (as for the data) compared to the natural WCS order.
