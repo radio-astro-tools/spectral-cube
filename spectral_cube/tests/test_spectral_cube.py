@@ -516,6 +516,15 @@ def test_endians():
     assert xbig.dtype.byteorder == '>'
     assert xlil.dtype.byteorder == '='
 
+def test_header_naxis():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    assert cube.header['NAXIS'] == 3 # NOT data.ndim == 4
+    assert cube.header['NAXIS1'] == data.shape[3]
+    assert cube.header['NAXIS2'] == data.shape[2]
+    assert cube.header['NAXIS3'] == data.shape[1]
+
 def test_slicing():
 
     cube, data = cube_and_raw('advs.fits')

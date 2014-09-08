@@ -1554,6 +1554,10 @@ class SpectralCube(object):
         header = self._header.copy()
         header.update(self.wcs.to_header())
         header['BUNIT'] = self.unit.to_string(format='fits')
+        header['NAXIS'] = self._data.ndim
+        header['NAXIS1'] = self.shape[2]
+        header['NAXIS2'] = self.shape[1]
+        header['NAXIS3'] = self.shape[0]
         # TODO: incorporate other relevant metadata here
         return header
 
