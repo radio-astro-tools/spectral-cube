@@ -19,6 +19,7 @@
   datacube/dataset objects
   (https://github.com/radio-astro-tools/spectral-cube/pull/90,
   https://github.com/radio-astro-tools/spectral-cube/pull/129)
+- Added `copy` and `deepcopy` methods for masks (https://github.com/radio-astro-tools/spectral-cube/pull/127)
 
 0.1 (2014-06-01)
 ----------------

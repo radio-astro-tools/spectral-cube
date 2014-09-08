@@ -1,6 +1,7 @@
 import abc
 
 import numpy as np
+import copy
 from numpy.lib.stride_tricks import as_strided
 
 from . import wcs_utils
@@ -153,6 +154,18 @@ class MaskBase(object):
 
     _get_new_wcs.__doc__ += with_spectral_unit_docs
 
+    @property
+    def wcs(self):
+        return self._wcs
+
+    @abc.abstractmethod
+    def copy(self):
+        pass
+
+    @abc.abstractmethod
+    def deepcopy(self):
+        pass
+
 
 class InvertedMask(MaskBase):
 
@@ -175,6 +188,12 @@ class InvertedMask(MaskBase):
         return InvertedMask(newmask)
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
+
+    def copy(self):
+        return InvertedMask(self._mask)
+
+    def deepcopy(self):
+        return InvertedMask(self._mask.copy())
 
 
 class CompositeMask(MaskBase):
@@ -226,6 +245,14 @@ class CompositeMask(MaskBase):
         return CompositeMask(newmask1, newmask2, self._operation)
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
+
+    def copy(self):
+        return CompositeMask(self._mask1, self._mask2,
+                             operation=self._operation)
+
+    def deepcopy(self):
+        return CompositeMask(self._mask1.copy(), self._mask2.copy(),
+                             operation=self._operation)
 
 
 class BooleanArrayMask(MaskBase):
@@ -301,6 +328,14 @@ class BooleanArrayMask(MaskBase):
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
 
+    def copy(self):
+        return BooleanArrayMask(self._mask, self._wcs,
+                                include=self._mask_type=='include')
+
+    def deepcopy(self):
+        return BooleanArrayMask(self._mask.copy(), self._wcs.copy(),
+                                include=self._mask_type=='include')
+
 class LazyMask(MaskBase):
 
     """
@@ -367,6 +402,13 @@ class LazyMask(MaskBase):
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
 
+    def copy(self):
+        return LazyMask(self._function, data=self._data, wcs=self._wcs)
+
+    def deepcopy(self):
+        return LazyMask(self._function, data=self._data.copy(),
+                        wcs=self._wcs.copy())
+
 class FunctionMask(MaskBase):
 
     """
@@ -410,4 +452,10 @@ class FunctionMask(MaskBase):
         of the current mask in order to be consistent with
         ``with_spectral_unit`` from other Masks
         """
+        return FunctionMask(self._function)
+
+    def copy(self):
+        return FunctionMask(self._function)
+
+    def deepcopy(self):
         return FunctionMask(self._function)
