@@ -683,6 +683,15 @@ class SpectralCube(object):
         return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
 
     def __getitem__(self, view):
+
+        # Need to allow self[:], self[:,:]
+        if isinstance(view, slice):
+            view = (view, slice(None), slice(None))
+        elif len(view) == 2:
+            view = view + (slice(None),)
+        elif len(view) > 3:
+            raise IndexError("Too many indices")
+
         meta = {}
         meta.update(self._meta)
         meta['slice'] = [(s.start, s.stop, s.step)
@@ -695,7 +704,8 @@ class SpectralCube(object):
             if len(intslices) > 1:
                 # TODO: return a Specutils Spectrum object
                 raise NotImplementedError("1D slices are not implemented yet.")
-            newwcs = wcs_utils.slice_wcs(self._wcs, view)
+            # only one element, so drop an axis
+            newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
             return Slice(value=self.filled_data[view],
                          wcs=newwcs,
                          copy=False,

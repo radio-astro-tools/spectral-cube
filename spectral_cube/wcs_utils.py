@@ -160,7 +160,7 @@ def axis_names(wcs):
     return names
 
 
-def slice_wcs(wcs, view):
+def slice_wcs(mywcs, view, numpy_order=True):
     """
     Slice a WCS instance using a Numpy slice. The order of the slice should
     be reversed (as for the data) compared to the natural WCS order.
@@ -168,30 +168,57 @@ def slice_wcs(wcs, view):
     Parameters
     ----------
     view : tuple
-        A tuple containing the same number of slices as the WCS system
+        A tuple containing the same number of slices as the WCS system.
+        The ``step`` method, the third argument to a slice, is not
+        presently supported.
+    numpy_order : bool
+        Use numpy order, i.e. slice the WCS so that an identical slice
+        applied to a numpy array will slice the array and WCS in the same
+        way. If set to `False`, the WCS will be sliced in FITS order,
+        meaning the first slice will be applied to the *last* numpy index
+        but the *first* WCS axis.
 
     Returns
     -------
-    A new `~astropy.wcs.WCS` instance
+    wcs_new : `~astropy.wcs.WCS`
+        A new resampled WCS axis
     """
-    if len(view) != wcs.wcs.naxis:
-        raise ValueError("Must have same number of slices as number of WCS axes")
+    if hasattr(view, '__len__') and len(view) > mywcs.wcs.naxis:
+        raise ValueError("Must have # of slices <= # of WCS axes")
+    elif not hasattr(view, '__len__'): # view MUST be an iterable
+        view = [view]
 
-    wcs_new = wcs.deepcopy()
+    if not all([isinstance(x, slice) for x in view]):
+        raise ValueError("Cannot downsample a WCS with indexing.  Use "
+                         "wcs.sub or wcs.dropaxis if you want to remove "
+                         "axes.")
 
-    # Indexing the WCS: x,y,z order (not numpy z,y,x order)
-    intslices = [wcs.wcs.naxis-ii-1 for ii,s in enumerate(view) if not hasattr(s,'start')]
-
-    for ii in intslices:
-        wcs_new = wcs_new.dropaxis(ii)
-    view = [s for s in view if hasattr(s,'start')]
-
+    wcs_new = mywcs.deepcopy()
     for i, iview in enumerate(view):
+        if iview.step is not None and iview.start is None:
+            # Slice from "None" is equivalent to slice from 0 (but one
+            # might want to downsample, so allow slices with
+            # None,None,step or None,stop,step)
+            iview = slice(0, iview.stop, iview.step)
+
         if iview.start is not None:
+            if numpy_order:
+                wcs_index = mywcs.wcs.naxis - 1 - i
+            else:
+                wcs_index = i
+
             if iview.step not in (None, 1):
-                raise NotImplementedError("Cannot yet slice WCS with strides different from None or 1")
-            wcs_index = wcs.wcs.naxis - 1 - i
-            wcs_new.wcs.crpix[wcs_index] -= iview.start
+                crpix = mywcs.wcs.crpix[wcs_index]
+                cdelt = mywcs.wcs.cdelt[wcs_index]
+                # equivalently (keep this comment so you can compare eqns):
+                # wcs_new.wcs.crpix[wcs_index] =
+                # (crpix - iview.start)*iview.step + 0.5 - iview.step/2.
+                crp = ((crpix - iview.start - 1.)/iview.step
+                       + 0.5 + 1./iview.step/2.)
+                wcs_new.wcs.crpix[wcs_index] = crp
+                wcs_new.wcs.cdelt[wcs_index] = cdelt * iview.step
+            else:
+                wcs_new.wcs.crpix[wcs_index] -= iview.start
     return wcs_new
 
 def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',

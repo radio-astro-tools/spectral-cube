@@ -515,3 +515,38 @@ def test_endians():
 
     assert xbig.dtype.byteorder == '>'
     assert xlil.dtype.byteorder == '='
+
+def test_slicing():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    # just to check that we're starting in the right place
+    assert cube.shape == (2,3,4)
+
+    sl = cube[:,1,:]
+    assert sl.shape == (2,4)
+    
+    v = cube[1:2,:,:]
+    assert v.shape == (1,3,4)
+
+    assert cube[:,:,:].shape == (2,3,4)
+    assert cube[:,:].shape == (2,3,4)
+    assert cube[:].shape == (2,3,4)
+    assert cube[:1,:1,:1].shape == (1,1,1)
+
+
+@pytest.mark.parametrize(('view','naxis'),
+                         [( (slice(None), 1, slice(None)), 2 ),
+                          ( (1, slice(None), slice(None)), 2 ),
+                          ( (slice(None), slice(None), 1), 2 ),
+                          ( (slice(None), slice(None), slice(1)), 3 ),
+                          ( (slice(1), slice(1), slice(1)), 3 ),
+                         ])
+def test_slice_wcs(view, naxis):
+
+    cube, data = cube_and_raw('advs.fits')
+
+    sl = cube[view]
+    assert sl.wcs.naxis == naxis
+
+
