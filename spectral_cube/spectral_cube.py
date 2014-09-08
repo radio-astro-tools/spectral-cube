@@ -1473,7 +1473,8 @@ class SpectralCube(object):
         cube = read(filename, format=format, hdu=hdu, **kwargs)
         if isinstance(cube, StokesSpectralCube):
             return SpectralCube(data=cube._data, wcs=cube._wcs,
-                                meta=cube._meta, mask=cube._mask)
+                                meta=cube._meta, mask=cube._mask,
+                                header=cube._header)
         else:
             return cube
 
