@@ -1552,7 +1552,7 @@ class SpectralCube(object):
     @property
     def header(self):
         # Preserve non-WCS information from previous header iteration
-        header = self._header.copy()
+        header = wcs_utils.strip_wcs_from_header(self._header)
         header.update(self.wcs.to_header())
         header['BUNIT'] = self.unit.to_string(format='fits')
         header['NAXIS'] = self._data.ndim

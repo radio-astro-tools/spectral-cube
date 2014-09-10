@@ -301,3 +301,22 @@ def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',
                 OK = False
 
     return OK
+
+def strip_wcs_from_header(header):
+    """
+    Given a header with WCS information, remove ALL WCS information from that
+    header
+    """
+
+    hwcs = WCS(header)
+    wcsh = hwcs.to_header()
+
+    keys_to_keep = [k for k in header
+                    if (k and k not in wcsh and 'NAXIS' not in k)]
+
+    newheader = header.copy()
+    for kw in newheader.keys():
+        if kw not in keys_to_keep:
+            del newheader[kw]
+
+    return newheader
