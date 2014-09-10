@@ -7,7 +7,7 @@ from functools import wraps
 
 from astropy import units as u
 from astropy.extern import six
-from astropy.io.fits import PrimaryHDU, ImageHDU, Header
+from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card
 from astropy import log
 from astropy import wcs
 
@@ -1514,7 +1514,8 @@ class SpectralCube(object):
 
         import yt
 
-        if StrictVersion(yt.__version__) >= StrictVersion('3.0'):
+        if ('dev' in yt.__version__ or
+            StrictVersion(yt.__version__) >= StrictVersion('3.0')):
 
             from yt.frontends.fits.api import FITSDataset
             from astropy.io import fits
@@ -1552,13 +1553,13 @@ class SpectralCube(object):
     @property
     def header(self):
         # Preserve non-WCS information from previous header iteration
-        header = self._header.copy()
+        header = wcs_utils.strip_wcs_from_header(self._header)
         header.update(self.wcs.to_header())
         header['BUNIT'] = self.unit.to_string(format='fits')
-        header['NAXIS'] = self._data.ndim
-        header['NAXIS1'] = self.shape[2]
-        header['NAXIS2'] = self.shape[1]
-        header['NAXIS3'] = self.shape[0]
+        header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
+        header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
+        header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
+        header.insert(5, Card(keyword='NAXIS3', value=self.shape[0]))
         # TODO: incorporate other relevant metadata here
         return header
 

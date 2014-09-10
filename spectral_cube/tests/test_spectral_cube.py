@@ -524,6 +524,7 @@ def test_header_naxis():
     assert cube.header['NAXIS1'] == data.shape[3]
     assert cube.header['NAXIS2'] == data.shape[2]
     assert cube.header['NAXIS3'] == data.shape[1]
+    assert 'NAXIS4' not in cube.header
 
 def test_slicing():
 
