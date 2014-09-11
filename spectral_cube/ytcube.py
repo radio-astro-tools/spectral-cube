@@ -219,7 +219,7 @@ def _rescale_images(images, prefix):
  
     for i, image in enumerate(images):
         image = image.rescale(cmax=cmax, amax=amax).swapaxes(0,1)
-        image.write_png("%04i.png" % (prefix, i), rescale=False)
+        image.write_png("%s%04i.png" % (prefix, i), rescale=False)
 
 def _make_movie(moviepath, prefix="", overwrite=True):
     """
