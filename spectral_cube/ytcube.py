@@ -237,7 +237,7 @@ def _make_movie(moviepath, prefix="", overwrite=True):
         log.info("File {0} exists - skipping".format(outpath))
     else:
         command = ['ffmpeg', '-r', '5', '-i',
-                   os.path.join(moviepath,'%04d.png'),
+                   os.path.join(moviepath,prefix+'%04d.png'),
                    '-r','30','-pix_fmt', 'yuv420p',
                    outpath]
 
