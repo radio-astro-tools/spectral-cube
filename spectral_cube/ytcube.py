@@ -1,6 +1,7 @@
 import os
 import subprocess
 import numpy as np
+import time
 from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy.extern import six
@@ -67,7 +68,7 @@ class ytCube(object):
                            transfer_function='auto',
                            start_index=0,
                            image_prefix="",
-                           log=False,
+                           log_scale=False,
                            rescale=True):
         """
         Create a movie rotating the cube 360 degrees from
@@ -95,7 +96,7 @@ class ytCube(object):
         transfer_function: 'auto' or `yt.visualization.volume_rendering.TransferFunction`
             Either 'auto' to use the colormap specified, or a valid
             TransferFunction instance
-        log: bool
+        log_scale: bool
             Should the colormap be log scaled?
         rescale: bool
             If True, the images will be rescaled to have a common 95th
@@ -127,7 +128,7 @@ class ytCube(object):
             cmap_range = [lower,upper]
 
         if transfer_function == 'auto':
-            tfh = self.auto_transfer_function(cmap_range, log=log)
+            tfh = self.auto_transfer_function(cmap_range, log=log_scale)
             tfh.tf.map_to_colormap(cmap_range[0], cmap_range[1], colormap=colormap)
             tf = tfh.tf
         else:
@@ -144,15 +145,16 @@ class ytCube(object):
         for ii,im in enumerate(cam.rotation(2 * np.pi, nframes,
                                             rot_vector=rot_vector)):
             images.append(im)
-            im.write_png(os.path.join(outdir,"%s%04i.png" % (prefix,
+            im.write_png(os.path.join(outdir,"%s%04i.png" % (image_prefix,
                                                              ii+start_index)),
                          rescale=False)
-            pb.update(ii)
+            pb.update(ii+1)
+        log.info("Rendering complete in {0}s".format(time.time() - pb._start_time))
 
         if rescale:
-            _rescale_images(images, outdir)
+            _rescale_images(images, os.path.join(outdir, image_prefix))
 
-        pipe = _make_movie(outdir, prefix=prefix)
+        pipe = _make_movie(outdir, prefix=image_prefix)
         
         return images
 
@@ -217,7 +219,7 @@ def _rescale_images(images, prefix):
  
     for i, image in enumerate(images):
         image = image.rescale(cmax=cmax, amax=amax).swapaxes(0,1)
-        image.write_png(os.path.join(prefix, "%04i.png" % (i)), rescale=False)
+        image.write_png("%04i.png" % (prefix, i), rescale=False)
 
 def _make_movie(moviepath, prefix="", overwrite=True):
     """
