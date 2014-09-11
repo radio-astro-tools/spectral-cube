@@ -65,6 +65,8 @@ class ytCube(object):
                            colormap='doom',
                            cmap_range='auto',
                            transfer_function='auto',
+                           start_index=0,
+                           image_prefix="",
                            log=False,
                            rescale=True):
         """
@@ -99,6 +101,10 @@ class ytCube(object):
             If True, the images will be rescaled to have a common 95th
             percentile brightness, which can help reduce flickering from having
             a single bright pixel in some projections
+        start_index : int
+            The number of the first image to save
+        image_prefix : str
+            A string to prepend to the image name for each image that is output
 
         Returns
         -------
@@ -138,13 +144,15 @@ class ytCube(object):
         for ii,im in enumerate(cam.rotation(2 * np.pi, nframes,
                                             rot_vector=rot_vector)):
             images.append(im)
-            im.write_png(os.path.join(outdir,"%04i.png" % (ii)), rescale=False)
+            im.write_png(os.path.join(outdir,"%s%04i.png" % (prefix,
+                                                             ii+start_index)),
+                         rescale=False)
             pb.update(ii)
 
         if rescale:
             _rescale_images(images, outdir)
 
-        pipe = _make_movie(outdir)
+        pipe = _make_movie(outdir, prefix=prefix)
         
         return images
 
@@ -211,7 +219,7 @@ def _rescale_images(images, prefix):
         image = image.rescale(cmax=cmax, amax=amax).swapaxes(0,1)
         image.write_png(os.path.join(prefix, "%04i.png" % (i)), rescale=False)
 
-def _make_movie(moviepath, overwrite=True):
+def _make_movie(moviepath, prefix="", overwrite=True):
     """
     Use ffmpeg to generate a movie from the image series
     """
@@ -220,7 +228,7 @@ def _make_movie(moviepath, overwrite=True):
 
     if os.path.exists(outpath) and overwrite:
         command = ['ffmpeg', '-y', '-r','5','-i',
-                   os.path.join(moviepath,'%04d.png'),
+                   os.path.join(moviepath,prefix+'%04d.png'),
                    '-r','30','-pix_fmt', 'yuv420p',
                    outpath]
     elif os.path.exists(outpath):
