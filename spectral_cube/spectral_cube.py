@@ -610,6 +610,20 @@ class SpectralCube(object):
         else:
             return u.Quantity(data, self.unit, copy=False)
 
+    def flattened_world(self, view=()):
+        """
+        Retrieve the world coordinates corresponding to the extracted flattened
+        version of the cube
+        """
+        lon,lat,spec = self.world[view]
+        spec = self._mask._flattened(data=spec, wcs=self._wcs,
+                                     view=slice)
+        lon = self._mask._flattened(data=lon, wcs=self._wcs,
+                                     view=slice)
+        lat = self._mask._flattened(data=lat, wcs=self._wcs,
+                                     view=slice)
+        return lat,lon,spec
+
     def median(self, axis=None, **kwargs):
         """
         Compute the median of an array, optionally along an axis.
