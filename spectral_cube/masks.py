@@ -263,14 +263,16 @@ class BooleanArrayMask(MaskBase):
         else:
             self._mask = mask
 
-    def _validate_wcs(self, new_data, new_wcs):
-        if not is_broadcastable(new_data.shape, self._mask.shape):
+    def _validate_wcs(self, new_data=None, new_wcs=None):
+        if new_data is not None and not is_broadcastable(new_data.shape, self._mask.shape):
             raise ValueError("data shape cannot be broadcast to match mask shape")
-        if new_wcs not in self._wcs_whitelist:
-            if not wcs_utils.check_equality(new_wcs, self._wcs,
-                                            warn_missing=True):
-                raise ValueError("WCS does not match mask WCS")
-        self._wcs_whitelist.add(new_wcs)
+        if new_wcs is not None:
+            if new_wcs not in self._wcs_whitelist:
+                if not wcs_utils.check_equality(new_wcs, self._wcs,
+                                                warn_missing=True):
+                    raise ValueError("WCS does not match mask WCS")
+                else:
+                    self._wcs_whitelist.add(new_wcs)
 
     def _include(self, data=None, wcs=None, view=()):
         result_mask = self._mask[view]
@@ -340,14 +342,17 @@ class LazyMask(MaskBase):
 
         self._wcs_whitelist = set()
 
-    def _validate_wcs(self, new_data, new_wcs):
-        if not is_broadcastable(new_data.shape, self._data.shape):
-            raise ValueError("data shape cannot be broadcast to match mask shape")
-        if new_wcs not in self._wcs_whitelist:
-            if not wcs_utils.check_equality(new_wcs, self._wcs,
-                                            warn_missing=True):
-                raise ValueError("WCS does not match mask WCS")
-        self._wcs_whitelist.add(new_wcs)
+    def _validate_wcs(self, new_data=None, new_wcs=None):
+        if new_data is not None:
+            if not is_broadcastable(new_data.shape, self._data.shape):
+                raise ValueError("data shape cannot be broadcast to match mask shape")
+        if new_wcs is not None:
+            if new_wcs not in self._wcs_whitelist:
+                if not wcs_utils.check_equality(new_wcs, self._wcs,
+                                                warn_missing=True):
+                    raise ValueError("WCS does not match mask WCS")
+                else:
+                    self._wcs_whitelist.add(new_wcs)
 
     def _include(self, data=None, wcs=None, view=()):
         self._validate_wcs(data, wcs)

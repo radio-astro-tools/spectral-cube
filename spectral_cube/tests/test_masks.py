@@ -296,3 +296,12 @@ def test_flat_mask_spectral():
     cubemask = (np.ones(4,dtype='bool')[:,None,None] & mask_array[None,:,:])
     # Check that spectral masking works too
     assert np.all((data*cubemask).sum(axis=(1,2)) == mcube.sum(axis=(1,2)))
+
+def test_include():
+    cube, data = cube_and_raw('adv.fits')
+
+    mask_array = np.array([[True,False],[False,False],[True,True]])
+    bool_mask_array = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
+                                       shape=cube.shape)
+
+    assert np.all(bool_mask_array.include() == mask_array)
