@@ -19,6 +19,8 @@
   datacube/dataset objects
   (https://github.com/radio-astro-tools/spectral-cube/pull/90,
   https://github.com/radio-astro-tools/spectral-cube/pull/129)
+- Allow movie name to be specified in yt movie creation
+  (https://github.com/radio-astro-tools/spectral-cube/pull/145)
 
 0.1 (2014-06-01)
 ----------------
