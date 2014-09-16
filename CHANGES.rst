@@ -21,6 +21,8 @@
   https://github.com/radio-astro-tools/spectral-cube/pull/129)
 - Masks' `.include()` method works without ``data`` arguments.
   (https://github.com/radio-astro-tools/spectral-cube/pull/147)
+- Allow movie name to be specified in yt movie creation
+  (https://github.com/radio-astro-tools/spectral-cube/pull/145)
 
 0.1 (2014-06-01)
 ----------------

@@ -68,6 +68,7 @@ class ytCube(object):
                            transfer_function='auto',
                            start_index=0,
                            image_prefix="",
+                           output_filename='out.mp4',
                            log_scale=False,
                            rescale=True):
         """
@@ -106,6 +107,9 @@ class ytCube(object):
             The number of the first image to save
         image_prefix : str
             A string to prepend to the image name for each image that is output
+        output_filename : str
+            The movie file name to output.  The suffix may affect the file type
+            created.  Defaults to 'out.mp4'.  Will be placed in ``outdir``
 
         Returns
         -------
@@ -154,7 +158,8 @@ class ytCube(object):
         if rescale:
             _rescale_images(images, os.path.join(outdir, image_prefix))
 
-        pipe = _make_movie(outdir, prefix=image_prefix)
+        pipe = _make_movie(outdir, prefix=image_prefix,
+                           filename=output_filename)
         
         return images
 
@@ -221,12 +226,12 @@ def _rescale_images(images, prefix):
         image = image.rescale(cmax=cmax, amax=amax).swapaxes(0,1)
         image.write_png("%s%04i.png" % (prefix, i), rescale=False)
 
-def _make_movie(moviepath, prefix="", overwrite=True):
+def _make_movie(moviepath, prefix="", filename='out.mp4', overwrite=True):
     """
     Use ffmpeg to generate a movie from the image series
     """
 
-    outpath = os.path.join(moviepath,'out.mp4')
+    outpath = os.path.join(moviepath, filename)
 
     if os.path.exists(outpath) and overwrite:
         command = ['ffmpeg', '-y', '-r','5','-i',
