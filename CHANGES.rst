@@ -23,6 +23,9 @@
   (https://github.com/radio-astro-tools/spectral-cube/pull/147)
 - Allow movie name to be specified in yt movie creation
   (https://github.com/radio-astro-tools/spectral-cube/pull/145)
+- add `flattened_world` method to get the world coordinates corresponding to
+  each pixel in the flattened array
+  (https://github.com/radio-astro-tools/spectral-cube/pull/146)
 
 0.1 (2014-06-01)
 ----------------
