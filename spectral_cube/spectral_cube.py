@@ -1630,19 +1630,7 @@ class StokesSpectralCube(SpectralCube):
         -------
         cube : :class:`SpectralCube`
         """
-        if format is None:
-            format = determine_format_from_filename(filename)
-        if format == 'fits':
-            from .io.fits import load_fits_cube
-            return load_fits_cube(filename)
-        elif format == 'casa_image':
-            from .io.casa_image import load_casa_image
-            return load_casa_image(filename)
-        elif format == 'class_lmv':
-            from .io.class_lmv import load_lmv_cube
-            return load_lmv_cube(filename)
-        else:
-            raise ValueError("Format {0} not implemented".format(format))
+        raise NotImplementedError("")
 
     def write(self, filename, overwrite=False, format=None):
         """

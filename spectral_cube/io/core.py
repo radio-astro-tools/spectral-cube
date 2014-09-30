@@ -1,11 +1,11 @@
-def read(input, format=None, hdu=None, **kwargs):
+def read(filename, format=None, hdu=None, **kwargs):
     """
     Read a file into a :class:`SpectralCube` or :class:`StokesSpectralCube`
     instance.
 
     Parameters
     ----------
-    input : str or HDU
+    filename : str or HDU
         File to read
     format : str, optional
         File format.
@@ -23,16 +23,20 @@ def read(input, format=None, hdu=None, **kwargs):
     """
 
     if format is None:
-        format = determine_format(input)
+        format = determine_format_from_filename(filename)
 
     if format == 'fits':
-        from .fits import load_fits_cube
-        return load_fits_cube(input, hdu=hdu, **kwargs)
+        from .io.fits import load_fits_cube
+        return load_fits_cube(filename)
     elif format == 'casa_image':
-        from .casa_image import load_casa_image
-        return load_casa_image(input, **kwargs)
+        from .io.casa_image import load_casa_image
+        return load_casa_image(filename)
+    elif format == 'class_lmv':
+        from .io.class_lmv import load_lmv_cube
+        return load_lmv_cube(filename)
     else:
-        raise ValueError("Format {0} not implemented. Supported formats are 'fits' and 'casa_image'".format(format))
+        raise ValueError("Format {0} not implemented. Supported formats are "
+                         "'fits', 'casa_image', and 'lmv'.".format(format))
 
 
 def write(filename, cube, overwrite=False, format=None):
