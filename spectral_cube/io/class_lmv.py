@@ -16,6 +16,8 @@ def read_lmv(filename):
 
     Specification is primarily in GILDAS image_def.f90
     """
+    log.warn("CLASS LMV cube reading is tentatively supported.  "
+             "Please post bug reports at the first sign of danger!")
 
     header = {}
     with open(filename,'rb') as lf:
