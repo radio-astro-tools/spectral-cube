@@ -120,11 +120,9 @@ class MaskBase(object):
         Users should use the property :meth:`MaskBase.filled_data`
         """
         # Must convert to floating point, but should not change from inherited
-        # type otherwise (There must be better logic to accomplish this...)
-        dt = (data.dtype if data.dtype in (np.float16, np.float32, np.float64,
-                                           np.float128)
-              else np.float)
-        sliced_data = data[view].copy().astype(dt)
+        # type otherwise
+        dt = np.find_common_type([data.dtype], [np.float])
+        sliced_data = data[view].astype(dt)
         ex = self.exclude(data=data, wcs=wcs, view=view)
         sliced_data[ex] = fill
         return sliced_data
