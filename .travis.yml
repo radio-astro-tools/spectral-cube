@@ -50,8 +50,8 @@ matrix:
           env: SETUP_CMD='test' YT=yes
         - python: 2.7
           env: SETUP_CMD='test' YT=no
-        - python: 3.2
-          env: SETUP_CMD='test'
+        - python: 3.2 # not compatible with 1.9 in conda
+          env: SETUP_CMD='test' NUMPY_VERSION=1.8
         - python: 3.3
           env: SETUP_CMD='test'
         - python: 3.4
@@ -74,6 +74,10 @@ matrix:
           env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.8
         - python: 3.4
           env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.8
+        - python: 2.7
+          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
+        - python: 3.4
+          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
 
 before_install:
 
