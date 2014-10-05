@@ -1,4 +1,5 @@
 import numpy as np
+from distutils.version import StrictVersion
 
 from .cube_utils import iterator_strategy
 
@@ -161,7 +162,11 @@ def moment_cubewise(cube, order, axis):
     data = cube._get_filled_data() * cube._pix_size()[axis]
 
     if order == 0:
-        return np.nansum(data, axis=axis)
+        result = np.nansum(data, axis=axis)
+        if StrictVersion(np.__version__) >= StrictVersion('1.9.0'):
+            nans = np.all(np.isnan(data), axis=axis)
+            result[nans] = np.nan
+        return result
 
     if order == 1:
         return (np.nansum(data * pix_cen, axis=axis) /
