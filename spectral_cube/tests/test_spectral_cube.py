@@ -17,7 +17,9 @@ from distutils.version import StrictVersion
 try:
     import yt
     ytOK = True
-    yt_version = StrictVersion(yt.__version__)
+    yt_version = (StrictVersion(yt.__version__[:-4])
+                  if 'dev' in yt.__version__ else
+                  StrictVersion(yt.__version__))
 except ImportError:
     yt_version = StrictVersion('0.0.0')
     ytOK = False
