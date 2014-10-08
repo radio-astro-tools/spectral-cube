@@ -146,13 +146,20 @@ class Projection(u.Quantity):
         """
         Use aplpy to make a quick-look image of the projection.  This will make
         the `FITSFigure` attribute available.
-        """
-        if not hasattr(self, 'FITSFigure'):
-            import aplpy
-            self.FITSFigure = aplpy.FITSFigure(self.hdu)
 
-        self.FITSFigure.show_grayscale()
-        self.FITSFigure.add_colorbar()
+        If there are unmatched celestial axes, this will instead show an image
+        without axis labels.
+        """
+        try:
+            if not hasattr(self, 'FITSFigure'):
+                import aplpy
+                self.FITSFigure = aplpy.FITSFigure(self.hdu)
+
+            self.FITSFigure.show_grayscale()
+            self.FITSFigure.add_colorbar()
+        except wcs.InconsistentAxisTypesError:
+            from matplotlib import pyplot
+            self.figure = pyplot.imshow(self.value)
 
 # A slice is just like a projection in every way
 class Slice(Projection):
