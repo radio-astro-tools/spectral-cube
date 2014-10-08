@@ -562,4 +562,25 @@ def test_slice_wcs(view, naxis):
     sl = cube[view]
     assert sl.wcs.naxis == naxis
 
+def test_header_units_consistent():
 
+    cube, data = cube_and_raw('advs.fits')
+
+    cube_kms = cube.with_spectral_unit(u.km/u.s)
+    cube_Mms = cube.with_spectral_unit(u.Mm/u.s)
+
+    assert cube.header['CUNIT3'] == 'm s-1'
+    assert cube_kms.header['CUNIT3'] == 'km s-1'
+    assert cube_Mms.header['CUNIT3'] == 'Mm s-1'
+
+    # Wow, the tolerance here is really terrible...
+    assert_allclose(cube_Mms.header['CDELT3'], cube.header['CDELT3']/1e6,rtol=1e-3,atol=1e-5)
+    assert_allclose(cube.header['CDELT3']/1e3, cube_kms.header['CDELT3'],rtol=1e-2,atol=1e-5)
+
+    cube_freq = cube.with_spectral_unit(u.Hz)
+
+    assert cube_freq.header['CUNIT3'] == 'Hz'
+
+    cube_freq_GHz = cube.with_spectral_unit(u.GHz)
+
+    assert cube_freq_GHz.header['CUNIT3'] == 'GHz'
