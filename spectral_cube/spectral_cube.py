@@ -1582,6 +1582,13 @@ class SpectralCube(object):
         header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
         header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
         header.insert(5, Card(keyword='NAXIS3', value=self.shape[0]))
+
+        # Preserve the cube's spectral units
+        if self.spectral_axis.unit != u.Unit(header['CUNIT3']):
+            header['CDELT3'] *= u.Unit(header['CUNIT3']).to(self.spectral_axis.unit)
+            header['CRVAL3'] *= u.Unit(header['CUNIT3']).to(self.spectral_axis.unit)
+            header['CUNIT3'] = self.spectral_axis.unit.to_string(format='FITS')
+
         # TODO: incorporate other relevant metadata here
         return header
 
