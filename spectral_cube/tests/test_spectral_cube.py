@@ -8,6 +8,7 @@ from astropy.wcs import WCS
 import numpy as np
 
 from .. import SpectralCube, BooleanArrayMask, FunctionMask, LazyMask, CompositeMask
+from ..np_compat import allbadtonan
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
@@ -192,7 +193,7 @@ class TestNumpyMethods(BaseTest):
 
     def test_sum(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
-        self._check_numpy(self.c.sum, d, np.nansum)
+        self._check_numpy(self.c.sum, d, allbadtonan(np.nansum))
 
     def test_max(self):
         d = np.where(self.d > 0.5, self.d, np.nan)

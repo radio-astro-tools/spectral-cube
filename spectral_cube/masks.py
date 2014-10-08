@@ -119,7 +119,10 @@ class MaskBase(object):
         This is an internal method used by :class:`SpectralCube`.
         Users should use the property :meth:`MaskBase.filled_data`
         """
-        sliced_data = data[view].copy().astype(np.float)
+        # Must convert to floating point, but should not change from inherited
+        # type otherwise
+        dt = np.find_common_type([data.dtype], [np.float])
+        sliced_data = data[view].astype(dt)
         ex = self.exclude(data=data, wcs=wcs, view=view)
         sliced_data[ex] = fill
         return sliced_data

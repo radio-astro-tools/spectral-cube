@@ -402,11 +402,12 @@ class SpectralCube(object):
         """
         Return the sum of the cube, optionally over an axis.
         """
+        from .np_compat import allbadtonan
 
         projection = self._naxes_dropped(axis) == 1
 
-        return self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
-                                         axis=axis, unit=self.unit,
+        return self.apply_numpy_function(allbadtonan(np.nansum), fill=np.nan,
+                                         how=how, axis=axis, unit=self.unit,
                                          projection=projection)
 
     @aggregation_docstring

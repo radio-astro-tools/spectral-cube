@@ -12,7 +12,7 @@ env:
         # The following versions are the 'default' for tests, unless
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
-        - NUMPY_VERSION=1.8
+        - NUMPY_VERSION=1.9
         - ASTROPY_VERSION=stable
         - CONDA_INSTALL='conda install -c astropy-ci-extras --yes'
         - PIP_INSTALL='pip install'
@@ -50,8 +50,8 @@ matrix:
           env: SETUP_CMD='test' YT=yes
         - python: 2.7
           env: SETUP_CMD='test' YT=no
-        - python: 3.2
-          env: SETUP_CMD='test'
+        - python: 3.2 # not compatible with 1.9 in conda
+          env: SETUP_CMD='test' NUMPY_VERSION=1.8
         - python: 3.3
           env: SETUP_CMD='test'
         - python: 3.4
@@ -60,6 +60,8 @@ matrix:
         # Try older numpy versions
         - python: 3.2
           env: NUMPY_VERSION=1.6 SETUP_CMD='test'
+        - python: 2.7
+          env: NUMPY_VERSION=1.8 SETUP_CMD='test'
         - python: 2.7
           env: NUMPY_VERSION=1.7 SETUP_CMD='test'
         - python: 2.7
@@ -72,6 +74,10 @@ matrix:
           env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.8
         - python: 3.4
           env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.8
+        - python: 2.7
+          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
+        - python: 3.4
+          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
 
 before_install:
 
