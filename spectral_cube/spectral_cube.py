@@ -1651,7 +1651,7 @@ class SpectralCube(object):
         from glue.core.coordinates import coordinates_from_header
 
         if dataset is not None:
-            if name in dataset:
+            if name in [d.label for d in dataset.components]:
                 name = name+"_"
             dataset[name] = self
 
