@@ -1624,7 +1624,7 @@ class SpectralCube(object):
 
         return ytCube(self, ds, spectral_factor=spectral_factor)
 
-    def to_glue(self, name=None, glue_app=None):
+    def to_glue(self, name=None, glue_app=None, data_collection=None):
         """
         Send data to a new or existing Glue application
 
@@ -1632,12 +1632,16 @@ class SpectralCube(object):
         ----------
         name : str or None
             The name of the dataset within Glue.  If None, defaults to
-            'SpectralCube'
+            'SpectralCube'.  If a dataset with the given name already exists,
+            a new dataset with "_" appended will be added instead.
         glue_app : GlueApplication or None
             A glue application to send the data to.  If this is not specified,
             a new glue application will be started if one does not already
             exist for this cube.  Otherwise, the data will be sent to the
             existing glue application, `self._glue_app`.
+        data_collection : DataCollection or None
+            An existing DataCollection to add the cube to.  This is a good way
+            to compare cubes with the same dimensions.  Supercedes ``glue_app``
         """
         if name is None:
             name = 'SpectralCube'
@@ -1653,21 +1657,27 @@ class SpectralCube(object):
         comp = Component.autotyped(array)
         result.add_component(comp, name)
 
-        if glue_app is None:
-            if hasattr(self,'_glue_app'):
-                glue_app = self._glue_app
-            else:
-                # Start a new glue session.  This will quit when done.
-                # I don't think the return statement is ever reached, based on
-                # past attempts [@ChrisBeaumont - chime in here if you'd like]
-                dc = DataCollection([result])
+        if data_collection is not None:
+            if name in data_collection:
+                name = name+"_"
+            data_collection[name] = result
 
-                #start Glue
-                self._glue_app = GlueApplication(dc)
-                self._glue_app.start()
-                return
+        else:
+            if glue_app is None:
+                if hasattr(self,'_glue_app'):
+                    glue_app = self._glue_app
+                else:
+                    # Start a new glue session.  This will quit when done.
+                    # I don't think the return statement is ever reached, based on
+                    # past attempts [@ChrisBeaumont - chime in here if you'd like]
+                    dc = DataCollection([result])
 
-        glue_app.add_datasets(self._glue_app.data_collection, result)
+                    #start Glue
+                    self._glue_app = GlueApplication(dc)
+                    self._glue_app.start()
+                    return
+
+            glue_app.add_datasets(self._glue_app.data_collection, result)
         
         
 
