@@ -1624,7 +1624,21 @@ class SpectralCube(object):
 
         return ytCube(self, ds, spectral_factor=spectral_factor)
 
-    def to_glue(self, name=None):
+    def to_glue(self, name=None, glue_app=None):
+        """
+        Send data to a new or existing Glue application
+
+        Parameters
+        ----------
+        name : str or None
+            The name of the dataset within Glue.  If None, defaults to
+            'SpectralCube'
+        glue_app : GlueApplication or None
+            A glue application to send the data to.  If this is not specified,
+            a new glue application will be started if one does not already
+            exist for this cube.  Otherwise, the data will be sent to the
+            existing glue application, `self._glue_app`.
+        """
         if name is None:
             name = 'SpectralCube'
 
@@ -1639,14 +1653,21 @@ class SpectralCube(object):
         comp = Component.autotyped(array)
         result.add_component(comp, name)
 
-        if hasattr(self,'_glue_app'):
-            self._glue_app.add_datasets(self._glue_app.data_collection, result)
-        else:
-            dc = DataCollection([result])
+        if glue_app is None:
+            if hasattr(self,'_glue_app'):
+                glue_app = self._glue_app
+            else:
+                # Start a new glue session.  This will quit when done.
+                # I don't think the return statement is ever reached, based on
+                # past attempts [@ChrisBeaumont - chime in here if you'd like]
+                dc = DataCollection([result])
 
-            #start Glue
-            self._glue_app = GlueApplication(dc)
-            self._glue_app.start()
+                #start Glue
+                self._glue_app = GlueApplication(dc)
+                self._glue_app.start()
+                return
+
+        glue_app.add_datasets(self._glue_app.data_collection, result)
         
         
 
