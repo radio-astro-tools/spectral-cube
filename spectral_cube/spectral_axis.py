@@ -52,6 +52,11 @@ LINEAR_CUNIT_DICT = {'VRAD': u.Hz, 'VOPT': u.m, 'FREQ': u.Hz, 'WAVE': u.m,
                      'VELO': u.m/u.s, 'AWAV': u.m}
 LINEAR_CUNIT_DICT.update(WCS_UNIT_DICT)
 
+def unit_from_header(header):
+    """ Retrieve the spectral unit from a header """
+    if 'CUNIT3' in header:
+        return u.Unit(header['CUNIT3'])
+
 def wcs_unit_scale(unit):
     """
     Determine the appropriate scaling factor to get to the equivalent WCS unit
