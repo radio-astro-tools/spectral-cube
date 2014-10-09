@@ -1649,6 +1649,7 @@ class SpectralCube(object):
         from glue.qt.glue_application import GlueApplication
         from glue.core import DataCollection, Data, Component
         from glue.core.coordinates import coordinates_from_header
+        from glue.qt.widgets import ImageWidget
 
         if dataset is not None:
             if name in [d.label for d in dataset.components]:
@@ -1659,8 +1660,7 @@ class SpectralCube(object):
             result = Data(label=name)
             result.coords = coordinates_from_header(self.header)
 
-            comp = Component.autotyped(self)
-            result.add_component(comp, name)
+            result.add_component(self, name)
 
             if glue_app is None:
                 if hasattr(self,'_glue_app'):
@@ -1672,9 +1672,13 @@ class SpectralCube(object):
                     dc = DataCollection([result])
 
                     #start Glue
-                    self._glue_app = GlueApplication(dc)
+                    ga = self._glue_app = GlueApplication(dc)
+                    self._glue_viewer = ga.new_data_viewer(ImageWidget,
+                                                           data=result)
+
                     self._glue_app.start()
-                    return
+
+                    return self._glue_app
 
             glue_app.add_datasets(self._glue_app.data_collection, result)
         
