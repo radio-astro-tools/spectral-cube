@@ -1630,22 +1630,23 @@ class SpectralCube(object):
 
         from glue.qt.glue_application import GlueApplication
         from glue.core import DataCollection, Data, Component
-        from glue.core.coordinates import coordinates_from_wcs
+        from glue.core.coordinates import coordinates_from_header
 
         result = Data()
         array = self
-        result.coords = coordinates_from_wcs(self.wcs)
+        result.coords = coordinates_from_header(self.header)
 
         comp = Component.autotyped(array)
-        result.add_component(comp, 'SpectralCube')
+        result.add_component(comp, name)
 
-        dc = DataCollection([result])
+        if hasattr(self,'_glue_app'):
+            self._glue_app.add_datasets(self._glue_app.data_collection, result)
+        else:
+            dc = DataCollection([result])
 
-        #start Glue
-        app = GlueApplication(dc)
-        app.start()
-
-        return app
+            #start Glue
+            self._glue_app = GlueApplication(dc)
+            self._glue_app.start()
         
         
 
