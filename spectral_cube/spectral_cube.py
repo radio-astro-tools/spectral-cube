@@ -1624,7 +1624,7 @@ class SpectralCube(object):
 
         return ytCube(self, ds, spectral_factor=spectral_factor)
 
-    def to_glue(self, name=None, glue_app=None, data_collection=None):
+    def to_glue(self, name=None, glue_app=None, dataset=None):
         """
         Send data to a new or existing Glue application
 
@@ -1639,8 +1639,8 @@ class SpectralCube(object):
             a new glue application will be started if one does not already
             exist for this cube.  Otherwise, the data will be sent to the
             existing glue application, `self._glue_app`.
-        data_collection : DataCollection or None
-            An existing DataCollection to add the cube to.  This is a good way
+        dataset : glue.core.Data or None
+            An existing Data object to add the cube to.  This is a good way
             to compare cubes with the same dimensions.  Supercedes ``glue_app``
         """
         if name is None:
@@ -1650,19 +1650,18 @@ class SpectralCube(object):
         from glue.core import DataCollection, Data, Component
         from glue.core.coordinates import coordinates_from_header
 
-        result = Data()
-        array = self
-        result.coords = coordinates_from_header(self.header)
-
-        comp = Component.autotyped(array)
-        result.add_component(comp, name)
-
-        if data_collection is not None:
-            if name in data_collection:
+        if dataset is not None:
+            if name in dataset:
                 name = name+"_"
-            data_collection[name] = result
+            dataset[name] = self
 
         else:
+            result = Data(label=name)
+            result.coords = coordinates_from_header(self.header)
+
+            comp = Component.autotyped(self)
+            result.add_component(comp, name)
+
             if glue_app is None:
                 if hasattr(self,'_glue_app'):
                     glue_app = self._glue_app
