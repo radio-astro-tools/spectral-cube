@@ -272,6 +272,9 @@ class SpectralCube(object):
         """ Number of elements in the cube """
         return self._data.size
 
+    def __len__(self):
+        return self.shape[0]
+
     @property
     def ndim(self):
         """ Dimensionality of the data """
@@ -737,7 +740,7 @@ class SpectralCube(object):
     def __getitem__(self, view):
 
         # Need to allow self[:], self[:,:]
-        if isinstance(view, slice):
+        if isinstance(view, (slice,int)):
             view = (view, slice(None), slice(None))
         elif len(view) == 2:
             view = view + (slice(None),)
@@ -1620,6 +1623,31 @@ class SpectralCube(object):
                                                                False))
 
         return ytCube(self, ds, spectral_factor=spectral_factor)
+
+    def to_glue(self, name=None):
+        if name is None:
+            name = 'SpectralCube'
+
+        from glue.qt.glue_application import GlueApplication
+        from glue.core import DataCollection, Data, Component
+        from glue.core.coordinates import coordinates_from_wcs
+
+        result = Data()
+        array = self
+        result.coords = coordinates_from_wcs(self.wcs)
+
+        comp = Component.autotyped(array)
+        result.add_component(comp, 'SpectralCube')
+
+        dc = DataCollection([result])
+
+        #start Glue
+        app = GlueApplication(dc)
+        app.start()
+
+        return app
+        
+        
 
     @property
     def header(self):
