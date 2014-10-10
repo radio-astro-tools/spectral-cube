@@ -773,9 +773,16 @@ class SpectralCube(object):
 
         return self._new_cube_with(data=self._data[view],
                                    wcs=wcs_utils.slice_wcs(self._wcs, view),
-                                   unit=self.unit,
                                    mask=newmask,
                                    meta=meta)
+
+    @property
+    def value(self):
+        """Return a copy of self with unit set to None"""
+        newcube = self._new_cube_with()
+        newcube._unit = None
+        return newcube
+
 
     @property
     def fill_value(self):
