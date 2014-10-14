@@ -84,24 +84,10 @@ def aggregation_docstring(func):
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
 
-
-class Projection(u.Quantity):
-
-    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None):
-
-        if value.ndim != 2:
-            raise ValueError("value should be a 2-d array")
-
-        if wcs is not None and wcs.wcs.naxis != 2:
-            raise ValueError("wcs should have two dimension")
-
-        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype, copy=copy).view(cls)
-        self._wcs = wcs
-        self._meta = meta
-        self._mask = mask
-
-        return self
+class LowerDimensionalObject(u.Quantity):
+    """
+    Generic class for 1D and 2D objects
+    """
 
     @property
     def wcs(self):
@@ -123,7 +109,7 @@ class Projection(u.Quantity):
 
     def write(self, filename, format=None, overwrite=False):
         """
-        Write the moment map to a file.
+        Write the lower dimensional object to a file.
 
         Parameters
         ----------
@@ -141,6 +127,26 @@ class Projection(u.Quantity):
         else:
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
+
+class Projection(LowerDimensionalObject):
+
+    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
+                meta=None, mask=None):
+
+        if np.asarray(value).ndim != 2:
+            raise ValueError("value should be a 2-d array")
+
+        if wcs is not None and wcs.wcs.naxis != 2:
+            raise ValueError("wcs should have two dimension")
+
+        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
+                                  copy=copy).view(cls)
+        self._wcs = wcs
+        self._meta = meta
+        self._mask = mask
+
+        return self
+
 
     def quicklook(self):
         """
@@ -164,6 +170,26 @@ class Projection(u.Quantity):
 # A slice is just like a projection in every way
 class Slice(Projection):
     pass
+
+
+class OneDSpectrum(LowerDimensionalObject):
+
+    def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
+                meta=None, mask=None):
+
+        if np.asarray(value).ndim != 1:
+            raise ValueError("value should be a 1-d array")
+
+        if wcs is not None and wcs.wcs.naxis != 1:
+            raise ValueError("wcs should have two dimension")
+
+        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
+                                  copy=copy).view(cls)
+        self._wcs = wcs
+        self._meta = meta
+        self._mask = mask
+
+        return self
 
 
 class SpectralCube(object):
@@ -728,13 +754,24 @@ class SpectralCube(object):
 
         if intslices:
             if len(intslices) > 1:
-                # TODO: return a Specutils Spectrum object
-                raise NotImplementedError("1D slices are not implemented yet.")
+                if 2 in intslices:
+                    raise NotImplementedError("1D slices along non-spectral "
+                                              "axes are not yet implemented.")
+                newwcs = self._wcs.sub([a
+                                        for a in (1,2,3)
+                                        if a not in [x+1 for x in intslices]])
+                return OneDSpectrum(value=self.filled_data[view],
+                                    wcs=newwcs,
+                                    copy=False,
+                                    unit=self.unit,
+                                    meta=meta)
+                                
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
             return Slice(value=self.filled_data[view],
                          wcs=newwcs,
                          copy=False,
+                         unit=self.unit,
                          meta=meta)
 
         newmask = self._mask[view] if self._mask is not None else None
@@ -743,6 +780,14 @@ class SpectralCube(object):
                                    wcs=wcs_utils.slice_wcs(self._wcs, view),
                                    mask=newmask,
                                    meta=meta)
+
+    @property
+    def unitless(self):
+        """Return a copy of self with unit set to None"""
+        newcube = self._new_cube_with()
+        newcube._unit = None
+        return newcube
+
 
     @property
     def fill_value(self):
