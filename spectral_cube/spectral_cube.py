@@ -1624,7 +1624,7 @@ class SpectralCube(object):
 
         return ytCube(self, ds, spectral_factor=spectral_factor)
 
-    def to_glue(self, name=None, glue_app=None, dataset=None):
+    def to_glue(self, name=None, glue_app=None, dataset=None, start_gui=True):
         """
         Send data to a new or existing Glue application
 
@@ -1642,6 +1642,8 @@ class SpectralCube(object):
         dataset : glue.core.Data or None
             An existing Data object to add the cube to.  This is a good way
             to compare cubes with the same dimensions.  Supercedes ``glue_app``
+        start_gui : bool
+            Start the GUI when this is run.  Set to False for testing.
         """
         if name is None:
             name = 'SpectralCube'
@@ -1676,7 +1678,8 @@ class SpectralCube(object):
                     self._glue_viewer = ga.new_data_viewer(ImageWidget,
                                                            data=result)
 
-                    self._glue_app.start()
+                    if start_gui:
+                        self._glue_app.start()
 
                     return self._glue_app
 
