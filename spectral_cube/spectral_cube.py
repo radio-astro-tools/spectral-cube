@@ -194,17 +194,22 @@ class SpectralCube(object):
         #assert mask._wcs == self._wcs
         self._fill_value = fill_value
 
+        self._header = Header() if header is None else header
+        if not isinstance(self._header, Header):
+            raise TypeError("If a header is given, it must be a fits.Header")
+
         # We don't pass the spectral unit via the initializer since the user
         # should be using ``with_spectral_unit`` if they want to set it.
         # However, we do want to keep track of what units the spectral axis
         # should be returned in, otherwise astropy's WCS can change the units,
         # e.g. km/s -> m/s.
+        # This can be overridden with Header below
         self._spectral_unit = u.Unit(self._wcs.wcs.cunit[2])
-        self._spectral_scale = 1.0
 
-        self._header = Header() if header is None else header
-        if not isinstance(self._header, Header):
-            raise TypeError("If a header is given, it must be a fits.Header")
+        if spectral_axis.unit_from_header(self._header) is not None:
+            self._spectral_unit = spectral_axis.unit_from_header(self._header)
+
+        self._spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None):
@@ -217,10 +222,9 @@ class SpectralCube(object):
         spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
 
         cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
-                            fill_value=fill_value)
+                            fill_value=fill_value, header=self._header)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
-        cube._header = self._header
 
         return cube
 
@@ -1584,10 +1588,10 @@ class SpectralCube(object):
         header.insert(5, Card(keyword='NAXIS3', value=self.shape[0]))
 
         # Preserve the cube's spectral units
-        if self.spectral_axis.unit != u.Unit(header['CUNIT3']):
-            header['CDELT3'] *= u.Unit(header['CUNIT3']).to(self.spectral_axis.unit)
-            header['CRVAL3'] *= u.Unit(header['CUNIT3']).to(self.spectral_axis.unit)
-            header['CUNIT3'] = self.spectral_axis.unit.to_string(format='FITS')
+        if self._spectral_unit != u.Unit(header['CUNIT3']):
+            header['CDELT3'] *= self._spectral_scale
+            header['CRVAL3'] *= self._spectral_scale
+            header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
         # TODO: incorporate other relevant metadata here
         return header
