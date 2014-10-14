@@ -133,6 +133,8 @@ class Projection(LowerDimensionalObject):
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None):
 
+        value = np.asarray(value)
+
         if value.ndim != 2:
             raise ValueError("value should be a 2-d array")
 
@@ -175,6 +177,8 @@ class OneDSpectrum(LowerDimensionalObject):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None):
+
+        value = np.asarray(value)
 
         if value.ndim != 1:
             raise ValueError("value should be a 1-d array")
@@ -777,7 +781,7 @@ class SpectralCube(object):
                                    meta=meta)
 
     @property
-    def value(self):
+    def unitless(self):
         """Return a copy of self with unit set to None"""
         newcube = self._new_cube_with()
         newcube._unit = None
