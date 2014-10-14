@@ -139,7 +139,8 @@ class Projection(LowerDimensionalObject):
         if wcs is not None and wcs.wcs.naxis != 2:
             raise ValueError("wcs should have two dimension")
 
-        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype, copy=copy).view(cls)
+        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
+                                  copy=copy).view(cls)
         self._wcs = wcs
         self._meta = meta
         self._mask = mask
