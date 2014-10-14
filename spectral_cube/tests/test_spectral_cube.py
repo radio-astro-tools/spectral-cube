@@ -194,6 +194,10 @@ class TestNumpyMethods(BaseTest):
     def test_sum(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
         self._check_numpy(self.c.sum, d, allbadtonan(np.nansum))
+        # Need a secondary check to make sure it works with no
+        # axis keyword being passed (regression test for issue introduced in
+        # 150)
+        assert np.all(self.c.sum() == np.nansum(d))
 
     def test_max(self):
         d = np.where(self.d > 0.5, self.d, np.nan)

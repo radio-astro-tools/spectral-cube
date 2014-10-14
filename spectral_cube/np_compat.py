@@ -7,7 +7,7 @@ def allbadtonan(function):
     results.  For >=1.9, any axes with all-nan values will have all-nan outputs
     in the collapsed version
     """
-    def f(data, axis=-1):
+    def f(data, axis=None):
         result = function(data, axis=axis)
         if StrictVersion(np.__version__) >= StrictVersion('1.9.0'):
             if axis is None:
