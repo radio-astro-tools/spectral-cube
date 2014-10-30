@@ -22,3 +22,5 @@ Build and coverage status
 
 [![Coverage Status](https://coveralls.io/repos/radio-astro-tools/spectral-cube/badge.png?branch=master)](https://coveralls.io/r/radio-astro-tools/spectral-cube?branch=master)
 
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.11485.png)](http://dx.doi.org/10.5281/zenodo.11485)
+
