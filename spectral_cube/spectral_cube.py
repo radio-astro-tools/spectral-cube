@@ -1687,6 +1687,10 @@ class SpectralCube(object):
         
         
     def to_pvextractor(self):
+        """
+        Open the cube in a quick viewer written in matplotlib that allows you
+        to create PV extractions within the GUI
+        """
         from pvextractor.gui import PVSlicer
 
         return PVSlicer(self)
