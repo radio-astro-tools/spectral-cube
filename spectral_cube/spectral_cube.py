@@ -198,7 +198,7 @@ class OneDSpectrum(LowerDimensionalObject):
         kwargs are passed to `matplotlib.pyplot.plot`
         """
         from matplotlib import pyplot
-        xaxis, = self.wcs.wcs_pix2world([np.arange(self.size)],0)
+        xaxis, = self.wcs.wcs_pix2world(np.arange(self.size),0)
         self.figure = pyplot.plot(xaxis, self.value, **kwargs)
         pyplot.gca().set_xlabel(self.wcs.wcs.cunit[0])
         pyplot.gca().set_ylabel(self.unit)
