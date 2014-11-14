@@ -1686,6 +1686,10 @@ class SpectralCube(object):
             glue_app.add_datasets(self._glue_app.data_collection, result)
         
         
+    def to_pvextractor(self):
+        from pvextractor.gui import PVSlicer
+
+        return PVSlicer(self)
 
     @property
     def header(self):
