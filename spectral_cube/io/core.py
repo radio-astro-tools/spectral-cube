@@ -31,7 +31,7 @@ def read(filename, format=None, hdu=None, **kwargs):
     elif format == 'casa_image':
         from .casa_image import load_casa_image
         return load_casa_image(filename)
-    elif format == 'class_lmv':
+    elif format in ('class_lmv','lmv'):
         from .class_lmv import load_lmv_cube
         return load_lmv_cube(filename)
     else:

@@ -2,6 +2,7 @@ import numpy as np
 import warnings
 r2deg = 180/np.pi
 import string
+from astropy import log
 from .fits import load_fits_cube
 
 """
