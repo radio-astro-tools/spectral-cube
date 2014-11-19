@@ -272,6 +272,9 @@ class SpectralCube(object):
         """ Number of elements in the cube """
         return self._data.size
 
+    def __len__(self):
+        return self.shape[0]
+
     @property
     def ndim(self):
         """ Dimensionality of the data """
@@ -737,7 +740,7 @@ class SpectralCube(object):
     def __getitem__(self, view):
 
         # Need to allow self[:], self[:,:]
-        if isinstance(view, slice):
+        if isinstance(view, (slice,int)):
             view = (view, slice(None), slice(None))
         elif len(view) == 2:
             view = view + (slice(None),)
@@ -1620,6 +1623,69 @@ class SpectralCube(object):
                                                                False))
 
         return ytCube(self, ds, spectral_factor=spectral_factor)
+
+    def to_glue(self, name=None, glue_app=None, dataset=None, start_gui=True):
+        """
+        Send data to a new or existing Glue application
+
+        Parameters
+        ----------
+        name : str or None
+            The name of the dataset within Glue.  If None, defaults to
+            'SpectralCube'.  If a dataset with the given name already exists,
+            a new dataset with "_" appended will be added instead.
+        glue_app : GlueApplication or None
+            A glue application to send the data to.  If this is not specified,
+            a new glue application will be started if one does not already
+            exist for this cube.  Otherwise, the data will be sent to the
+            existing glue application, `self._glue_app`.
+        dataset : glue.core.Data or None
+            An existing Data object to add the cube to.  This is a good way
+            to compare cubes with the same dimensions.  Supercedes ``glue_app``
+        start_gui : bool
+            Start the GUI when this is run.  Set to False for testing.
+        """
+        if name is None:
+            name = 'SpectralCube'
+
+        from glue.qt.glue_application import GlueApplication
+        from glue.core import DataCollection, Data, Component
+        from glue.core.coordinates import coordinates_from_header
+        from glue.qt.widgets import ImageWidget
+
+        if dataset is not None:
+            if name in [d.label for d in dataset.components]:
+                name = name+"_"
+            dataset[name] = self
+
+        else:
+            result = Data(label=name)
+            result.coords = coordinates_from_header(self.header)
+
+            result.add_component(self, name)
+
+            if glue_app is None:
+                if hasattr(self,'_glue_app'):
+                    glue_app = self._glue_app
+                else:
+                    # Start a new glue session.  This will quit when done.
+                    # I don't think the return statement is ever reached, based on
+                    # past attempts [@ChrisBeaumont - chime in here if you'd like]
+                    dc = DataCollection([result])
+
+                    #start Glue
+                    ga = self._glue_app = GlueApplication(dc)
+                    self._glue_viewer = ga.new_data_viewer(ImageWidget,
+                                                           data=result)
+
+                    if start_gui:
+                        self._glue_app.start()
+
+                    return self._glue_app
+
+            glue_app.add_datasets(self._glue_app.data_collection, result)
+        
+        
 
     @property
     def header(self):
