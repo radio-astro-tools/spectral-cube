@@ -27,7 +27,7 @@ def read(filename, format=None, hdu=None, **kwargs):
 
     if format == 'fits':
         from .fits import load_fits_cube
-        return load_fits_cube(filename)
+        return load_fits_cube(filename, hdu=hdu, **kwargs)
     elif format == 'casa_image':
         from .casa_image import load_casa_image
         return load_casa_image(filename)
