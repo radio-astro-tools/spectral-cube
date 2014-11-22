@@ -191,17 +191,26 @@ class OneDSpectrum(LowerDimensionalObject):
 
         return self
 
+    @property
+    def spectral_axis(self):
+        """
+        A `~astropy.units.Quantity` array containing the central values of
+        each channel along the spectral axis.
+        """
+        return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0]
+
     def quicklook(self, **kwargs):
         """
-        Simply plot the spectrum
+        Plot the spectrum with current spectral units in the currently open
+        figure
 
         kwargs are passed to `matplotlib.pyplot.plot`
         """
         from matplotlib import pyplot
-        xaxis, = self.wcs.wcs_pix2world(np.arange(self.size),0)
-        self.figure = pyplot.plot(xaxis, self.value, **kwargs)
-        pyplot.gca().set_xlabel(self.wcs.wcs.cunit[0])
-        pyplot.gca().set_ylabel(self.unit)
+        ax = pyplot.gca()
+        ax.plot(self.spectral_axis.value, self.value, **kwargs)
+        ax.set_ylabel(self.unit)
+        ax.set_xlabel(self.wcs.wcs.cunit[0])
 
 
 class SpectralCube(object):
