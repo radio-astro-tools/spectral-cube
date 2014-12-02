@@ -163,7 +163,7 @@ class Projection(LowerDimensionalObject):
 
             self.FITSFigure.show_grayscale()
             self.FITSFigure.add_colorbar()
-        except wcs.InconsistentAxisTypesError:
+        except (wcs.InconsistentAxisTypesError, ImportError):
             from matplotlib import pyplot
             self.figure = pyplot.imshow(self.value)
 

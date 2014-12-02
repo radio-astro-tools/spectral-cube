@@ -117,6 +117,8 @@ def load_casa_image(filename, skipdata=False,
 
     wcs = wcs_casa2astropy(casa_cs)
 
+    unit = ia.brightnessunit()
+
     # don't need this yet
     # stokes = get_casa_axis(temp_cs, wanttype="Stokes", skipdeg=False,)
 
@@ -144,7 +146,8 @@ def load_casa_image(filename, skipdata=False,
     # close the ia tool
     ia.close()
 
-    meta = {'filename': filename}
+    meta = {'filename': filename,
+            'BUNIT': unit}
 
 
     if wcs.naxis == 3:
