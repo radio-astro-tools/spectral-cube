@@ -191,6 +191,18 @@ class OneDSpectrum(LowerDimensionalObject):
 
         return self
 
+    def quicklook(self, **kwargs):
+        """
+        Simply plot the spectrum
+
+        kwargs are passed to `matplotlib.pyplot.plot`
+        """
+        from matplotlib import pyplot
+        xaxis, = self.wcs.wcs_pix2world(np.arange(self.size),0)
+        self.figure = pyplot.plot(xaxis, self.value, **kwargs)
+        pyplot.gca().set_xlabel(self.wcs.wcs.cunit[0])
+        pyplot.gca().set_ylabel(self.unit)
+
 
 class SpectralCube(object):
 
@@ -1686,6 +1698,14 @@ class SpectralCube(object):
             glue_app.add_datasets(self._glue_app.data_collection, result)
         
         
+    def to_pvextractor(self):
+        """
+        Open the cube in a quick viewer written in matplotlib that allows you
+        to create PV extractions within the GUI
+        """
+        from pvextractor.gui import PVSlicer
+
+        return PVSlicer(self)
 
     @property
     def header(self):

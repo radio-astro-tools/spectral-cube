@@ -62,6 +62,7 @@ Getting started
    manipulating.rst
    writing.rst
    moments.rst
+   quick_looks.rst
 
 Advanced
 ^^^^^^^^
