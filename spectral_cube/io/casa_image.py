@@ -3,7 +3,9 @@ from astropy.io import fits
 from astropy.extern import six
 from astropy.wcs import WCS
 import numpy as np
-from spectral_cube import SpectralCube, BooleanArrayMask
+
+from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask
+from .. import cube_utils
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -144,7 +146,20 @@ def load_casa_image(filename, skipdata=False,
 
     meta = {'filename': filename}
 
-    mask = BooleanArrayMask(wcs, np.logical_not(valid))
-    cube = SpectralCube(data, wcs, mask, meta=meta)
+
+    if wcs.naxis == 3:
+        mask = BooleanArrayMask(np.logical_not(valid), wcs)
+        cube = SpectralCube(data, wcs, mask, meta=meta)
+
+    elif wcs.naxis == 4:
+        data, wcs = cube_utils._split_stokes(data.T, wcs)
+        mask = {}
+        for component in data:
+            data[component], wcs_slice = cube_utils._orient(data[component],
+                                                            wcs)
+            mask[component] = LazyMask(np.isfinite, data=data[component],
+                                       wcs=wcs_slice)
+
+        cube = StokesSpectralCube(data, wcs_slice, mask, meta=meta)
 
     return cube
