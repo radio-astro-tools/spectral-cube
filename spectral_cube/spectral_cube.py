@@ -208,9 +208,9 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         from matplotlib import pyplot
         ax = pyplot.gca()
-        ax.plot(self.spectral_axis.value, self.value, **kwargs)
-        ax.set_ylabel(self.unit)
+        ax.plot(self.spectral_axis, self.value, **kwargs)
         ax.set_xlabel(self.wcs.wcs.cunit[0])
+        ax.set_ylabel(self.unit)
 
 
 class SpectralCube(object):
