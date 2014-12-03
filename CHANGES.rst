@@ -1,4 +1,25 @@
-0.2 (unreleased)
+0.2.2 (unreleased)
+------------------
+
+None yet
+
+0.2.1 (2014-12-03)
+------------------
+
+- CASA cube readers now compatible with ALMA .image files (tested on Cycle 2
+  data) https://github.com/radio-astro-tools/spectral-cube/pull/165
+- Spectral quicklooks available
+  https://github.com/radio-astro-tools/spectral-cube/pull/164 now that 1D
+  slices are possible
+  https://github.com/radio-astro-tools/spectral-cube/pull/157
+- `to_pvextractor` tool allows easy export to `pvextractor
+  <pvextractor.readthedocs.org>`_
+  https://github.com/radio-astro-tools/spectral-cube/pull/160
+- `to_glue` sends the cube to `glue <www.glueviz.org/en/latest/>`_
+  https://github.com/radio-astro-tools/spectral-cube/pull/153
+
+
+0.2 (2014-09-11)
 ----------------
 
 - `moments` preserve spectral units now https://github.com/radio-astro-tools/spectral-cube/pull/118
