@@ -148,13 +148,18 @@ class Projection(LowerDimensionalObject):
         return self
 
 
-    def quicklook(self):
+    def quicklook(self, filename=None):
         """
         Use aplpy to make a quick-look image of the projection.  This will make
         the `FITSFigure` attribute available.
 
         If there are unmatched celestial axes, this will instead show an image
         without axis labels.
+
+        Parameters
+        ----------
+        filename : str or Non
+            Optional - the filename to save the quicklook to.
         """
         try:
             if not hasattr(self, 'FITSFigure'):
@@ -163,9 +168,13 @@ class Projection(LowerDimensionalObject):
 
             self.FITSFigure.show_grayscale()
             self.FITSFigure.add_colorbar()
+            if filename is not None:
+                self.FITSFigure.save(filename)
         except (wcs.InconsistentAxisTypesError, ImportError):
             from matplotlib import pyplot
             self.figure = pyplot.imshow(self.value)
+            if filename is not None:
+                self.figure.savefig(filename)
 
 # A slice is just like a projection in every way
 class Slice(Projection):
@@ -199,18 +208,25 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0]
 
-    def quicklook(self, **kwargs):
+    def quicklook(self, filename, **kwargs):
         """
         Plot the spectrum with current spectral units in the currently open
         figure
 
         kwargs are passed to `matplotlib.pyplot.plot`
+
+        Parameters
+        ----------
+        filename : str or Non
+            Optional - the filename to save the quicklook to.
         """
         from matplotlib import pyplot
         ax = pyplot.gca()
         ax.plot(self.spectral_axis, self.value, **kwargs)
         ax.set_xlabel(self.wcs.wcs.cunit[0])
         ax.set_ylabel(self.unit)
+        if filename is not None:
+            pyplot.gcf().savefig(filename)
 
 
 class SpectralCube(object):
