@@ -767,8 +767,8 @@ class SpectralCube(object):
         This operation returns a view into the data, and not a copy.
         """
         if isinstance(mask, np.ndarray):
-            if mask.shape != self._data.shape:
-                raise ValueError("Mask shape doesn't match data shape: "
+            if not is_broadcastable(mask.shape, self._data.shape):
+                raise ValueError("Mask shape is not broadcastable to data shape: "
                                  "%s vs %s" % (mask.shape, self._data.shape))
             mask = BooleanArrayMask(mask, self._wcs)
 
