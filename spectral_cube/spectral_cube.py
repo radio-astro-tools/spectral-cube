@@ -16,7 +16,7 @@ import numpy as np
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable
+from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable_and_smaller
 from .io.core import determine_format
 from .ytcube import ytCube
 
@@ -148,13 +148,18 @@ class Projection(LowerDimensionalObject):
         return self
 
 
-    def quicklook(self):
+    def quicklook(self, filename=None):
         """
         Use aplpy to make a quick-look image of the projection.  This will make
         the `FITSFigure` attribute available.
 
         If there are unmatched celestial axes, this will instead show an image
         without axis labels.
+
+        Parameters
+        ----------
+        filename : str or Non
+            Optional - the filename to save the quicklook to.
         """
         try:
             if not hasattr(self, 'FITSFigure'):
@@ -163,9 +168,13 @@ class Projection(LowerDimensionalObject):
 
             self.FITSFigure.show_grayscale()
             self.FITSFigure.add_colorbar()
+            if filename is not None:
+                self.FITSFigure.save(filename)
         except (wcs.InconsistentAxisTypesError, ImportError):
             from matplotlib import pyplot
             self.figure = pyplot.imshow(self.value)
+            if filename is not None:
+                self.figure.savefig(filename)
 
 # A slice is just like a projection in every way
 class Slice(Projection):
@@ -199,18 +208,25 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0]
 
-    def quicklook(self, **kwargs):
+    def quicklook(self, filename, **kwargs):
         """
         Plot the spectrum with current spectral units in the currently open
         figure
 
         kwargs are passed to `matplotlib.pyplot.plot`
+
+        Parameters
+        ----------
+        filename : str or Non
+            Optional - the filename to save the quicklook to.
         """
         from matplotlib import pyplot
         ax = pyplot.gca()
         ax.plot(self.spectral_axis, self.value, **kwargs)
         ax.set_xlabel(self.wcs.wcs.cunit[0])
         ax.set_ylabel(self.unit)
+        if filename is not None:
+            pyplot.gcf().savefig(filename)
 
 
 class SpectralCube(object):
@@ -751,8 +767,8 @@ class SpectralCube(object):
         This operation returns a view into the data, and not a copy.
         """
         if isinstance(mask, np.ndarray):
-            if mask.shape != self._data.shape:
-                raise ValueError("Mask shape doesn't match data shape: "
+            if not is_broadcastable_and_smaller(mask.shape, self._data.shape):
+                raise ValueError("Mask shape is not broadcastable to data shape: "
                                  "%s vs %s" % (mask.shape, self._data.shape))
             mask = BooleanArrayMask(mask, self._wcs)
 
@@ -1322,7 +1338,7 @@ class SpectralCube(object):
             raise ImportError("Scipy could not be imported: this function won't work.")
 
         if isinstance(region_mask, np.ndarray):
-            if is_broadcastable(region_mask.shape, self.shape):
+            if is_broadcastable_and_smaller(region_mask.shape, self.shape):
                 region_mask = BooleanArrayMask(region_mask, self._wcs)
             else:
                 raise ValueError("Mask shape does not match cube shape.")

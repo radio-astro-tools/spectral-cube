@@ -9,7 +9,7 @@ from astropy import units as u
 from .test_spectral_cube import cube_and_raw
 from .. import (BooleanArrayMask, SpectralCube, LazyMask,
                 FunctionMask, CompositeMask)
-from ..masks import is_broadcastable
+from ..masks import is_broadcastable_and_smaller
 
 from distutils.version import StrictVersion
 
@@ -256,6 +256,10 @@ def is_broadcastable_try(shp1, shp2):
     b = as_strided(x, shape=shp2, strides=[0] * len(shp2))
     try:
         c = np.broadcast_arrays(a, b)
+        # reverse order: compare last dim first (as broadcasting does)
+        if any(bi<ai for ai,bi in zip(shp1,shp2)):
+            # don't allow "b" to be smaller than "a"
+            return False
         return True
     except ValueError:
         return False
@@ -264,9 +268,9 @@ shapes = ([1,5,5], [1,5,1], [5,5,1], [5,5], [5,5,2],
           [2,3,4], [4,3,2], [4,2,3], [2,4,3])
 shape_combos = list(itertools.combinations(shapes,2))
 
-@pytest.mark.parametrize(('sh1','sh2'),shape_combos)
-def test_is_broadcastable(sh1, sh2):
-    assert is_broadcastable(sh1,sh2) == is_broadcastable_try(sh1,sh2)
+@pytest.mark.parametrize(('shp1','shp2'),shape_combos)
+def test_is_broadcastable(shp1, shp2):
+    assert is_broadcastable_and_smaller(shp1,shp2) == is_broadcastable_try(shp1,shp2)
 
 def test_flat_mask():
     cube, data = cube_and_raw('adv.fits')

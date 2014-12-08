@@ -25,9 +25,14 @@ with_spectral_unit_docs = """
             wavelength/frequency can be overridden with this parameter.
         """
 
-def is_broadcastable(shp1, shp2):
+def is_broadcastable_and_smaller(shp1, shp2):
+    """
+    Test if shape 1 can be broadcast to shape 2, not allowing the case
+    where shape 2 has a dimension length 1
+    """
     for a, b in zip(shp1[::-1], shp2[::-1]):
-        if a == 1 or b == 1 or a == b:
+        # b==1 is broadcastable but not desired
+        if a == 1 or a == b:
             pass
         else:
             return False
@@ -255,7 +260,7 @@ class BooleanArrayMask(MaskBase):
         #if mask.ndim != 3 and (shape is None or len(shape) != 3):
         #    raise ValueError("When creating a BooleanArrayMask with <3 dimensions, "
         #                     "the shape of the 3D array must be specified.")
-        if shape is not None and not is_broadcastable(mask.shape, shape):
+        if shape is not None and not is_broadcastable_and_smaller(mask.shape, shape):
             raise ValueError("Mask cannot be broadcast to the specified shape.")
         self._shape = shape or mask.shape
         n_extra_dims = (len(self._shape)-mask.ndim)
@@ -267,7 +272,7 @@ class BooleanArrayMask(MaskBase):
             self._mask = mask
 
     def _validate_wcs(self, new_data=None, new_wcs=None):
-        if new_data is not None and not is_broadcastable(new_data.shape, self._mask.shape):
+        if new_data is not None and not is_broadcastable_and_smaller(new_data.shape, self._mask.shape):
             raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs is not None:
             if new_wcs not in self._wcs_whitelist:
@@ -347,7 +352,7 @@ class LazyMask(MaskBase):
 
     def _validate_wcs(self, new_data=None, new_wcs=None):
         if new_data is not None:
-            if not is_broadcastable(new_data.shape, self._data.shape):
+            if not is_broadcastable_and_smaller(new_data.shape, self._data.shape):
                 raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs is not None:
             if new_wcs not in self._wcs_whitelist:
