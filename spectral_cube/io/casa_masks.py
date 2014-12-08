@@ -5,7 +5,7 @@ import warnings
 
 
 def make_casa_mask(SpecCube, outname, append_to_image=True,
-                   img=""):
+                   img=None):
     '''
     Takes a SpectralCube object as an input. Outputs the mask in a CASA
     friendly form.
@@ -27,7 +27,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
         from taskinit import ia
         from tasks import immath
     except ImportError:
-        print("Run in CASA! Cannot import casac.")
+        print("Cannot import casac. Must be run in a CASA environment.")
 
     # Get the header info from the image
     # There's not wcs_astropy2casa (yet), so create a temporary file for
@@ -63,6 +63,8 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     ia.close()
 
     if append_to_image:
+        if img is None:
+            raise TypeError("img argument must be specified to append the mask.")
         warnings.warn("Image appending not working yet.")
         # immath(imagename=img, mode='evalexpr', expr='IM0',
         #        outfile=img+"_test", mask='mask('+outname+')')
