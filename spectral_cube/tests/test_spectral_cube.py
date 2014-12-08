@@ -425,7 +425,7 @@ def test_with_mask_with_bad_array_shape():
     mask = np.zeros((5, 5), dtype=np.bool)
     with pytest.raises(ValueError) as exc:
         cube.with_mask(mask)
-    assert exc.value.args[0] == ("Mask shape doesn't match data shape: "
+    assert exc.value.args[0] == ("Mask shape is not broadcastable to data shape: "
                                  "(5, 5) vs (1, 1, 5)")
 
 

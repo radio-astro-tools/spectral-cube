@@ -16,7 +16,7 @@ import numpy as np
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable
+from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable_and_smaller
 from .io.core import determine_format
 from .ytcube import ytCube
 
@@ -767,7 +767,7 @@ class SpectralCube(object):
         This operation returns a view into the data, and not a copy.
         """
         if isinstance(mask, np.ndarray):
-            if not is_broadcastable(mask.shape, self._data.shape):
+            if not is_broadcastable_and_smaller(mask.shape, self._data.shape):
                 raise ValueError("Mask shape is not broadcastable to data shape: "
                                  "%s vs %s" % (mask.shape, self._data.shape))
             mask = BooleanArrayMask(mask, self._wcs)
@@ -1338,7 +1338,7 @@ class SpectralCube(object):
             raise ImportError("Scipy could not be imported: this function won't work.")
 
         if isinstance(region_mask, np.ndarray):
-            if is_broadcastable(region_mask.shape, self.shape):
+            if is_broadcastable_and_smaller(region_mask.shape, self.shape):
                 region_mask = BooleanArrayMask(region_mask, self._wcs)
             else:
                 raise ValueError("Mask shape does not match cube shape.")
