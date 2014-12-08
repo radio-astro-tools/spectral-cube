@@ -8,6 +8,18 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     '''
     Takes a SpectralCube object as an input. Outputs the mask in a CASA
     friendly form.
+
+    Parameters
+    ----------
+    SpecCube : SpectralCube
+        SpectralCube object containing mask.
+    outname : str
+        Name of the outputted mask file.
+    append_to_image : bool, optional
+        Appends the mask to a given image.
+    img : str, optional
+        Image to be appended to. Must be specified if append_to_image is
+        enabled.
     '''
 
     try:
