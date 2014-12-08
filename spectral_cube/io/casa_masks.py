@@ -1,6 +1,7 @@
 import numpy as np
 from astropy.io import fits
 import tempfile
+import warnings
 
 
 def make_casa_mask(SpecCube, outname, append_to_image=True,
@@ -24,6 +25,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
     try:
         from taskinit import ia
+        from tasks import immath
     except ImportError:
         print("Run in CASA! Cannot import casac.")
 
@@ -61,6 +63,6 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     ia.close()
 
     if append_to_image:
-        ia.open(img)
-        ia.maskhandler('set', outname)
-        ia.done()
+        warnings.warn("Image appending not working yet.")
+        # immath(imagename=img, mode='evalexpr', expr='IM0',
+        #        outfile=img+"_test", mask='mask('+outname+')')
