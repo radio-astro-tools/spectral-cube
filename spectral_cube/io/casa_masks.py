@@ -3,9 +3,11 @@ from astropy.io import fits
 import tempfile
 import warnings
 
+from ..wcs_utils import add_stokes_axis_to_wcs
+
 
 def make_casa_mask(SpecCube, outname, append_to_image=True,
-                   img=None):
+                   img=None, add_stokes=True):
     '''
     Takes a SpectralCube object as an input. Outputs the mask in a CASA
     friendly form.
@@ -36,8 +38,20 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     # CASA is closing this file at some point so set it to manual delete.
     temp2 = tempfile.NamedTemporaryFile(delete=False)
 
-    hdu = fits.PrimaryHDU(header=SpecCube.header,
-                          data=np.empty(SpecCube.shape))
+    # Grab wcs
+    # Optionally re-add on the Stokes axis
+    if add_stokes:
+        wcs = SpecCube.wcs
+        new_wcs = add_stokes_axis_to_wcs(wcs, wcs.wcs.naxis)
+        header = new_wcs.to_header()
+        shape = (1,) + SpecCube.shape
+    else:
+        # Just grab the header from SpecCube
+        header = SpecCube.header
+        shape = SpecCube.shape
+
+    hdu = fits.PrimaryHDU(header=header,
+                          data=np.empty(shape))
 
     hdu.writeto(temp.name)
 
@@ -52,6 +66,9 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     temp2.close()
 
     mask_arr = SpecCube.mask.include()
+
+    # Reshape mask with possible Stokes axis
+    mask_arr = mask_arr.reshape(shape)
 
     # Transpose to match CASA axes
     mask_arr = mask_arr.T
