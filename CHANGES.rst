@@ -1,7 +1,7 @@
 0.2.2 (unreleased)
 ------------------
 
-None yet
+- Output mask as a CASA image https://github.com/radio-astro-tools/spectral-cube/pull/171
 
 0.2.1 (2014-12-03)
 ------------------
@@ -26,7 +26,7 @@ None yet
 - Initial support added for Air Wavelength.  This is only 1-way support,
   round-tripping (vacuum->air) is not supported yet.
   https://github.com/radio-astro-tools/spectral-cube/pull/117
-- Integer slices (single frames) are supported 
+- Integer slices (single frames) are supported
   https://github.com/radio-astro-tools/spectral-cube/pull/113
 - Bugfix: BUNIT capitalized https://github.com/radio-astro-tools/spectral-cube/pull/112
 - Masks can be any array that is broadcastable to the cube shape
