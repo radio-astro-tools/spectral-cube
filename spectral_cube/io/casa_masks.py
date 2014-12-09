@@ -23,6 +23,8 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     img : str, optional
         Image to be appended to. Must be specified if append_to_image is
         enabled.
+    add_stokes: bool, optional
+        Adds a Stokes axis onto the wcs from SpecCube.
     '''
 
     try:
