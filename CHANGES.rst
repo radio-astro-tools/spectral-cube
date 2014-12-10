@@ -1,7 +1,8 @@
 0.2.2 (unreleased)
 ------------------
 
-None yet
+- ytcube exports to .obj and .ply too
+  https://github.com/radio-astro-tools/spectral-cube/pull/173
 
 0.2.1 (2014-12-03)
 ------------------
