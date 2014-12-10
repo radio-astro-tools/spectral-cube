@@ -136,3 +136,16 @@ can also be defined directly by specifying conditions on
        LazyMask(...)
 
 .. TODO: add example for FunctionalMask
+
+Outputting masks
+----------------
+
+The attached mask to the given :class:`~spectral_cube.SpectralCube` class can
+be converted into a CASA image using :function:`~spectral_cube.io.make_casa_mask`:
+
+  >>> from spectral_cube.io import make_casa_mask
+  >>> make_casa_mask(cube, 'casa_mask.image', add_stokes=False)
+
+Optionally, a redundant Stokes axis can be added to match the original CASA image.
+.. Masks may also be appended to an existing CASA image:
+..  >>> make_casa_mask(cube, 'casa_mask.image', append_to_img=True, img='casa.image')
