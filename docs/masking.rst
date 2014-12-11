@@ -141,7 +141,7 @@ Outputting masks
 ----------------
 
 The attached mask to the given :class:`~spectral_cube.SpectralCube` class can
-be converted into a CASA image using :function:`~spectral_cube.io.make_casa_mask`:
+be converted into a CASA image using :func:`~spectral_cube.io.make_casa_mask`:
 
   >>> from spectral_cube.io import make_casa_mask
   >>> make_casa_mask(cube, 'casa_mask.image', add_stokes=False)
