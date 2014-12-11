@@ -7,7 +7,7 @@ from ..wcs_utils import add_stokes_axis_to_wcs
 
 
 def make_casa_mask(SpecCube, outname, append_to_image=True,
-                   img=None, add_stokes=True):
+                   img=None, add_stokes=True, stokes_posn=None):
     '''
     Takes a SpectralCube object as an input. Outputs the mask in a CASA
     friendly form.
@@ -25,6 +25,8 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
         enabled.
     add_stokes: bool, optional
         Adds a Stokes axis onto the wcs from SpecCube.
+    stokes_posn : int, optional
+        Sets the position of the new Stokes axis. Defaults to the last axis.
     '''
 
     try:
@@ -44,9 +46,12 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     # Optionally re-add on the Stokes axis
     if add_stokes:
         wcs = SpecCube.wcs
-        new_wcs = add_stokes_axis_to_wcs(wcs, wcs.wcs.naxis)
+        if stokes_posn is None:
+            stokes_posn = wcs.wcs.naxis
+
+        new_wcs = add_stokes_axis_to_wcs(wcs, stokes_posn)
         header = new_wcs.to_header()
-        shape = (1,) + SpecCube.shape
+        shape = SpecCube.shape[:stokes_posn] + (1,) + SpecCube.shape[stokes_posn:]
     else:
         # Just grab the header from SpecCube
         header = SpecCube.header
