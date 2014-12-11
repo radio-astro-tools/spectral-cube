@@ -80,7 +80,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     # Transpose to match CASA axes
     mask_arr = mask_arr.T
 
-    # CASA doesn't like bool? Using floats for now...
+    # CASA doesn't like bool? Using ints for now...
     ia.newimagefromarray(outfile=outname,
                          pixels=mask_arr.astype('int16'))
 
