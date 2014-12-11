@@ -31,7 +31,6 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
     try:
         from taskinit import ia
-        from tasks import immath
     except ImportError:
         print("Cannot import casac. Must be run in a CASA environment.")
 
@@ -51,7 +50,11 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
         new_wcs = add_stokes_axis_to_wcs(wcs, stokes_posn)
         header = new_wcs.to_header()
-        shape = SpecCube.shape[:stokes_posn] + (1,) + SpecCube.shape[stokes_posn:]
+        # Transpose the shape so we're adding the axis at the place CASA will
+        # recognize. Then transpose back.
+        shape = SpecCube.shape[::-1]
+        shape = shape[:stokes_posn] + (1,) + shape[stokes_posn:]
+        shape = shape[::-1]
     else:
         # Just grab the header from SpecCube
         header = SpecCube.header
@@ -92,6 +95,12 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     if append_to_image:
         if img is None:
             raise TypeError("img argument must be specified to append the mask.")
-        warnings.warn("Image appending not working yet.")
-        # immath(imagename=img, mode='evalexpr', expr='IM0',
-        #        outfile=img+"_test", mask='mask('+outname+')')
+
+        ia.open(outname)
+        ia.calcmask(outname+">0.5")
+        ia.close()
+
+        ia.open(img)
+        ia.maskhandler('copy', [outname+":mask0", outname])
+        ia.maskhandler('set', outname)
+        ia.close()
