@@ -772,7 +772,10 @@ class SpectralCube(object):
                                  "%s vs %s" % (mask.shape, self._data.shape))
             mask = BooleanArrayMask(mask, self._wcs)
 
-        return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
+        if self._mask is not None:
+            return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
+        else:
+            return self._new_cube_with(mask=mask)
 
     def __getitem__(self, view):
 
