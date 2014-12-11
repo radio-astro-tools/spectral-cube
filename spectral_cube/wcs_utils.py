@@ -65,16 +65,16 @@ def add_stokes_axis_to_wcs(wcs, add_before_ind):
     pc[inds[:, np.newaxis], inds[np.newaxis, :]] = wcs.wcs.get_pc()
     pc[add_before_ind, add_before_ind] = 1
 
-    def append_to_end(val, lst):
+    def append_to_posn(val, posn, lst):
         """ insert a value at index into a list """
-        return list(lst) + [val]
+        return list(lst)[:posn] + [val] + list(lst)[posn:]
 
-    outwcs.wcs.crpix = append_to_end(1, wcs.wcs.crpix)
-    outwcs.wcs.cdelt = append_to_end(1, wcs.wcs.get_cdelt())
-    outwcs.wcs.crval = append_to_end(1, wcs.wcs.crval)
-    outwcs.wcs.cunit = append_to_end("", wcs.wcs.cunit)
-    outwcs.wcs.ctype = append_to_end("STOKES", wcs.wcs.ctype)
-    outwcs.wcs.cname = append_to_end("STOKES", wcs.wcs.cname)
+    outwcs.wcs.crpix = append_to_posn(1, add_before_ind, wcs.wcs.crpix)
+    outwcs.wcs.cdelt = append_to_posn(1, add_before_ind, wcs.wcs.get_cdelt())
+    outwcs.wcs.crval = append_to_posn(1, add_before_ind, wcs.wcs.crval)
+    outwcs.wcs.cunit = append_to_posn("a", add_before_ind, wcs.wcs.cunit)
+    outwcs.wcs.ctype = append_to_posn("STOKES", add_before_ind, wcs.wcs.ctype)
+    outwcs.wcs.cname = append_to_posn("STOKES", add_before_ind, wcs.wcs.cname)
     outwcs.wcs.pc = pc
 
     return outwcs
