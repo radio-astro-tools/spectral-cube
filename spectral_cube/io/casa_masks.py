@@ -77,7 +77,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
     # CASA doesn't like bool? Using floats for now...
     ia.newimagefromarray(outfile=outname,
-                         pixels=mask_arr.astype('float64'))
+                         pixels=mask_arr.astype('int16'))
 
     ia.open(outname)
     ia.setcoordsys(cs.torecord())
