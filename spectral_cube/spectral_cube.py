@@ -1637,7 +1637,7 @@ class SpectralCube(object):
             hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
                                   header=self.wcs.to_header())
 
-            hdu.header["BUNIT"] = str(self.unit.to_string(format='fits'))
+            hdu.header["BUNIT"] = str(self.unit.to_string())
             hdu.header["BTYPE"] = "flux"
 
             ds = FITSDataset(hdu, nprocs=nprocs,
