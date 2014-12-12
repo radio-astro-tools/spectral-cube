@@ -3,15 +3,16 @@ import numpy as np
 from numpy.testing import assert_allclose
 import os
 
-from ..test_spectral_cube import cube_and_raw
 from ..io.casa_masks import make_casa_mask
 from ..io.casa_image import wcs_casa2astropy
 from .. import SpectralCube, BooleanArrayMask
 
 try:
     from taskinit import ia
+    casaOK = True
 except ImportError:
     print("Run in CASA environment.")
+    casaOK = False
 
 
 def make_casa_testimage(infile, outname):
@@ -20,6 +21,7 @@ def make_casa_testimage(infile, outname):
     ia.close()
 
 
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask():
 
     cube = SpectralCube.read('adv.fits')
@@ -66,6 +68,7 @@ def test_casa_mask():
                     atol=1.0)
 
 
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask_append():
 
     cube = SpectralCube.read('adv.fits')
