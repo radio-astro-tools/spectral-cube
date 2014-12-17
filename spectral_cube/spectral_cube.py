@@ -1633,7 +1633,7 @@ class SpectralCube(object):
 
             from yt.frontends.fits.api import FITSDataset
             from astropy.io import fits
-            from yt.utilities.exceptions import UnitParseError
+            from yt.units.unit_object import UnitParseError
 
             hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
                                   header=self.wcs.to_header())
