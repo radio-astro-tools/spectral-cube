@@ -334,6 +334,15 @@ class TestYt():
         assert ds1.spec_cube
         assert ds2.spec_cube
         assert ds3.spec_cube
+        ds1.index
+        ds2.index
+        ds3.index
+        unit1 = ds1.field_info["fits","flux"].units
+        unit2 = ds2.field_info["fits","flux"].units
+        unit3 = ds3.field_info["fits","flux"].units
+        ds1.quan(1.0,unit1)
+        ds2.quan(1.0,unit2)
+        ds3.quan(1.0,unit3)
 
     @pytest.mark.skipif(yt_version < StrictVersion('3.0.1'), reason='yt 3.0 has a FITS-related bug')
     def test_yt_fluxcompare(self):
