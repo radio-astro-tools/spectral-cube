@@ -117,6 +117,7 @@ Movie Making
 There is a simple utility for quick movie making.  The default movie is a rotation
 of the cube around one of the spatial axes, going from PP -> PV space and back.::
 
+    >>> cube = read('cube.fits', format='fits')
     >>> ytcube = cube.to_yt()
     >>> images = ytcube.quick_render_movie('outdir')
 
@@ -156,3 +157,9 @@ Here's an example:
        on <a href="https://sketchfab.com" style="font-weight: bold; color: #1CAAD9;">Sketchfab</a>
    </p>
 
+You can also export locally to .ply and .obj files, which can be read by many
+programs (sketchfab, meshlab, blender).  See the `yt page
+<http://yt-project.org/doc/visualizing/sketchfab.html>`_ for details.::
+
+   >>> ytcube.quick_isocontour(export_to='ply', filename='meshes.ply', level=1.0)
+   >>> ytcube.quick_isocontour(export_to='obj', filename='meshes', level=1.0)

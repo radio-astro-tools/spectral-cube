@@ -174,7 +174,9 @@ class ytCube(object):
         return tfh
 
     def quick_isocontour(self, level='3 sigma', title='', description='',
-                         color_map='hot', color_log=False):
+                         color_map='hot', color_log=False,
+                         export_to='sketchfab', filename=None,
+                         **kwargs):
         """
         Export isocontours to sketchfab
 
@@ -196,6 +198,16 @@ class ytCube(object):
         color_log: bool
             Whether the colormap should be log scaled.  With the default
             parameters, this has no effect.
+        export_to: 'sketchfab', 'obj', 'ply'
+            You can export to sketchfab, to a .obj file (and accompanying .mtl
+            file), or a .ply file.  The latter two require ``filename``
+            specification
+        filename: None or str
+            Optional - prefix for output filenames if `export_to` is 'obj', 
+            or the full filename when `export_to` is 'ply'.  Ignored for
+            'sketchfab'
+        kwargs: dict
+            Keyword arguments are passed to the appropriate yt function
 
         Returns
         -------
@@ -209,9 +221,30 @@ class ytCube(object):
         surface = self.dataset.surface(self.dataset.all_data(),
                                        "flux",
                                        level)
-        return surface.export_sketchfab(title=title, description=description,
-                                        color_map=color_map,
-                                        color_log=color_log)
+        if export_to == 'sketchfab':
+            return surface.export_sketchfab(title=title,
+                                            description=description,
+                                            color_map=color_map,
+                                            color_log=color_log, **kwargs)
+        elif export_to == 'obj':
+            if filename is None:
+                raise ValueError("If export_to is not 'sketchfab',"
+                                 " a filename must be specified")
+
+            surface.export_obj(filename, color_field='ones',
+                               color_map=color_map, color_log=color_log,
+                               **kwargs)
+        elif export_to == 'ply':
+            if filename is None:
+                raise ValueError("If export_to is not 'sketchfab',"
+                                 " a filename must be specified")
+
+            surface.export_ply(filename, color_field='ones',
+                               color_map=color_map, color_log=color_log,
+                               **kwargs)
+        else:
+            raise ValueError("export_to must be one of sketchfab,obj,ply")
+
 
 def _rescale_images(images, prefix):
     """
