@@ -1633,15 +1633,26 @@ class SpectralCube(object):
 
             from yt.frontends.fits.api import FITSDataset
             from astropy.io import fits
+            from yt.units.unit_object import UnitParseError
 
             hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
                                   header=self.wcs.to_header())
 
-            hdu.header["BUNIT"] = str(self.unit.to_string(format='fits'))
+            units = str(self.unit.to_string())
+
+            hdu.header["BUNIT"] = units
             hdu.header["BTYPE"] = "flux"
 
             ds = FITSDataset(hdu, nprocs=nprocs,
                              spectral_factor=spectral_factor, **kwargs)
+
+            # Check to make sure the units are legit
+
+            try:
+                ds.quan(1.0,units)
+            except UnitParseError:
+                raise RuntimeError("The unit %s was not parsed by yt. " % units+
+                                   "Check to make sure it is correct.")
 
         else:
 
