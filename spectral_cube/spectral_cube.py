@@ -7,7 +7,7 @@ from functools import wraps
 
 from astropy import units as u
 from astropy.extern import six
-from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card
+from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
 from astropy import log
 from astropy import wcs
 
@@ -1633,15 +1633,26 @@ class SpectralCube(object):
 
             from yt.frontends.fits.api import FITSDataset
             from astropy.io import fits
+            from yt.units.unit_object import UnitParseError
 
             hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
                                   header=self.wcs.to_header())
 
-            hdu.header["BUNIT"] = str(self.unit.to_string(format='fits'))
+            units = str(self.unit.to_string())
+
+            hdu.header["BUNIT"] = units
             hdu.header["BTYPE"] = "flux"
 
             ds = FITSDataset(hdu, nprocs=nprocs,
                              spectral_factor=spectral_factor, **kwargs)
+
+            # Check to make sure the units are legit
+
+            try:
+                ds.quan(1.0,units)
+            except UnitParseError:
+                raise RuntimeError("The unit %s was not parsed by yt. " % units+
+                                   "Check to make sure it is correct.")
 
         else:
 
@@ -1734,6 +1745,36 @@ class SpectralCube(object):
         from pvextractor.gui import PVSlicer
 
         return PVSlicer(self)
+
+    def to_ds9(self, ds9id=None, newframe=False):
+        """
+        Send the data to ds9 (this will create a copy in memory)
+
+        Parameters
+        ----------
+        ds9id: None or string
+            The DS9 session ID.  If 'None', a new one will be created.
+            To find your ds9 session ID, open the ds9 menu option
+            File:XPA:Information and look for the XPA_METHOD string, e.g.
+            ``XPA_METHOD:  86ab2314:60063``.  You would then calll this
+            function as ``cube.to_ds9('86ab2314:60063')``
+        newframe: bool
+            Send the cube to a new frame or to the current frame?
+        """
+        import ds9
+
+        if ds9id is None:
+            dd = ds9.ds9(start=True)
+        else:
+            dd = ds9.ds9(target=ds9id, start=False)
+
+        if newframe:
+            dd.set('frame new')
+
+        dd.set_pyfits(HDUList(self.hdu))
+
+        return dd
+
 
     @property
     def header(self):
