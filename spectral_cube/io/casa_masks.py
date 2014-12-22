@@ -9,8 +9,8 @@ from ..wcs_utils import add_stokes_axis_to_wcs
 def make_casa_mask(SpecCube, outname, append_to_image=True,
                    img=None, add_stokes=True, stokes_posn=None):
     '''
-    Takes a SpectralCube object as an input. Outputs the mask in a CASA
-    friendly form.
+    Outputs the mask attached to the SpectralCube object as a CASA image, or
+    optionally appends the mask to a preexisting CASA image.
 
     Parameters
     ----------
@@ -44,11 +44,11 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     # Grab wcs
     # Optionally re-add on the Stokes axis
     if add_stokes:
-        wcs = SpecCube.wcs
+        my_wcs = SpecCube.wcs
         if stokes_posn is None:
-            stokes_posn = wcs.wcs.naxis
+            stokes_posn = my_wcs.wcs.naxis
 
-        new_wcs = add_stokes_axis_to_wcs(wcs, stokes_posn)
+        new_wcs = add_stokes_axis_to_wcs(my_wcs, stokes_posn)
         header = new_wcs.to_header()
         # Transpose the shape so we're adding the axis at the place CASA will
         # recognize. Then transpose back.
@@ -61,7 +61,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
         shape = SpecCube.shape
 
     hdu = fits.PrimaryHDU(header=header,
-                          data=np.empty(shape))
+                          data=np.empty(shape, dtype='int16'))
 
     hdu.writeto(temp.name)
 
@@ -83,7 +83,6 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     # Transpose to match CASA axes
     mask_arr = mask_arr.T
 
-    # CASA doesn't like bool? Using ints for now...
     ia.newimagefromarray(outfile=outname,
                          pixels=mask_arr.astype('int16'))
 
