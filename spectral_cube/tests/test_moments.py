@@ -142,6 +142,7 @@ def test_with_flux_unit():
                           for a in [0, 1, 2]
                           for h in ['cube', 'slice', 'auto', 'ray']])
 def test_how_withfluxunit(order, axis, how):
+    """ Regression test for issue 180 """
     mc_hdu = moment_cube()
     sc = SpectralCube.read(mc_hdu)
     sc._unit = u.K
