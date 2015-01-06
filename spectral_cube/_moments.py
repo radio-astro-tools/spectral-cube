@@ -48,7 +48,7 @@ def _slice0(cube, axis):
     valid = np.zeros(shp, dtype=np.bool)
     for i in range(cube.shape[axis]):
         view[axis] = i
-        plane = cube.filled_data[view]
+        plane = cube._get_filled_data(fill=np.nan, view=view)
         valid |= np.isfinite(plane)
         result += np.nan_to_num(plane) * pix_size[view]
     result[~valid] = np.nan
@@ -135,7 +135,7 @@ def moment_raywise(cube, order, axis):
         if not include.any():
             continue
 
-        data = cube.flattened(slc) * pix_size[slc][include]
+        data = cube.flattened(slc).value * pix_size[slc][include]
 
         if order == 0:
             out[x, y] = data.sum()
