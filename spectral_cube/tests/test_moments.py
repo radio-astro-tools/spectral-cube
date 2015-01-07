@@ -45,6 +45,7 @@ m2x = np.array([[0.22222222, 0.63888889, 0.65759637],
                 [0.66222222, 0.66403682, 0.66493056],
                 [0.66543552, 0.66574839, 0.66595556]]) * dx ** 2
 MOMENTS = [[m0v, m0y, m0x], [m1v, m1y, m1x], [m2v, m2y, m2x]]
+MOMENTSu = [[m0v*u.K, m0y*u.K, m0x*u.K], [m1v, m1y, m1x], [m2v, m2y, m2x]]
 
 
 def moment_cube():
@@ -120,3 +121,34 @@ def test_preserve_unit():
 
     assert_allclose(m0, MOMENTS[0][0].to(u.km/u.s))
     assert_allclose(m1, MOMENTS[1][0].to(u.km/u.s))
+
+def test_with_flux_unit():
+    mc_hdu = moment_cube()
+    sc = SpectralCube.read(mc_hdu)
+    sc._unit = u.K
+    sc_kms = sc.with_spectral_unit(u.km/u.s)
+    m0 = sc_kms.moment0(axis=0)
+    m1 = sc_kms.moment1(axis=0)
+
+    assert sc.unit == u.K
+    assert sc.filled_data[:].unit == u.K
+
+    assert_allclose(m0, MOMENTS[0][0].to(u.km/u.s))
+    assert_allclose(m1, MOMENTS[1][0].to(u.km/u.s))
+
+@pytest.mark.parametrize(('order', 'axis', 'how'),
+                         [(o, a, h)
+                          for o in [0, 1, 2]
+                          for a in [0, 1, 2]
+                          for h in ['cube', 'slice', 'auto', 'ray']])
+def test_how_withfluxunit(order, axis, how):
+    """ Regression test for issue 180 """
+    mc_hdu = moment_cube()
+    sc = SpectralCube.read(mc_hdu)
+    sc._unit = u.K
+    mom_sc = sc.moment(order=order, axis=axis, how=how)
+
+    assert sc.unit == u.K
+    assert sc.filled_data[:].unit == u.K
+
+    assert_allclose(mom_sc, MOMENTSu[order][axis])
