@@ -359,12 +359,7 @@ def read_lmv_type2(lf):
     
     convert = np.fromfile(lf, count=3*gdf_maxdims, dtype='float64').reshape([gdf_maxdims,3])
 
-    for ii,(ref,val,inc) in enumerate(convert):
-        if ii in valid_dims:
-            header['CRPIX{0}'.format(ii+1)] = ref
-            header['CRVAL{0}'.format(ii+1)] = val
-            # r2deg conversion done below in ctype section
-            header['CDELT{0}'.format(ii+1)] = inc
+    # conversion of "convert" to CRPIX/CRVAL/CDELT below
 
     desc_words = _read_int32(lf)
     if desc_words != 3*(gdf_maxdims+1):
@@ -383,13 +378,6 @@ def read_lmv_type2(lf):
                            ijuni)
     else:
         header['BUNIT'] = ijuni
-
-    for ii,ctype in enumerate(ijcode):
-        if ii in valid_dims:
-            header['CTYPE{0}'.format(ii+1)] = _ctype_dict[ctype.strip()]
-            if header['CTYPE{0}'.format(ii+1)] in cel_types:
-                header['CDELT{0}'.format(ii+1)] *= r2deg
-            header['CUNIT{0}'.format(ii+1)] = _cunit_dict[ctype.strip()]
 
      #! The first block length is thus
      #!	s_dim-1 + (2*mdim+4) + (4) + (8) +  (6*mdim+2) + (3*mdim+5)
@@ -412,6 +400,7 @@ def read_lmv_type2(lf):
 
     proj_start = _read_int32(lf)
     source_name = lf.read(12)
+    header['OBJECT'] = source_name
     coordinate_system = lf.read(12)
     
     header['RA'] = _read_float64(lf)
@@ -422,6 +411,18 @@ def read_lmv_type2(lf):
     #pad_posi = _read_float32(lf)
     #print pad_posi
     #raise ValueError("pad_posi should probably be 0?")
+
+    #! PROJECTION
+    #integer(kind=4) :: proj_words = 9     ! Projection length: 9 used + 1 padding
+    #integer(kind=4) :: spec_start !! = proj_start + 12 
+    #real(kind=8) :: a0      = 0.d0        ! 89  X of projection center
+    #real(kind=8) :: d0      = 0.d0        ! 91  Y of projection center
+    #real(kind=8) :: pang    = 0.d0        ! 93  Projection angle
+    #integer(kind=4) :: ptyp = p_none      ! 88  Projection type (see p_... codes)
+    #integer(kind=4) :: xaxi = 0           ! 95  X axis
+    #integer(kind=4) :: yaxi = 0           ! 96  Y axis
+    #integer(kind=4) :: pad_proj
+    #!
 
     proj_words = _read_int32(lf)
     spec_start = _read_int32(lf)
@@ -442,17 +443,47 @@ def read_lmv_type2(lf):
                 if header[kw] in cel_types:
                     header[kw] += '-' + _proj_dict[ptyp]
 
-     #! PROJECTION
-     #integer(kind=4) :: proj_words = 9     ! Projection length: 9 used + 1 padding
-     #integer(kind=4) :: spec_start !! = proj_start + 12 
-     #real(kind=8) :: a0      = 0.d0        ! 89  X of projection center
-     #real(kind=8) :: d0      = 0.d0        ! 91  Y of projection center
-     #real(kind=8) :: pang    = 0.d0        ! 93  Projection angle
-     #integer(kind=4) :: ptyp = p_none      ! 88  Projection type (see p_... codes)
-     #integer(kind=4) :: xaxi = 0           ! 95  X axis
-     #integer(kind=4) :: yaxi = 0           ! 96  Y axis
-     #integer(kind=4) :: pad_proj
-     #!
+    for ii,((ref,val,inc),code) in enumerate(zip(convert,ijcode)):
+        if ii in valid_dims:
+            # jul14a gio/to_imfits.f90 line 284-313
+            if ptyp != 0 and (ii+1) in (header['PROJXAXI'],
+                                        header['PROJYAXI']):
+                #! Compute reference pixel so that VAL(REF) = 0
+                ref = ref - val/inc
+                if (ii+1) == header['PROJXAXI']:
+                    val = header['PROJ_A0']
+                elif (ii+1) == header['PROJYAXI']:
+                    val = header['PROJ_D0']
+                else:
+                    raise ValueError("Impossible state - code bug.")
+                val = val*r2deg
+                inc = inc*r2deg
+                rota = r2deg*header['PROJPANG']
+            elif code.strip() in ('RA', 'L', 'B', 'DEC', 'LII', 'BII', 'GLAT',
+                                  'GLON', 'LAT', 'LON'):
+                val = val*r2deg
+                inc = inc*r2deg
+                rota = 0.0
+            # These are not implemented: prefer to maintain original units (we're
+            # reading in to spectral_cube after all, no need to change units until the
+            # output step)
+            #elseif (code.eq.'FREQUENCY') then
+            #val = val*1.0d6            ! MHz to Hz
+            #inc = inc*1.0d6
+            #elseif (code.eq.'VELOCITY') then
+            #code = 'VRAD'              ! force VRAD instead of VELOCITY for CASA
+            #val = val*1.0d3            ! km/s to m/s
+            #inc = inc*1.0d3
+
+            header['CRPIX{0}'.format(ii+1)] = ref
+            header['CRVAL{0}'.format(ii+1)] = val
+            header['CDELT{0}'.format(ii+1)] = inc
+
+
+    for ii,ctype in enumerate(ijcode):
+        if ii in valid_dims:
+            header['CTYPE{0}'.format(ii+1)] = _ctype_dict[ctype.strip()]
+            header['CUNIT{0}'.format(ii+1)] = _cunit_dict[ctype.strip()]
 
     spec_words = _read_int32(lf)
     reso_start = _read_int32(lf)
