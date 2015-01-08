@@ -2,6 +2,7 @@ import numpy as np
 import struct
 import warnings
 import string
+from astropy.extern import six
 from astropy import log
 from .fits import load_fits_cube
 
@@ -35,6 +36,15 @@ _proj_dict = {0:'', 1:'TAN', 2:'SIN', 3:'AZP', 4:'STG', 5:'ZEA', 6:'AIT',
               7:'GLS', 8:'SFL', }
 _bunit_dict = {'k (tmb)': 'K'}
 
+def is_lmv(input, **kwargs):
+    """
+    Determine whether input is in GILDAS CLASS lmv format
+    """
+    if isinstance(input, six.string_types):
+        if input.lower().endswith(('.lmv')):
+            return True
+    else:
+        return False
 
 def read_lmv(filename):
     """
@@ -125,9 +135,9 @@ def read_lmv_type1(lf):
     header['CTYPE2'] = lf.read(12) # 62
     header['CTYPE3'] = lf.read(12) # 65
     header['CTYPE4'] = lf.read(12) # 68
-    header['CUNIT1'] = _cunit_dict[header['CTYPE1']]
-    header['CUNIT2'] = _cunit_dict[header['CTYPE2']]
-    header['CUNIT3'] = _cunit_dict[header['CTYPE3']]
+    header['CUNIT1'] = _cunit_dict[header['CTYPE1'].strip()]
+    header['CUNIT2'] = _cunit_dict[header['CTYPE2'].strip()]
+    header['CUNIT3'] = _cunit_dict[header['CTYPE3'].strip()]
     header['COOSYS'] = lf.read(12) # 71
     position_section_length = np.fromfile(lf,count=1,dtype='int32') # 74
     if position_section_length != 48:

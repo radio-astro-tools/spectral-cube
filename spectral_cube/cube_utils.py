@@ -29,8 +29,29 @@ def _split_stokes(array, wcs):
 
     types = [a['coordinate_type'] for a in axtypes]
 
-    # Find stokes dimension
-    stokes_index = types.index('stokes')
+    try:
+        # Find stokes dimension
+        stokes_index = types.index('stokes')
+    except ValueError:
+        # stokes not in list, but we are 4d
+        if types.count('celestial') == 2 and types.count('spectral') == 1:
+            if None in types:
+                stokes_index = types.index(None)
+                warnings.warn("FITS file has no STOKES axis, but it has a blank"
+                              " axis type at index {0} that is assumed to be "
+                              "stokes.")
+            else:
+                for ii,tp in enumerate(types):
+                    if tp not in ('celestial', 'spectral'):
+                        stokes_index = ii
+                        stokes_type = tp
+
+                warnings.warn("FITS file has no STOKES axis, but it has an axis"
+                              " of type {1} at index {0} that is assumed to be "
+                              "stokes.".format(stokes_index, stokes_type))
+        else:
+            raise IOError("There are 4 axes in the data cube but no STOKES "
+                          "axis could be identified")
 
     # TODO: make the stokes names more general
     stokes_names = ["I", "Q", "U", "V"]

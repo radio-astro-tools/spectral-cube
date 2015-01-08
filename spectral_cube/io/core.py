@@ -69,11 +69,14 @@ def determine_format(input):
 
     from .fits import is_fits
     from .casa_image import is_casa_image
+    from .class_lmv import is_lmv
 
     if is_fits(input):
         return 'fits'
     elif is_casa_image(input):
         return 'casa_image'
+    elif is_lmv(input):
+        return 'lmv'
     else:
         raise ValueError("Could not determine format - use the `format=` "
                          "parameter to explicitly set the format")
