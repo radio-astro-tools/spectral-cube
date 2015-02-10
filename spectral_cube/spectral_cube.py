@@ -105,6 +105,10 @@ class LowerDimensionalObject(u.Quantity):
         else:
             hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
+
+        if 'beam' in self.meta:
+            hdu.header.update(self.meta['beam'].to_header_keywords())
+
         return hdu
 
     def write(self, filename, format=None, overwrite=False):
@@ -240,15 +244,19 @@ class SpectralCube(object):
 
             # special case: CASA makes non-FITS-compliant jy/beam headers
             if self._meta['BUNIT'] == 'JY/BEAM':
+                self._unit = u.Jy
                 try:
                     import radio_beam
-                    self._unit = u.Jy/radio_beam.Beam.from_fits_header(header)
+                    self.beam = radio_beam.Beam.from_fits_header(header)
+                    self._meta['beam'] = self.beam
+                    warnings.warn("Units were JY/BEAM.  The 'beam' is now "
+                                  "stored in the .beam attribute, and the "
+                                  "units are set to Jy")
                 except:
                     warnings.warn("Could not parse JY/BEAM unit.  Either you "
                                   "should install the radio_beam package "
                                   "or manually replace the units.  For now, "
                                   "the units are being interpreted as Jy.")
-                    self._unit = u.Jy
             else:
                 try:
                     self._unit = u.Unit(self._meta['BUNIT'])
