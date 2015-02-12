@@ -208,7 +208,7 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0]
 
-    def quicklook(self, filename, **kwargs):
+    def quicklook(self, filename=None, **kwargs):
         """
         Plot the spectrum with current spectral units in the currently open
         figure
