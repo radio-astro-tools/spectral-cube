@@ -390,6 +390,15 @@ def air_to_vac(wavelength):
     wlum = wavelength.to(u.um).value
     return (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4)) * wavelength
 
+def vac_to_air(wavelength):
+    """
+    Griesen 2006 reports that the error in naively inverting Eqn 65 is less
+    than 10^-9 and therefore acceptable.  This is therefore eqn 67
+    """
+    wlum = wavelength.to(u.um).value
+    nl = (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4))
+    return wavelength/nl
+
 def air_to_vac_deriv(wavelength):
     """
     Eqn 66
