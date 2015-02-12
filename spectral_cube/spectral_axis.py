@@ -253,12 +253,12 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit)
     cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * inunit)
 
-    if in_spec_ctype == 'air wavelength':
+    if in_spec_ctype == 'AWAV':
         warnings.warn("Support for air wavelengths is experimental and only "
                       "works in the forward direction (air->vac, not vac->air).")
         cdelt_in = air_to_vac_deriv(crval_in) * cdelt_in
         crval_in = air_to_vac(crval_in)
-        in_spec_ctype = 'wavelength'
+        in_spec_ctype = 'WAVE'
 
     # 1. Convert input to input, linear
     if in_vcequiv is not None and ref_value is not None:
@@ -362,7 +362,9 @@ def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None):
             return (-numer/denom).to(PHYS_UNIT_DICT[outtype], u.spectral())
         else:
             return (numer/denom).to(PHYS_UNIT_DICT[outtype], u.spectral())
-    elif intype == 'air wavelength': # Redundant: not used
+    elif intype == 'air wavelength':
+        raise ValueError("Air wavelength should be converted to vacuum earlier.")
+        # Convert to vacuum wavelength, then continue
         return cdelt_derivative(air_to_vac(crval),
                                 air_to_vac_deriv(crval)*cdelt,
                                 intype='length',
@@ -370,6 +372,8 @@ def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None):
                                 linear=linear,
                                 rest=rest)
     elif outtype == 'air wavelength':
+        # I thought this wasn't supported?
+        raise ValueError("Conversion to air wavelength not supported.")
         cdelt2 = cdelt_derivative(crval,
                                   cdelt,
                                   intype=intype,

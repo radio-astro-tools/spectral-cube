@@ -11,7 +11,8 @@ from .helpers import assert_allclose
 from . import path as data_path
 from ..spectral_axis import (convert_spectral_axis, determine_ctype_from_vconv,
                              cdelt_derivative, determine_vconv_from_ctype,
-                             get_rest_value_from_wcs, air_to_vac, vac_to_air)
+                             get_rest_value_from_wcs, air_to_vac,
+                             air_to_vac_deriv, vac_to_air)
 
 def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
@@ -436,3 +437,43 @@ def test_air_to_vac(air, vac):
     # round tripping
     assert np.abs((vac_to_air(air_to_vac(air))-air))/air < 1e-8
     assert np.abs((air_to_vac(vac_to_air(vac))-vac))/vac < 1e-8
+
+def test_byhand_awav2vel():
+    # AWAV
+    CRVAL3A = (6560*u.AA).to(u.m).value
+    CDELT3A = (1.0*u.AA).to(u.m).value
+    CUNIT3A = 'm'
+    CRPIX3A = 1.0
+    # restwav MUST be vacuum
+    restwl = air_to_vac(6562.81*u.AA)
+    RESTWAV = restwl.to(u.m).value
+    CRVAL3V = (CRVAL3A*u.m).to(u.m/u.s,
+                               u.doppler_optical(restwl)).value
+    CDELT3V = (CDELT3A*u.m*air_to_vac_deriv(CRVAL3A*u.m)/restwl) * constants.c
+    CUNIT3V = 'm/s'
+
+    mywcs = wcs.WCS(naxis=1)
+    mywcs.wcs.ctype[0] = 'AWAV'
+    mywcs.wcs.crval[0] = CRVAL3A
+    mywcs.wcs.crpix[0] = CRPIX3A
+    mywcs.wcs.cunit[0] = CUNIT3A
+    mywcs.wcs.cdelt[0] = CDELT3A
+    mywcs.wcs.restwav = RESTWAV
+    mywcs.wcs.set()
+
+
+    newwcs = convert_spectral_axis(mywcs, u.km/u.s,
+                                   determine_ctype_from_vconv(mywcs.wcs.ctype[0],
+                                                              u.km/u.s,
+                                                              'optical'))
+    
+    newwcs.wcs.set()
+    assert newwcs.wcs.cunit[0] == 'm / s'
+    np.testing.assert_almost_equal(newwcs.wcs.crval,
+                                   air_to_vac(CRVAL3A*u.m).to(u.m/u.s,
+                                                              u.doppler_optical(restwl)).value)
+    # Check that the cdelts match the expected cdelt, 1 angstrom / rest
+    # wavelength (vac)
+    np.testing.assert_almost_equal(newwcs.wcs.cdelt, CDELT3V.to(u.m/u.s).value)
+    # Check that the reference wavelength is 2.81 angstroms up
+    np.testing.assert_almost_equal(newwcs.wcs_pix2world((2.81,), 0), 0.0, decimal=3)
