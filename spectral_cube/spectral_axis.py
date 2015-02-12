@@ -404,5 +404,5 @@ def air_to_vac_deriv(wavelength):
     Eqn 66
     """
     wlum = wavelength.to(u.um).value
-    return (1+1e-6*(287.6155 - 1.62877/wlum**2 - 0.04080/wlum**4))
+    return (1+1e-6*(287.6155 - 1.62887/wlum**2 - 0.04080/wlum**4))
 
