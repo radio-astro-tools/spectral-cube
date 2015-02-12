@@ -11,7 +11,7 @@ from .helpers import assert_allclose
 from . import path as data_path
 from ..spectral_axis import (convert_spectral_axis, determine_ctype_from_vconv,
                              cdelt_derivative, determine_vconv_from_ctype,
-                             get_rest_value_from_wcs)
+                             get_rest_value_from_wcs, air_to_vac, vac_to_air)
 
 def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
@@ -405,3 +405,34 @@ def test_change_rest_frequency(wcstype):
 
     assert_allclose(p_old, p_new, rtol=1e-3)
     assert_allclose(p_old, p_new, rtol=1e-3)
+
+
+# from http://classic.sdss.org/dr5/products/spectra/vacwavelength.html
+# these aren't accurate enough for my liking, but I can't find a better one readily
+air_vac = {
+    'H-beta':(4861.363, 4862.721)*u.AA,
+    '[O III]':(4958.911, 4960.295)*u.AA,
+    '[O III]':(5006.843, 5008.239)*u.AA,
+    '[N II]':(6548.05, 6549.86)*u.AA,
+    'H-alpha':(6562.801, 6564.614)*u.AA,
+    '[N II]':(6583.45, 6585.27)*u.AA,
+    '[S II]':(6716.44, 6718.29)*u.AA,
+    '[S II]':(6730.82, 6732.68)*u.AA,
+}
+           
+
+@pytest.mark.parametrize(('air','vac'), air_vac.values())
+def test_air_to_vac(air, vac):
+    # This is the accuracy provided by the line list we have.
+    # I'm not sure if the formula are incorrect or if the reference wavelengths
+    # are, but this is an accuracy of only 6 km/s, which is *very bad* for
+    # astrophysical applications.
+    assert np.abs((air_to_vac(air)- vac)) < 0.15*u.AA
+    assert np.abs((vac_to_air(vac)- air)) < 0.15*u.AA
+
+    assert np.abs((air_to_vac(air)- vac)/vac) < 2e-5
+    assert np.abs((vac_to_air(vac)- air)/air) < 2e-5
+
+    # round tripping
+    assert np.abs((vac_to_air(air_to_vac(air))-air))/air < 1e-8
+    assert np.abs((air_to_vac(vac_to_air(vac))-vac))/vac < 1e-8
