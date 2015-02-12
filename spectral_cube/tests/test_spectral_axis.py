@@ -427,8 +427,12 @@ def test_air_to_vac(air, vac):
     # I'm not sure if the formula are incorrect or if the reference wavelengths
     # are, but this is an accuracy of only 6 km/s, which is *very bad* for
     # astrophysical applications.
-    assert np.abs((air_to_vac(air)- vac)) < 0.1*u.AA
-    assert np.abs((vac_to_air(vac)- air)) < 0.1*u.AA
+    assert np.abs((air_to_vac(air)- vac)) < 0.15*u.AA
+    assert np.abs((vac_to_air(vac)- air)) < 0.15*u.AA
 
     assert np.abs((air_to_vac(air)- vac)/vac) < 2e-5
     assert np.abs((vac_to_air(vac)- air)/air) < 2e-5
+
+    # round tripping
+    assert np.abs((vac_to_air(air_to_vac(air))-air))/air < 1e-8
+    assert np.abs((air_to_vac(vac_to_air(vac))-vac))/vac < 1e-8
