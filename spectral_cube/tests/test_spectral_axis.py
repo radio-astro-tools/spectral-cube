@@ -477,3 +477,14 @@ def test_byhand_awav2vel():
     np.testing.assert_almost_equal(newwcs.wcs.cdelt, CDELT3V.to(u.m/u.s).value)
     # Check that the reference wavelength is 2.81 angstroms up
     np.testing.assert_almost_equal(newwcs.wcs_pix2world((2.81,), 0), 0.0, decimal=3)
+
+
+    # Go through a full-on sanity check:
+    vline = 100*u.km/u.s
+    wave_line_vac = vline.to(u.AA, u.doppler_optical(restwl))
+    wave_line_air = vac_to_air(wave_line_vac)
+
+    pix_line_input = mywcs.wcs_world2pix((wave_line_air.to(u.m).value,), 0)
+    pix_line_output = newwcs.wcs_world2pix((vline.to(u.m/u.s).value,), 0)
+
+    np.testing.assert_almost_equal(pix_line_output, pix_line_input, decimal=4)
