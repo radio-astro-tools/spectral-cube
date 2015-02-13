@@ -514,3 +514,6 @@ def test_byhand_awav2wav():
     np.testing.assert_almost_equal(newwcs.wcs_pix2world((10,),0),
                                    air_to_vac(mywcs.wcs_pix2world((10,),0)*u.m).value)
 
+    # At least one of the components MUST change
+    assert not (mywcs.wcs.crval[0] == newwcs.wcs.crval[0]
+                and mywcs.wcs.crpix[0] == newwcs.wcs.crpix[0])
