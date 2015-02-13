@@ -892,8 +892,15 @@ class SpectralCube(object):
         from .spectral_axis import (convert_spectral_axis,
                                     determine_ctype_from_vconv)
 
+        # Velocity conventions: required for frq <-> velo
+        # convert_spectral_axis will handle the case of no velocity
+        # convention specified & one is required
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
+        elif (velocity_convention is not None and
+              velocity_convention not in DOPPLER_CONVENTIONS.values()):
+            raise ValueError("Velocity convention must be radio, optical, "
+                             "or relativistic.")
 
         # Shorter versions to keep lines under 80
         ctype_from_vconv = determine_ctype_from_vconv

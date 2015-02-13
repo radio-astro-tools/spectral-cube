@@ -621,3 +621,16 @@ def test_spectral_unit_conventions():
     assert cube_opt.spectral_axis[1] != cube_rad.spectral_axis[1]
     assert cube_rel.spectral_axis[1] != cube_opt.spectral_axis[1]
 
+    assert cube_rel.velocity_convention == u.doppler_relativistic
+    assert cube_rad.velocity_convention == u.doppler_radio
+    assert cube_opt.velocity_convention == u.doppler_optical
+
+def test_invalid_spectral_unit_conventions():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    with pytest.raises(ValueError) as exc:
+        cube.with_spectral_unit(u.km/u.s,
+                                velocity_convention='invalid velocity convention')
+    assert exc.value.args[0] == ("Velocity convention must be radio, optical, "
+                                 "or relativistic.")
