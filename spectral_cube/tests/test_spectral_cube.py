@@ -597,3 +597,52 @@ def test_header_units_consistent():
     cube_freq_GHz = cube.with_spectral_unit(u.GHz)
 
     assert cube_freq_GHz.header['CUNIT3'] == 'GHz'
+
+def test_spectral_unit_conventions():
+
+    cube, data = cube_and_raw('advs.fits')
+    cube_frq = cube.with_spectral_unit(u.Hz)
+
+    cube_opt = cube.with_spectral_unit(u.km/u.s,
+                                       rest_value=cube_frq.spectral_axis[0],
+                                       velocity_convention='optical')
+    cube_rad = cube.with_spectral_unit(u.km/u.s,
+                                       rest_value=cube_frq.spectral_axis[0],
+                                       velocity_convention='radio')
+    cube_rel = cube.with_spectral_unit(u.km/u.s,
+                                       rest_value=cube_frq.spectral_axis[0],
+                                       velocity_convention='relativistic')
+
+    # should all be exactly 0 km/s
+    for x in (cube_rel.spectral_axis[0], cube_rad.spectral_axis[0],
+              cube_opt.spectral_axis[0]):
+        np.testing.assert_almost_equal(0,x.value)
+    assert cube_rel.spectral_axis[1] != cube_rad.spectral_axis[1]
+    assert cube_opt.spectral_axis[1] != cube_rad.spectral_axis[1]
+    assert cube_rel.spectral_axis[1] != cube_opt.spectral_axis[1]
+
+    assert cube_rel.velocity_convention == u.doppler_relativistic
+    assert cube_rad.velocity_convention == u.doppler_radio
+    assert cube_opt.velocity_convention == u.doppler_optical
+
+def test_invalid_spectral_unit_conventions():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    with pytest.raises(ValueError) as exc:
+        cube.with_spectral_unit(u.km/u.s,
+                                velocity_convention='invalid velocity convention')
+    assert exc.value.args[0] == ("Velocity convention must be radio, optical, "
+                                 "or relativistic.")
+
+@pytest.mark.parametrize('rest', (50, 50*u.K))
+def test_invalid_rest(rest):
+
+    cube, data = cube_and_raw('advs.fits')
+
+    with pytest.raises(ValueError) as exc:
+        cube.with_spectral_unit(u.km/u.s,
+                                velocity_convention='radio',
+                                rest_value=rest)
+    assert exc.value.args[0] == ("Rest value must be specified as an astropy "
+                                 "quantity with spectral equivalence.")

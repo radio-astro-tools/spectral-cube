@@ -4,6 +4,8 @@
 - Output mask as a CASA image https://github.com/radio-astro-tools/spectral-cube/pull/171
 - ytcube exports to .obj and .ply too
   https://github.com/radio-astro-tools/spectral-cube/pull/173
+- Fix air wavelengths, which were mistreated
+  (https://github.com/radio-astro-tools/spectral-cube/pull/186)
 
 0.2.1 (2014-12-03)
 ------------------

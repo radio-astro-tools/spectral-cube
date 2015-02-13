@@ -885,12 +885,29 @@ class SpectralCube(object):
             already if the *input* type is velocity, but the WCS's rest
             wavelength/frequency can be overridden with this parameter.
 
+            .. note: This must be the rest frequency/wavelength *in vacuum*,
+                     even if your cube has air wavelength units
+
         """
         from .spectral_axis import (convert_spectral_axis,
                                     determine_ctype_from_vconv)
 
+        # Velocity conventions: required for frq <-> velo
+        # convert_spectral_axis will handle the case of no velocity
+        # convention specified & one is required
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
+        elif (velocity_convention is not None and
+              velocity_convention not in DOPPLER_CONVENTIONS.values()):
+            raise ValueError("Velocity convention must be radio, optical, "
+                             "or relativistic.")
+
+        # If rest value is specified, it must be a quantity
+        if (rest_value is not None and
+            (not hasattr(rest_value, 'unit') or
+             not rest_value.unit.is_equivalent(u.m, u.spectral()))):
+            raise ValueError("Rest value must be specified as an astropy "
+                             "quantity with spectral equivalence.")
 
         # Shorter versions to keep lines under 80
         ctype_from_vconv = determine_ctype_from_vconv
