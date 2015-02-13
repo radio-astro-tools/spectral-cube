@@ -597,3 +597,27 @@ def test_header_units_consistent():
     cube_freq_GHz = cube.with_spectral_unit(u.GHz)
 
     assert cube_freq_GHz.header['CUNIT3'] == 'GHz'
+
+def test_spectral_unit_conventions():
+
+    cube, data = cube_and_raw('advs.fits')
+    cube_frq = cube.with_spectral_unit(u.Hz)
+
+    cube_opt = cube.with_spectral_unit(u.km/u.s,
+                                       rest_value=cube_frq.spectral_axis[0],
+                                       velocity_convention='optical')
+    cube_rad = cube.with_spectral_unit(u.km/u.s,
+                                       rest_value=cube_frq.spectral_axis[0],
+                                       velocity_convention='radio')
+    cube_rel = cube.with_spectral_unit(u.km/u.s,
+                                       rest_value=cube_frq.spectral_axis[0],
+                                       velocity_convention='relativistic')
+
+    # should all be exactly 0 km/s
+    for x in (cube_rel.spectral_axis[0], cube_rad.spectral_axis[0],
+              cube_opt.spectral_axis[0]):
+        np.testing.assert_almost_equal(0,x.value)
+    assert cube_rel.spectral_axis[1] != cube_rad.spectral_axis[1]
+    assert cube_opt.spectral_axis[1] != cube_rad.spectral_axis[1]
+    assert cube_rel.spectral_axis[1] != cube_opt.spectral_axis[1]
+
