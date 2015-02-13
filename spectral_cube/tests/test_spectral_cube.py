@@ -634,3 +634,15 @@ def test_invalid_spectral_unit_conventions():
                                 velocity_convention='invalid velocity convention')
     assert exc.value.args[0] == ("Velocity convention must be radio, optical, "
                                  "or relativistic.")
+
+@pytest.mark.parametrize('rest', (50, 50*u.K))
+def test_invalid_rest(rest):
+
+    cube, data = cube_and_raw('advs.fits')
+
+    with pytest.raises(ValueError) as exc:
+        cube.with_spectral_unit(u.km/u.s,
+                                velocity_convention='radio',
+                                rest_value=rest)
+    assert exc.value.args[0] == ("Rest value must be specified as an astropy "
+                                 "quantity with spectral equivalence.")

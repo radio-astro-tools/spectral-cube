@@ -902,6 +902,13 @@ class SpectralCube(object):
             raise ValueError("Velocity convention must be radio, optical, "
                              "or relativistic.")
 
+        # If rest value is specified, it must be a quantity
+        if (rest_value is not None and
+            (not hasattr(rest_value, 'unit') or
+             not rest_value.unit.is_equivalent(u.m, u.spectral()))):
+            raise ValueError("Rest value must be specified as an astropy "
+                             "quantity with spectral equivalence.")
+
         # Shorter versions to keep lines under 80
         ctype_from_vconv = determine_ctype_from_vconv
         vc = velocity_convention
