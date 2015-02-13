@@ -65,28 +65,6 @@ def wcs_unit_scale(unit):
         if wu.is_equivalent(unit):
             return wu.to(unit)
 
-def _get_linear_equivalency(unit1, unit2):
-    """
-    Determin the default / "natural" convention
-    Radio <-> freq
-    Optical <-> wavelength
-    """
-
-    if unit1.is_equivalent(unit2):
-        # Only a change of units is needed
-        return lambda *args: []
-    elif unit1.is_equivalent(unit2, u.spectral()):
-        # wavelength <-> frequency
-        # this is NOT a linear transformation (w = 1/v)
-        return None
-    elif (unit1.physical_type in ('frequency','speed') and
-          unit2.physical_type in ('frequency','speed')):
-        # top 'if' statement rules out both being the same
-        return u.doppler_radio
-    elif (unit1.physical_type in ('length','speed') and
-          unit2.physical_type in ('length','speed')):
-        return u.doppler_optical
-
 def determine_vconv_from_ctype(ctype):
     """
     Given a CTYPE, say what velocity convention it is associated with,
@@ -363,25 +341,9 @@ def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None):
         else:
             return (numer/denom).to(PHYS_UNIT_DICT[outtype], u.spectral())
     elif intype == 'air wavelength':
-        raise ValueError("Air wavelength should be converted to vacuum earlier.")
-        # Convert to vacuum wavelength, then continue
-        return cdelt_derivative(air_to_vac(crval),
-                                air_to_vac_deriv(crval)*cdelt,
-                                intype='length',
-                                outtype=outtype,
-                                linear=linear,
-                                rest=rest)
+        raise TypeError("Air wavelength should be converted to vacuum earlier.")
     elif outtype == 'air wavelength':
-        # I thought this wasn't supported?
-        raise ValueError("Conversion to air wavelength not supported.")
-        cdelt2 = cdelt_derivative(crval,
-                                  cdelt,
-                                  intype=intype,
-                                  outtype='length',
-                                  linear=linear,
-                                  rest=rest)
-        return air_to_vac_deriv(crval) * cdelt2
-                                
+        raise TypeError("Conversion to air wavelength not supported.")
     else:
         raise ValueError("Invalid in/out frames")
 

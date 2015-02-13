@@ -885,6 +885,9 @@ class SpectralCube(object):
             already if the *input* type is velocity, but the WCS's rest
             wavelength/frequency can be overridden with this parameter.
 
+            .. note: This must be the rest frequency/wavelength *in vacuum*,
+                     even if your cube has air wavelength units
+
         """
         from .spectral_axis import (convert_spectral_axis,
                                     determine_ctype_from_vconv)
