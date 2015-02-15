@@ -11,6 +11,7 @@ from .. import (SpectralCube, BooleanArrayMask, FunctionMask, LazyMask,
                 CompositeMask)
 from ..spectral_cube import OneDSpectrum
 from ..np_compat import allbadtonan
+from .. import spectral_axis
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
