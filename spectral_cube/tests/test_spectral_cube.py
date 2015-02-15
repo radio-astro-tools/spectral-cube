@@ -7,7 +7,9 @@ from astropy import units as u
 from astropy.wcs import WCS
 import numpy as np
 
-from .. import SpectralCube, BooleanArrayMask, FunctionMask, LazyMask, CompositeMask
+from .. import (SpectralCube, BooleanArrayMask, FunctionMask, LazyMask,
+                CompositeMask)
+from ..spectral_cube import OneDSpectrum
 from ..np_compat import allbadtonan
 
 from . import path
@@ -646,3 +648,45 @@ def test_invalid_rest(rest):
                                 rest_value=rest)
     assert exc.value.args[0] == ("Rest value must be specified as an astropy "
                                  "quantity with spectral equivalence.")
+
+def test_airwave_to_wave():
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._wcs.wcs.ctype[2] = 'AWAV'
+    cube._wcs.wcs.cunit[2] = 'm'
+    cube._spectral_unit = u.m
+    cube._wcs.wcs.cdelt[2] = 1e-7
+    cube._wcs.wcs.crval[2] = 5e-7
+
+    ax1 = cube.spectral_axis
+    ax2 = cube.with_spectral_unit(u.m).spectral_axis
+    np.testing.assert_almost_equal(spectral_axis.air_to_vac(ax1).value,
+                                   ax2.value)
+
+@pytest.mark.parametrize('func',('sum','std','max','min','mean'))
+def test_oned_numpy(func):
+    # Check that a numpy function returns an appropriate spectrum
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+
+    spec = getattr(cube,func)(axis=(1,2))
+    dspec = getattr(data,func)(axis=(2,3)).squeeze()
+    assert isinstance(spec, OneDSpectrum)
+    # data has a redundant 1st axis
+    np.testing.assert_equal(spec.value, dspec)
+    assert cube.unit == spec.unit
+
+def test_oned_slice():
+    # Check that a slice returns an appropriate spectrum
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+
+    spec = cube[:,0,0]
+    assert isinstance(spec, OneDSpectrum)
+    # data has a redundant 1st axis
+    np.testing.assert_equal(spec.value, data[0,:,0,0])
+    assert cube.unit == spec.unit
