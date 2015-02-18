@@ -309,3 +309,15 @@ def test_include():
                                        shape=cube.shape)
 
     assert np.all(bool_mask_array.include() == mask_array)
+
+def test_1d_mask():
+    # regression test for issue revealed in #183
+
+    cube, data = cube_and_raw('adv.fits')
+    mask = np.array([True, False, True, False])
+
+    sum0 = cube.with_mask(mask[:,None,None]).sum(axis=0)
+    sum0d = data[mask, :,:].sum(axis=0)
+
+    np.testing.assert_almost_equal(sum0.value, sum0d)
+
