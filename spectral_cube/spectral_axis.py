@@ -65,28 +65,6 @@ def wcs_unit_scale(unit):
         if wu.is_equivalent(unit):
             return wu.to(unit)
 
-def _get_linear_equivalency(unit1, unit2):
-    """
-    Determin the default / "natural" convention
-    Radio <-> freq
-    Optical <-> wavelength
-    """
-
-    if unit1.is_equivalent(unit2):
-        # Only a change of units is needed
-        return lambda *args: []
-    elif unit1.is_equivalent(unit2, u.spectral()):
-        # wavelength <-> frequency
-        # this is NOT a linear transformation (w = 1/v)
-        return None
-    elif (unit1.physical_type in ('frequency','speed') and
-          unit2.physical_type in ('frequency','speed')):
-        # top 'if' statement rules out both being the same
-        return u.doppler_radio
-    elif (unit1.physical_type in ('length','speed') and
-          unit2.physical_type in ('length','speed')):
-        return u.doppler_optical
-
 def determine_vconv_from_ctype(ctype):
     """
     Given a CTYPE, say what velocity convention it is associated with,
@@ -253,12 +231,12 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit)
     cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * inunit)
 
-    if in_spec_ctype == 'air wavelength':
+    if in_spec_ctype == 'AWAV':
         warnings.warn("Support for air wavelengths is experimental and only "
                       "works in the forward direction (air->vac, not vac->air).")
         cdelt_in = air_to_vac_deriv(crval_in) * cdelt_in
         crval_in = air_to_vac(crval_in)
-        in_spec_ctype = 'wavelength'
+        in_spec_ctype = 'WAVE'
 
     # 1. Convert input to input, linear
     if in_vcequiv is not None and ref_value is not None:
@@ -362,22 +340,10 @@ def cdelt_derivative(crval, cdelt, intype, outtype, linear=False, rest=None):
             return (-numer/denom).to(PHYS_UNIT_DICT[outtype], u.spectral())
         else:
             return (numer/denom).to(PHYS_UNIT_DICT[outtype], u.spectral())
-    elif intype == 'air wavelength': # Redundant: not used
-        return cdelt_derivative(air_to_vac(crval),
-                                air_to_vac_deriv(crval)*cdelt,
-                                intype='length',
-                                outtype=outtype,
-                                linear=linear,
-                                rest=rest)
+    elif intype == 'air wavelength':
+        raise TypeError("Air wavelength should be converted to vacuum earlier.")
     elif outtype == 'air wavelength':
-        cdelt2 = cdelt_derivative(crval,
-                                  cdelt,
-                                  intype=intype,
-                                  outtype='length',
-                                  linear=linear,
-                                  rest=rest)
-        return air_to_vac_deriv(crval) * cdelt2
-                                
+        raise TypeError("Conversion to air wavelength not supported.")
     else:
         raise ValueError("Invalid in/out frames")
 
@@ -390,10 +356,19 @@ def air_to_vac(wavelength):
     wlum = wavelength.to(u.um).value
     return (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4)) * wavelength
 
+def vac_to_air(wavelength):
+    """
+    Griesen 2006 reports that the error in naively inverting Eqn 65 is less
+    than 10^-9 and therefore acceptable.  This is therefore eqn 67
+    """
+    wlum = wavelength.to(u.um).value
+    nl = (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4))
+    return wavelength/nl
+
 def air_to_vac_deriv(wavelength):
     """
     Eqn 66
     """
     wlum = wavelength.to(u.um).value
-    return (1+1e-6*(287.6155 - 1.62877/wlum**2 - 0.04080/wlum**4))
+    return (1+1e-6*(287.6155 - 1.62887/wlum**2 - 0.04080/wlum**4))
 

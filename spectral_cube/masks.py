@@ -272,7 +272,8 @@ class BooleanArrayMask(MaskBase):
             self._mask = mask
 
     def _validate_wcs(self, new_data=None, new_wcs=None):
-        if new_data is not None and not is_broadcastable_and_smaller(new_data.shape, self._mask.shape):
+        if new_data is not None and not is_broadcastable_and_smaller(self._mask.shape,
+                                                                     new_data.shape):
             raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs is not None:
             if new_wcs not in self._wcs_whitelist:
@@ -367,7 +368,8 @@ class LazyMask(MaskBase):
         return self._function(self._data[view])
 
     def __getitem__(self, view):
-        return LazyMask(self._function, data=self._data[view], wcs=wcs_utils.slice_wcs(self._wcs, view))
+        return LazyMask(self._function, data=self._data[view],
+                        wcs=wcs_utils.slice_wcs(self._wcs, view))
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """

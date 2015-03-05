@@ -208,7 +208,7 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0]
 
-    def quicklook(self, filename, **kwargs):
+    def quicklook(self, filename=None, **kwargs):
         """
         Plot the spectrum with current spectral units in the currently open
         figure
@@ -353,7 +353,9 @@ class SpectralCube(object):
            decreasing subsets of the data, to conserve memory.
            Default='auto'
         projection : bool
-            Return a `Projection` if the resulting array is 2D?
+            Return a `Projection` if the resulting array is 2D or a
+            OneDProjection if the resulting array is 1D and the sum is over both
+            spatial axes?
         unit : None or `astropy.units.Unit`
             The unit to include for the output array.  For example,
             `SpectralCube.max` calls `SpectralCube.apply_numpy_function(np.max,
@@ -412,11 +414,24 @@ class SpectralCube(object):
             else:
                 return out
         elif projection and reduce:
-            new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-
             meta = {'collapse_axis': axis}
 
-            return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+            if hasattr(axis, '__len__') and len(axis) == 2:
+                # if operation is over two spatial dims
+                if set(axis) == set((1,2)):
+                    new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
+                    return OneDSpectrum(value=out,
+                                        wcs=new_wcs,
+                                        copy=False,
+                                        unit=unit,
+                                        meta=meta)
+                else:
+                    return out
+
+            else:
+                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+                return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
         else:
             return out
 
@@ -481,7 +496,7 @@ class SpectralCube(object):
         """
         from .np_compat import allbadtonan
 
-        projection = self._naxes_dropped(axis) == 1
+        projection = self._naxes_dropped(axis) in (1,2)
 
         return self.apply_numpy_function(allbadtonan(np.nansum), fill=np.nan,
                                          how=how, axis=axis, unit=self.unit,
@@ -493,7 +508,7 @@ class SpectralCube(object):
         Return the mean of the cube, optionally over an axis.
         """
 
-        projection = self._naxes_dropped(axis) == 1
+        projection = self._naxes_dropped(axis) in (1,2)
 
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
@@ -505,7 +520,7 @@ class SpectralCube(object):
         Return the standard deviation of the cube, optionally over an axis.
         """
 
-        projection = self._naxes_dropped(axis) == 1
+        projection = self._naxes_dropped(axis) in (1,2)
 
         return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
@@ -518,7 +533,7 @@ class SpectralCube(object):
         Return the maximum data value of the cube, optionally over an axis.
         """
 
-        projection = self._naxes_dropped(axis) == 1
+        projection = self._naxes_dropped(axis) in (1,2)
 
         return self.apply_numpy_function(np.nanmax, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
@@ -530,7 +545,7 @@ class SpectralCube(object):
         Return the minimum data value of the cube, optionally over an axis.
         """
 
-        projection = self._naxes_dropped(axis) == 1
+        projection = self._naxes_dropped(axis) in (1,2)
 
         return self.apply_numpy_function(np.nanmin, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
@@ -885,12 +900,29 @@ class SpectralCube(object):
             already if the *input* type is velocity, but the WCS's rest
             wavelength/frequency can be overridden with this parameter.
 
+            .. note: This must be the rest frequency/wavelength *in vacuum*,
+                     even if your cube has air wavelength units
+
         """
         from .spectral_axis import (convert_spectral_axis,
                                     determine_ctype_from_vconv)
 
+        # Velocity conventions: required for frq <-> velo
+        # convert_spectral_axis will handle the case of no velocity
+        # convention specified & one is required
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
+        elif (velocity_convention is not None and
+              velocity_convention not in DOPPLER_CONVENTIONS.values()):
+            raise ValueError("Velocity convention must be radio, optical, "
+                             "or relativistic.")
+
+        # If rest value is specified, it must be a quantity
+        if (rest_value is not None and
+            (not hasattr(rest_value, 'unit') or
+             not rest_value.unit.is_equivalent(u.m, u.spectral()))):
+            raise ValueError("Rest value must be specified as an astropy "
+                             "quantity with spectral equivalence.")
 
         # Shorter versions to keep lines under 80
         ctype_from_vconv = determine_ctype_from_vconv

@@ -4,6 +4,12 @@
 - Output mask as a CASA image https://github.com/radio-astro-tools/spectral-cube/pull/171
 - ytcube exports to .obj and .ply too
   https://github.com/radio-astro-tools/spectral-cube/pull/173
+- Fix air wavelengths, which were mistreated
+  (https://github.com/radio-astro-tools/spectral-cube/pull/186)
+- Add support for sum/mean/std over both spatial axes to return a
+  OneDSpectrum object.  This PR also removes numpy 1.5-1.7 tests, since
+  many `spectral_cube` functions are not compatible with these versions
+  of numpy (https://github.com/radio-astro-tools/spectral-cube/pull/188)
 
 0.2.1 (2014-12-03)
 ------------------
