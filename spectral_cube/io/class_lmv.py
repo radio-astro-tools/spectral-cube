@@ -32,7 +32,9 @@ _cunit_dict = {'LII':'deg',
             }
 cel_types = ('RA','DEC','GLON','GLAT')
 
-_proj_dict = {0:'', 1:'TAN', 2:'SIN', 3:'AZP', 4:'STG', 5:'ZEA', 6:'AIT',
+# CLASS apparently defaults to an ARC (zenithal equidistant) projection; this
+# is what is output in case the projection # is zero when exporting from CLASS
+_proj_dict = {0:'ARC', 1:'TAN', 2:'SIN', 3:'AZP', 4:'STG', 5:'ZEA', 6:'AIT',
               7:'GLS', 8:'SFL', }
 _bunit_dict = {'k (tmb)': 'K'}
 
@@ -197,6 +199,16 @@ def read_lmv_type1(lf):
         header['RA'] != 0):
         header['CRVAL1'] = header['RA']
         header['CRVAL2'] = header['DEC']
+
+
+    # Copied from the type 2 reader:
+    # Use the appropriate projection type
+    ptyp = header['PTYP']
+    for kw in header:
+        if 'CTYPE' in kw:
+            if header[kw].strip() in cel_types:
+                n_dashes = 5-len(header[kw].strip())
+                header[kw] = header[kw].strip()+ '-'*n_dashes + _proj_dict[ptyp]
 
     other_info = np.fromfile(lf, count=7, dtype='float32') # 121-end
     if not np.all(other_info == 0):
@@ -447,11 +459,11 @@ def read_lmv_type2(lf):
     elif proj_words != 0:
         raise ValueError("Invalid # of projection keywords")
 
-    if ptyp != 0:
-        for kw in header:
-            if 'CTYPE' in kw:
-                if header[kw] in cel_types:
-                    header[kw] += '-' + _proj_dict[ptyp]
+    for kw in header:
+        if 'CTYPE' in kw:
+            if header[kw].strip() in cel_types:
+                n_dashes = 5-len(header[kw].strip())
+                header[kw] = header[kw].strip()+ '-'*n_dashes + _proj_dict[ptyp]
 
     for ii,((ref,val,inc),code) in enumerate(zip(convert,ijcode)):
         if ii in valid_dims:
