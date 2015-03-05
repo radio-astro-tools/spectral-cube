@@ -24,12 +24,12 @@ _ctype_dict={'LII':'GLON',
              'FREQUENCY': 'FREQ',
             }
 _cunit_dict = {'LII':'deg',
-             'BII':'deg',
-             'VELOCITY':'km s-1',
-             'RA':'deg',
-             'DEC':'deg',
-             'FREQUENCY': 'MHz',
-            }
+               'BII':'deg',
+               'VELOCITY':'km s-1',
+               'RA':'deg',
+               'DEC':'deg',
+               'FREQUENCY': 'MHz',
+              }
 cel_types = ('RA','DEC','GLON','GLAT')
 
 # CLASS apparently defaults to an ARC (zenithal equidistant) projection; this
@@ -59,7 +59,7 @@ def read_lmv(filename):
 
     with open(filename,'rb') as lf:
         # lf for "LMV File"
-        filetype = lf.read(12)
+        filetype = lf.read(12).decode('utf8')
         #!---------------------------------------------------------------------
         #! @ private
         #!       SYCODE system code
@@ -132,25 +132,25 @@ def read_lmv_type1(lf):
     if description_section_length != 72:
         warnings.warn("Invalid section length found for description section")
     #strings = lf.read(description_section_length) # 56
-    header['BUNIT'] = lf.read(12) # 56
-    header['CTYPE1'] = lf.read(12) # 59
-    header['CTYPE2'] = lf.read(12) # 62
-    header['CTYPE3'] = lf.read(12) # 65
-    header['CTYPE4'] = lf.read(12) # 68
+    header['BUNIT']  = lf.read(12).decode('utf8') # 56
+    header['CTYPE1'] = lf.read(12).decode('utf8') # 59
+    header['CTYPE2'] = lf.read(12).decode('utf8') # 62
+    header['CTYPE3'] = lf.read(12).decode('utf8') # 65
+    header['CTYPE4'] = lf.read(12).decode('utf8') # 68
     header['CUNIT1'] = _cunit_dict[header['CTYPE1'].strip()]
     header['CUNIT2'] = _cunit_dict[header['CTYPE2'].strip()]
     header['CUNIT3'] = _cunit_dict[header['CTYPE3'].strip()]
-    header['COOSYS'] = lf.read(12) # 71
+    header['COOSYS'] = lf.read(12).decode('utf8') # 71
     position_section_length = np.fromfile(lf,count=1,dtype='int32') # 74
     if position_section_length != 48:
         warnings.warn("Invalid section length found for position section")
-    header['OBJNAME'] = lf.read(4*3) # 75
+    header['OBJNAME'] = lf.read(4*3).decode('utf8') # 75
     header['RA'] = np.fromfile(lf, count=1, dtype='float64')[0] * r2deg # 78
     header['DEC'] = np.fromfile(lf, count=1, dtype='float64')[0] * r2deg # 80
     header['GLON'] = np.fromfile(lf, count=1, dtype='float64')[0] * r2deg # 82
     header['GLAT'] = np.fromfile(lf, count=1, dtype='float64')[0] * r2deg # 84
     header['EQUINOX'] = np.fromfile(lf,count=1,dtype='float32')[0] # 86
-    header['PROJWORD'] = lf.read(4) # 87
+    header['PROJWORD'] = lf.read(4).decode('utf8') # 87
     header['PTYP'] = np.fromfile(lf,count=1,dtype='int32')[0] # 88
     header['A0'] = np.fromfile(lf,count=1,dtype='float64')[0] # 89
     header['D0'] = np.fromfile(lf,count=1,dtype='float64')[0] # 91
@@ -160,7 +160,7 @@ def read_lmv_type1(lf):
     spectroscopy_section_length = np.fromfile(lf,count=1,dtype='int32') # 97
     if spectroscopy_section_length != 48:
         warnings.warn("Invalid section length found for spectroscopy section")
-    header['RECVR'] = lf.read(12) # 98
+    header['RECVR'] = lf.read(12).decode('utf8') # 98
     header['FRES'] = np.fromfile(lf,count=1,dtype='float64')[0] # 101
     header['IMAGFREQ'] = np.fromfile(lf,count=1,dtype='float64')[0] # 103 "FIMA"
     header['REFFREQ'] = np.fromfile(lf,count=1,dtype='float64')[0] # 105
@@ -253,7 +253,7 @@ def read_lmv_tofits(filename):
              if isinstance(v, tuple) else
              fits.header.Card(''.join(s for s in k if s in string.printable),
                               ''.join(s for s in v if s in string.printable)
-                              if isinstance(v, str) else v)
+                              if isinstance(v, six.string_types) else v)
              for k,v in header.iteritems()
              if k not in bad_kws]
     Header = fits.Header(cards)
@@ -421,9 +421,9 @@ def read_lmv_type2(lf):
     _check_val('posi_words', posi_words, 15)
 
     proj_start = _read_int32(lf)
-    source_name = lf.read(12)
+    source_name = lf.read(12).decode('utf8')
     header['OBJECT'] = source_name
-    coordinate_system = lf.read(12)
+    coordinate_system = lf.read(12).decode('utf8')
     
     header['RA'] = _read_float64(lf)
     header['DEC'] = _read_float64(lf)
@@ -518,7 +518,7 @@ def read_lmv_type2(lf):
         header['VOFF'] = _read_float32(lf)
         header['DOPP'] = _read_float32(lf)
         header['FAXI'] = _read_int32(lf)
-        header['LINENAME'] = lf.read(12)
+        header['LINENAME'] = lf.read(12).decode('utf8')
         header['VTYPE'] = _read_int32(lf)
     elif spec_words != 0:
         raise ValueError("Invalid # of spectroscopic keywords")
