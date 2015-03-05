@@ -59,12 +59,12 @@ matrix:
           env: NUMPY_VERSION=1.8 SETUP_CMD='test'
         - python: 2.7
           env: NUMPY_VERSION=1.8 SETUP_CMD='test'
-        - python: 2.7
-          env: NUMPY_VERSION=1.7 SETUP_CMD='test'
-        - python: 2.7
-          env: NUMPY_VERSION=1.6 SETUP_CMD='test'
-        - python: 2.7
-          env: NUMPY_VERSION=1.5 SETUP_CMD='test'
+        #- python: 2.7
+        #  env: NUMPY_VERSION=1.7 SETUP_CMD='test'
+        #- python: 2.7
+        #  env: NUMPY_VERSION=1.6 SETUP_CMD='test'
+        #- python: 2.7
+        #  env: NUMPY_VERSION=1.5 SETUP_CMD='test'
 
         # Test with bottleneck
         - python: 2.7
@@ -108,11 +108,10 @@ install:
     - if [[ $SETUP_CMD != egg_info ]] && [[ $ASTROPY_VERSION == stable ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION astropy; fi
 
     # YT
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $TRAVIS_PYTHON_VERSION == 2.7 ]] && [[ $NUMPY_VERSION == 1.8 ]] && [[ $YT == yes ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION yt; fi
+    - if [[ $SETUP_CMD != egg_info ]] && [[ $TRAVIS_PYTHON_VERSION == 2.7 ]] && [[ $NUMPY_VERSION == 1.9 ]] && [[ $YT == yes ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION yt; fi
 
     # Bottleneck
-    # asmeurer currently (8/26/2014) supports numpy 1.8
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $BOTTLENECK == yes ]] && [[ $NUMPY_VERSION == 1.8 ]]; then $CONDA_INSTALL --channel https://conda.binstar.org/asmeurer bottleneck; fi
+    - if [[ $SETUP_CMD != egg_info ]] && [[ $BOTTLENECK == yes ]] && [[ $NUMPY_VERSION == 1.9 ]]; then $CONDA_INSTALL --channel https://conda.binstar.org/asmeurer bottleneck; fi
 
     # OPTIONAL DEPENDENCIES
     # Here you can add any dependencies your package may have. You can use
