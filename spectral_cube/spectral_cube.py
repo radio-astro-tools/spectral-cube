@@ -1596,6 +1596,9 @@ class SpectralCube(object):
     def __eq__(self, value):
         return LazyMask(lambda data: data == value, data=self._data, wcs=self._wcs)
 
+    def __hash__(self):
+        return id(self)
+
     def __ne__(self, value):
         return LazyMask(lambda data: data != value, data=self._data, wcs=self._wcs)
 
