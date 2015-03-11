@@ -1593,6 +1593,15 @@ class SpectralCube(object):
     def __lt__(self, value):
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
+    def __eq__(self, value):
+        return LazyMask(lambda data: data == value, data=self._data, wcs=self._wcs)
+
+    def __hash__(self):
+        return id(self)
+
+    def __ne__(self, value):
+        return LazyMask(lambda data: data != value, data=self._data, wcs=self._wcs)
+
     @classmethod
     def read(cls, filename, format=None, hdu=None, **kwargs):
         """
