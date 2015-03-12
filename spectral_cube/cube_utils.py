@@ -2,6 +2,30 @@ import numpy as np
 from . import wcs_utils
 import warnings
 
+def _fix_spectral(wcs):
+    """
+    Attempt to fix a cube with an invalid spectral axis definition.  Only uses
+    well-known exceptions, e.g. CTYPE = 'VELOCITY'.  For the rest, it will try
+    to raise a helpful error.
+    """
+
+    axtypes = wcs.get_axis_types()
+
+    types = [a['coordinate_type'] for a in axtypes]
+
+    if wcs.naxis not in (3,4):
+        raise TypeError("The WCS has {0} axes of types {1}".format(len(types),
+                                                                   types))
+
+    # sanitize noncompliant headers
+    if 'spectral' not in types:
+        warnings.warn("No spectral axis found; header may be non-compliant.")
+        for ind,tp in enumerate(types):
+            if tp not in ('celestial','stokes'):
+                if wcs.wcs.ctype[ind] in wcs_utils.bad_spectypes_mapping:
+                    wcs.wcs.ctype[ind] = wcs_utils.bad_spectypes_mapping[wcs.wcs.ctype[ind]]
+
+    return wcs
 
 def _split_stokes(array, wcs):
     """
@@ -23,6 +47,8 @@ def _split_stokes(array, wcs):
 
     if wcs.wcs.naxis != 4:
         raise ValueError("Input WCS must be 4-dimensional")
+
+    wcs = _fix_spectral(wcs)
 
     # reverse from wcs -> numpy convention
     axtypes = wcs.get_axis_types()[::-1]
@@ -91,18 +117,12 @@ def _orient(array, wcs):
     if wcs.wcs.naxis != 3:
         raise ValueError("Input WCS must be 3-dimensional")
 
+    wcs = _fix_spectral(wcs)
+
     # reverse from wcs -> numpy convention
     axtypes = wcs.get_axis_types()[::-1]
 
     types = [a['coordinate_type'] for a in axtypes]
-
-    # sanitize noncompliant headers
-    if 'spectral' not in types:
-        warnings.warn("No spectral axis found; header may be non-compliant.")
-        types = [tp if tp == 'celestial' else 'spectral' for tp in types]
-        spec = types.index('spectral')
-        if wcs.wcs.ctype[spec] in wcs_utils.bad_spectypes_mapping:
-            wcs.wcs.ctype[spec] = wcs_utils.bad_spectypes_mapping[wcs.wcs.ctype[spec]]
 
     nums = [None if a['coordinate_type'] != 'celestial' else a['number']
             for a in axtypes]
