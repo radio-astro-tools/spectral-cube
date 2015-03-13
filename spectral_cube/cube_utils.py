@@ -1,7 +1,32 @@
 import numpy as np
+from astropy.wcs import WCSSUB_CELESTIAL,WCSSUB_SPECTRAL
 from . import wcs_utils
-import warnings
+from astropy import log
 
+def _fix_spectral(wcs):
+    """
+    Attempt to fix a cube with an invalid spectral axis definition.  Only uses
+    well-known exceptions, e.g. CTYPE = 'VELOCITY'.  For the rest, it will try
+    to raise a helpful error.
+    """
+
+    axtypes = wcs.get_axis_types()
+
+    types = [a['coordinate_type'] for a in axtypes]
+
+    if wcs.naxis not in (3,4):
+        raise TypeError("The WCS has {0} axes of types {1}".format(len(types),
+                                                                   types))
+
+    # sanitize noncompliant headers
+    if 'spectral' not in types:
+        log.warn("No spectral axis found; header may be non-compliant.")
+        for ind,tp in enumerate(types):
+            if tp not in ('celestial','stokes'):
+                if wcs.wcs.ctype[ind] in wcs_utils.bad_spectypes_mapping:
+                    wcs.wcs.ctype[ind] = wcs_utils.bad_spectypes_mapping[wcs.wcs.ctype[ind]]
+
+    return wcs
 
 def _split_stokes(array, wcs):
     """
@@ -24,6 +49,8 @@ def _split_stokes(array, wcs):
     if wcs.wcs.naxis != 4:
         raise ValueError("Input WCS must be 4-dimensional")
 
+    wcs = _fix_spectral(wcs)
+
     # reverse from wcs -> numpy convention
     axtypes = wcs.get_axis_types()[::-1]
 
@@ -37,18 +64,18 @@ def _split_stokes(array, wcs):
         if types.count('celestial') == 2 and types.count('spectral') == 1:
             if None in types:
                 stokes_index = types.index(None)
-                warnings.warn("FITS file has no STOKES axis, but it has a blank"
-                              " axis type at index {0} that is assumed to be "
-                              "stokes.")
+                log.warn("FITS file has no STOKES axis, but it has a blank"
+                         " axis type at index {0} that is assumed to be "
+                         "stokes.".format(4-stokes_index))
             else:
                 for ii,tp in enumerate(types):
                     if tp not in ('celestial', 'spectral'):
                         stokes_index = ii
                         stokes_type = tp
 
-                warnings.warn("FITS file has no STOKES axis, but it has an axis"
-                              " of type {1} at index {0} that is assumed to be "
-                              "stokes.".format(stokes_index, stokes_type))
+                log.warn("FITS file has no STOKES axis, but it has an axis"
+                         " of type {1} at index {0} that is assumed to be "
+                         "stokes.".format(4-stokes_index, stokes_type))
         else:
             raise IOError("There are 4 axes in the data cube but no STOKES "
                           "axis could be identified")
@@ -91,18 +118,12 @@ def _orient(array, wcs):
     if wcs.wcs.naxis != 3:
         raise ValueError("Input WCS must be 3-dimensional")
 
+    wcs = _fix_spectral(wcs)
+
     # reverse from wcs -> numpy convention
     axtypes = wcs.get_axis_types()[::-1]
 
     types = [a['coordinate_type'] for a in axtypes]
-
-    # sanitize noncompliant headers
-    if 'spectral' not in types:
-        warnings.warn("No spectral axis found; header may be non-compliant.")
-        types = [tp if tp == 'celestial' else 'spectral' for tp in types]
-        spec = types.index('spectral')
-        if wcs.wcs.ctype[spec] in wcs_utils.bad_spectypes_mapping:
-            wcs.wcs.ctype[spec] = wcs_utils.bad_spectypes_mapping[wcs.wcs.ctype[spec]]
 
     nums = [None if a['coordinate_type'] != 'celestial' else a['number']
             for a in axtypes]
@@ -113,8 +134,7 @@ def _orient(array, wcs):
     t = [types.index('spectral'), nums.index(1), nums.index(0)]
     result_array = array.transpose(t)
 
-    t = wcs.wcs.naxis - np.array(t[::-1]) - 1
-    result_wcs = wcs_utils.reindex_wcs(wcs, t)
+    result_wcs = wcs.sub([WCSSUB_CELESTIAL, WCSSUB_SPECTRAL])
 
     return result_array, result_wcs
 
