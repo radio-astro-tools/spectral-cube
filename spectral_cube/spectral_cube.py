@@ -153,7 +153,7 @@ class Projection(LowerDimensionalObject):
         self._wcs = wcs
         self._meta = meta
         self._mask = mask
-        if header is None:
+        if header is not None:
             self._header = header
         else:
             self._header = Header()
@@ -210,7 +210,7 @@ class OneDSpectrum(LowerDimensionalObject):
         self._wcs = wcs
         self._meta = meta
         self._mask = mask
-        if header is None:
+        if header is not None:
             self._header = header
         else:
             self._header = Header()
