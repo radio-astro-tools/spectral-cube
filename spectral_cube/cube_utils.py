@@ -1,6 +1,7 @@
 import numpy as np
+from astropy.wcs import WCSSUB_CELESTIAL,WCSSUB_SPECTRAL
 from . import wcs_utils
-import warnings
+from astropy import log
 
 def _fix_spectral(wcs):
     """
@@ -19,7 +20,7 @@ def _fix_spectral(wcs):
 
     # sanitize noncompliant headers
     if 'spectral' not in types:
-        warnings.warn("No spectral axis found; header may be non-compliant.")
+        log.warn("No spectral axis found; header may be non-compliant.")
         for ind,tp in enumerate(types):
             if tp not in ('celestial','stokes'):
                 if wcs.wcs.ctype[ind] in wcs_utils.bad_spectypes_mapping:
@@ -63,18 +64,18 @@ def _split_stokes(array, wcs):
         if types.count('celestial') == 2 and types.count('spectral') == 1:
             if None in types:
                 stokes_index = types.index(None)
-                warnings.warn("FITS file has no STOKES axis, but it has a blank"
-                              " axis type at index {0} that is assumed to be "
-                              "stokes.")
+                log.warn("FITS file has no STOKES axis, but it has a blank"
+                         " axis type at index {0} that is assumed to be "
+                         "stokes.".format(4-stokes_index))
             else:
                 for ii,tp in enumerate(types):
                     if tp not in ('celestial', 'spectral'):
                         stokes_index = ii
                         stokes_type = tp
 
-                warnings.warn("FITS file has no STOKES axis, but it has an axis"
-                              " of type {1} at index {0} that is assumed to be "
-                              "stokes.".format(stokes_index, stokes_type))
+                log.warn("FITS file has no STOKES axis, but it has an axis"
+                         " of type {1} at index {0} that is assumed to be "
+                         "stokes.".format(4-stokes_index, stokes_type))
         else:
             raise IOError("There are 4 axes in the data cube but no STOKES "
                           "axis could be identified")
@@ -84,7 +85,9 @@ def _split_stokes(array, wcs):
 
     stokes_arrays = {}
 
-    wcs_slice = wcs_utils.drop_axis(wcs, array.ndim - 1 - stokes_index)
+    # wcs_slice = wcs_utils.drop_axis(wcs, array.ndim - 1 - stokes_index)
+    wcs_slice = wcs.sub([WCSSUB_CELESTIAL, WCSSUB_SPECTRAL])
+    wcs_slice.to_header()
 
     for i_stokes in range(array.shape[stokes_index]):
 
@@ -133,8 +136,7 @@ def _orient(array, wcs):
     t = [types.index('spectral'), nums.index(1), nums.index(0)]
     result_array = array.transpose(t)
 
-    t = wcs.wcs.naxis - np.array(t[::-1]) - 1
-    result_wcs = wcs_utils.reindex_wcs(wcs, t)
+    result_wcs = wcs.sub([WCSSUB_CELESTIAL, WCSSUB_SPECTRAL])
 
     return result_array, result_wcs
 
