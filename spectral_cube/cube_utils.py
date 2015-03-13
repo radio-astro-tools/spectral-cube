@@ -85,9 +85,7 @@ def _split_stokes(array, wcs):
 
     stokes_arrays = {}
 
-    # wcs_slice = wcs_utils.drop_axis(wcs, array.ndim - 1 - stokes_index)
-    wcs_slice = wcs.sub([WCSSUB_CELESTIAL, WCSSUB_SPECTRAL])
-    wcs_slice.to_header()
+    wcs_slice = wcs_utils.drop_axis(wcs, array.ndim - 1 - stokes_index)
 
     for i_stokes in range(array.shape[stokes_index]):
 

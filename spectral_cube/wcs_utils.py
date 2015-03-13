@@ -135,6 +135,20 @@ def reindex_wcs(wcs, inds):
     outwcs.wcs.cname = [wcs.wcs.cname[i] for i in inds]
     outwcs.wcs.pc = pc[inds[:, None], inds[None, :]]
 
+    pv_cards = []
+    for i, j in enumerate(inds):
+        for k, m, v in wcs.wcs.get_pv():
+            if k == j:
+                pv_cards.append((i, m, v))
+    outwcs.wcs.set_pv(pv_cards)
+
+    ps_cards = []
+    for i, j in enumerate(inds):
+        for k, m, v in wcs.wcs.get_ps():
+            if k == j:
+                ps_cards.append((i, m, v))
+    outwcs.wcs.set_ps(ps_cards)
+
     return outwcs
 
 
