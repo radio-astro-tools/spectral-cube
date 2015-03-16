@@ -1846,6 +1846,67 @@ class SpectralCube(object):
         hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
+    def plot_channel_maps(self, output_file, nx, ny, channels, levels,
+                          figsize=(20,20), decimals=3, zoom=1):
+        """
+        Make channel maps from a spectral cube
+
+        Parameters
+        ----------
+        input_file : str
+            Name of the input spectral cube
+        output_file : str
+            Name of the matplotlib plot
+        nx, ny : int
+            Number of sub-plots in the x and y direction
+        channels : list
+            List of channels to show
+        levels : list
+            List of levels to show
+        figsize : tuple, optional
+            Figure size for matplotlib
+        decimals : int, optional
+            Number of decimal places to show in spectral value
+        zoom : int, optional
+            How much to zoom in. In future versions of this function, the
+            pointing center will be customizable.
+        """
+
+        import matplotlib.pyplot as plt
+
+        if len(channels) != nx * ny:
+            raise ValueError("Number of channels should be equal to nx * ny")
+
+        # Read in spectral cube and get spectral axis
+        spectral_axis = self.spectral_axis
+
+        fig = plt.figure(figsize=figsize)
+
+        sizey, sizex = self.shape[1:]
+        cenx = sizex / 2.
+        ceny = sizey / 2.
+
+        for ichannel, channel in enumerate(channels):
+
+            # Get color from Red - Yellow - Blue color map
+            color = plt.cm.RdYlBu_r(ichannel / float(len(channels)))
+
+            ax = fig.add_subplot(ny, nx, ichannel + 1, projection=self.wcs, slices=('x', 'y', channel))
+            ax.contourf(self.unmasked_data[channel,:,:], levels=[levels[0], 10.], colors=[color])
+            ax.contour(self.unmasked_data[channel,:,:], levels=levels, colors='k', alpha=0.8)
+            ax.set_xlim(cenx - cenx / zoom, cenx + cenx / zoom)
+            ax.set_ylim(ceny - ceny / zoom, ceny + ceny / zoom)
+            ax.set_title(("{0:." + str(decimals) + "f}").format(spectral_axis[channel]))
+
+            if ichannel % nx != 0:
+                ax.coords[1].set_ticklabel_position('')
+
+            if ichannel < nx * (ny - 1) != 0:
+                ax.coords[0].set_ticklabel_position('')
+
+        fig.savefig(output_file)
+
+
 class StokesSpectralCube(SpectralCube):
 
     """
