@@ -98,13 +98,22 @@ class LowerDimensionalObject(u.Quantity):
         return self._meta
 
     @property
+    def header(self):
+        header = self._header
+        # This inplace update is OK; it's not bad to overwrite WCS in this
+        # header
+        if self.wcs is not None:
+            header.update(self.wcs.to_header())
+        header['BUNIT'] = self.unit.to_string(format='fits')
+        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
+        for ind,sh in enumerate(self.shape[::-1]):
+            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
+                                      value=sh))
+        return header
+
+    @property
     def hdu(self):
-        from astropy.io import fits
-        if self.wcs is None:
-            hdu = fits.PrimaryHDU(self.value)
-        else:
-            hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
-        hdu.header['BUNIT'] = self.unit.to_string(format='fits')
+        hdu = PrimaryHDU(self.value, header=self.header)
         return hdu
 
     def write(self, filename, format=None, overwrite=False):
@@ -131,7 +140,7 @@ class LowerDimensionalObject(u.Quantity):
 class Projection(LowerDimensionalObject):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None):
+                meta=None, mask=None, header=None):
 
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -144,6 +153,10 @@ class Projection(LowerDimensionalObject):
         self._wcs = wcs
         self._meta = meta
         self._mask = mask
+        if header is not None:
+            self._header = header
+        else:
+            self._header = Header()
 
         return self
 
@@ -184,7 +197,7 @@ class Slice(Projection):
 class OneDSpectrum(LowerDimensionalObject):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None):
+                meta=None, mask=None, header=None):
 
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
@@ -197,6 +210,10 @@ class OneDSpectrum(LowerDimensionalObject):
         self._wcs = wcs
         self._meta = meta
         self._mask = mask
+        if header is not None:
+            self._header = header
+        else:
+            self._header = Header()
 
         return self
 
@@ -424,6 +441,7 @@ class SpectralCube(object):
                                         wcs=new_wcs,
                                         copy=False,
                                         unit=unit,
+                                        header=self._nowcs_header,
                                         meta=meta)
                 else:
                     return out
@@ -431,7 +449,8 @@ class SpectralCube(object):
             else:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
-                return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+                return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                                  unit=unit, header=self._nowcs_header)
         else:
             return out
 
@@ -652,7 +671,8 @@ class SpectralCube(object):
 
             meta = {'collapse_axis': axis}
 
-            return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+            return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                              unit=unit, header=self._nowcs_header)
         else:
             return out
 
@@ -830,6 +850,7 @@ class SpectralCube(object):
                          wcs=newwcs,
                          copy=False,
                          unit=self.unit,
+                         header=self._nowcs_header,
                          meta=meta)
 
         newmask = self._mask[view] if self._mask is not None else None
@@ -1205,7 +1226,8 @@ class SpectralCube(object):
                 'moment_axis': axis,
                 'moment_method': how}
 
-        return Projection(out, copy=False, wcs=new_wcs, meta=meta)
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                          header=self._nowcs_header)
 
     def moment0(self, axis=0, how='auto'):
         """Compute the zeroth moment along an axis.
@@ -1673,11 +1695,10 @@ class SpectralCube(object):
             StrictVersion(yt.__version__) >= StrictVersion('3.0')):
 
             from yt.frontends.fits.api import FITSDataset
-            from astropy.io import fits
             from yt.units.unit_object import UnitParseError
 
-            hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
-                                  header=self.wcs.to_header())
+            hdu = PrimaryHDU(self._get_filled_data(fill=0.),
+                             header=self.wcs.to_header())
 
             units = str(self.unit.to_string())
 
@@ -1818,9 +1839,16 @@ class SpectralCube(object):
 
 
     @property
+    def _nowcs_header(self):
+        """
+        Return a copy of the header with no WCS information attached
+        """
+        return wcs_utils.strip_wcs_from_header(self._header)
+
+    @property
     def header(self):
         # Preserve non-WCS information from previous header iteration
-        header = wcs_utils.strip_wcs_from_header(self._header)
+        header = self._nowcs_header
         header.update(self.wcs.to_header())
         header['BUNIT'] = self.unit.to_string(format='fits')
         header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
@@ -1842,8 +1870,7 @@ class SpectralCube(object):
         """
         HDU version of self
         """
-        from astropy.io import fits
-        hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
+        hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
 class StokesSpectralCube(SpectralCube):
