@@ -1850,7 +1850,12 @@ class SpectralCube(object):
         # Preserve non-WCS information from previous header iteration
         header = self._nowcs_header
         header.update(self.wcs.to_header())
-        header['BUNIT'] = self.unit.to_string(format='fits')
+        if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
+            # preserve the BUNIT even though it's not technically valid
+            # (Jy/Beam)
+            header['BUNIT'] = self._meta['BUNIT']
+        else:
+            header['BUNIT'] = self.unit.to_string(format='fits')
         header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
         header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
         header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
