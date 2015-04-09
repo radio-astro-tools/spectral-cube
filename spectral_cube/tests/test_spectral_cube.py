@@ -697,3 +697,10 @@ def test_preserve_bunit():
     cube, data = cube_and_raw('advs.fits')
 
     assert cube.header['BUNIT'] == 'JY/BEAM'
+
+    hdu = fits.open(path('advs.fits'))[0]
+    hdu.header['BUNIT'] = 'K'
+    cube = SpectralCube.read(hdu)
+
+    assert cube.unit == u.K
+    assert cube.header['BUNIT'] == 'K'
