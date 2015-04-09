@@ -691,3 +691,9 @@ def test_oned_slice():
     # data has a redundant 1st axis
     np.testing.assert_equal(spec.value, data[0,:,0,0])
     assert cube.unit == spec.unit
+
+def test_preserve_bunit():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    assert cube.header['BUNIT'] == 'JY/BEAM'
