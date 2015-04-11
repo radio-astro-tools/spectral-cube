@@ -43,11 +43,12 @@ def _split_stokes(array, wcs):
         dimension, and a Stokes dimension.
     """
 
-    if array.ndim != 4:
-        raise ValueError("Input array must be 4-dimensional")
+    if array.ndim not in (3,4):
+        raise ValueError("Input array must be 3- or 4-dimensional for a"
+                         " STOKES cube")
 
     if wcs.wcs.naxis != 4:
-        raise ValueError("Input WCS must be 4-dimensional")
+        raise ValueError("Input WCS must be 4-dimensional for a STOKES cube")
 
     wcs = _fix_spectral(wcs)
 
@@ -85,13 +86,18 @@ def _split_stokes(array, wcs):
 
     stokes_arrays = {}
 
-    wcs_slice = wcs_utils.drop_axis(wcs, array.ndim - 1 - stokes_index)
+    wcs_slice = wcs_utils.drop_axis(wcs, wcs.naxis - 1 - stokes_index)
 
-    for i_stokes in range(array.shape[stokes_index]):
+    if array.ndim == 4:
+        for i_stokes in range(array.shape[stokes_index]):
 
-        array_slice = [i_stokes if idim == stokes_index else slice(None) for idim in range(array.ndim)]
+            array_slice = [i_stokes if idim == stokes_index else slice(None)
+                           for idim in range(array.ndim)]
 
-        stokes_arrays[stokes_names[i_stokes]] = array[array_slice]
+            stokes_arrays[stokes_names[i_stokes]] = array[array_slice]
+    else:
+        # 3D array with STOKES as a 4th header parameter
+        stokes_arrays['I'] = array
 
     return stokes_arrays, wcs_slice
 
