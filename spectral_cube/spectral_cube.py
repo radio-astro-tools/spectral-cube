@@ -340,10 +340,63 @@ class SpectralCube(object):
             s += ":\n"
         else:
             s += " and unit={0}:\n".format(self.unit)
-        s += " n_x: {0}  type_x: {1:8s}  unit_x: {2}\n".format(self.shape[2], self.wcs.wcs.ctype[0], self.wcs.wcs.cunit[0])
-        s += " n_y: {0}  type_y: {1:8s}  unit_y: {2}\n".format(self.shape[1], self.wcs.wcs.ctype[1], self.wcs.wcs.cunit[1])
-        s += " n_s: {0}  type_s: {1:8s}  unit_s: {2}".format(self.shape[0], self.wcs.wcs.ctype[2], self.wcs.wcs.cunit[2])
+        s += (" n_x: {0:6d}  type_x: {1:8s}  unit_x: {2:5s}"
+              "  range: {3:8s}:{4:8s}\n".format(self.shape[2],
+                                                self.wcs.wcs.ctype[0],
+                                                self.wcs.wcs.cunit[0],
+                                                self.longitude_extrema[0],
+                                                self.longitude_extrema[1],
+                                               ))
+        s += (" n_y: {0:6d}  type_y: {1:8s}  unit_y: {2:5s}"
+              "  range: {3:8s}:{4:8s}\n".format(self.shape[1],
+                                                self.wcs.wcs.ctype[1],
+                                                self.wcs.wcs.cunit[1],
+                                                self.latitude_extrema[0],
+                                                self.latitude_extrema[1],
+                                               ))
+        s += (" n_s: {0:6d}  type_s: {1:8s}  unit_s: {2:5s}"
+              "  range: {3:8s}:{4:8s}".format(self.shape[0],
+                                              self.wcs.wcs.ctype[2],
+                                              self.wcs.wcs.cunit[2],
+                                              self.spectral_extrema[0],
+                                              self.spectral_extrema[1],
+                                             ))
         return s
+
+    @property
+    def spectral_extrema(self):
+        if not hasattr(self, '_spectral_min'):
+            self._spectral_min = self.spectral_axis.min()
+        if not hasattr(self, '_spectral_max'):
+            self._spectral_max = self.spectral_axis.max()
+
+        return self._spectral_min, self._spectral_max
+
+    @property
+    def world_extrema(self):
+        if not all((hasattr(self, '_{0}_{1}'.format(xy, extr))
+                    for xy in ('lon','lat')
+                    for extr in ('min','max'))):
+            lat,lon = self.spatial_coordinate_map
+        if not hasattr(self, '_lon_min'):
+            self._lon_min = lon.min()
+        if not hasattr(self, '_lon_max'):
+            self._lon_max = lon.max()
+        if not hasattr(self, '_lat_min'):
+            self._lat_min = lat.min()
+        if not hasattr(self, '_lat_max'):
+            self._lat_max = lat.max()
+
+        return ((self._lon_min, self._lon_max),
+                (self._lat_min, self._lat_max))
+
+    @property
+    def longitude_extrema(self):
+        return self.world_extrema[0]
+
+    @property
+    def latitude_extrema(self):
+        return self.world_extrema[1]
 
     def apply_numpy_function(self, function, fill=np.nan,
                              reduce=True, how='auto',
