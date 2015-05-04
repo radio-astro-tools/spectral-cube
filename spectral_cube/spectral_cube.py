@@ -366,22 +366,22 @@ class SpectralCube(object):
     @property
     @cached
     def spectral_extrema(self):
-        self._spectral_min = self.spectral_axis.min()
-        self._spectral_max = self.spectral_axis.max()
+        _spectral_min = self.spectral_axis.min()
+        _spectral_max = self.spectral_axis.max()
 
-        return self._spectral_min, self._spectral_max
+        return _spectral_min, _spectral_max
 
     @property
     @cached
     def world_extrema(self):
         lat,lon = self.spatial_coordinate_map
-        self._lon_min = lon.min()
-        self._lon_max = lon.max()
-        self._lat_min = lat.min()
-        self._lat_max = lat.max()
+        _lon_min = lon.min()
+        _lon_max = lon.max()
+        _lat_min = lat.min()
+        _lat_max = lat.max()
 
-        return ((self._lon_min, self._lon_max),
-                (self._lat_min, self._lat_max))
+        return ((_lon_min, _lon_max),
+                (_lat_min, _lat_max))
 
     @property
     @cached
