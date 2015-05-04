@@ -363,6 +363,7 @@ class SpectralCube(object):
                                              ))
         return s
 
+    @property
     @cached
     def spectral_extrema(self):
         self._spectral_min = self.spectral_axis.min()
@@ -370,6 +371,7 @@ class SpectralCube(object):
 
         return self._spectral_min, self._spectral_max
 
+    @property
     @cached
     def world_extrema(self):
         lat,lon = self.spatial_coordinate_map
@@ -381,11 +383,13 @@ class SpectralCube(object):
         return ((self._lon_min, self._lon_max),
                 (self._lat_min, self._lat_max))
 
+    @property
     @cached
     def longitude_extrema(self):
         return self.world_extrema[0]
 
     @property
+    @cached
     def latitude_extrema(self):
         return self.world_extrema[1]
 
