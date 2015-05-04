@@ -363,34 +363,25 @@ class SpectralCube(object):
                                              ))
         return s
 
-    @property
+    @cached
     def spectral_extrema(self):
-        if not hasattr(self, '_spectral_min'):
-            self._spectral_min = self.spectral_axis.min()
-        if not hasattr(self, '_spectral_max'):
-            self._spectral_max = self.spectral_axis.max()
+        self._spectral_min = self.spectral_axis.min()
+        self._spectral_max = self.spectral_axis.max()
 
         return self._spectral_min, self._spectral_max
 
-    @property
+    @cached
     def world_extrema(self):
-        if not all((hasattr(self, '_{0}_{1}'.format(xy, extr))
-                    for xy in ('lon','lat')
-                    for extr in ('min','max'))):
-            lat,lon = self.spatial_coordinate_map
-        if not hasattr(self, '_lon_min'):
-            self._lon_min = lon.min()
-        if not hasattr(self, '_lon_max'):
-            self._lon_max = lon.max()
-        if not hasattr(self, '_lat_min'):
-            self._lat_min = lat.min()
-        if not hasattr(self, '_lat_max'):
-            self._lat_max = lat.max()
+        lat,lon = self.spatial_coordinate_map
+        self._lon_min = lon.min()
+        self._lon_max = lon.max()
+        self._lat_min = lat.min()
+        self._lat_max = lat.max()
 
         return ((self._lon_min, self._lon_max),
                 (self._lat_min, self._lat_max))
 
-    @property
+    @cached
     def longitude_extrema(self):
         return self.world_extrema[0]
 
