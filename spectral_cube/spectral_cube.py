@@ -225,7 +225,7 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0]
 
-    def quicklook(self, filename=None, **kwargs):
+    def quicklook(self, filename=None, drawstyle='steps-mid', **kwargs):
         """
         Plot the spectrum with current spectral units in the currently open
         figure
@@ -239,7 +239,7 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         from matplotlib import pyplot
         ax = pyplot.gca()
-        ax.plot(self.spectral_axis, self.value, **kwargs)
+        ax.plot(self.spectral_axis, self.value, drawstyle=drawstyle, **kwargs)
         ax.set_xlabel(self.wcs.wcs.cunit[0])
         ax.set_ylabel(self.unit)
         if filename is not None:
