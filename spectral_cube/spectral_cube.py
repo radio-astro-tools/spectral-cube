@@ -341,21 +341,21 @@ class SpectralCube(object):
         else:
             s += " and unit={0}:\n".format(self.unit)
         s += (" n_x: {0:6d}  type_x: {1:8s}  unit_x: {2:5s}"
-              "  range: {3:8s}:{4:8s}\n".format(self.shape[2],
+              "  range: {3:12.6f}:{4:12.6f}\n".format(self.shape[2],
                                                 self.wcs.wcs.ctype[0],
                                                 self.wcs.wcs.cunit[0],
                                                 self.longitude_extrema[0],
                                                 self.longitude_extrema[1],
                                                ))
         s += (" n_y: {0:6d}  type_y: {1:8s}  unit_y: {2:5s}"
-              "  range: {3:8s}:{4:8s}\n".format(self.shape[1],
+              "  range: {3:12.6f}:{4:12.6f}\n".format(self.shape[1],
                                                 self.wcs.wcs.ctype[1],
                                                 self.wcs.wcs.cunit[1],
                                                 self.latitude_extrema[0],
                                                 self.latitude_extrema[1],
                                                ))
         s += (" n_s: {0:6d}  type_s: {1:8s}  unit_s: {2:5s}"
-              "  range: {3:8s}:{4:8s}".format(self.shape[0],
+              "  range: {3:12.3f}:{4:12.3f}".format(self.shape[0],
                                               self.wcs.wcs.ctype[2],
                                               self.wcs.wcs.cunit[2],
                                               self.spectral_extrema[0],
