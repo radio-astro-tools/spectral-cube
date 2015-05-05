@@ -59,7 +59,7 @@ def read_lmv(filename):
 
     with open(filename,'rb') as lf:
         # lf for "LMV File"
-        filetype = lf.read(12).decode('utf8')
+        filetype = _read_string(lf, 12)
         #!---------------------------------------------------------------------
         #! @ private
         #!       SYCODE system code
@@ -132,25 +132,25 @@ def read_lmv_type1(lf):
     if description_section_length != 72:
         warnings.warn("Invalid section length found for description section")
     #strings = lf.read(description_section_length) # 56
-    header['BUNIT']  = lf.read(12).decode('utf8') # 56
-    header['CTYPE1'] = lf.read(12).decode('utf8') # 59
-    header['CTYPE2'] = lf.read(12).decode('utf8') # 62
-    header['CTYPE3'] = lf.read(12).decode('utf8') # 65
-    header['CTYPE4'] = lf.read(12).decode('utf8') # 68
+    header['BUNIT']  = _read_string(lf, 12) # 56
+    header['CTYPE1'] = _read_string(lf, 12) # 59
+    header['CTYPE2'] = _read_string(lf, 12) # 62
+    header['CTYPE3'] = _read_string(lf, 12) # 65
+    header['CTYPE4'] = _read_string(lf, 12) # 68
     header['CUNIT1'] = _cunit_dict[header['CTYPE1'].strip()]
     header['CUNIT2'] = _cunit_dict[header['CTYPE2'].strip()]
     header['CUNIT3'] = _cunit_dict[header['CTYPE3'].strip()]
-    header['COOSYS'] = lf.read(12).decode('utf8') # 71
+    header['COOSYS'] = _read_string(lf, 12) # 71
     position_section_length = np.fromfile(lf,count=1,dtype='int32') # 74
     if position_section_length != 48:
         warnings.warn("Invalid section length found for position section")
-    header['OBJNAME'] = lf.read(4*3).decode('utf8') # 75
+    header['OBJNAME'] = _read_string(lf, 4*3) # 75
     header['RA'] = np.fromfile(lf, count=1, dtype='float64')[0] * r2deg # 78
     header['DEC'] = np.fromfile(lf, count=1, dtype='float64')[0] * r2deg # 80
     header['GLON'] = np.fromfile(lf, count=1, dtype='float64')[0] * r2deg # 82
     header['GLAT'] = np.fromfile(lf, count=1, dtype='float64')[0] * r2deg # 84
     header['EQUINOX'] = np.fromfile(lf,count=1,dtype='float32')[0] # 86
-    header['PROJWORD'] = lf.read(4).decode('utf8') # 87
+    header['PROJWORD'] = _read_string(lf, 4) # 87
     header['PTYP'] = np.fromfile(lf,count=1,dtype='int32')[0] # 88
     header['A0'] = np.fromfile(lf,count=1,dtype='float64')[0] # 89
     header['D0'] = np.fromfile(lf,count=1,dtype='float64')[0] # 91
@@ -160,7 +160,7 @@ def read_lmv_type1(lf):
     spectroscopy_section_length = np.fromfile(lf,count=1,dtype='int32') # 97
     if spectroscopy_section_length != 48:
         warnings.warn("Invalid section length found for spectroscopy section")
-    header['RECVR'] = lf.read(12).decode('utf8') # 98
+    header['RECVR'] = _read_string(lf, 12) # 98
     header['FRES'] = np.fromfile(lf,count=1,dtype='float64')[0] # 101
     header['IMAGFREQ'] = np.fromfile(lf,count=1,dtype='float64')[0] # 103 "FIMA"
     header['REFFREQ'] = np.fromfile(lf,count=1,dtype='float64')[0] # 105
@@ -286,6 +286,10 @@ def _read_float32(f):
     '''Read a 32-bit float (from idlsave)'''
     return np.float32(struct.unpack('=f', f.read(4))[0])
 
+def _read_string(f, size):
+    '''Read a string of known maximum length'''
+    return f.read(size).decode('utf-8').strip()
+
 def _read_float64(f):
     '''Read a 64-bit float (from idlsave)'''
     return np.float64(struct.unpack('=d', f.read(8))[0])
@@ -378,7 +382,7 @@ def read_lmv_type2(lf):
     if desc_start != coor_start+coor_words+2:
         log.warn("desc_start = {0} instead of {1}".format(desc_start,
                                                           coor_start+coor_words+2))
-    
+
     convert = np.fromfile(lf, count=3*gdf_maxdims, dtype='float64').reshape([gdf_maxdims,3])
 
     # conversion of "convert" to CRPIX/CRVAL/CDELT below
@@ -391,21 +395,21 @@ def read_lmv_type2(lf):
     if null_start != desc_start+desc_words+2:
         log.warn("null_start = {0} instead of {1}".format(null_start,
                                                           desc_start+desc_words+2))
-    ijuni = lf.read(12) # data unit
-    ijcode = [lf.read(12) for ii in range(gdf_maxdims)]
+    ijuni = _read_string(lf, 12) # data unit
+    ijcode = [_read_string(lf, 12) for ii in range(gdf_maxdims)]
     pad_desc = _read_int32(lf)
 
-    if ijuni.lower().strip() in _bunit_dict:
-        header['BUNIT'] = (_bunit_dict[ijuni.lower().strip()],
+    if ijuni.lower() in _bunit_dict:
+        header['BUNIT'] = (_bunit_dict[ijuni.lower()],
                            ijuni)
     else:
         header['BUNIT'] = ijuni
 
      #! The first block length is thus
      #!	s_dim-1 + (2*mdim+4) + (4) + (8) +  (6*mdim+2) + (3*mdim+5)
-     #! = s_dim-1 + mdim*(2+6+3) + (4+4+2+5+8) 
+     #! = s_dim-1 + mdim*(2+6+3) + (4+4+2+5+8)
      #! = s_dim-1 + 11*mdim + 23
-     #! With mdim = 7, s_dim=11, this is 110 spaces 
+     #! With mdim = 7, s_dim=11, this is 110 spaces
      #! With mdim = 8, s_dim=11, this is 121 spaces
      #! MDIM > 8 would NOT fit in one block...
      #!
@@ -421,10 +425,10 @@ def read_lmv_type2(lf):
     _check_val('posi_words', posi_words, 15)
 
     proj_start = _read_int32(lf)
-    source_name = lf.read(12).decode('utf8')
+    source_name = _read_string(lf, 12)
     header['OBJECT'] = source_name
-    coordinate_system = lf.read(12).decode('utf8')
-    
+    coordinate_system = _read_string(lf, 12)
+
     header['RA'] = _read_float64(lf)
     header['DEC'] = _read_float64(lf)
     header['LII'] = _read_float64(lf)
@@ -436,7 +440,7 @@ def read_lmv_type2(lf):
 
     #! PROJECTION
     #integer(kind=4) :: proj_words = 9     ! Projection length: 9 used + 1 padding
-    #integer(kind=4) :: spec_start !! = proj_start + 12 
+    #integer(kind=4) :: spec_start !! = proj_start + 12
     #real(kind=8) :: a0      = 0.d0        ! 89  X of projection center
     #real(kind=8) :: d0      = 0.d0        ! 91  Y of projection center
     #real(kind=8) :: pang    = 0.d0        ! 93  Projection angle
@@ -481,8 +485,8 @@ def read_lmv_type2(lf):
                 val = val*r2deg
                 inc = inc*r2deg
                 rota = r2deg*header['PROJPANG']
-            elif code.strip() in ('RA', 'L', 'B', 'DEC', 'LII', 'BII', 'GLAT',
-                                  'GLON', 'LAT', 'LON'):
+            elif code in ('RA', 'L', 'B', 'DEC', 'LII', 'BII', 'GLAT',
+                          'GLON', 'LAT', 'LON'):
                 val = val*r2deg
                 inc = inc*r2deg
                 rota = 0.0
@@ -504,8 +508,8 @@ def read_lmv_type2(lf):
 
     for ii,ctype in enumerate(ijcode):
         if ii in valid_dims:
-            header['CTYPE{0}'.format(ii+1)] = _ctype_dict[ctype.strip()]
-            header['CUNIT{0}'.format(ii+1)] = _cunit_dict[ctype.strip()]
+            header['CTYPE{0}'.format(ii+1)] = _ctype_dict[ctype]
+            header['CUNIT{0}'.format(ii+1)] = _cunit_dict[ctype]
 
     spec_words = _read_int32(lf)
     reso_start = _read_int32(lf)
@@ -518,7 +522,7 @@ def read_lmv_type2(lf):
         header['VOFF'] = _read_float32(lf)
         header['DOPP'] = _read_float32(lf)
         header['FAXI'] = _read_int32(lf)
-        header['LINENAME'] = lf.read(12).decode('utf8')
+        header['LINENAME'] = _read_string(lf, 12)
         header['VTYPE'] = _read_int32(lf)
     elif spec_words != 0:
         raise ValueError("Invalid # of spectroscopic keywords")
@@ -620,7 +624,7 @@ def read_lmv_type2(lf):
         raise ValueError("Invalid # of UV data keywords")
 
      #! UV_DATA information
-     #integer(kind=4) :: uvda_words  = 18+2*code_uvt_last ! Length of section: 14 used 
+     #integer(kind=4) :: uvda_words  = 18+2*code_uvt_last ! Length of section: 14 used
      #integer(kind=4) :: void_start  !! = s_uvda + l_uvda + 2
      #integer(kind=4) :: version_uv = code_version_uvt_current  ! 1 version number. Will allow us to change the data format
      #integer(kind=4) :: nchan = 0         ! 2 Number of channels
@@ -630,14 +634,14 @@ def read_lmv_type2(lf):
      #real(kind=4)    :: basemin = 0.      ! 7 Minimum Baseline
      #real(kind=4)    :: basemax = 0.      ! 8 Maximum Baseline
      #integer(kind=4) :: fcol              ! 9 Column of first channel
-     #integer(kind=4) :: lcol              ! 10 Column of last  channel 
+     #integer(kind=4) :: lcol              ! 10 Column of last  channel
      #! The number of information per channel can be obtained by
      #!       (lcol-fcol+1)/(nchan*natom)
      #! so this could allow to derive the number of Stokes parameters
      #! Leading data at start of each visibility contains specific information
      #integer(kind=4) :: nlead = 7           ! 11 Number of leading informations (at lest 7)
      #! Trailing data at end of each visibility may hold additional information
-     #integer(kind=4) :: ntrail = 0          ! 12 Number of trailing informations 
+     #integer(kind=4) :: ntrail = 0          ! 12 Number of trailing informations
      #!
      #! Leading / Trailing information codes have been specified before
      #integer(kind=4) :: column_pointer(code_uvt_last) = code_null ! Back pointer to the columns...
@@ -647,7 +651,7 @@ def read_lmv_type2(lf):
      #! integer(kind=4) :: column_types(nlead+ntrail) /0,1,2/ ! Number of columns for each: 1 real*4, 2 real*8
      #! Leading / Trailing information codes
      #!
-     #integer(kind=4) :: order = 0          ! 13  Stoke/Channel ordering 
+     #integer(kind=4) :: order = 0          ! 13  Stoke/Channel ordering
      #integer(kind=4) :: nfreq = 0          ! 14  ! 0 or = nchan*nstokes
      #integer(kind=4) :: atoms(4)           ! 15-18 Atom description
      #!
