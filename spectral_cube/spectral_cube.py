@@ -1569,6 +1569,11 @@ class SpectralCube(object):
                                                                       yhi=yhi))
 
         subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+
+        if any(dim == 0 for dim in subcube.shape):
+            raise ValueError("The derived subset is empty: the region does not"
+                             " overlap with the cube.")
+
         subhdr = subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
 
         mask = shapelist.get_mask(header=subhdr,
