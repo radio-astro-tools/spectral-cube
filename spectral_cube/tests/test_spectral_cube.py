@@ -294,18 +294,18 @@ class TestRepr(BaseTest):
     def test_repr(self):
         assert repr(self.c) == """
 SpectralCube with shape=(4, 3, 2):
- n_x: 2  type_x: RA---SIN  unit_x: deg
- n_y: 3  type_y: DEC--SIN  unit_y: deg
- n_s: 4  type_s: VOPT      unit_s: m / s
+ n_x:      2  type_x: RA---SIN  unit_x: deg    range:    24.062698 deg:   24.063349 deg
+ n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
+ n_s:      4  type_s: VOPT      unit_s: m / s  range:  -321214.699 m / s: -317350.054 m / s
         """.strip()
 
     def test_repr_withunit(self):
         self.c._unit = u.Jy
         assert repr(self.c) == """
 SpectralCube with shape=(4, 3, 2) and unit=Jy:
- n_x: 2  type_x: RA---SIN  unit_x: deg
- n_y: 3  type_y: DEC--SIN  unit_y: deg
- n_s: 4  type_s: VOPT      unit_s: m / s
+ n_x:      2  type_x: RA---SIN  unit_x: deg    range:    24.062698 deg:   24.063349 deg
+ n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
+ n_s:      4  type_s: VOPT      unit_s: m / s  range:  -321214.699 m / s: -317350.054 m / s
         """.strip()
 
 
