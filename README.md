@@ -2,7 +2,7 @@ About
 =====
 
 This package aims to facilitate the reading, writing, manipulation, and
-analysis of spectral data cubes.
+analysis of spectral data cubes.  More information is available in the documentation, avaliable [online at readthedocs.org](http://spectral-cube.rtfd.org).
 
 Credits
 =======
