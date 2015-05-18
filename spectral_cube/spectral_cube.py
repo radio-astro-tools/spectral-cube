@@ -98,6 +98,20 @@ class LowerDimensionalObject(u.Quantity):
         return self._meta
 
     @property
+    def header(self):
+        header = self._header
+        # This inplace update is OK; it's not bad to overwrite WCS in this
+        # header
+        if self.wcs is not None:
+            header.update(self.wcs.to_header())
+        header['BUNIT'] = self.unit.to_string(format='fits')
+        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
+        for ind,sh in enumerate(self.shape[::-1]):
+            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
+                                      value=sh))
+        return header
+
+    @property
     def hdu(self):
         from astropy.io import fits
         if self.wcs is None:
@@ -135,7 +149,7 @@ class LowerDimensionalObject(u.Quantity):
 class Projection(LowerDimensionalObject):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None):
+                meta=None, mask=None, header=None):
 
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -148,6 +162,10 @@ class Projection(LowerDimensionalObject):
         self._wcs = wcs
         self._meta = meta
         self._mask = mask
+        if header is not None:
+            self._header = header
+        else:
+            self._header = Header()
 
         return self
 
@@ -188,7 +206,7 @@ class Slice(Projection):
 class OneDSpectrum(LowerDimensionalObject):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None):
+                meta=None, mask=None, header=None):
 
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
@@ -201,6 +219,10 @@ class OneDSpectrum(LowerDimensionalObject):
         self._wcs = wcs
         self._meta = meta
         self._mask = mask
+        if header is not None:
+            self._header = header
+        else:
+            self._header = Header()
 
         return self
 
@@ -212,7 +234,7 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0]
 
-    def quicklook(self, filename=None, **kwargs):
+    def quicklook(self, filename=None, drawstyle='steps-mid', **kwargs):
         """
         Plot the spectrum with current spectral units in the currently open
         figure
@@ -226,7 +248,7 @@ class OneDSpectrum(LowerDimensionalObject):
         """
         from matplotlib import pyplot
         ax = pyplot.gca()
-        ax.plot(self.spectral_axis, self.value, **kwargs)
+        ax.plot(self.spectral_axis, self.value, drawstyle=drawstyle, **kwargs)
         ax.set_xlabel(self.wcs.wcs.cunit[0])
         ax.set_ylabel(self.unit)
         if filename is not None:
@@ -344,10 +366,58 @@ class SpectralCube(object):
             s += ":\n"
         else:
             s += " and unit={0}:\n".format(self.unit)
-        s += " n_x: {0}  type_x: {1:8s}  unit_x: {2}\n".format(self.shape[2], self.wcs.wcs.ctype[0], self.wcs.wcs.cunit[0])
-        s += " n_y: {0}  type_y: {1:8s}  unit_y: {2}\n".format(self.shape[1], self.wcs.wcs.ctype[1], self.wcs.wcs.cunit[1])
-        s += " n_s: {0}  type_s: {1:8s}  unit_s: {2}".format(self.shape[0], self.wcs.wcs.ctype[2], self.wcs.wcs.cunit[2])
+        s += (" n_x: {0:6d}  type_x: {1:8s}  unit_x: {2:5s}"
+              "  range: {3:12.6f}:{4:12.6f}\n".format(self.shape[2],
+                                                self.wcs.wcs.ctype[0],
+                                                self.wcs.wcs.cunit[0],
+                                                self.longitude_extrema[0],
+                                                self.longitude_extrema[1],
+                                               ))
+        s += (" n_y: {0:6d}  type_y: {1:8s}  unit_y: {2:5s}"
+              "  range: {3:12.6f}:{4:12.6f}\n".format(self.shape[1],
+                                                self.wcs.wcs.ctype[1],
+                                                self.wcs.wcs.cunit[1],
+                                                self.latitude_extrema[0],
+                                                self.latitude_extrema[1],
+                                               ))
+        s += (" n_s: {0:6d}  type_s: {1:8s}  unit_s: {2:5s}"
+              "  range: {3:12.3f}:{4:12.3f}".format(self.shape[0],
+                                              self.wcs.wcs.ctype[2],
+                                              self.wcs.wcs.cunit[2],
+                                              self.spectral_extrema[0],
+                                              self.spectral_extrema[1],
+                                             ))
         return s
+
+    @property
+    @cached
+    def spectral_extrema(self):
+        _spectral_min = self.spectral_axis.min()
+        _spectral_max = self.spectral_axis.max()
+
+        return _spectral_min, _spectral_max
+
+    @property
+    @cached
+    def world_extrema(self):
+        lat,lon = self.spatial_coordinate_map
+        _lon_min = lon.min()
+        _lon_max = lon.max()
+        _lat_min = lat.min()
+        _lat_max = lat.max()
+
+        return ((_lon_min, _lon_max),
+                (_lat_min, _lat_max))
+
+    @property
+    @cached
+    def longitude_extrema(self):
+        return self.world_extrema[0]
+
+    @property
+    @cached
+    def latitude_extrema(self):
+        return self.world_extrema[1]
 
     def apply_numpy_function(self, function, fill=np.nan,
                              reduce=True, how='auto',
@@ -445,6 +515,7 @@ class SpectralCube(object):
                                         wcs=new_wcs,
                                         copy=False,
                                         unit=unit,
+                                        header=self._nowcs_header,
                                         meta=meta)
                 else:
                     return out
@@ -452,7 +523,8 @@ class SpectralCube(object):
             else:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
-                return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+                return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                                  unit=unit, header=self._nowcs_header)
         else:
             return out
 
@@ -673,7 +745,8 @@ class SpectralCube(object):
 
             meta = {'collapse_axis': axis}
 
-            return Projection(out, copy=False, wcs=new_wcs, meta=meta, unit=unit)
+            return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                              unit=unit, header=self._nowcs_header)
         else:
             return out
 
@@ -851,6 +924,7 @@ class SpectralCube(object):
                          wcs=newwcs,
                          copy=False,
                          unit=self.unit,
+                         header=self._nowcs_header,
                          meta=meta)
 
         newmask = self._mask[view] if self._mask is not None else None
@@ -1226,7 +1300,8 @@ class SpectralCube(object):
                 'moment_axis': axis,
                 'moment_method': how}
 
-        return Projection(out, copy=False, wcs=new_wcs, meta=meta)
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                          header=self._nowcs_header)
 
     def moment0(self, axis=0, how='auto'):
         """Compute the zeroth moment along an axis.
@@ -1520,6 +1595,11 @@ class SpectralCube(object):
                                                                       yhi=yhi))
 
         subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+
+        if any(dim == 0 for dim in subcube.shape):
+            raise ValueError("The derived subset is empty: the region does not"
+                             " overlap with the cube.")
+
         subhdr = subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
 
         mask = shapelist.get_mask(header=subhdr,
@@ -1614,6 +1694,15 @@ class SpectralCube(object):
     def __lt__(self, value):
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
+    def __eq__(self, value):
+        return LazyMask(lambda data: data == value, data=self._data, wcs=self._wcs)
+
+    def __hash__(self):
+        return id(self)
+
+    def __ne__(self, value):
+        return LazyMask(lambda data: data != value, data=self._data, wcs=self._wcs)
+
     @classmethod
     def read(cls, filename, format=None, hdu=None, **kwargs):
         """
@@ -1685,11 +1774,10 @@ class SpectralCube(object):
             StrictVersion(yt.__version__) >= StrictVersion('3.0')):
 
             from yt.frontends.fits.api import FITSDataset
-            from astropy.io import fits
             from yt.units.unit_object import UnitParseError
 
-            hdu = fits.PrimaryHDU(self._get_filled_data(fill=0.),
-                                  header=self.wcs.to_header())
+            hdu = PrimaryHDU(self._get_filled_data(fill=0.),
+                             header=self.wcs.to_header())
 
             units = str(self.unit.to_string())
 
@@ -1830,11 +1918,23 @@ class SpectralCube(object):
 
 
     @property
+    def _nowcs_header(self):
+        """
+        Return a copy of the header with no WCS information attached
+        """
+        return wcs_utils.strip_wcs_from_header(self._header)
+
+    @property
     def header(self):
         # Preserve non-WCS information from previous header iteration
-        header = wcs_utils.strip_wcs_from_header(self._header)
+        header = self._nowcs_header
         header.update(self.wcs.to_header())
-        header['BUNIT'] = self.unit.to_string(format='fits')
+        if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
+            # preserve the BUNIT even though it's not technically valid
+            # (Jy/Beam)
+            header['BUNIT'] = self._meta['BUNIT']
+        else:
+            header['BUNIT'] = self.unit.to_string(format='fits')
         header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
         header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
         header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
@@ -1854,8 +1954,7 @@ class SpectralCube(object):
         """
         HDU version of self
         """
-        from astropy.io import fits
-        hdu = fits.PrimaryHDU(self.filled_data[:].value, header=self.header)
+        hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
 class StokesSpectralCube(SpectralCube):

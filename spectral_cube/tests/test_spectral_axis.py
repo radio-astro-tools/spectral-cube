@@ -488,3 +488,32 @@ def test_byhand_awav2vel():
     pix_line_output = newwcs.wcs_world2pix((vline.to(u.m/u.s).value,), 0)
 
     np.testing.assert_almost_equal(pix_line_output, pix_line_input, decimal=4)
+
+def test_byhand_awav2wav():
+    # AWAV
+    CRVAL3A = (6560*u.AA).to(u.m).value
+    CDELT3A = (1.0*u.AA).to(u.m).value
+    CUNIT3A = 'm'
+    CRPIX3A = 1.0
+
+    mywcs = wcs.WCS(naxis=1)
+    mywcs.wcs.ctype[0] = 'AWAV'
+    mywcs.wcs.crval[0] = CRVAL3A
+    mywcs.wcs.crpix[0] = CRPIX3A
+    mywcs.wcs.cunit[0] = CUNIT3A
+    mywcs.wcs.cdelt[0] = CDELT3A
+    mywcs.wcs.set()
+
+
+    newwcs = convert_spectral_axis(mywcs, u.AA, 'WAVE')
+    newwcs.wcs.set()
+
+    np.testing.assert_almost_equal(newwcs.wcs_pix2world((0,),0),
+                                   air_to_vac(mywcs.wcs_pix2world((0,),0)*u.m).value)
+
+    np.testing.assert_almost_equal(newwcs.wcs_pix2world((10,),0),
+                                   air_to_vac(mywcs.wcs_pix2world((10,),0)*u.m).value)
+
+    # At least one of the components MUST change
+    assert not (mywcs.wcs.crval[0] == newwcs.wcs.crval[0]
+                and mywcs.wcs.crpix[0] == newwcs.wcs.crpix[0])

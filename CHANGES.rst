@@ -1,4 +1,9 @@
-0.2.2 (unreleased)
+0.2.3 (unreleased)
+------------------
+
+ - (none yet)
+
+0.2.2 (2015-03-12)
 ------------------
 
 - Output mask as a CASA image https://github.com/radio-astro-tools/spectral-cube/pull/171
