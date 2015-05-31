@@ -14,7 +14,7 @@ data should be used, and the value ``False`` when the data should be ignored
 boolean mask from a boolean array ``mask_array``, you can for example use::
 
     >>> from spectral_cube import BooleanArrayMask
-    >>> mask = BooleanArrayMask(mask=mask_array, wcs=cube.wcs)
+    >>> mask = BooleanArrayMask(mask=mask_array, wcs=cube.wcs)  # doctest: +SKIP
 
 Using a pure boolean array may not always be the most efficient solution,
 because it may require a large amount of memory.
@@ -22,14 +22,14 @@ because it may require a large amount of memory.
 You can also create a mask using simple conditions directly on the cube
 values themselves, for example::
 
-    >>> mask = cube > 1.3
+    >>> mask = cube > 1.3  # doctest: +SKIP
 
 This is more efficient, because the condition is actually evaluated
 on-the-fly as needed.
 
 Masks can be combined using standard boolean comparison operators::
 
-   >>> new_mask = (cube > 1.3) & (cube < 100.)
+   >>> new_mask = (cube > 1.3) & (cube < 100.)  # doctest: +SKIP
 
 The available operators are ``&`` (and), ``|`` (or), and ``~`` (not).
 
@@ -37,7 +37,7 @@ To apply a new mask to a :class:`~spectral_cube.SpectralCube` class, use the
 :meth:`~spectral_cube.SpectralCube.with_mask` method, which can take a mask
 and combine it with any pre-existing mask::
 
-    >>> cube2 = cube.with_mask(new_mask)
+    >>> cube2 = cube.with_mask(new_mask)  # doctest: +SKIP
 
 In the above example, ``cube2`` contains a mask that is the ``&`` combination
 of ``new_mask`` with the existing mask on ``cube``. The ``cube2`` object
@@ -48,7 +48,7 @@ Boolean arrays can also be used as input to
 :meth:`~spectral_cube.SpectralCube.with_mask`, assuming the shape of the mask
 and the data match::
 
-    >>> cube2 = cube.with_mask(boolean_array)
+    >>> cube2 = cube.with_mask(boolean_array)  # doctest: +SKIP
 
 Any boolean area that can be `broadcast
 <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ to the cube
@@ -65,7 +65,7 @@ copy of the original data with any masked value replaced by a fill value
 option in the :class:`~spectral_cube.SpectralCube`
 initializer). The 'filled' data is accessed with e.g.::
 
-    >>> slice_filled = cube.filled_data[0,:,:]
+    >>> slice_filled = cube.filled_data[0,:,:]  # doctest: +SKIP
 
 Note that accessing the filled data should still be efficient because the data
 are loaded and filled only once you access the actual data values, so this
@@ -75,7 +75,7 @@ If you are only interested in getting a flat (i.e. 1-d) array of all the
 non-masked values, you can also make use of the
 :meth:`~spectral_cube.SpectralCube.flattened` method::
 
-   >>> flat_array = cube.flattened()
+   >>> flat_array = cube.flattened()  # doctest: +SKIP
 
 Fill values
 -----------
@@ -87,7 +87,7 @@ can be set using the ``fill_value`` initializer in
 change the fill value on a cube, you can make use of the
 :meth:`~spectral_cube.SpectralCube.with_fill_value` method::
 
-    >>> cube2 = cube.with_fill_value(0.)
+    >>> cube2 = cube.with_fill_value(0.)  # doctest: +SKIP
 
 This returns a new :class:`~spectral_cube.SpectralCube` instance that
 contains a view to the same data in ``cube`` (so no data are copied).
@@ -119,20 +119,20 @@ datasets. The function passed to :class:`~spectral_cube.LazyMask` should be a
 simple function taking one argument - the dataset itself::
 
     >>> from spectral_cube import LazyMask
-    >>> cube = read(...)
-    >>> LazyMask(np.isfinite, cube=cube)
+    >>> cube = read(...)  # doctest: +SKIP
+    >>> LazyMask(np.isfinite, cube=cube)  # doctest: +SKIP
 
 or for example::
 
     >>> def threshold(data):
     ...     return data > 3.
-    >>> LazyMask(threshold, cube=cube)
+    >>> LazyMask(threshold, cube=cube)  # doctest: +SKIP
 
 As shown in `Getting Started`_, :class:`~spectral_cube.LazyMask` instances
 can also be defined directly by specifying conditions on
 :class:`~spectral_cube.SpectralCube` objects:
 
-   >>> cube > 5
+   >>> cube > 5  # doctest: +SKIP
        LazyMask(...)
 
 .. TODO: add example for FunctionalMask
@@ -143,8 +143,8 @@ Outputting masks
 The attached mask to the given :class:`~spectral_cube.SpectralCube` class can
 be converted into a CASA image using :func:`~spectral_cube.io.make_casa_mask`:
 
-  >>> from spectral_cube.io import make_casa_mask
-  >>> make_casa_mask(cube, 'casa_mask.image', add_stokes=False)
+  >>> from spectral_cube.io.casa_masks import make_casa_mask
+  >>> make_casa_mask(cube, 'casa_mask.image', add_stokes=False)  # doctest: +SKIP
 
 Optionally, a redundant Stokes axis can be added to match the original CASA image.
 .. Masks may also be appended to an existing CASA image:

@@ -16,8 +16,8 @@ spectral axis.
 
 The :meth:`~spectral_cube.SpectralCube.to_yt` method is used as follows::
 
-    >>> ytcube = cube.to_yt(spectral_factor=0.5)
-    >>> ds = ytcube.dataset
+    >>> ytcube = cube.to_yt(spectral_factor=0.5)  # doctest: +SKIP
+    >>> ds = ytcube.dataset  # doctest: +SKIP
 
 .. WARNING:: The API change in
    https://github.com/radio-astro-tools/spectral-cube/pull/129 affects the
@@ -37,13 +37,13 @@ corresponds to the desired world coordinate. For this purpose, the method
 
     >>> import astropy.units as u
     >>> pix_coord = ytcube.world2yt([51.424522,
-                                     30.723611,
-                                     5205.18071],  # units of deg, deg, m/s
-                                    )
+    ...                              30.723611,
+    ...                              5205.18071],  # units of deg, deg, m/s
+    ...                             )  # doctest: +SKIP
 
 There is also a reverse method provided, :meth:`~spectral_cube.ytCube.yt2world`::
 
-    >>> world_coord = ytcube.yt2world([ds.domain_center])
+    >>> world_coord = ytcube.yt2world([ds.domain_center])  # doctest: +SKIP
 
 which in this case would return the world coordinates of the center of the dataset
 in yt.
@@ -117,9 +117,9 @@ Movie Making
 There is a simple utility for quick movie making.  The default movie is a rotation
 of the cube around one of the spatial axes, going from PP -> PV space and back.::
 
-    >>> cube = read('cube.fits', format='fits')
-    >>> ytcube = cube.to_yt()
-    >>> images = ytcube.quick_render_movie('outdir')
+    >>> cube = read('cube.fits', format='fits')  # doctest: +SKIP
+    >>> ytcube = cube.to_yt()  # doctest: +SKIP
+    >>> images = ytcube.quick_render_movie('outdir')  # doctest: +SKIP
 
 The movie only does rotation, but it is a useful stepping-stone if you wish to
 learn how to use yt's rendering system.
@@ -142,7 +142,7 @@ grayscale figures will be created with the quicklook code.
 
 You need an account on sketchfab.com for this to work.::
 
-   >>> ytcube.quick_isocontour(title='GRS l=49 13CO 1 K contours', level=1.0)
+   >>> ytcube.quick_isocontour(title='GRS l=49 13CO 1 K contours', level=1.0)  # doctest: +SKIP
 
 
 Here's an example:
@@ -161,5 +161,5 @@ You can also export locally to .ply and .obj files, which can be read by many
 programs (sketchfab, meshlab, blender).  See the `yt page
 <http://yt-project.org/doc/visualizing/sketchfab.html>`_ for details.::
 
-   >>> ytcube.quick_isocontour(export_to='ply', filename='meshes.ply', level=1.0)
-   >>> ytcube.quick_isocontour(export_to='obj', filename='meshes', level=1.0)
+   >>> ytcube.quick_isocontour(export_to='ply', filename='meshes.ply', level=1.0)  # doctest: +SKIP
+   >>> ytcube.quick_isocontour(export_to='obj', filename='meshes', level=1.0)  # doctest: +SKIP

@@ -21,7 +21,7 @@ arbitrary axis order and always return a consistently oriented spectral cube
 (see :doc:`accessing`). To read in a file, use the
 :meth:`~spectral_cube.SpectralCube.read` method as follows::
 
-     >>> cube = SpectralCube.read('L1448_13CO.fits')
+     >>> cube = SpectralCube.read('L1448_13CO.fits')  # doctest: +SKIP
 
 This will always read the Stokes I parameter in the file. For information on
 accessing other Stokes parameters, see :doc:`stokes`.
@@ -42,7 +42,7 @@ If you are interested in directly creating a
 :class:`~spectral_cube.SpectralCube` instance, you can do so using a 3-d
 Numpy-like array with a 3-d :class:`~astropy.wcs.WCS` object::
 
-    >>> cube = SpectralCube(data=data, wcs=wcs)
+    >>> cube = SpectralCube(data=data, wcs=wcs)  # doctest: +SKIP
 
 Here ``data`` can be any Numpy-like array, including *memory-mapped* Numpy
 arrays (as mentioned in `Reading from a file`_, memory-mapping is a technique
