@@ -93,8 +93,9 @@ def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
     'FREQ'
     >>> determine_ctype_from_vconv('VELO-F2V', u.m)
     'WAVE-F2W'
-    >>> determine_ctype_from_vconv('FREQ', u.m/u.s)
-    ValueError('A velocity convention must be specified')
+    >>> determine_ctype_from_vconv('FREQ', u.m/u.s)  # doctest: +SKIP
+    ...
+    ValueError: A velocity convention must be specified
     >>> determine_ctype_from_vconv('FREQ', u.m/u.s, velocity_convention=u.doppler_radio)
     'VRAD'
     >>> determine_ctype_from_vconv('FREQ', u.m/u.s, velocity_convention=u.doppler_optical)
