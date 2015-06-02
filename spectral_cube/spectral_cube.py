@@ -24,6 +24,8 @@ from distutils.version import StrictVersion
 
 __all__ = ['SpectralCube']
 
+__doctest_skip__ = ['SpectralCube.world']
+
 try:  # TODO replace with six.py
     xrange
 except NameError:

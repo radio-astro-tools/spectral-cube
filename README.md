@@ -4,6 +4,8 @@ About
 This package aims to facilitate the reading, writing, manipulation, and
 analysis of spectral data cubes.  More information is available in the documentation, avaliable [online at readthedocs.org](http://spectral-cube.rtfd.org).
 
+![Powered by Astropy Badge](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)
+
 Credits
 =======
 
@@ -19,8 +21,6 @@ Build and coverage status
 =========================
 
 [![Build Status](https://travis-ci.org/radio-astro-tools/spectral-cube.png?branch=master)](https://travis-ci.org/radio-astro-tools/spectral-cube)
-
-[![Coverage Status](https://coveralls.io/repos/radio-astro-tools/spectral-cube/badge.png?branch=master)](https://coveralls.io/r/radio-astro-tools/spectral-cube?branch=master)
-
+[![Coverage Status](https://coveralls.io/repos/radio-astro-tools/spectral-cube/badge.svg?branch=master)](https://coveralls.io/r/radio-astro-tools/spectral-cube?branch=master)
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.11485.png)](http://dx.doi.org/10.5281/zenodo.11485)
 

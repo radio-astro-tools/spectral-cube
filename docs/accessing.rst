@@ -11,7 +11,7 @@ Data values
 You can access the underlying data using the ``unmasked_data`` array which is
 a Numpy-like array::
 
-    >>> slice_unmasked = cube.unmasked_data[0,:,:]
+    >>> slice_unmasked = cube.unmasked_data[0,:,:]  # doctest: +SKIP
 
 The order of the dimensions of the ``unmasked_data`` array is deterministic -
 it is always ``(n_spectral, n_y, n_x)`` irrespective of how the cube was
@@ -34,7 +34,7 @@ World coordinates
 Given a cube object, it is straightforward to find the coordinates along the
 spectral axis::
 
-   >>> cube.spectral_axis
+   >>> cube.spectral_axis  # doctest: +SKIP
    [ -2.97198762e+03  -2.63992044e+03  -2.30785327e+03  -1.97578610e+03
      -1.64371893e+03  -1.31165176e+03  -9.79584583e+02  -6.47517411e+02
      ...
@@ -50,7 +50,7 @@ pixels using the :attr:`~spectral_cube.SpectralCube.world` property, which
 returns the spectral axis then the two positional coordinates in reverse
 order (in the same order as the data indices).
 
-   >>> velo, dec, ra = cube.world[:]
+   >>> velo, dec, ra = cube.world[:]  # doctest: +SKIP
 
 In order to extract coordinates, a slice (such as ``[:]`` above) is required.
 Using ``[:]`` will return three 3-d arrays with the coordinates for all
@@ -59,7 +59,7 @@ the first spectral slice.
 
 If you forget to specify a slice, you will get the following error:
 
-   >>> velo, dec, ra = cube.world
+   >>> velo, dec, ra = cube.world  # doctest: +SKIP
    ...
    Exception: You need to specify a slice (e.g. ``[:]`` or ``[0,:,:]`` in order to access this property.
 
