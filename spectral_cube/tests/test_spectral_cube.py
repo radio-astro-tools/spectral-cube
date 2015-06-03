@@ -708,7 +708,7 @@ def test_preserve_bunit():
 
 def test_cube_with_swapped_axes():
     """
-    Regression test for ...
+    Regression test for #208
     """
     cube, data = cube_and_raw('vda.fits')
 
