@@ -80,7 +80,7 @@ class Projection(LowerDimensionalObject):
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
         self._wcs = wcs
-        self._meta = meta
+        self._meta = {} if meta is None else meta
         self._mask = mask
         if header is not None:
             self._header = header
@@ -137,7 +137,7 @@ class OneDSpectrum(LowerDimensionalObject):
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
         self._wcs = wcs
-        self._meta = meta
+        self._meta = {} if meta is None else meta
         self._mask = mask
         if header is not None:
             self._header = header
