@@ -1,5 +1,6 @@
 from astropy import units as u
 from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
+from .io.core import determine_format
 
 import numpy as np
 
