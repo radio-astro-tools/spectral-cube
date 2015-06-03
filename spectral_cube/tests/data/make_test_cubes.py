@@ -60,3 +60,6 @@ if __name__ == "__main__":
 
     d, h = transpose(d, h, [2, 0, 1])
     fits.writeto('vad.fits', d, h, clobber=True)
+
+    d, h = transpose(d, h, [2, 1, 0])
+    fits.writeto('vda.fits', d, h, clobber=True)
