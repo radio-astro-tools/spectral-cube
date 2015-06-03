@@ -64,7 +64,7 @@ class TestSpectralCube(object):
                              ('sadv', [0, 1, 2, 3]),
                              ('vsad', [3, 0, 1, 2]),
                              ('vad', [2, 0, 1]),
-                             ('vda', [2, 1, 0]),
+                             ('vda', [0, 2, 1]),
                              ('adv', [0, 1, 2]),
                              ))
     def test_consistent_transposition(self, name, trans):
