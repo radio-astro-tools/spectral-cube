@@ -64,6 +64,7 @@ class TestSpectralCube(object):
                              ('sadv', [0, 1, 2, 3]),
                              ('vsad', [3, 0, 1, 2]),
                              ('vad', [2, 0, 1]),
+                             ('vda', [2, 1, 0]),
                              ('adv', [0, 1, 2]),
                              ))
     def test_consistent_transposition(self, name, trans):
@@ -704,3 +705,12 @@ def test_preserve_bunit():
 
     assert cube.unit == u.K
     assert cube.header['BUNIT'] == 'K'
+
+def test_cube_with_swapped_axes():
+    """
+    Regression test for ...
+    """
+    cube, data = cube_and_raw('vda.fits')
+
+    # Check that masking works (this should apply a lazy mask)
+    cube.filled_data[:]
