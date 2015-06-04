@@ -122,7 +122,9 @@ def load_fits_cube(input, hdu=0, meta={}):
         data, wcs = cube_utils._orient(data, wcs)
 
         mask = LazyMask(np.isfinite, data=data, wcs=wcs)
+        assert data.shape == mask._data.shape
         cube = SpectralCube(data, wcs, mask, meta=meta, header=header)
+        assert cube._data.shape == cube._mask._data.shape
 
     elif wcs.wcs.naxis == 4:
 

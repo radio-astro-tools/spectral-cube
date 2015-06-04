@@ -69,11 +69,11 @@ Minimize Data Copying
 Methods in :meth:`SpectralCube` avoid copying as much as possible. For example, all of the following operations create new cubes or masks
 without copying any data::
 
-    >>> mask = cube > 3
-    >>> slab = cube.spectral_slab(...)
-    >>> subcube = cube[0::2, 10:, 0:30]
-    >>> cube2 = cube.with_fill(np.nan)
-    >>> cube2 = cube.apply_mask(mask)
+    >>> mask = cube > 3  # doctest: +SKIP
+    >>> slab = cube.spectral_slab(...)  # doctest: +SKIP
+    >>> subcube = cube[0::2, 10:, 0:30]  # doctest: +SKIP
+    >>> cube2 = cube.with_fill(np.nan)  # doctest: +SKIP
+    >>> cube2 = cube.apply_mask(mask)  # doctest: +SKIP
 
 Minimize the number of passes over the data
 -------------------------------------------

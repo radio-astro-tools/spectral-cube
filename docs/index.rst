@@ -23,22 +23,22 @@ Here's a simple script demonstrating ``spectral-cube``::
 
     >>> import astropy.units as u
     >>> from spectral_cube import SpectralCube
-    >>> cube = SpectralCube.read('data.fits')
-    >>> print cube
+    >>> cube = SpectralCube.read('data.fits')  # doctest: +SKIP
+    >>> print cube  # doctest: +SKIP
     SpectralCube with shape=(563, 640, 640) and unit=K:
     n_x: 640  type_x: RA---SIN  unit_x: deg
     n_y: 640  type_y: DEC--SIN  unit_y: deg
     n_s: 563  type_s: FREQ      unit_s: Hz
 
     # extract the subcube between 98 and 100 GHz
-    >>> slab = cube.spectral_slab(98 * u.GHz, 100 * u.GHz)
+    >>> slab = cube.spectral_slab(98 * u.GHz, 100 * u.GHz)  # doctest: +SKIP
 
     # Ignore elements fainter than 1K
-    >>> masked_slab = slab.with_mask(slab > 1)
+    >>> masked_slab = slab.with_mask(slab > 1)  # doctest: +SKIP
 
     # Compute the first moment and write to file
-    >>> m1 = masked_slab.moment(order=1)
-    >>> m1.write('moment_1.fits')
+    >>> m1 = masked_slab.moment(order=1)  # doctest: +SKIP
+    >>> m1.write('moment_1.fits')  # doctest: +SKIP
 
 Using ``spectral-cube``
 -----------------------

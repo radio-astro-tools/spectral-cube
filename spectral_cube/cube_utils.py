@@ -1,5 +1,5 @@
 import numpy as np
-from astropy.wcs import WCSSUB_CELESTIAL,WCSSUB_SPECTRAL
+from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
 from astropy import log
 
@@ -140,7 +140,7 @@ def _orient(array, wcs):
     t = [types.index('spectral'), nums.index(1), nums.index(0)]
     result_array = array.transpose(t)
 
-    result_wcs = wcs.sub([WCSSUB_CELESTIAL, WCSSUB_SPECTRAL])
+    result_wcs = wcs.sub([WCSSUB_LONGITUDE, WCSSUB_LATITUDE, WCSSUB_SPECTRAL])
 
     return result_array, result_wcs
 
