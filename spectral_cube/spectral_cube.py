@@ -1774,6 +1774,47 @@ class SpectralCube(object):
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
+    def find_lines(self, velocity_offset=None, velocity_convention=None,
+                   rest_value=None, **kwargs):
+        """
+        Using astroquery's splatalogue interface, search for lines within the
+        spectral band.  See `astroquery.splatalogue.Splatalogue` for
+        information on keyword arguments
+
+        Parameters
+        ----------
+        velocity_offset : u.km/u.s equivalent
+            An offset by which the spectral axis should be shifted before
+            searching splatalogue.  This value will be *added* to the velocity,
+            so if you want to redshift a spectrum, make this value positive,
+            and if you want to un-redshift it, make this value negative.
+        velocity_convention : 'radio', 'optical', 'relativistic'
+            The doppler convention to pass to `with_spectral_unit`
+        rest_value : u.GHz equivalent
+            The rest frequency (or wavelength or energy) to be passed to
+            `with_spectral_unit`
+        """
+        from astroquery.splatalogue import Splatalogue
+        if velocity_convention in DOPPLER_CONVENTIONS:
+            velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
+        if velocity_offset is not None:
+            spectral_axis = (self.with_spectral_unit(u.km/u.s,
+                                                    velocity_convention=velocity_convention,
+                                                    rest_value=rest_value).spectral_axis
+                             + velocity_offset).to(u.GHz,
+                                                   velocity_convention(rest_value))
+        else:
+            spectral_axis = self.spectral_axis.to(u.GHz)
+
+        numin,numax = spectral_axis.min(), spectral_axis.max()
+
+        log.log(19, "Min/max frequency: {0},{1}".format(numin, numax))
+
+        result = Splatalogue.query_lines(numin, numax, **kwargs)
+
+        return result
+
+
 class StokesSpectralCube(SpectralCube):
 
     """
