@@ -9,7 +9,7 @@ import numpy as np
 
 from .. import (SpectralCube, BooleanArrayMask, FunctionMask, LazyMask,
                 CompositeMask)
-from ..spectral_cube import OneDSpectrum
+from ..spectral_cube import OneDSpectrum, Projection
 from ..np_compat import allbadtonan
 from .. import spectral_axis
 
@@ -664,6 +664,23 @@ def test_airwave_to_wave():
     ax2 = cube.with_spectral_unit(u.m).spectral_axis
     np.testing.assert_almost_equal(spectral_axis.air_to_vac(ax1).value,
                                    ax2.value)
+
+@pytest.mark.parametrize('func',('sum','std','max','min','mean'))
+def test_twod_numpy(func):
+    # Check that a numpy function returns the correct result when applied along
+    # one axis
+    # This is partly a regression test for #211
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+
+    proj = getattr(cube,func)(axis=0)
+    # data has a redundant 1st axis
+    dproj = getattr(data,func)(axis=(0,1)).squeeze()
+    assert isinstance(proj, Projection)
+    np.testing.assert_equal(proj.value, dproj)
+    assert cube.unit == proj.unit
 
 @pytest.mark.parametrize('func',('sum','std','max','min','mean'))
 def test_oned_numpy(func):
