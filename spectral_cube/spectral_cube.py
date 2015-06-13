@@ -431,13 +431,17 @@ class SpectralCube(object):
 
         projection = self._naxes_dropped(axis) in (1,2)
 
+        if how == 'slice':
+            raise NotImplementedError("Standard deviation cannot be computed "
+                                      "in a slicewise manner.  Please use a "
+                                      "different strategy.")
+
         # standard deviation cannot be computed as a trivial step-by-step
         # process.  There IS a one-pass algorithm for std dev, but it is not
-        # implemented, so we must force cube here by specifying reduce=False.  We could and should also
+        # implemented, so we must force cube here.  We could and should also
         # implement raywise reduction
         return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         reduce=False,
                                          projection=projection)
 
 
