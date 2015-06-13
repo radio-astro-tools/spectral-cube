@@ -412,12 +412,17 @@ class SpectralCube(object):
                                          projection=projection)
 
     @aggregation_docstring
-    def mean(self, axis=None, how='auto'):
+    def mean(self, axis=None, how='cube'):
         """
         Return the mean of the cube, optionally over an axis.
         """
 
         projection = self._naxes_dropped(axis) in (1,2)
+
+        if how == 'slice':
+            raise NotImplementedError("Mean cannot be computed "
+                                      "in a slicewise manner.  Please use a "
+                                      "different strategy.")
 
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,

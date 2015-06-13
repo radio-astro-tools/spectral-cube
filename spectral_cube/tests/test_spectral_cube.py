@@ -679,9 +679,14 @@ def test_twod_numpy(func, how, axis):
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
-    proj = getattr(cube,func)(axis=axis, how=how)
+    if func in ('mean','std') and how == 'slice':
+        with pytest.raises(NotImplementedError) as ex:
+            proj = getattr(cube,func)(axis=axis, how=how)
+        return
+    else:
+        proj = getattr(cube,func)(axis=axis, how=how)
     # data has a redundant 1st axis
-    dproj = getattr(data,func)(axis=(0,axis)).squeeze()
+    dproj = getattr(data,func)(axis=(0,axis+1)).squeeze()
     assert isinstance(proj, Projection)
     np.testing.assert_equal(proj.value, dproj)
     assert cube.unit == proj.unit
