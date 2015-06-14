@@ -1794,6 +1794,9 @@ class SpectralCube(object):
             The rest frequency (or wavelength or energy) to be passed to
             `with_spectral_unit`
         """
+        warnings.warn("The line-finding routine is experimental.  Please "
+                      "report bugs on the Issues page: "
+                      "https://github.com/radio-astro-tools/spectral-cube/issues")
         from astroquery.splatalogue import Splatalogue
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
