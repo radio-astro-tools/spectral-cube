@@ -253,7 +253,7 @@ class SpectralCube(object):
         reduce : bool
             reduce indicates whether this is a reduce-like operation,
             that can be accumulated one slice at a time.
-            sum/max/min are like this. argmax/argmin are not
+            sum/max/min are like this. argmax/argmin/stddev are not
         how : cube | slice | ray | auto
            How to compute the moment. All strategies give the same
            result, but certain strategies are more efficient depending
@@ -306,8 +306,7 @@ class SpectralCube(object):
                                               **kwargs)
             except NotImplementedError:
                 pass
-
-        if how not in ['auto', 'cube']:
+        elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
         if out is None:
@@ -413,25 +412,39 @@ class SpectralCube(object):
                                          projection=projection)
 
     @aggregation_docstring
-    def mean(self, axis=None, how='auto'):
+    def mean(self, axis=None, how='cube'):
         """
         Return the mean of the cube, optionally over an axis.
         """
 
         projection = self._naxes_dropped(axis) in (1,2)
 
+        if how == 'slice':
+            raise NotImplementedError("Mean cannot be computed "
+                                      "in a slicewise manner.  Please use a "
+                                      "different strategy.")
+
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
 
     @aggregation_docstring
-    def std(self, axis=None, how='auto'):
+    def std(self, axis=None, how='cube'):
         """
         Return the standard deviation of the cube, optionally over an axis.
         """
 
         projection = self._naxes_dropped(axis) in (1,2)
 
+        if how == 'slice':
+            raise NotImplementedError("Standard deviation cannot be computed "
+                                      "in a slicewise manner.  Please use a "
+                                      "different strategy.")
+
+        # standard deviation cannot be computed as a trivial step-by-step
+        # process.  There IS a one-pass algorithm for std dev, but it is not
+        # implemented, so we must force cube here.  We could and should also
+        # implement raywise reduction
         return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
