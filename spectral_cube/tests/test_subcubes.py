@@ -15,6 +15,7 @@ from .. import spectral_axis
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
+from .test_spectral_cube import cube_and_raw
 
 from distutils.version import StrictVersion
 
