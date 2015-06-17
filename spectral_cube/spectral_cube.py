@@ -1418,6 +1418,17 @@ class SpectralCube(object):
             xhi = xhi if xhi > ext.max[0] else ext.max[0]
             yhi = yhi if yhi > ext.max[1] else ext.max[1]
 
+        # Negative indices will do bad things, like wrap around the cube
+        # If xhi/yhi are negative, there is not overlap
+        if (xhi < 0) or (yhi < 0):
+            raise ValueError("Region is outside of cube.")
+
+        # if xlo/ylo are negative, we need to crop
+        if xlo < 0:
+            xlo = 0
+        if ylo < 0:
+            ylo = 0
+
         log.debug("Region boundaries: ")
         log.debug("xlo={xlo}, ylo={ylo}, xhi={xhi}, yhi={yhi}".format(xlo=xlo,
                                                                       ylo=ylo,
