@@ -270,7 +270,7 @@ class SpectralCube(object):
         reduce : bool
             reduce indicates whether this is a reduce-like operation,
             that can be accumulated one slice at a time.
-            sum/max/min are like this. argmax/argmin are not
+            sum/max/min are like this. argmax/argmin/stddev are not
         how : cube | slice | ray | auto
            How to compute the moment. All strategies give the same
            result, but certain strategies are more efficient depending
@@ -323,8 +323,7 @@ class SpectralCube(object):
                                               **kwargs)
             except NotImplementedError:
                 pass
-
-        if how not in ['auto', 'cube']:
+        elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
         if out is None:
@@ -430,25 +429,39 @@ class SpectralCube(object):
                                          projection=projection)
 
     @aggregation_docstring
-    def mean(self, axis=None, how='auto'):
+    def mean(self, axis=None, how='cube'):
         """
         Return the mean of the cube, optionally over an axis.
         """
 
         projection = self._naxes_dropped(axis) in (1,2)
 
+        if how == 'slice':
+            raise NotImplementedError("Mean cannot be computed "
+                                      "in a slicewise manner.  Please use a "
+                                      "different strategy.")
+
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
 
     @aggregation_docstring
-    def std(self, axis=None, how='auto'):
+    def std(self, axis=None, how='cube'):
         """
         Return the standard deviation of the cube, optionally over an axis.
         """
 
         projection = self._naxes_dropped(axis) in (1,2)
 
+        if how == 'slice':
+            raise NotImplementedError("Standard deviation cannot be computed "
+                                      "in a slicewise manner.  Please use a "
+                                      "different strategy.")
+
+        # standard deviation cannot be computed as a trivial step-by-step
+        # process.  There IS a one-pass algorithm for std dev, but it is not
+        # implemented, so we must force cube here.  We could and should also
+        # implement raywise reduction
         return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
@@ -1790,6 +1803,50 @@ class SpectralCube(object):
         """
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
+
+    def find_lines(self, velocity_offset=None, velocity_convention=None,
+                   rest_value=None, **kwargs):
+        """
+        Using astroquery's splatalogue interface, search for lines within the
+        spectral band.  See `astroquery.splatalogue.Splatalogue` for
+        information on keyword arguments
+
+        Parameters
+        ----------
+        velocity_offset : u.km/u.s equivalent
+            An offset by which the spectral axis should be shifted before
+            searching splatalogue.  This value will be *added* to the velocity,
+            so if you want to redshift a spectrum, make this value positive,
+            and if you want to un-redshift it, make this value negative.
+        velocity_convention : 'radio', 'optical', 'relativistic'
+            The doppler convention to pass to `with_spectral_unit`
+        rest_value : u.GHz equivalent
+            The rest frequency (or wavelength or energy) to be passed to
+            `with_spectral_unit`
+        """
+        warnings.warn("The line-finding routine is experimental.  Please "
+                      "report bugs on the Issues page: "
+                      "https://github.com/radio-astro-tools/spectral-cube/issues")
+        from astroquery.splatalogue import Splatalogue
+        if velocity_convention in DOPPLER_CONVENTIONS:
+            velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
+        if velocity_offset is not None:
+            spectral_axis = (self.with_spectral_unit(u.km/u.s,
+                                                    velocity_convention=velocity_convention,
+                                                    rest_value=rest_value).spectral_axis
+                             + velocity_offset).to(u.GHz,
+                                                   velocity_convention(rest_value))
+        else:
+            spectral_axis = self.spectral_axis.to(u.GHz)
+
+        numin,numax = spectral_axis.min(), spectral_axis.max()
+
+        log.log(19, "Min/max frequency: {0},{1}".format(numin, numax))
+
+        result = Splatalogue.query_lines(numin, numax, **kwargs)
+
+        return result
+
 
 class StokesSpectralCube(SpectralCube):
 

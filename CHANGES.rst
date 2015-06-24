@@ -1,7 +1,8 @@
 0.2.3 (unreleased)
 ------------------
 
- - (none yet)
+ - Add experimental line-finding tool using astroquery.splatalogue
+   (https://github.com/radio-astro-tools/spectral-cube/pull/210)
 
 0.2.2 (2015-03-12)
 ------------------
