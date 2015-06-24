@@ -34,6 +34,12 @@ try:
 except ImportError:
     bottleneckOK = False
 
+try:
+    import radio_beam
+    radiobeamOK = True
+except ImportError:
+    radiobeamOK = False
+
 
 def cube_and_raw(filename):
     p = path(filename)
@@ -740,3 +746,24 @@ def test_cube_with_swapped_axes():
 
     # Check that masking works (this should apply a lazy mask)
     cube.filled_data[:]
+
+def test_jybeam_upper():
+
+    cube, data = cube_and_raw('vda_JYBEAM_upper.fits')
+
+    assert cube.unit == u.Jy
+    if radiobeamOK:
+        assert hasattr(cube, 'beam')
+        np.testing.assert_almost_equal(cube.beam.sr.value,
+                                       (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
+
+def test_jybeam_lower():
+
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+
+    assert cube.unit == u.Jy
+    if radiobeamOK:
+        assert hasattr(cube, 'beam')
+        np.testing.assert_almost_equal(cube.beam.sr.value,
+                                       (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
+
