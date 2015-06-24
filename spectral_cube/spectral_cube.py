@@ -98,8 +98,8 @@ class SpectralCube(object):
         self._meta = meta or {}
         if 'BUNIT' in self._meta:
 
-            # special case: CASA makes non-FITS-compliant jy/beam headers
-            if self._meta['BUNIT'] == 'JY/BEAM':
+            # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
+            if self._meta['BUNIT'].lower() == 'jy/beam':
                 self._unit = u.Jy
                 try:
                     import radio_beam

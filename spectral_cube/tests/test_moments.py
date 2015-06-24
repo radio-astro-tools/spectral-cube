@@ -12,7 +12,7 @@ from .helpers import assert_allclose
 dv = 3e-2 * u.Unit('m/s')
 dy = 2e-5 * u.Unit('deg')
 dx = 1e-5 * u.Unit('deg')
-data_unit = u.dimensionless_unscaled
+data_unit = u.K
 
 m0v = np.array([[27, 30, 33],
                 [36, 39, 42],
@@ -45,7 +45,10 @@ m2x = np.array([[0.22222222, 0.63888889, 0.65759637],
                 [0.66222222, 0.66403682, 0.66493056],
                 [0.66543552, 0.66574839, 0.66595556]]) * dx ** 2
 MOMENTS = [[m0v, m0y, m0x], [m1v, m1y, m1x], [m2v, m2y, m2x]]
-MOMENTSu = [[m0v*u.K, m0y*u.K, m0x*u.K], [m1v, m1y, m1x], [m2v, m2y, m2x]]
+# In issue 184, the cubes were corrected such that they all have valid units
+# Therefore, no separate tests are needed for moments-with-units and those
+# without
+MOMENTSu = MOMENTS
 
 
 def moment_cube():
@@ -119,10 +122,13 @@ def test_preserve_unit():
     m0 = sc_kms.moment0(axis=0)
     m1 = sc_kms.moment1(axis=0)
 
-    assert_allclose(m0, MOMENTS[0][0].to(u.km/u.s))
+    assert_allclose(m0, MOMENTS[0][0].to(u.K*u.km/u.s))
     assert_allclose(m1, MOMENTS[1][0].to(u.km/u.s))
 
 def test_with_flux_unit():
+    """
+    As of Issue 184, redundant with test_reference
+    """
     mc_hdu = moment_cube()
     sc = SpectralCube.read(mc_hdu)
     sc._unit = u.K
@@ -133,7 +139,7 @@ def test_with_flux_unit():
     assert sc.unit == u.K
     assert sc.filled_data[:].unit == u.K
 
-    assert_allclose(m0, MOMENTS[0][0].to(u.km/u.s))
+    assert_allclose(m0, MOMENTS[0][0].to(u.K*u.km/u.s))
     assert_allclose(m1, MOMENTS[1][0].to(u.km/u.s))
 
 @pytest.mark.parametrize(('order', 'axis', 'how'),
@@ -142,7 +148,11 @@ def test_with_flux_unit():
                           for a in [0, 1, 2]
                           for h in ['cube', 'slice', 'auto', 'ray']])
 def test_how_withfluxunit(order, axis, how):
-    """ Regression test for issue 180 """
+    """
+    Regression test for issue 180
+    As of issue 184, this is mostly redundant with test_reference except that
+    it (kind of) checks that units are set
+    """
     mc_hdu = moment_cube()
     sc = SpectralCube.read(mc_hdu)
     sc._unit = u.K

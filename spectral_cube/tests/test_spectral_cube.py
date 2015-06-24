@@ -201,7 +201,7 @@ class TestNumpyMethods(BaseTest):
         # Need a secondary check to make sure it works with no
         # axis keyword being passed (regression test for issue introduced in
         # 150)
-        assert np.all(self.c.sum() == np.nansum(d))
+        assert np.all(self.c.sum().value == np.nansum(d))
 
     def test_max(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
@@ -294,7 +294,7 @@ class TestRepr(BaseTest):
 
     def test_repr(self):
         assert repr(self.c) == """
-SpectralCube with shape=(4, 3, 2):
+SpectralCube with shape=(4, 3, 2) and unit=K:
  n_x:      2  type_x: RA---SIN  unit_x: deg    range:    24.062698 deg:   24.063349 deg
  n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
  n_s:      4  type_s: VOPT      unit_s: m / s  range:  -321214.699 m / s: -317350.054 m / s
@@ -723,14 +723,14 @@ def test_preserve_bunit():
 
     cube, data = cube_and_raw('advs.fits')
 
-    assert cube.header['BUNIT'] == 'JY/BEAM'
+    assert cube.header['BUNIT'] == 'K'
 
     hdu = fits.open(path('advs.fits'))[0]
-    hdu.header['BUNIT'] = 'K'
+    hdu.header['BUNIT'] = 'Jy'
     cube = SpectralCube.read(hdu)
 
-    assert cube.unit == u.K
-    assert cube.header['BUNIT'] == 'K'
+    assert cube.unit == u.Jy
+    assert cube.header['BUNIT'] == 'Jy'
 
 def test_cube_with_swapped_axes():
     """
