@@ -17,7 +17,8 @@ import numpy as np
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable_and_smaller
+from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
+                    is_broadcastable_and_smaller)
 from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
