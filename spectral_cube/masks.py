@@ -38,6 +38,50 @@ def is_broadcastable_and_smaller(shp1, shp2):
             return False
     return True
 
+def dims_to_skip(shp1, shp2):
+    """
+    For a shape `shp1` that is broadcastable to shape `shp2`, specify which
+    dimensions are length 1.
+
+    Parameters
+    ----------
+    keep : bool
+        If True, return the dimensions to keep rather than those to remove
+    """
+    if not is_broadcastable_and_smaller(shp1, shp2):
+        raise ValueError("Cannot broadcast {0} to {1}".format(shp1,shp2))
+    dims = []
+
+    for ii,(a, b) in enumerate(zip(shp1[::-1], shp2[::-1])):
+        # b==1 is broadcastable but not desired
+        if a == 1:
+            dims.append(len(shp2) - ii - 1)
+        elif  a == b:
+            pass
+        else:
+            raise ValueError("This should not be possible")
+
+    if len(shp1) < len(shp2):
+        dims += list(range(len(shp2)-len(shp1)))
+
+    return dims
+
+def view_of_subset(shp1, shp2, view):
+    """
+    Given two shapes and a view, assuming that shape 1 can be broadcast
+    to shape 2, return the sub-view that applies to shape 1
+    """
+    dts = dims_to_skip(shp1, shp2)
+    if view:
+        cv_view = [x for ii,x in enumerate(view) if ii not in dts]
+    else:
+        # if no view is specified, still need to slice
+        cv_view = [x for ii,x in enumerate([slice(None)]*3)
+                   if ii not in dts]
+
+    return cv_view
+
+
 class MaskBase(object):
 
     __metaclass__ = abc.ABCMeta
@@ -436,12 +480,19 @@ class LazyComparisonMask(LazyMask):
 
     def _include(self, data=None, wcs=None, view=()):
         self._validate_wcs(data, wcs)
-        return self._function(self._data[view], self._comparison_value[view])
+
+        cv_view = view_of_subset(self._comparison_value.shape,
+                                 self._data.shape, view)
+
+        return self._function(self._data[view],
+                              self._comparison_value[cv_view])
 
     def __getitem__(self, view):
+        cv_view = view_of_subset(self._comparison_value.shape,
+                                 self._data.shape, view)
         return LazyComparisonMask(self._function, data=self._data[view],
-                        comparison_value=self._comparison_value[view],
-                        wcs=wcs_utils.slice_wcs(self._wcs, view))
+                                  comparison_value=self._comparison_value[cv_view],
+                                  wcs=wcs_utils.slice_wcs(self._wcs, view))
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """
