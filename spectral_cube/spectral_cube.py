@@ -1536,6 +1536,17 @@ class SpectralCube(object):
 
         return world[::-1]  # reverse WCS -> numpy order
 
+    def _val_to_own_unit(self, value):
+        """
+        Given a value, check if it has a unit.  If it does, convert to the
+        cube's unit.  If it doesn't, raise an exception.
+        """
+        if hasattr(value, 'unit'):
+            return value.to(self.unit).value
+        else:
+            raise ValueError("Can only compare cube objects to Quantities"
+                             " with a unit attribute.")
+
     def __gt__(self, value):
         """
         Return a LazyMask representing the inequality
@@ -1545,24 +1556,30 @@ class SpectralCube(object):
         value : number
             The threshold
         """
+        value = self._val_to_own_unit(value)
         return LazyMask(lambda data: data > value, data=self._data, wcs=self._wcs)
 
     def __ge__(self, value):
+        value = self._val_to_own_unit(value)
         return LazyMask(lambda data: data >= value, data=self._data, wcs=self._wcs)
 
     def __le__(self, value):
+        value = self._val_to_own_unit(value)
         return LazyMask(lambda data: data <= value, data=self._data, wcs=self._wcs)
 
     def __lt__(self, value):
+        value = self._val_to_own_unit(value)
         return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
 
     def __eq__(self, value):
+        value = self._val_to_own_unit(value)
         return LazyMask(lambda data: data == value, data=self._data, wcs=self._wcs)
 
     def __hash__(self):
         return id(self)
 
     def __ne__(self, value):
+        value = self._val_to_own_unit(value)
         return LazyMask(lambda data: data != value, data=self._data, wcs=self._wcs)
 
     @classmethod

@@ -218,7 +218,8 @@ class CompositeMask(MaskBase):
             raise ValueError("Operation '{0}' not supported".format(self._operation))
 
     def __getitem__(self, view):
-        return CompositeMask(self._mask1[view], self._mask2[view], operation=self._operation)
+        return CompositeMask(self._mask1[view], self._mask2[view],
+                             operation=self._operation)
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """
