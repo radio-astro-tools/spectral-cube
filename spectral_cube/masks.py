@@ -383,6 +383,77 @@ class LazyMask(MaskBase):
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
 
+class LazyComparisonMask(LazyMask):
+
+    """
+    A boolean mask defined by the evaluation of a comparison function between a
+    fixed dataset and some other value.
+    
+    This is conceptually similar to the :class:`LazyMask` but it will ensure
+    that the comparison value can be compared to the data
+
+    Parameters
+    ----------
+    function : callable
+        The function to apply to ``data``. This method should accept
+        a numpy array, which will be the data array passed to __init__,  and a
+        second argument also passed to __init__. It should return a boolean
+        array, where True values indicate that which pixels are
+        valid/unaffected by masking.
+    comparison_value : float or array
+        The comparison value for the array
+    data : array-like
+        The array to evaluate ``function`` on. This should support Numpy-like
+        slicing syntax.
+    wcs : `~astropy.wcs.WCS`
+        The WCS of the input data, which is used to define the coordinates
+        for which the boolean mask is defined.
+    """
+
+    def __init__(self, function, comparison_value, cube=None, data=None,
+                 wcs=None):
+        self._function = function
+        if cube is not None and (data is not None or wcs is not None):
+            raise ValueError("Pass only cube or (data & wcs)")
+        elif cube is not None:
+            self._data = cube._data
+            self._wcs = cube._wcs
+        elif data is not None and wcs is not None:
+            self._data = data
+            self._wcs = wcs
+        else:
+            raise ValueError("Either a cube or (data & wcs) is required.")
+
+        if (hasattr(comparison_value, 'shape') and not
+            is_broadcastable_and_smaller(self._data.shape,
+                                         comparison_value.shape)):
+            raise ValueError("The data and the comparison value cannot "
+                             "be broadcast to match shape")
+
+        self._comparison_value = comparison_value
+
+        self._wcs_whitelist = set()
+
+    def _include(self, data=None, wcs=None, view=()):
+        self._validate_wcs(data, wcs)
+        return self._function(self._data[view], self._comparison_value[view])
+
+    def __getitem__(self, view):
+        return LazyComparisonMask(self._function, data=self._data[view],
+                        comparison_value=self._comparison_value[view],
+                        wcs=wcs_utils.slice_wcs(self._wcs, view))
+
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get a LazyComparisonMask copy with a WCS in the modified unit
+        """
+        newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
+
+        newmask = LazyComparisonMask(self._function, data=self._data,
+                                     comparison_value=self._comparison_value,
+                                     wcs=newwcs)
+        return newmask
+
 class FunctionMask(MaskBase):
 
     """

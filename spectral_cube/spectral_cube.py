@@ -4,6 +4,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 import warnings
 from functools import wraps
+import operator
 
 from astropy import units as u
 from astropy.extern import six
@@ -1557,30 +1558,30 @@ class SpectralCube(object):
             The threshold
         """
         value = self._val_to_own_unit(value)
-        return LazyMask(lambda data: data > value, data=self._data, wcs=self._wcs)
+        return LazyComparisonMask(operator.gt, value, data=self._data, wcs=self._wcs)
 
     def __ge__(self, value):
         value = self._val_to_own_unit(value)
-        return LazyMask(lambda data: data >= value, data=self._data, wcs=self._wcs)
+        return LazyComparisonMask(operator.ge, value, data=self._data, wcs=self._wcs)
 
     def __le__(self, value):
         value = self._val_to_own_unit(value)
-        return LazyMask(lambda data: data <= value, data=self._data, wcs=self._wcs)
+        return LazyComparisonMask(operator.le, value, data=self._data, wcs=self._wcs)
 
     def __lt__(self, value):
         value = self._val_to_own_unit(value)
-        return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
+        return LazyComparisonMask(operator.lt, value, data=self._data, wcs=self._wcs)
 
     def __eq__(self, value):
         value = self._val_to_own_unit(value)
-        return LazyMask(lambda data: data == value, data=self._data, wcs=self._wcs)
+        return LazyComparisonMask(operator.eq, value, data=self._data, wcs=self._wcs)
 
     def __hash__(self):
         return id(self)
 
     def __ne__(self, value):
         value = self._val_to_own_unit(value)
-        return LazyMask(lambda data: data != value, data=self._data, wcs=self._wcs)
+        return LazyComparisonMask(operator.ne, value, data=self._data, wcs=self._wcs)
 
     @classmethod
     def read(cls, filename, format=None, hdu=None, **kwargs):
