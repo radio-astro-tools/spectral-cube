@@ -89,8 +89,6 @@ def aggregation_docstring(func):
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
 
-
-
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
