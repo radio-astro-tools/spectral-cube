@@ -456,7 +456,7 @@ class TestMasks(BaseTest):
 
         # choose thresh to exercise proper equality tests
         thresh = self.d.ravel()[0]
-        m = op(self.c, thresh)
+        m = op(self.c, thresh*u.K)
         self.c._mask = m
 
         expected = self.d[op(self.d, thresh)]

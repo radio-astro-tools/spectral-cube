@@ -98,7 +98,7 @@ def test_reference(order, axis, how):
 def test_consistent_mask_handling(axis, order):
     mc_hdu = moment_cube()
     sc = SpectralCube.read(mc_hdu)
-    sc._mask = sc > 4
+    sc._mask = sc > 4*u.K
 
     cwise = sc.moment(axis=axis, order=order, how='cube')
     swise = sc.moment(axis=axis, order=order, how='slice')
