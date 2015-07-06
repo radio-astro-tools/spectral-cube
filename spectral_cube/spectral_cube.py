@@ -584,11 +584,12 @@ class SpectralCube(object):
             # acquire the flattened, valid data for the slice
             data = self.flattened(slc, weights=weights)
             if len(data) != 0:
-                if hasattr(data, 'value'):
+                result = function(data, **kwargs)
+                if hasattr(result, 'value'):
                     # store result in array
-                    out[x, y] = function(data, **kwargs).value
+                    out[x, y] = result.value
                 else:
-                    out[x, y] = function(data, **kwargs)
+                    out[x, y] = result
 
         if projection and axis in (0,1,2):
             new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
