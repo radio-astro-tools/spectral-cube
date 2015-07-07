@@ -9,7 +9,7 @@ from astropy import units as u
 from .test_spectral_cube import cube_and_raw
 from .. import (BooleanArrayMask, SpectralCube, LazyMask,
                 FunctionMask, CompositeMask)
-from ..masks import is_broadcastable_and_smaller
+from ..masks import is_broadcastable_and_smaller, dims_to_skip, view_of_subset
 
 from distutils.version import StrictVersion
 
@@ -271,6 +271,20 @@ shape_combos = list(itertools.combinations(shapes,2))
 @pytest.mark.parametrize(('shp1','shp2'),shape_combos)
 def test_is_broadcastable(shp1, shp2):
     assert is_broadcastable_and_smaller(shp1,shp2) == is_broadcastable_try(shp1,shp2)
+
+@pytest.mark.parametrize(('shp1','shp2','dim'),
+                         (([5,5],[2,5,5],[0]),
+                          #([5,5],[5,5,2],[2]),
+                          ([2,5,5],[2,5,5],[])))
+def test_dims_to_skip(shp1, shp2, dim):
+    assert dims_to_skip(shp1, shp2) == dim
+
+@pytest.mark.parametrize(('shp1','shp2', 'inview', 'outview'),
+                         (([5,5],[2,5,5],  [slice(0,1), slice(1,3), slice(2,4),], [slice(1,3), slice(2,4)]),
+                          # not a valid broadcast ([5,5],[5,5,2],  [slice(1,3), slice(2,4), slice(0,1),], [slice(1,3), slice(2,4)]),
+                          ([2,5,5],[2,5,5],[slice(0,1), slice(1,3), slice(2,4),], [slice(0,1), slice(1,3), slice(2,4),])))
+def test_view_of_subset(shp1, shp2, inview, outview):
+    assert view_of_subset(shp1,shp2,inview) == outview
 
 def test_flat_mask():
     cube, data = cube_and_raw('adv.fits')
