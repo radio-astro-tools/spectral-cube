@@ -36,9 +36,9 @@ except ImportError:
 
 try:
     import radio_beam
-    radiobeamOK = True
+    RADIO_BEAM_INSTALLED = True
 except ImportError:
-    radiobeamOK = False
+    RADIO_BEAM_INSTALLED = False
 
 
 def cube_and_raw(filename):
@@ -752,7 +752,7 @@ def test_jybeam_upper():
     cube, data = cube_and_raw('vda_JYBEAM_upper.fits')
 
     assert cube.unit == u.Jy
-    if radiobeamOK:
+    if RADIO_BEAM_INSTALLED:
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
@@ -762,7 +762,7 @@ def test_jybeam_lower():
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 
     assert cube.unit == u.Jy
-    if radiobeamOK:
+    if RADIO_BEAM_INSTALLED:
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
