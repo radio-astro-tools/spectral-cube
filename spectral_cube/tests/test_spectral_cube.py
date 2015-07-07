@@ -173,6 +173,14 @@ class TestFilters(BaseTest):
         expected = np.where(d > .5, d, 0)
         assert_allclose(c._get_filled_data(fill=0), expected)
 
+    def test_mask_comparison(self):
+        c, d = self.c, self.d
+        dmask = d > 0.5
+        cmask = c > 0.5*u.K
+        assert cmask.include().sum() == dmask.sum()
+        np.testing.assert_almost_equal(c.with_mask(cmask).sum().value,
+                                       d[dmask].sum())
+
     def test_flatten(self):
         c, d = self.c, self.d
         expected = d[d > 0.5]
