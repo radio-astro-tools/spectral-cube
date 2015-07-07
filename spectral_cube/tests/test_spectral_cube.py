@@ -173,11 +173,12 @@ class TestFilters(BaseTest):
         expected = np.where(d > .5, d, 0)
         assert_allclose(c._get_filled_data(fill=0), expected)
 
-    def test_mask_comparison(self):
+    @pytest.mark.parametrize('operation', (operator.lt, operator.gt, operator.le, operator.ge))
+    def test_mask_comparison(self, operation):
         c, d = self.c, self.d
-        dmask = d > 0.5
-        cmask = c > 0.5*u.K
-        assert cmask.include().sum() == dmask.sum()
+        dmask = operation(d, 0.6) & self.c.mask.include()
+        cmask = operation(c, 0.6*u.K)
+        assert (self.c.mask.include() & cmask.include()).sum() == dmask.sum()
         np.testing.assert_almost_equal(c.with_mask(cmask).sum().value,
                                        d[dmask].sum())
 
