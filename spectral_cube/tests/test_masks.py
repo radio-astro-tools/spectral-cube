@@ -1,5 +1,6 @@
 import pytest
 import itertools
+import operator
 import numpy as np
 from numpy.testing import assert_allclose
 from numpy.lib.stride_tricks import as_strided
@@ -7,7 +8,7 @@ from astropy.wcs import WCS
 from astropy import units as u
 
 from .test_spectral_cube import cube_and_raw
-from .. import (BooleanArrayMask, SpectralCube, LazyMask,
+from .. import (BooleanArrayMask, SpectralCube, LazyMask, LazyComparisonMask,
                 FunctionMask, CompositeMask)
 from ..masks import is_broadcastable_and_smaller, dims_to_skip, view_of_subset
 
@@ -41,6 +42,38 @@ def test_lazy_mask():
     wcs = WCS()
 
     m = LazyMask(lambda x: x > 2, data=data, wcs=wcs)
+
+    assert_allclose(m.include(data, wcs), [[[0, 0, 0, 1, 1]]])
+    assert_allclose(m.exclude(data, wcs), [[[1, 1, 1, 0, 0]]])
+    assert_allclose(m._filled(data, wcs), [[[np.nan, np.nan, np.nan, 3, 4]]])
+    assert_allclose(m._flattened(data, wcs), [3, 4])
+
+    assert_allclose(m.include(data, wcs, view=(0, 0, slice(1, 4))), [0, 0, 1])
+    assert_allclose(m.exclude(data, wcs, view=(0, 0, slice(1, 4))), [1, 1, 0])
+    assert_allclose(m._filled(data, wcs, view=(0, 0, slice(1, 4))), [np.nan, np.nan, 3])
+    assert_allclose(m._flattened(data, wcs, view=(0, 0, slice(1, 4))), [3])
+
+    # Now if we call with different data, the results for include and exclude
+    # should *not* change.
+
+    data = (3 - np.arange(5)).reshape((1, 1, 5))
+
+    assert_allclose(m.include(data, wcs), [[[0, 0, 0, 1, 1]]])
+    assert_allclose(m.exclude(data, wcs), [[[1, 1, 1, 0, 0]]])
+    assert_allclose(m._filled(data, wcs), [[[np.nan, np.nan, np.nan, 0, -1]]])
+    assert_allclose(m._flattened(data, wcs), [0, -1])
+
+    assert_allclose(m.include(data, wcs, view=(0, 0, slice(1, 4))), [0, 0, 1])
+    assert_allclose(m.exclude(data, wcs, view=(0, 0, slice(1, 4))), [1, 1, 0])
+    assert_allclose(m._filled(data, wcs, view=(0, 0, slice(1, 4))), [np.nan, np.nan, 0])
+    assert_allclose(m._flattened(data, wcs, view=(0, 0, slice(1, 4))), [0])
+
+def test_lazy_comparison_mask():
+
+    data = np.arange(5).reshape((1, 1, 5))
+    wcs = WCS()
+
+    m = LazyComparisonMask(operator.gt, 2, data=data, wcs=wcs)
 
     assert_allclose(m.include(data, wcs), [[[0, 0, 0, 1, 1]]])
     assert_allclose(m.exclude(data, wcs), [[[1, 1, 1, 0, 0]]])

@@ -6,7 +6,7 @@ from numpy.lib.stride_tricks import as_strided
 from . import wcs_utils
 
 __all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
-           'LazyMask', 'FunctionMask']
+           'LazyMask', 'LazyComparisonMask', 'FunctionMask']
 
 # Global version of the with_spectral_unit docs to avoid duplicating them
 with_spectral_unit_docs = """
