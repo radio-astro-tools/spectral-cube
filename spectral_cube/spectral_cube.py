@@ -97,11 +97,28 @@ class SpectralCube(object):
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
         if 'BUNIT' in self._meta:
-            try:
-                self._unit = u.Unit(self._meta['BUNIT'])
-            except ValueError:
-                warnings.warn("Could not parse unit {0}".format(self._meta['BUNIT']))
-                self._unit = None
+
+            # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
+            if self._meta['BUNIT'].lower() == 'jy/beam':
+                self._unit = u.Jy
+                try:
+                    import radio_beam
+                    self.beam = radio_beam.Beam.from_fits_header(header)
+                    self._meta['beam'] = self.beam
+                    warnings.warn("Units were JY/BEAM.  The 'beam' is now "
+                                  "stored in the .beam attribute, and the "
+                                  "units are set to Jy")
+                except:
+                    warnings.warn("Could not parse JY/BEAM unit.  Either you "
+                                  "should install the radio_beam package "
+                                  "or manually replace the units.  For now, "
+                                  "the units are being interpreted as Jy.")
+            else:
+                try:
+                    self._unit = u.Unit(self._meta['BUNIT'])
+                except ValueError:
+                    warnings.warn("Could not parse unit {0}".format(self._meta['BUNIT']))
+                    self._unit = None
         elif hasattr(data, 'unit'):
             self._unit = data.unit
             # strip the unit so that it can be treated as cube metadata
@@ -567,8 +584,12 @@ class SpectralCube(object):
             # acquire the flattened, valid data for the slice
             data = self.flattened(slc, weights=weights)
             if len(data) != 0:
-                # store result in array
-                out[x, y] = function(data, **kwargs)
+                result = function(data, **kwargs)
+                if hasattr(result, 'value'):
+                    # store result in array
+                    out[x, y] = result.value
+                else:
+                    out[x, y] = result
 
         if projection and axis in (0,1,2):
             new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
