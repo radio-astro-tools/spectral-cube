@@ -173,6 +173,15 @@ class TestFilters(BaseTest):
         expected = np.where(d > .5, d, 0)
         assert_allclose(c._get_filled_data(fill=0), expected)
 
+    @pytest.mark.parametrize('operation', (operator.lt, operator.gt, operator.le, operator.ge))
+    def test_mask_comparison(self, operation):
+        c, d = self.c, self.d
+        dmask = operation(d, 0.6) & self.c.mask.include()
+        cmask = operation(c, 0.6*u.K)
+        assert (self.c.mask.include() & cmask.include()).sum() == dmask.sum()
+        np.testing.assert_almost_equal(c.with_mask(cmask).sum().value,
+                                       d[dmask].sum())
+
     def test_flatten(self):
         c, d = self.c, self.d
         expected = d[d > 0.5]
@@ -456,7 +465,7 @@ class TestMasks(BaseTest):
 
         # choose thresh to exercise proper equality tests
         thresh = self.d.ravel()[0]
-        m = op(self.c, thresh)
+        m = op(self.c, thresh*u.K)
         self.c._mask = m
 
         expected = self.d[op(self.d, thresh)]

@@ -6,7 +6,7 @@ from numpy.lib.stride_tricks import as_strided
 from . import wcs_utils
 
 __all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
-           'LazyMask', 'FunctionMask']
+           'LazyMask', 'LazyComparisonMask', 'FunctionMask']
 
 # Global version of the with_spectral_unit docs to avoid duplicating them
 with_spectral_unit_docs = """
@@ -37,6 +37,50 @@ def is_broadcastable_and_smaller(shp1, shp2):
         else:
             return False
     return True
+
+def dims_to_skip(shp1, shp2):
+    """
+    For a shape `shp1` that is broadcastable to shape `shp2`, specify which
+    dimensions are length 1.
+
+    Parameters
+    ----------
+    keep : bool
+        If True, return the dimensions to keep rather than those to remove
+    """
+    if not is_broadcastable_and_smaller(shp1, shp2):
+        raise ValueError("Cannot broadcast {0} to {1}".format(shp1,shp2))
+    dims = []
+
+    for ii,(a, b) in enumerate(zip(shp1[::-1], shp2[::-1])):
+        # b==1 is broadcastable but not desired
+        if a == 1:
+            dims.append(len(shp2) - ii - 1)
+        elif  a == b:
+            pass
+        else:
+            raise ValueError("This should not be possible")
+
+    if len(shp1) < len(shp2):
+        dims += list(range(len(shp2)-len(shp1)))
+
+    return dims
+
+def view_of_subset(shp1, shp2, view):
+    """
+    Given two shapes and a view, assuming that shape 1 can be broadcast
+    to shape 2, return the sub-view that applies to shape 1
+    """
+    dts = dims_to_skip(shp1, shp2)
+    if view:
+        cv_view = [x for ii,x in enumerate(view) if ii not in dts]
+    else:
+        # if no view is specified, still need to slice
+        cv_view = [x for ii,x in enumerate([slice(None)]*3)
+                   if ii not in dts]
+
+    return cv_view
+
 
 class MaskBase(object):
 
@@ -218,7 +262,8 @@ class CompositeMask(MaskBase):
             raise ValueError("Operation '{0}' not supported".format(self._operation))
 
     def __getitem__(self, view):
-        return CompositeMask(self._mask1[view], self._mask2[view], operation=self._operation)
+        return CompositeMask(self._mask1[view], self._mask2[view],
+                             operation=self._operation)
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """
@@ -381,6 +426,94 @@ class LazyMask(MaskBase):
         return newmask
 
     with_spectral_unit.__doc__ += with_spectral_unit_docs
+
+class LazyComparisonMask(LazyMask):
+
+    """
+    A boolean mask defined by the evaluation of a comparison function between a
+    fixed dataset and some other value.
+    
+    This is conceptually similar to the :class:`LazyMask` but it will ensure
+    that the comparison value can be compared to the data
+
+    Parameters
+    ----------
+    function : callable
+        The function to apply to ``data``. This method should accept
+        a numpy array, which will be the data array passed to __init__,  and a
+        second argument also passed to __init__. It should return a boolean
+        array, where True values indicate that which pixels are
+        valid/unaffected by masking.
+    comparison_value : float or array
+        The comparison value for the array
+    data : array-like
+        The array to evaluate ``function`` on. This should support Numpy-like
+        slicing syntax.
+    wcs : `~astropy.wcs.WCS`
+        The WCS of the input data, which is used to define the coordinates
+        for which the boolean mask is defined.
+    """
+
+    def __init__(self, function, comparison_value, cube=None, data=None,
+                 wcs=None):
+        self._function = function
+        if cube is not None and (data is not None or wcs is not None):
+            raise ValueError("Pass only cube or (data & wcs)")
+        elif cube is not None:
+            self._data = cube._data
+            self._wcs = cube._wcs
+        elif data is not None and wcs is not None:
+            self._data = data
+            self._wcs = wcs
+        else:
+            raise ValueError("Either a cube or (data & wcs) is required.")
+
+        if (hasattr(comparison_value, 'shape') and not
+            is_broadcastable_and_smaller(self._data.shape,
+                                         comparison_value.shape)):
+            raise ValueError("The data and the comparison value cannot "
+                             "be broadcast to match shape")
+
+        self._comparison_value = comparison_value
+
+        self._wcs_whitelist = set()
+
+    def _include(self, data=None, wcs=None, view=()):
+        self._validate_wcs(data, wcs)
+
+        if hasattr(self._comparison_value, 'shape'):
+            cv_view = view_of_subset(self._comparison_value.shape,
+                                     self._data.shape, view)
+
+            return self._function(self._data[view],
+                                  self._comparison_value[cv_view])
+        
+        else:
+            return self._function(self._data[view],
+                                  self._comparison_value)
+
+    def __getitem__(self, view):
+        if hasattr(self._comparison_value, 'shape'):
+            cv_view = view_of_subset(self._comparison_value.shape,
+                                     self._data.shape, view)
+            return LazyComparisonMask(self._function, data=self._data[view],
+                                      comparison_value=self._comparison_value[cv_view],
+                                      wcs=wcs_utils.slice_wcs(self._wcs, view))
+        else:
+            return LazyComparisonMask(self._function, data=self._data[view],
+                                      comparison_value=self._comparison_value,
+                                      wcs=wcs_utils.slice_wcs(self._wcs, view))
+
+    def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
+        """
+        Get a LazyComparisonMask copy with a WCS in the modified unit
+        """
+        newwcs = self._get_new_wcs(unit, velocity_convention, rest_value)
+
+        newmask = LazyComparisonMask(self._function, data=self._data,
+                                     comparison_value=self._comparison_value,
+                                     wcs=newwcs)
+        return newmask
 
 class FunctionMask(MaskBase):
 

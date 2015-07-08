@@ -4,6 +4,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 import warnings
 from functools import wraps
+import operator
 
 from astropy import units as u
 from astropy.extern import six
@@ -16,7 +17,8 @@ import numpy as np
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .masks import LazyMask, BooleanArrayMask, MaskBase, is_broadcastable_and_smaller
+from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
+                    is_broadcastable_and_smaller)
 from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
@@ -86,8 +88,6 @@ def aggregation_docstring(func):
 # convenience structures to keep track of the reversed index
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
-
-
 
 class SpectralCube(object):
 
@@ -1536,6 +1536,17 @@ class SpectralCube(object):
 
         return world[::-1]  # reverse WCS -> numpy order
 
+    def _val_to_own_unit(self, value):
+        """
+        Given a value, check if it has a unit.  If it does, convert to the
+        cube's unit.  If it doesn't, raise an exception.
+        """
+        if hasattr(value, 'unit'):
+            return value.to(self.unit).value
+        else:
+            raise ValueError("Can only compare cube objects to Quantities"
+                             " with a unit attribute.")
+
     def __gt__(self, value):
         """
         Return a LazyMask representing the inequality
@@ -1545,25 +1556,31 @@ class SpectralCube(object):
         value : number
             The threshold
         """
-        return LazyMask(lambda data: data > value, data=self._data, wcs=self._wcs)
+        value = self._val_to_own_unit(value)
+        return LazyComparisonMask(operator.gt, value, data=self._data, wcs=self._wcs)
 
     def __ge__(self, value):
-        return LazyMask(lambda data: data >= value, data=self._data, wcs=self._wcs)
+        value = self._val_to_own_unit(value)
+        return LazyComparisonMask(operator.ge, value, data=self._data, wcs=self._wcs)
 
     def __le__(self, value):
-        return LazyMask(lambda data: data <= value, data=self._data, wcs=self._wcs)
+        value = self._val_to_own_unit(value)
+        return LazyComparisonMask(operator.le, value, data=self._data, wcs=self._wcs)
 
     def __lt__(self, value):
-        return LazyMask(lambda data: data < value, data=self._data, wcs=self._wcs)
+        value = self._val_to_own_unit(value)
+        return LazyComparisonMask(operator.lt, value, data=self._data, wcs=self._wcs)
 
     def __eq__(self, value):
-        return LazyMask(lambda data: data == value, data=self._data, wcs=self._wcs)
+        value = self._val_to_own_unit(value)
+        return LazyComparisonMask(operator.eq, value, data=self._data, wcs=self._wcs)
 
     def __hash__(self):
         return id(self)
 
     def __ne__(self, value):
-        return LazyMask(lambda data: data != value, data=self._data, wcs=self._wcs)
+        value = self._val_to_own_unit(value)
+        return LazyComparisonMask(operator.ne, value, data=self._data, wcs=self._wcs)
 
     @classmethod
     def read(cls, filename, format=None, hdu=None, **kwargs):

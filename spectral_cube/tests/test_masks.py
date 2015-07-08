@@ -1,5 +1,6 @@
 import pytest
 import itertools
+import operator
 import numpy as np
 from numpy.testing import assert_allclose
 from numpy.lib.stride_tricks import as_strided
@@ -7,9 +8,9 @@ from astropy.wcs import WCS
 from astropy import units as u
 
 from .test_spectral_cube import cube_and_raw
-from .. import (BooleanArrayMask, SpectralCube, LazyMask,
+from .. import (BooleanArrayMask, SpectralCube, LazyMask, LazyComparisonMask,
                 FunctionMask, CompositeMask)
-from ..masks import is_broadcastable_and_smaller
+from ..masks import is_broadcastable_and_smaller, dims_to_skip, view_of_subset
 
 from distutils.version import StrictVersion
 
@@ -41,6 +42,38 @@ def test_lazy_mask():
     wcs = WCS()
 
     m = LazyMask(lambda x: x > 2, data=data, wcs=wcs)
+
+    assert_allclose(m.include(data, wcs), [[[0, 0, 0, 1, 1]]])
+    assert_allclose(m.exclude(data, wcs), [[[1, 1, 1, 0, 0]]])
+    assert_allclose(m._filled(data, wcs), [[[np.nan, np.nan, np.nan, 3, 4]]])
+    assert_allclose(m._flattened(data, wcs), [3, 4])
+
+    assert_allclose(m.include(data, wcs, view=(0, 0, slice(1, 4))), [0, 0, 1])
+    assert_allclose(m.exclude(data, wcs, view=(0, 0, slice(1, 4))), [1, 1, 0])
+    assert_allclose(m._filled(data, wcs, view=(0, 0, slice(1, 4))), [np.nan, np.nan, 3])
+    assert_allclose(m._flattened(data, wcs, view=(0, 0, slice(1, 4))), [3])
+
+    # Now if we call with different data, the results for include and exclude
+    # should *not* change.
+
+    data = (3 - np.arange(5)).reshape((1, 1, 5))
+
+    assert_allclose(m.include(data, wcs), [[[0, 0, 0, 1, 1]]])
+    assert_allclose(m.exclude(data, wcs), [[[1, 1, 1, 0, 0]]])
+    assert_allclose(m._filled(data, wcs), [[[np.nan, np.nan, np.nan, 0, -1]]])
+    assert_allclose(m._flattened(data, wcs), [0, -1])
+
+    assert_allclose(m.include(data, wcs, view=(0, 0, slice(1, 4))), [0, 0, 1])
+    assert_allclose(m.exclude(data, wcs, view=(0, 0, slice(1, 4))), [1, 1, 0])
+    assert_allclose(m._filled(data, wcs, view=(0, 0, slice(1, 4))), [np.nan, np.nan, 0])
+    assert_allclose(m._flattened(data, wcs, view=(0, 0, slice(1, 4))), [0])
+
+def test_lazy_comparison_mask():
+
+    data = np.arange(5).reshape((1, 1, 5))
+    wcs = WCS()
+
+    m = LazyComparisonMask(operator.gt, 2, data=data, wcs=wcs)
 
     assert_allclose(m.include(data, wcs), [[[0, 0, 0, 1, 1]]])
     assert_allclose(m.exclude(data, wcs), [[[1, 1, 1, 0, 0]]])
@@ -272,6 +305,20 @@ shape_combos = list(itertools.combinations(shapes,2))
 def test_is_broadcastable(shp1, shp2):
     assert is_broadcastable_and_smaller(shp1,shp2) == is_broadcastable_try(shp1,shp2)
 
+@pytest.mark.parametrize(('shp1','shp2','dim'),
+                         (([5,5],[2,5,5],[0]),
+                          #([5,5],[5,5,2],[2]),
+                          ([2,5,5],[2,5,5],[])))
+def test_dims_to_skip(shp1, shp2, dim):
+    assert dims_to_skip(shp1, shp2) == dim
+
+@pytest.mark.parametrize(('shp1','shp2', 'inview', 'outview'),
+                         (([5,5],[2,5,5],  [slice(0,1), slice(1,3), slice(2,4),], [slice(1,3), slice(2,4)]),
+                          # not a valid broadcast ([5,5],[5,5,2],  [slice(1,3), slice(2,4), slice(0,1),], [slice(1,3), slice(2,4)]),
+                          ([2,5,5],[2,5,5],[slice(0,1), slice(1,3), slice(2,4),], [slice(0,1), slice(1,3), slice(2,4),])))
+def test_view_of_subset(shp1, shp2, inview, outview):
+    assert view_of_subset(shp1,shp2,inview) == outview
+
 def test_flat_mask():
     cube, data = cube_and_raw('adv.fits')
 
@@ -299,7 +346,8 @@ def test_flat_mask_spectral():
     # Broadcast the 2D mask to 3D
     cubemask = (np.ones(4,dtype='bool')[:,None,None] & mask_array[None,:,:])
     # Check that spectral masking works too
-    assert np.all((data*cubemask).sum(axis=(1,2)) == mcube.sum(axis=(1,2)).value)
+    assert np.all((data*cubemask).sum(axis=(1,2)) ==
+                  mcube.sum(axis=(1,2)).value)
 
 def test_include():
     cube, data = cube_and_raw('adv.fits')
