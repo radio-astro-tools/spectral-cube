@@ -5,6 +5,7 @@ import time
 from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy.extern import six
+import warnings
 
 try:
     import yt
@@ -222,6 +223,8 @@ class ytCube(object):
                                        "flux",
                                        level)
         if export_to == 'sketchfab':
+            if filename is not None:
+                warnings.warn("sketchfab export does not expect a filename entry")
             return surface.export_sketchfab(title=title,
                                             description=description,
                                             color_map=color_map,
