@@ -542,15 +542,26 @@ class SpectralCube(object):
         return nx, ny
 
     @warn_slow
-    def apply_everywhere(self, function):
+    def apply_everywhere(self, function, *args):
         """
         Return a new cube with ``function`` applied to all pixels
+
+        Examples
+        --------
+        >>> newcube = cube.apply_everywhere(np.add(0.5*u.Jy))
         """
 
-        # First, check that function returns same # of dims?
-        assert function(np.ones([1,1,1])).shape == (1,1,1)
+        try:
+            test_result = function(np.ones([1,1,1])*self.unit, *args)
+            # First, check that function returns same # of dims?
+            assert test_result.shape == (1,1,1)
+        except Exception as ex:
+            raise AssertionError("Function could not be applied to a simple "
+                                 "cube.  The error was: {0}".format(ex))
 
-        return self._new_cube_with(data=function(self._data))
+        data = function(self._get_filled_data(fill=self._fill_value), *args)
+
+        return self._new_cube_with(data=data)
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False, **kwargs):
