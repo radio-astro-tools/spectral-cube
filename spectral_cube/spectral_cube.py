@@ -62,6 +62,7 @@ def cached(func):
     return wrapper
 
 def warn_slow(function):
+    # TODO: add check for whether cube has been loaded into memory
     warnings.warn("This function requires loading the entire cube into memory "
                   "and may therefore be slow.")
     return function
