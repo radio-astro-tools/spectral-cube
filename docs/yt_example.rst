@@ -68,12 +68,12 @@ produce a 3-d isocontour visualization using an object returned by
 :meth:`~spectral_cube.SpectralCube.to_yt`::
 
     import numpy as np
-    from spectral_cube import read
+    from spectral_cube import SpectralCube
     from yt.mods import ColorTransferFunction, write_bitmap
     import astropy.units as u
 
     # Read in spectral cube
-    cube = read('L1448_13CO.fits', format='fits')
+    cube = SpectralCube.read('L1448_13CO.fits', format='fits')
 
     # Extract the yt object from the SpectralCube instance
     ytcube = cube.to_yt(spectral_factor=0.75)
@@ -101,8 +101,8 @@ produce a 3-d isocontour visualization using an object returned by
     width = 100.  # pixels
     size = 1024
 
-    camera = ds.h.camera(center, direction, width, size, transfer,
-                         fields=['flux'])
+    camera = ds.camera(center, direction, width, size, transfer,
+                       fields=['flux'])
 
     # Take a snapshot and save to a file
     snapshot = camera.snapshot()
