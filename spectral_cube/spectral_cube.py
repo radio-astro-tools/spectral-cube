@@ -553,9 +553,6 @@ class SpectralCube(object):
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False, **kwargs):
-    # not clear if this should be removed?
-    # def _apply_along_axes(self, function, axis=None, weights=None, wcs=False,
-    #                       **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
