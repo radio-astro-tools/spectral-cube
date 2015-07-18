@@ -27,7 +27,8 @@ from distutils.version import StrictVersion
 
 __all__ = ['SpectralCube']
 
-__doctest_skip__ = ['SpectralCube.world']
+# apply_everywhere, world: do not have a valid cube to test on
+__doctest_skip__ = ['SpectralCube.world', 'SpectralCube.apply_everywhere']
 
 try:  # TODO replace with six.py
     xrange
@@ -549,7 +550,8 @@ class SpectralCube(object):
 
         Examples
         --------
-        >>> newcube = cube.apply_everywhere(np.add(0.5*u.Jy))
+        >>> cube = SpectralCube.read('xyv.fits')
+        >>> newcube = cube.apply_everywhere(np.add, 0.5*u.Jy)
         """
 
         try:
