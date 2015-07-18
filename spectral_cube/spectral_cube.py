@@ -63,8 +63,9 @@ def cached(func):
 
 def warn_slow(function):
     # TODO: add check for whether cube has been loaded into memory
-    warnings.warn("This function requires loading the entire cube into memory "
-                  "and may therefore be slow.")
+    warnings.warn("This function ({0}) requires loading the entire cube into "
+                  "memory "
+                  "and may therefore be slow.".format(str(function)))
     return function
 
 _NP_DOC = """
