@@ -195,11 +195,24 @@ class TestArithmetic(object):
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
 
+    def test_add_cubes(self):
+        d2 = self.d1 + self.d1
+        c2 = self.c1 + self.c1
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_subtract(self, value):
         d2 = self.d1 - value
         c2 = self.c1 - value*u.K
         assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+
+    def test_subtract_cubes(self):
+        d2 = self.d1 - self.d1
+        c2 = self.c1 - self.c1
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert np.all(c2.filled_data[:].value == 0)
         assert c2.unit == u.K
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
@@ -209,12 +222,25 @@ class TestArithmetic(object):
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
 
+    def test_mul_cubes(self):
+        d2 = self.d1 * self.d1
+        c2 = self.c1 * self.c1
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K**2
+
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_div(self, value):
         d2 = self.d1 / value
         c2 = self.c1 / value
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
+
+    def test_div_cubes(self):
+        d2 = self.d1 / self.d1
+        c2 = self.c1 / self.c1
+        assert np.all((d2 == c2.filled_data[:].value) | (np.isnan(c2.filled_data[:])))
+        assert np.all((c2.filled_data[:] == 1) | (np.isnan(c2.filled_data[:])))
+        assert c2.unit == u.dimensionless_unscaled
 
     @pytest.mark.parametrize(('value'),
                              (1,1.0,2,2.0))
@@ -223,6 +249,12 @@ class TestArithmetic(object):
         c2 = self.c1 ** value
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K**value
+
+    def test_cube_add(self):
+        c2 = self.c1 + self.c1
+        d2 = self.d1 + self.d1
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
 
 
 

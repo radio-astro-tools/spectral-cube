@@ -597,6 +597,40 @@ class SpectralCube(object):
 
         return self._new_cube_with(data=data, unit=data.unit)
 
+    @warn_slow
+    def _cube_on_cube_operation(self, function, cube, equivalencies=[]):
+        """
+        Apply an operation between two cubes.  Inherits the metadata of the
+        left cube.
+        """
+        assert cube.shape == self.shape
+        if not self.unit.is_equivalent(cube.unit, equivalencies=equivalencies):
+            raise u.UnitsError("{0} is not equivalent to {1}"
+                               .format(self.unit, cube.unit))
+        if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True):
+            warnings.warn("Cube WCSs do not match, but their shapes do")
+        try:
+            test_result = function(np.ones([1,1,1])*self.unit,
+                                   np.ones([1,1,1])*self.unit)
+            # First, check that function returns same # of dims?
+            assert test_result.shape == (1,1,1)
+        except Exception as ex:
+            raise AssertionError("Function {1} could not be applied to a "
+                                 "pair of simple "
+                                 "cube.  The error was: {0}".format(ex,
+                                                                    function))
+
+        cube = cube.to(self.unit)
+        data = function(self._data, cube._data)
+        try:
+            # multiplication, division, etc. are valid inter-unit operations
+            unit = function(self.unit, cube.unit)
+        except TypeError:
+            # addition, subtraction are not
+            unit = self.unit
+
+        return self._new_cube_with(data=data, unit=unit)
+
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False, **kwargs):
         """
@@ -1604,14 +1638,20 @@ class SpectralCube(object):
         Given a value, check if it has a unit.  If it does, convert to the
         cube's unit.  If it doesn't, raise an exception.
         """
-        if hasattr(value, 'unit'):
+        if isinstance(value, SpectralCube):
+            if self.unit.is_equivalent(value.unit):
+                return value
+            else:
+                return value.to(self.unit)
+        elif hasattr(value, 'unit'):
             if keepunit:
                 return value.to(self.unit)
             else:
                 return value.to(self.unit).value
         else:
             raise ValueError("Can only {operation} cube objects {tofrom}"
-                             " Quantities with a unit attribute."
+                             " SpectralCubes or Quantities with "
+                             "a unit attribute."
                              .format(operation=operation, tofrom=tofrom))
 
     def __gt__(self, value):
@@ -1650,23 +1690,38 @@ class SpectralCube(object):
         return LazyComparisonMask(operator.ne, value, data=self._data, wcs=self._wcs)
 
     def __add__(self, value):
-        value = self._val_to_own_unit(value, operation='add', tofrom='from',
-                                      keepunit=True)
-        return self._apply_everywhere(operator.add, value)
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.add, value)
+        else:
+            value = self._val_to_own_unit(value, operation='add', tofrom='from',
+                                          keepunit=True)
+            return self._apply_everywhere(operator.add, value)
 
     def __sub__(self, value):
-        value = self._val_to_own_unit(value, operation='subtract',
-                                      tofrom='from', keepunit=True)
-        return self._apply_everywhere(operator.sub, value)
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.sub, value)
+        else:
+            value = self._val_to_own_unit(value, operation='subtract',
+                                          tofrom='from', keepunit=True)
+            return self._apply_everywhere(operator.sub, value)
 
     def __mul__(self, value):
-        return self._apply_everywhere(operator.mul, value)
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.mul, value)
+        else:
+            return self._apply_everywhere(operator.mul, value)
 
     def __div__(self, value):
-        return self._apply_everywhere(operator.div, value)
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.div, value)
+        else:
+            return self._apply_everywhere(operator.div, value)
 
     def __pow__(self, value):
-        return self._apply_everywhere(operator.pow, value)
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.pow, value)
+        else:
+            return self._apply_everywhere(operator.pow, value)
 
 
     @classmethod
@@ -1922,6 +1977,26 @@ class SpectralCube(object):
         """
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
+
+    def to(self, unit, equivalencies=()):
+        """
+        Return the cube converted to the given unit (assuming it is equivalent).
+        If conversion was required, this will be a copy, otherwise it will
+        """
+        
+        if not isinstance(unit, u.Unit):
+            unit = u.Unit(unit)
+
+        if unit == self.unit:
+            # No copying
+            return self
+
+        # scaling factor
+        factor = self.unit.to(unit, equivalencies=equivalencies)
+
+        return self._new_cube_with(data=self._data*factor,
+                                   unit=unit)
+
 
     def find_lines(self, velocity_offset=None, velocity_convention=None,
                    rest_value=None, **kwargs):
