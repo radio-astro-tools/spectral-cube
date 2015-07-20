@@ -463,24 +463,6 @@ class SpectralCube(object):
                                          how=how, axis=axis, unit=self.unit,
                                          projection=projection)
 
-    def __add__(self, value):
-        value = self._val_to_own_unit(value, operation='add', tofrom='from')
-        return self._apply_everywhere(operator.add, value)
-
-    def __sub__(self, value):
-        value = self._val_to_own_unit(value, operation='subtract',
-                                      tofrom='from')
-        return self._apply_everywhere(operator.sub, value)
-
-    def __mul__(self, value):
-        return self._apply_everywhere(operator.mul, value)
-
-    def __div__(self, value):
-        return self._apply_everywhere(operator.div, value)
-
-    def __pow__(self, value):
-        return self._apply_everywhere(operator.pow, value)
-
     @aggregation_docstring
     def mean(self, axis=None, how='cube'):
         """
@@ -1616,13 +1598,17 @@ class SpectralCube(object):
 
         return world[::-1]  # reverse WCS -> numpy order
 
-    def _val_to_own_unit(self, value, operation='compare', tofrom='to'):
+    def _val_to_own_unit(self, value, operation='compare', tofrom='to',
+                         keepunit=False):
         """
         Given a value, check if it has a unit.  If it does, convert to the
         cube's unit.  If it doesn't, raise an exception.
         """
         if hasattr(value, 'unit'):
-            return value.to(self.unit).value
+            if keepunit:
+                return value.to(self.unit)
+            else:
+                return value.to(self.unit).value
         else:
             raise ValueError("Can only {operation} cube objects {tofrom}"
                              " Quantities with a unit attribute."
@@ -1662,6 +1648,26 @@ class SpectralCube(object):
     def __ne__(self, value):
         value = self._val_to_own_unit(value)
         return LazyComparisonMask(operator.ne, value, data=self._data, wcs=self._wcs)
+
+    def __add__(self, value):
+        value = self._val_to_own_unit(value, operation='add', tofrom='from',
+                                      keepunit=True)
+        return self._apply_everywhere(operator.add, value)
+
+    def __sub__(self, value):
+        value = self._val_to_own_unit(value, operation='subtract',
+                                      tofrom='from', keepunit=True)
+        return self._apply_everywhere(operator.sub, value)
+
+    def __mul__(self, value):
+        return self._apply_everywhere(operator.mul, value)
+
+    def __div__(self, value):
+        return self._apply_everywhere(operator.div, value)
+
+    def __pow__(self, value):
+        return self._apply_everywhere(operator.pow, value)
+
 
     @classmethod
     def read(cls, filename, format=None, hdu=None, **kwargs):
