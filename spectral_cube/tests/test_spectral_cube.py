@@ -172,12 +172,52 @@ class TestSpectralCube(object):
         c1, d1 = cube_and_raw('advs.fits')
 
         # append 'o' to indicate that it has been operated on
-        c1o = c1.apply_everywhere(operation, value)
+        c1o = c1._apply_everywhere(operation, value)
         d1o = operation(u.Quantity(d1, u.K), value)
 
         assert np.all(d1o == c1o.filled_data[:])
         # allclose fails on identical data?
         #assert_allclose(d1o, c1o.filled_data[:])
+
+class TestArithmetic(BaseTest):
+
+    def __init__(self):
+        self.c1, self.d1 = cube_and_raw('adv.fits')
+
+        # make nice easy-to-test numbers
+        self.d1.flat[:] = np.arange(self.d1.size)
+        self.c1._data.flat[:] = np.arange(self.d1.size)
+
+    def test_add(self):
+        d2 = self.d1 + 1*u.K
+        c2 = self.c1 + 1*u.K
+        assert np.all(d2 == c2.filled_data[:])
+        assert c2.unit == u.K
+
+    def test_subtract(self):
+        d2 = self.d1 - 1*u.K
+        c2 = self.c1 - 1*u.K
+        assert np.all(d2 == c2.filled_data[:])
+        assert c2.unit == u.K
+
+    def test_mul(self):
+        d2 = self.d1 * 2
+        c2 = self.c1 * 2
+        assert np.all(d2 == c2.filled_data[:])
+        assert c2.unit == u.K
+
+    def test_div(self):
+        d2 = self.d1 / 2
+        c2 = self.c1 / 2
+        assert np.all(d2 == c2.filled_data[:])
+        assert c2.unit == u.K
+
+    def test_pow(self):
+        d2 = self.d1 ** 2
+        c2 = self.c1 ** 2
+        assert np.all(d2 == c2.filled_data[:])
+        assert c2.unit == u.K**2
+
 
 
 class TestFilters(BaseTest):

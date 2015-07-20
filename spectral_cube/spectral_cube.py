@@ -28,7 +28,7 @@ from distutils.version import StrictVersion
 __all__ = ['SpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
-__doctest_skip__ = ['SpectralCube.world', 'SpectralCube.apply_everywhere']
+__doctest_skip__ = ['SpectralCube.world', 'SpectralCube._apply_everywhere']
 
 try:  # TODO replace with six.py
     xrange
@@ -463,6 +463,24 @@ class SpectralCube(object):
                                          how=how, axis=axis, unit=self.unit,
                                          projection=projection)
 
+    def __add__(self, value):
+        value = self._val_to_own_unit(value, operation='add', tofrom='from')
+        return self._apply_everywhere(operator.add, value)
+
+    def __sub__(self, value):
+        value = self._val_to_own_unit(value, operation='subtract',
+                                      tofrom='from')
+        return self._apply_everywhere(operator.sub, value)
+
+    def __mul__(self, value):
+        return self._apply_everywhere(operator.mul, value)
+
+    def __div__(self, value):
+        return self._apply_everywhere(operator.div, value)
+
+    def __pow__(self, value):
+        return self._apply_everywhere(operator.pow, value)
+
     @aggregation_docstring
     def mean(self, axis=None, how='cube'):
         """
@@ -571,9 +589,11 @@ class SpectralCube(object):
         return nx, ny
 
     @warn_slow
-    def apply_everywhere(self, function, *args):
+    def _apply_everywhere(self, function, *args):
         """
         Return a new cube with ``function`` applied to all pixels
+
+        Private because this doesn't have an obvious and easy-to-use API
 
         Examples
         --------
@@ -1596,7 +1616,7 @@ class SpectralCube(object):
 
         return world[::-1]  # reverse WCS -> numpy order
 
-    def _val_to_own_unit(self, value):
+    def _val_to_own_unit(self, value, operation='compare', tofrom='to'):
         """
         Given a value, check if it has a unit.  If it does, convert to the
         cube's unit.  If it doesn't, raise an exception.
@@ -1604,8 +1624,9 @@ class SpectralCube(object):
         if hasattr(value, 'unit'):
             return value.to(self.unit).value
         else:
-            raise ValueError("Can only compare cube objects to Quantities"
-                             " with a unit attribute.")
+            raise ValueError("Can only {operation} cube objects {tofrom}"
+                             " Quantities with a unit attribute."
+                             .format(operation=operation, tofrom=tofrom))
 
     def __gt__(self, value):
         """
