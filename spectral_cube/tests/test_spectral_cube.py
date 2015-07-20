@@ -163,6 +163,23 @@ class TestSpectralCube(object):
                         outcv.to(u.Hz).value)
 
 
+    @pytest.mark.parametrize(('operation', 'value'),
+                             ((operator.add, 0.5*u.K),
+                              (operator.sub, 0.5*u.K),
+                              (operator.mul, 0.5*u.K),
+                              (operator.div, 0.5*u.K),))
+    def test_apply_everywhere(self, operation, value):
+        c1, d1 = cube_and_raw('advs.fits')
+
+        # append 'o' to indicate that it has been operated on
+        c1o = c1.apply_everywhere(operation, value)
+        d1o = operation(u.Quantity(d1, u.K), value)
+
+        assert np.all(d1o == c1o.filled_data[:])
+        # allclose fails on identical data?
+        #assert_allclose(d1o, c1o.filled_data[:])
+
+
 class TestFilters(BaseTest):
 
     def test_mask_data(self):

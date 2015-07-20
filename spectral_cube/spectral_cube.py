@@ -138,7 +138,8 @@ class SpectralCube(object):
         self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore
-                           # object or array-like object, given that WCS needs to be consistent with data?
+                           # object or array-like object, given that WCS needs
+                           # to be consistent with data?
         #assert mask._wcs == self._wcs
         self._fill_value = fill_value
 
@@ -160,12 +161,38 @@ class SpectralCube(object):
         self._spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
-                       fill_value=None, spectral_unit=None):
+                       fill_value=None, spectral_unit=None, unit=None):
 
         data = self._data if data is None else data
+        if unit is None and hasattr(data, 'unit'):
+            if data.unit != self.unit:
+                raise u.UnitsError("New data unit '{0}' does not"
+                                   " match cube unit '{1}'.  You can"
+                                   " override this by specifying the"
+                                   " `unit` keyword."
+                                   .format(data.unit, self.unit))
+            unit = data.unit
+        elif unit is not None:
+            # convert string units to Units
+            if not isinstance(unit, u.Unit):
+                unit = u.Unit(unit)
+
+            if hasattr(data, 'unit'):
+                if u.Unit(unit) != data.unit:
+                    raise u.UnitsError("The specified new cube unit '{0}' "
+                                       "does not match the input unit '{1}'."
+                                       .format(unit, data.unit))
+            else:
+                data = u.Quantity(data, unit=unit, copy=False)
+
         wcs = self._wcs if wcs is None else wcs
         mask = self._mask if mask is None else mask
-        meta = self._meta if meta is None else meta
+        if meta is None:
+            meta = {}
+            meta.update(self._meta)
+        if unit is not None:
+            meta['BUNIT'] = unit.to_string(format='FITS')
+
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
 
@@ -562,9 +589,11 @@ class SpectralCube(object):
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
 
-        data = function(self._get_filled_data(fill=self._fill_value), *args)
+        data = function(u.Quantity(self._get_filled_data(fill=self._fill_value),
+                                   self.unit, copy=False),
+                        *args)
 
-        return self._new_cube_with(data=data)
+        return self._new_cube_with(data=data, unit=data.unit)
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False, **kwargs):
@@ -1844,7 +1873,7 @@ class SpectralCube(object):
             # (Jy/Beam)
             header['BUNIT'] = self._meta['BUNIT']
         else:
-            header['BUNIT'] = self.unit.to_string(format='fits')
+            header['BUNIT'] = self.unit.to_string(format='FITS')
         header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
         header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
         header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
