@@ -4,6 +4,8 @@
  - Add experimental line-finding tool using astroquery.splatalogue
    (https://github.com/radio-astro-tools/spectral-cube/pull/210)
  - Bugfixes (211,212,217)
+ - Add arithmetic operations (add, subtract, divide, multiply, power)
+   (https://github.com/radio-astro-tools/spectral-cube/pull/220)
 
 0.2.2 (2015-03-12)
 ------------------
