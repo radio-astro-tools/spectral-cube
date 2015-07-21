@@ -1711,11 +1711,14 @@ class SpectralCube(object):
         else:
             return self._apply_everywhere(operator.mul, value)
 
+    def __truediv__(self, value):
+        return self.__div__(value)
+
     def __div__(self, value):
         if isinstance(value, SpectralCube):
-            return self._cube_on_cube_operation(operator.div, value)
+            return self._cube_on_cube_operation(operator.truediv, value)
         else:
-            return self._apply_everywhere(operator.div, value)
+            return self._apply_everywhere(operator.truediv, value)
 
     def __pow__(self, value):
         if isinstance(value, SpectralCube):
