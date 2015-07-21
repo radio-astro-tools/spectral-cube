@@ -168,7 +168,7 @@ class TestSpectralCube(object):
                               (operator.sub, 0.5*u.K),
                               (operator.mul, 0.5*u.K),
                               (operator.truediv, 0.5*u.K),
-                              (operator.div, 0.5*u.K),
+                              (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
                              ))
     def test_apply_everywhere(self, operation, value):
         c1, d1 = cube_and_raw('advs.fits')
