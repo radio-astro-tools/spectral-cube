@@ -13,6 +13,7 @@ data should be used, and the value ``False`` when the data should be ignored
 (though it is also possible to flip the convention around). To create a
 boolean mask from a boolean array ``mask_array``, you can for example use::
 
+    >>> from astropy import units as u
     >>> from spectral_cube import BooleanArrayMask
     >>> mask = BooleanArrayMask(mask=mask_array, wcs=cube.wcs)  # doctest: +SKIP
 
@@ -22,14 +23,14 @@ because it may require a large amount of memory.
 You can also create a mask using simple conditions directly on the cube
 values themselves, for example::
 
-    >>> mask = cube > 1.3  # doctest: +SKIP
+    >>> mask = cube > 1.3*u.K  # doctest: +SKIP
 
-This is more efficient, because the condition is actually evaluated
-on-the-fly as needed.
+This is more efficient, because the condition is actually evaluated on-the-fly
+as needed.  Note that units equivalent to the cube's units must be used.
 
 Masks can be combined using standard boolean comparison operators::
 
-   >>> new_mask = (cube > 1.3) & (cube < 100.)  # doctest: +SKIP
+   >>> new_mask = (cube > 1.3*u.K) & (cube < 100.*u.K)  # doctest: +SKIP
 
 The available operators are ``&`` (and), ``|`` (or), and ``~`` (not).
 
@@ -132,8 +133,8 @@ As shown in `Getting Started`_, :class:`~spectral_cube.LazyMask` instances
 can also be defined directly by specifying conditions on
 :class:`~spectral_cube.SpectralCube` objects:
 
-   >>> cube > 5  # doctest: +SKIP
-       LazyMask(...)
+   >>> cube > 5*u.K  # doctest: +SKIP
+       LazyComparisonMask(...)
 
 .. TODO: add example for FunctionalMask
 

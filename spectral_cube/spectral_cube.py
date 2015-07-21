@@ -586,7 +586,7 @@ class SpectralCube(object):
         try:
             test_result = function(np.ones([1,1,1])*self.unit, *args)
             # First, check that function returns same # of dims?
-            assert test_result.shape == (1,1,1)
+            assert test_result.ndim == 3,"Output is not 3-dimensional"
         except Exception as ex:
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
