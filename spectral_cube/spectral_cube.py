@@ -771,6 +771,7 @@ class SpectralCube(object):
                                 
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
+            log.info("")
             return Slice(value=self.filled_data[view],
                          wcs=newwcs,
                          copy=False,
