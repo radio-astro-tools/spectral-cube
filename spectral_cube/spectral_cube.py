@@ -826,8 +826,42 @@ class SpectralCube(object):
         """
         return self._new_cube_with(fill_value=fill_value)
 
+    def with_reference_frame(self, reference_frame, source_redshift=None,
+                             source_reference_frame=None):
+        """
+        Parameters
+        ----------
+        reference_frame : str
+            The frame of rest of the specified frequency, wavelength, or
+            velocity, FITS keyword SPECSYS.  Must be one of the allowed
+            keywords in FITS Paper III, Table 12: TOPOCENT, GEOCENTR, BARYCENT,
+            HELIOCEN, LSRK, LSRD, GALACTOC, LOCALGRP, CMBDIPOL, or SOURCE.
+            If SOURCE is used, the ``source_reference_frame`` and
+            ``source_redshift`` must also be specfied
+        source_reference_frame : str
+            The frame of rest of the specified frequency, wavelength, or
+            velocity, FITS keyword SSYSSRC.  Must be one of the allowed
+            keywords in FITS Paper III, Table 12: TOPOCENT, GEOCENTR, BARYCENT,
+            HELIOCEN, LSRK, LSRD, GALACTOC, LOCALGRP, CMBDIPOL.  This is the
+            frame of rest against which source_redshift is defined.
+        source_redshift : float
+            The redshift of the source in frame ``source_reference_frame``,
+            FITS keyword ZSOURCE.  This must be an actual unitless redshift,
+            not a velocity, and therefore uses the optical convention for
+            velocity.
+        """
+
+        valid_reference_frames = ["TOPOCENT", "GEOCENTR", "BARYCENT",
+                                  "HELIOCEN", "LSRK", "LSRD", "GALACTOC",
+                                  "LOCALGRP", "CMBDIPOL", "SOURCE"]
+        # TOPO -> GEO requires OBS-GEO, DATE
+        # GEO -> BARY requires DATE
+        # the rest can be computed
+        # VELOSYS is the velocity difference between SSYSOBS and SPECSYS
+
     def with_spectral_unit(self, unit, velocity_convention=None,
-                           rest_value=None):
+                           rest_value=None, spectral_reference_system='LSRK',
+                           velosys='LSRK'):
         """
         Returns a new Cube with a different Spectral Axis unit
 
