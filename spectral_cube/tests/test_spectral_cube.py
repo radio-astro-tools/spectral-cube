@@ -10,6 +10,7 @@ warnings.simplefilter('always', UserWarning)
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
+from astropy.wcs import _wcs
 import numpy as np
 
 from .. import (SpectralCube, BooleanArrayMask, FunctionMask, LazyMask,
@@ -540,7 +541,11 @@ def test_read_write_rountrip(tmpdir):
 
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
-    assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
+    if StrictVersion(_wcs.__version__) != StrictVersion('5.9'):
+        # see https://github.com/astropy/astropy/pull/3992 for reasons:
+        # we should upgrade this for 5.10 when the absolute accuracy is
+        # maximized
+        assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
 
 def _dummy_cube():
