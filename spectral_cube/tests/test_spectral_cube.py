@@ -1,6 +1,11 @@
 import pytest
 import operator
 import itertools
+import warnings
+
+# needed to test for warnings later
+warnings.simplefilter('always', UserWarning)
+
 
 from astropy.io import fits
 from astropy import units as u
@@ -49,6 +54,36 @@ def cube_and_raw(filename):
     c = SpectralCube.read(p, format='fits')
     return c, d
 
+
+def test_arithmetic_warning(recwarn):
+
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+
+    assert not cube._is_huge
+
+    # make sure the small cube raises a warning about loading into memory
+    cube + 5*cube.unit
+    w = recwarn.list[-1]
+
+    assert 'requires loading the entire cube into' in str(w.message)
+
+
+def test_huge_disallowed():
+
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+
+    data = np.empty([1e2,1e3,1e3])
+    cube = SpectralCube(data=data, wcs=cube.wcs)
+
+    assert cube._is_huge
+
+    with pytest.raises(ValueError) as exc:
+        cube + 5*cube.unit
+    assert 'entire cube into memory' in exc.value.args[0]
+
+    cube.allow_huge_operations = True
+    # just make sure it doesn't fail
+    cube + 5*cube.unit
 
 class BaseTest(object):
 
@@ -843,4 +878,3 @@ def test_jybeam_lower():
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
-

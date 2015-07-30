@@ -63,11 +63,22 @@ def cached(func):
     return wrapper
 
 def warn_slow(function):
-    # TODO: add check for whether cube has been loaded into memory
-    warnings.warn("This function ({0}) requires loading the entire cube into "
-                  "memory "
-                  "and may therefore be slow.".format(str(function)))
-    return function
+
+    @wraps(function)
+    def wrapper(self, *args, **kwargs):
+        if self._is_huge and not self.allow_huge_operations:
+            raise ValueError("This function ({0}) requires loading the entire "
+                             "cube into memory, and the cube is large ({1} "
+                             "pixels), so by default we disable this operation. "
+                             "To enable the operation, set "
+                             "`cube.allow_huge_operations=True` and try again."
+                             .format(str(function), self.size))
+        elif not self._is_huge:
+            # TODO: add check for whether cube has been loaded into memory
+            warnings.warn("This function ({0}) requires loading the entire cube into "
+                          "memory and may therefore be slow.".format(str(function)))
+        return function(self, *args, **kwargs)
+    return wrapper
 
 _NP_DOC = """
 Ignores excluded mask elements.
@@ -100,7 +111,7 @@ np2wcs = {2: 0, 1: 1, 0: 2}
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None):
+                 header=None, allow_huge_operations=False):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
@@ -160,6 +171,13 @@ class SpectralCube(object):
 
         self._spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
 
+        self.allow_huge_operations = allow_huge_operations
+
+    @property
+    def _is_huge(self):
+        # TODO: make threshold depend on memory?
+        return cube_utils.is_huge(self, threshold=1e8)
+
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None, unit=None):
 
@@ -197,7 +215,8 @@ class SpectralCube(object):
         spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
 
         cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
-                            fill_value=fill_value, header=self._header)
+                            fill_value=fill_value, header=self._header,
+                            allow_huge_operations=self.allow_huge_operations)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 
