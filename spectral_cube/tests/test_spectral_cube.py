@@ -541,7 +541,8 @@ def test_read_write_rountrip(tmpdir):
 
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
-    if StrictVersion(_wcs.__version__) != StrictVersion('5.9'):
+    if ((hasattr(_wcs, '__version__') and StrictVersion(_wcs.__version__) != StrictVersion('5.9'))
+        or not hasattr(_wcs, '__version__')):
         # see https://github.com/astropy/astropy/pull/3992 for reasons:
         # we should upgrade this for 5.10 when the absolute accuracy is
         # maximized
