@@ -5,7 +5,10 @@
    (https://github.com/radio-astro-tools/spectral-cube/pull/210)
  - Bugfixes (211,212,217)
  - Add arithmetic operations (add, subtract, divide, multiply, power)
-   (https://github.com/radio-astro-tools/spectral-cube/pull/220)
+   (https://github.com/radio-astro-tools/spectral-cube/pull/220).
+   These operations will not be permitted on large cubes by default, but will
+   require the user to specify that they are allowed using the attribute
+   ``allow_huge_operations``
 
 0.2.2 (2015-03-12)
 ------------------
