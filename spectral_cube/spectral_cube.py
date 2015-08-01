@@ -537,14 +537,10 @@ class SpectralCube(object):
                                             projection=False)
             mean = ttl/counts
 
-            def diffsum(x, axis=2, **kwargs):
-                assert axis == 2
-                return np.nansum(np.dstack((x[:,:,0], (x[:,:,1]-mean)**2)), axis=2,
-                                 **kwargs)
             planes = self._iter_slices(axis, fill=np.nan, check_endian=False)
             result = (next(planes)-mean)**2
             for plane in planes:
-                result = diffsum(np.dstack((result, plane)), axis=2)
+                result = np.nansum(np.dstack((result, (plane-mean)**2)), axis=2)
 
             out = (result/(counts-ddof))**0.5
 
