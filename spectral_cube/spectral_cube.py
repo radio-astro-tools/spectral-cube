@@ -491,16 +491,30 @@ class SpectralCube(object):
         projection = self._naxes_dropped(axis) in (1,2)
 
         if how == 'slice':
-            raise NotImplementedError("Mean cannot be computed "
-                                      "in a slicewise manner.  Please use a "
-                                      "different strategy.")
+            def nonnans(x, axis=None):
+                return np.sum(np.isfinite(x), axis=axis)
+            counts = self.apply_numpy_function(nonnans, fill=np.nan,
+                                               how='slice', axis=axis,
+                                               unit=None,
+                                               projection=False)
+            ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
+                                            axis=axis, unit=None,
+                                            projection=False)
+            out = ttl / counts
+            if projection:
+                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                return Projection(out, copy=False, wcs=new_wcs,
+                                  meta={'collapse_axis': axis},
+                                  unit=self.unit, header=self._nowcs_header)
+            else:
+                return out
 
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
 
     @aggregation_docstring
-    def std(self, axis=None, how='cube'):
+    def std(self, axis=None, how='cube', ddof=0):
         """
         Return the standard deviation of the cube, optionally over an axis.
         """
@@ -508,9 +522,39 @@ class SpectralCube(object):
         projection = self._naxes_dropped(axis) in (1,2)
 
         if how == 'slice':
-            raise NotImplementedError("Standard deviation cannot be computed "
-                                      "in a slicewise manner.  Please use a "
-                                      "different strategy.")
+            if axis is None:
+                 raise NotImplementedError("Standard deviation cannot be computed "
+                                           "in a slicewise manner.  Please use a "
+                                           "different strategy.")
+            def nonnans(x, axis=None, **kwargs):
+                return np.sum(np.isfinite(x), axis=axis, **kwargs)
+            counts = self.apply_numpy_function(nonnans, fill=np.nan,
+                                               how='slice', axis=axis,
+                                               unit=None,
+                                               projection=False)
+            ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
+                                            axis=axis, unit=None,
+                                            projection=False)
+            def nansum2(x, axis=2, **kwargs):
+                assert axis == 2
+                return np.nansum(np.dstack((x[:,:,0], x[:,:,1]**2)), axis=2,
+                                 **kwargs)
+            ttl2 = self.apply_numpy_function(nansum2, fill=np.nan, how=how,
+                                             axis=axis, unit=None,
+                                             projection=False)
+            #mean = ttl / counts
+            #out = ((ttl2 - 2*ttl*mean - mean**2)/(counts-ddof))**0.5
+            # to minimize underflow/overflow errors here, we set the dtypes
+            out = ((counts.astype('float64')*ttl2.astype('float64') -
+                    ttl.astype('float64')**2) /
+                   (counts.astype('float64')*(counts.astype('float64')-ddof)))**0.5
+            if projection:
+                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                return Projection(out, copy=False, wcs=new_wcs,
+                                  meta={'collapse_axis': axis},
+                                  unit=self.unit, header=self._nowcs_header)
+            else:
+                return out
 
         # standard deviation cannot be computed as a trivial step-by-step
         # process.  There IS a one-pass algorithm for std dev, but it is not
