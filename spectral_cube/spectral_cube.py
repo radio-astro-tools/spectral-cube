@@ -535,19 +535,19 @@ class SpectralCube(object):
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                             axis=axis, unit=None,
                                             projection=False)
-            def nansum2(x, axis=2, **kwargs):
+            mean = ttl/counts
+
+            def diffsum(x, axis=2, **kwargs):
                 assert axis == 2
-                return np.nansum(np.dstack((x[:,:,0], x[:,:,1]**2)), axis=2,
+                return np.nansum(np.dstack((x[:,:,0], (x[:,:,1]-mean)**2)), axis=2,
                                  **kwargs)
-            ttl2 = self.apply_numpy_function(nansum2, fill=np.nan, how=how,
-                                             axis=axis, unit=None,
-                                             projection=False)
-            #mean = ttl / counts
-            #out = ((ttl2 - 2*ttl*mean - mean**2)/(counts-ddof))**0.5
-            # to minimize underflow/overflow errors here, we set the dtypes
-            out = ((ttl2.astype('float64') -
-                    ttl.astype('float64')**2/counts.astype('float64')) /
-                   ((counts.astype('float64')-ddof)))**0.5
+            planes = self._iter_slices(axis, fill=np.nan, check_endian=False)
+            result = (next(planes)-mean)**2
+            for plane in planes:
+                result = diffsum(np.dstack((result, plane)), axis=2)
+
+            out = (result/(counts-ddof))**0.5
+
             if projection:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
                 return Projection(out, copy=False, wcs=new_wcs,
