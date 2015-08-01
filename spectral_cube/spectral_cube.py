@@ -545,9 +545,9 @@ class SpectralCube(object):
             #mean = ttl / counts
             #out = ((ttl2 - 2*ttl*mean - mean**2)/(counts-ddof))**0.5
             # to minimize underflow/overflow errors here, we set the dtypes
-            out = ((counts.astype('float64')*ttl2.astype('float64') -
-                    ttl.astype('float64')**2) /
-                   (counts.astype('float64')*(counts.astype('float64')-ddof)))**0.5
+            out = ((ttl2.astype('float64') -
+                    ttl.astype('float64')**2/counts.astype('float64')) /
+                   ((counts.astype('float64')-ddof)))**0.5
             if projection:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
                 return Projection(out, copy=False, wcs=new_wcs,
