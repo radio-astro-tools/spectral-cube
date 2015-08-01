@@ -532,7 +532,7 @@ class SpectralCube(object):
                                                how='slice', axis=axis,
                                                unit=None,
                                                projection=False)
-            ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
+            ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how='slice',
                                             axis=axis, unit=None,
                                             projection=False)
             mean = ttl/counts
