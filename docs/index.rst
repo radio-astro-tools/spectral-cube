@@ -23,12 +23,12 @@ Here's a simple script demonstrating ``spectral-cube``::
 
     >>> import astropy.units as u
     >>> from spectral_cube import SpectralCube
-    >>> cube = SpectralCube.read('data.fits')  # doctest: +SKIP
+    >>> cube = SpectralCube.read('adv.fits')  # doctest: +SKIP
     >>> print cube  # doctest: +SKIP
-    SpectralCube with shape=(563, 640, 640) and unit=K:
-    n_x: 640  type_x: RA---SIN  unit_x: deg
-    n_y: 640  type_y: DEC--SIN  unit_y: deg
-    n_s: 563  type_s: FREQ      unit_s: Hz
+    SpectralCube with shape=(4, 3, 2) and unit=K:
+    n_x:      2  type_x: RA---SIN  unit_x: deg    range:    24.062698 deg:   24.063349 deg
+    n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
+    n_s:      4  type_s: VOPT      unit_s: m / s  range:  -321214.699 m / s: -317350.054 m / s
 
     # extract the subcube between 98 and 100 GHz
     >>> slab = cube.spectral_slab(98 * u.GHz, 100 * u.GHz)  # doctest: +SKIP
@@ -59,6 +59,7 @@ Getting started
    creating_reading.rst
    accessing.rst
    masking.rst
+   arithmetic.rst
    manipulating.rst
    writing.rst
    moments.rst

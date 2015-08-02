@@ -1,10 +1,16 @@
 import pytest
 import operator
 import itertools
+import warnings
+
+# needed to test for warnings later
+warnings.simplefilter('always', UserWarning)
+
 
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
+from astropy.wcs import _wcs
 import numpy as np
 
 from .. import (SpectralCube, BooleanArrayMask, FunctionMask, LazyMask,
@@ -49,6 +55,36 @@ def cube_and_raw(filename):
     c = SpectralCube.read(p, format='fits')
     return c, d
 
+
+def test_arithmetic_warning(recwarn):
+
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+
+    assert not cube._is_huge
+
+    # make sure the small cube raises a warning about loading into memory
+    cube + 5*cube.unit
+    w = recwarn.list[-1]
+
+    assert 'requires loading the entire cube into' in str(w.message)
+
+
+def test_huge_disallowed():
+
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+
+    data = np.empty([1e2,1e3,1e3])
+    cube = SpectralCube(data=data, wcs=cube.wcs)
+
+    assert cube._is_huge
+
+    with pytest.raises(ValueError) as exc:
+        cube + 5*cube.unit
+    assert 'entire cube into memory' in exc.value.args[0]
+
+    cube.allow_huge_operations = True
+    # just make sure it doesn't fail
+    cube + 5*cube.unit
 
 class BaseTest(object):
 
@@ -161,6 +197,103 @@ class TestSpectralCube(object):
                         outcv.to(u.Hz).value)
         assert_allclose(cube_masked_freq._mask._wcs.wcs.crval[cube_masked_freq._mask._wcs.wcs.spec],
                         outcv.to(u.Hz).value)
+
+
+    @pytest.mark.parametrize(('operation', 'value'),
+                             ((operator.add, 0.5*u.K),
+                              (operator.sub, 0.5*u.K),
+                              (operator.mul, 0.5*u.K),
+                              (operator.truediv, 0.5*u.K),
+                              (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
+                             ))
+    def test_apply_everywhere(self, operation, value):
+        c1, d1 = cube_and_raw('advs.fits')
+
+        # append 'o' to indicate that it has been operated on
+        c1o = c1._apply_everywhere(operation, value)
+        d1o = operation(u.Quantity(d1, u.K), value)
+
+        assert np.all(d1o == c1o.filled_data[:])
+        # allclose fails on identical data?
+        #assert_allclose(d1o, c1o.filled_data[:])
+
+class TestArithmetic(object):
+
+    def setup_method(self, method):
+        self.c1, self.d1 = cube_and_raw('adv.fits')
+
+        # make nice easy-to-test numbers
+        self.d1.flat[:] = np.arange(self.d1.size)
+        self.c1._data.flat[:] = np.arange(self.d1.size)
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
+    def test_add(self,value):
+        d2 = self.d1 + value
+        c2 = self.c1 + value*u.K
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+
+    def test_add_cubes(self):
+        d2 = self.d1 + self.d1
+        c2 = self.c1 + self.c1
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
+    def test_subtract(self, value):
+        d2 = self.d1 - value
+        c2 = self.c1 - value*u.K
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+
+    def test_subtract_cubes(self):
+        d2 = self.d1 - self.d1
+        c2 = self.c1 - self.c1
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert np.all(c2.filled_data[:].value == 0)
+        assert c2.unit == u.K
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
+    def test_mul(self, value):
+        d2 = self.d1 * value
+        c2 = self.c1 * value
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+
+    def test_mul_cubes(self):
+        d2 = self.d1 * self.d1
+        c2 = self.c1 * self.c1
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K**2
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
+    def test_div(self, value):
+        d2 = self.d1 / value
+        c2 = self.c1 / value
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+
+    def test_div_cubes(self):
+        d2 = self.d1 / self.d1
+        c2 = self.c1 / self.c1
+        assert np.all((d2 == c2.filled_data[:].value) | (np.isnan(c2.filled_data[:])))
+        assert np.all((c2.filled_data[:] == 1) | (np.isnan(c2.filled_data[:])))
+        assert c2.unit == u.dimensionless_unscaled
+
+    @pytest.mark.parametrize(('value'),
+                             (1,1.0,2,2.0))
+    def test_pow(self, value):
+        d2 = self.d1 ** value
+        c2 = self.c1 ** value
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K**value
+
+    def test_cube_add(self):
+        c2 = self.c1 + self.c1
+        d2 = self.d1 + self.d1
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+
 
 
 class TestFilters(BaseTest):
@@ -408,7 +541,12 @@ def test_read_write_rountrip(tmpdir):
 
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
-    assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
+    if ((hasattr(_wcs, '__version__') and StrictVersion(_wcs.__version__) != StrictVersion('5.9'))
+        or not hasattr(_wcs, '__version__')):
+        # see https://github.com/astropy/astropy/pull/3992 for reasons:
+        # we should upgrade this for 5.10 when the absolute accuracy is
+        # maximized
+        assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
 
 def _dummy_cube():
@@ -746,4 +884,3 @@ def test_jybeam_lower():
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
-

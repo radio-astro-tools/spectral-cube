@@ -27,7 +27,8 @@ from distutils.version import StrictVersion
 
 __all__ = ['SpectralCube']
 
-__doctest_skip__ = ['SpectralCube.world']
+# apply_everywhere, world: do not have a valid cube to test on
+__doctest_skip__ = ['SpectralCube.world', 'SpectralCube._apply_everywhere']
 
 try:  # TODO replace with six.py
     xrange
@@ -61,6 +62,24 @@ def cached(func):
 
     return wrapper
 
+def warn_slow(function):
+
+    @wraps(function)
+    def wrapper(self, *args, **kwargs):
+        if self._is_huge and not self.allow_huge_operations:
+            raise ValueError("This function ({0}) requires loading the entire "
+                             "cube into memory, and the cube is large ({1} "
+                             "pixels), so by default we disable this operation. "
+                             "To enable the operation, set "
+                             "`cube.allow_huge_operations=True` and try again."
+                             .format(str(function), self.size))
+        elif not self._is_huge:
+            # TODO: add check for whether cube has been loaded into memory
+            warnings.warn("This function ({0}) requires loading the entire cube into "
+                          "memory and may therefore be slow.".format(str(function)))
+        return function(self, *args, **kwargs)
+    return wrapper
+
 _NP_DOC = """
 Ignores excluded mask elements.
 
@@ -92,7 +111,7 @@ np2wcs = {2: 0, 1: 1, 0: 2}
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None):
+                 header=None, allow_huge_operations=False):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
@@ -130,7 +149,8 @@ class SpectralCube(object):
         self._data, self._wcs = cube_utils._orient(data, wcs)
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore
-                           # object or array-like object, given that WCS needs to be consistent with data?
+                           # object or array-like object, given that WCS needs
+                           # to be consistent with data?
         #assert mask._wcs == self._wcs
         self._fill_value = fill_value
 
@@ -151,18 +171,52 @@ class SpectralCube(object):
 
         self._spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
 
+        self.allow_huge_operations = allow_huge_operations
+
+    @property
+    def _is_huge(self):
+        # TODO: make threshold depend on memory?
+        return cube_utils.is_huge(self, threshold=1e8)
+
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
-                       fill_value=None, spectral_unit=None):
+                       fill_value=None, spectral_unit=None, unit=None):
 
         data = self._data if data is None else data
+        if unit is None and hasattr(data, 'unit'):
+            if data.unit != self.unit:
+                raise u.UnitsError("New data unit '{0}' does not"
+                                   " match cube unit '{1}'.  You can"
+                                   " override this by specifying the"
+                                   " `unit` keyword."
+                                   .format(data.unit, self.unit))
+            unit = data.unit
+        elif unit is not None:
+            # convert string units to Units
+            if not isinstance(unit, u.Unit):
+                unit = u.Unit(unit)
+
+            if hasattr(data, 'unit'):
+                if u.Unit(unit) != data.unit:
+                    raise u.UnitsError("The specified new cube unit '{0}' "
+                                       "does not match the input unit '{1}'."
+                                       .format(unit, data.unit))
+            else:
+                data = u.Quantity(data, unit=unit, copy=False)
+
         wcs = self._wcs if wcs is None else wcs
         mask = self._mask if mask is None else mask
-        meta = self._meta if meta is None else meta
+        if meta is None:
+            meta = {}
+            meta.update(self._meta)
+        if unit is not None:
+            meta['BUNIT'] = unit.to_string(format='FITS')
+
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
 
         cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
-                            fill_value=fill_value, header=self._header)
+                            fill_value=fill_value, header=self._header,
+                            allow_huge_operations=self.allow_huge_operations)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 
@@ -535,6 +589,67 @@ class SpectralCube(object):
         ny = self.shape[iteraxes[1]]
         return nx, ny
 
+    @warn_slow
+    def _apply_everywhere(self, function, *args):
+        """
+        Return a new cube with ``function`` applied to all pixels
+
+        Private because this doesn't have an obvious and easy-to-use API
+
+        Examples
+        --------
+        >>> cube = SpectralCube.read('xyv.fits')
+        >>> newcube = cube.apply_everywhere(np.add, 0.5*u.Jy)
+        """
+
+        try:
+            test_result = function(np.ones([1,1,1])*self.unit, *args)
+            # First, check that function returns same # of dims?
+            assert test_result.ndim == 3,"Output is not 3-dimensional"
+        except Exception as ex:
+            raise AssertionError("Function could not be applied to a simple "
+                                 "cube.  The error was: {0}".format(ex))
+
+        data = function(u.Quantity(self._get_filled_data(fill=self._fill_value),
+                                   self.unit, copy=False),
+                        *args)
+
+        return self._new_cube_with(data=data, unit=data.unit)
+
+    @warn_slow
+    def _cube_on_cube_operation(self, function, cube, equivalencies=[]):
+        """
+        Apply an operation between two cubes.  Inherits the metadata of the
+        left cube.
+        """
+        assert cube.shape == self.shape
+        if not self.unit.is_equivalent(cube.unit, equivalencies=equivalencies):
+            raise u.UnitsError("{0} is not equivalent to {1}"
+                               .format(self.unit, cube.unit))
+        if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True):
+            warnings.warn("Cube WCSs do not match, but their shapes do")
+        try:
+            test_result = function(np.ones([1,1,1])*self.unit,
+                                   np.ones([1,1,1])*self.unit)
+            # First, check that function returns same # of dims?
+            assert test_result.shape == (1,1,1)
+        except Exception as ex:
+            raise AssertionError("Function {1} could not be applied to a "
+                                 "pair of simple "
+                                 "cube.  The error was: {0}".format(ex,
+                                                                    function))
+
+        cube = cube.to(self.unit)
+        data = function(self._data, cube._data)
+        try:
+            # multiplication, division, etc. are valid inter-unit operations
+            unit = function(self.unit, cube.unit)
+        except TypeError:
+            # addition, subtraction are not
+            unit = self.unit
+
+        return self._new_cube_with(data=data, unit=unit)
+
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False, **kwargs):
         """
@@ -681,8 +796,8 @@ class SpectralCube(object):
         try:
             from bottleneck import nanmedian
             result = self.apply_numpy_function(nanmedian, axis=axis,
-                                                projection=True,
-                                                check_endian=True, **kwargs)
+                                               projection=True,
+                                               check_endian=True, **kwargs)
         except ImportError:
             result = self.apply_function(np.median, axis=axis, **kwargs)
 
@@ -1536,16 +1651,27 @@ class SpectralCube(object):
 
         return world[::-1]  # reverse WCS -> numpy order
 
-    def _val_to_own_unit(self, value):
+    def _val_to_own_unit(self, value, operation='compare', tofrom='to',
+                         keepunit=False):
         """
         Given a value, check if it has a unit.  If it does, convert to the
         cube's unit.  If it doesn't, raise an exception.
         """
-        if hasattr(value, 'unit'):
-            return value.to(self.unit).value
+        if isinstance(value, SpectralCube):
+            if self.unit.is_equivalent(value.unit):
+                return value
+            else:
+                return value.to(self.unit)
+        elif hasattr(value, 'unit'):
+            if keepunit:
+                return value.to(self.unit)
+            else:
+                return value.to(self.unit).value
         else:
-            raise ValueError("Can only compare cube objects to Quantities"
-                             " with a unit attribute.")
+            raise ValueError("Can only {operation} cube objects {tofrom}"
+                             " SpectralCubes or Quantities with "
+                             "a unit attribute."
+                             .format(operation=operation, tofrom=tofrom))
 
     def __gt__(self, value):
         """
@@ -1581,6 +1707,44 @@ class SpectralCube(object):
     def __ne__(self, value):
         value = self._val_to_own_unit(value)
         return LazyComparisonMask(operator.ne, value, data=self._data, wcs=self._wcs)
+
+    def __add__(self, value):
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.add, value)
+        else:
+            value = self._val_to_own_unit(value, operation='add', tofrom='from',
+                                          keepunit=True)
+            return self._apply_everywhere(operator.add, value)
+
+    def __sub__(self, value):
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.sub, value)
+        else:
+            value = self._val_to_own_unit(value, operation='subtract',
+                                          tofrom='from', keepunit=True)
+            return self._apply_everywhere(operator.sub, value)
+
+    def __mul__(self, value):
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.mul, value)
+        else:
+            return self._apply_everywhere(operator.mul, value)
+
+    def __truediv__(self, value):
+        return self.__div__(value)
+
+    def __div__(self, value):
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.truediv, value)
+        else:
+            return self._apply_everywhere(operator.truediv, value)
+
+    def __pow__(self, value):
+        if isinstance(value, SpectralCube):
+            return self._cube_on_cube_operation(operator.pow, value)
+        else:
+            return self._apply_everywhere(operator.pow, value)
+
 
     @classmethod
     def read(cls, filename, format=None, hdu=None, **kwargs):
@@ -1813,7 +1977,7 @@ class SpectralCube(object):
             # (Jy/Beam)
             header['BUNIT'] = self._meta['BUNIT']
         else:
-            header['BUNIT'] = self.unit.to_string(format='fits')
+            header['BUNIT'] = self.unit.to_string(format='FITS')
         header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
         header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
         header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
@@ -1835,6 +1999,26 @@ class SpectralCube(object):
         """
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
+
+    def to(self, unit, equivalencies=()):
+        """
+        Return the cube converted to the given unit (assuming it is equivalent).
+        If conversion was required, this will be a copy, otherwise it will
+        """
+        
+        if not isinstance(unit, u.Unit):
+            unit = u.Unit(unit)
+
+        if unit == self.unit:
+            # No copying
+            return self
+
+        # scaling factor
+        factor = self.unit.to(unit, equivalencies=equivalencies)
+
+        return self._new_cube_with(data=self._data*factor,
+                                   unit=unit)
+
 
     def find_lines(self, velocity_offset=None, velocity_convention=None,
                    rest_value=None, **kwargs):

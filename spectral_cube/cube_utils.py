@@ -191,6 +191,12 @@ class SliceIndexer(object):
         raise Exception("You need to specify a slice (e.g. ``[:]`` or "
                         "``[0,:,:]`` in order to access this property.")
 
+def is_huge(cube, threshold=1e8):
+    if cube.size < threshold:  # smallish
+        return False
+    else:
+        return True
+
 
 def iterator_strategy(cube, axis=None):
     """
@@ -214,6 +220,6 @@ def iterator_strategy(cube, axis=None):
         *ray*  recommends working with one ray at a time
     """
     # pretty simple for now
-    if np.product(cube.shape) < 1e8:  # smallish
+    if cube.size < 1e8:  # smallish
         return 'cube'
     return 'slice'
