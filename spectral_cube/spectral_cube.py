@@ -416,7 +416,8 @@ class SpectralCube(object):
             return out
 
 
-    def _reduce_slicewise(self, function, fill, check_endian, **kwargs):
+    def _reduce_slicewise(self, function, fill, check_endian,
+                          includemask=False, **kwargs):
         """
         Compute a numpy aggregation by grabbing one slice at a time
         """
@@ -429,7 +430,10 @@ class SpectralCube(object):
             raise NotImplementedError("Multi-axis reductions are not "
                                       "supported with how='slice'")
 
-        planes = self._iter_slices(ax, fill=fill, check_endian=check_endian)
+        if includemask:
+            planes = self._iter_mask_slices(ax)
+        else:
+            planes = self._iter_slices(ax, fill=fill, check_endian=check_endian)
         result = next(planes)
         for plane in planes:
             result = function(np.dstack((result, plane)), axis=2, **kwargs)
@@ -491,12 +495,7 @@ class SpectralCube(object):
         projection = self._naxes_dropped(axis) in (1,2)
 
         if how == 'slice':
-            def nonnans(x, axis=None):
-                return np.sum(np.isfinite(x), axis=axis)
-            counts = self.apply_numpy_function(nonnans, fill=np.nan,
-                                               how='slice', axis=axis,
-                                               unit=None,
-                                               projection=False)
+            counts = self._count_nonzero_slicewise(axis=axis)
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                             axis=axis, unit=None,
                                             projection=False)
@@ -513,6 +512,18 @@ class SpectralCube(object):
                                          axis=axis, unit=self.unit,
                                          projection=projection)
 
+    def _count_nonzero_slicewise(self, axis=None):
+        """
+        Count the number of finite pixels along an axis slicewise.  This is a
+        helper function for the mean and std deviation slicewise iterators.
+        """
+        counts = self.apply_numpy_function(np.sum, fill=np.nan,
+                                           how='slice', axis=axis,
+                                           unit=None,
+                                           projection=False,
+                                           includemask=True)
+        return counts
+
     @aggregation_docstring
     def std(self, axis=None, how='cube', ddof=0):
         """
@@ -526,15 +537,12 @@ class SpectralCube(object):
                  raise NotImplementedError("Standard deviation cannot be computed "
                                            "in a slicewise manner.  Please use a "
                                            "different strategy.")
-            def nonnans(x, axis=None, **kwargs):
-                return np.sum(np.isfinite(x), axis=axis, **kwargs)
-            counts = self.apply_numpy_function(nonnans, fill=np.nan,
-                                               how='slice', axis=axis,
-                                               unit=None,
-                                               projection=False)
+            counts = self._count_nonzero_slicewise(axis=axis)
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how='slice',
                                             axis=axis, unit=None,
                                             projection=False)
+            # Equivalent, but with more overhead:
+            # ttl = self.sum(axis=axis, how='slice').value
             mean = ttl/counts
 
             planes = self._iter_slices(axis, fill=np.nan, check_endian=False)
@@ -781,6 +789,18 @@ class SpectralCube(object):
             view[axis] = x
             yield self._get_filled_data(view=view, fill=fill,
                                         check_endian=check_endian)
+
+    def _iter_mask_slices(self, axis):
+        """
+        Iterate over the cube one slice at a time,
+        replacing masked elements with fill
+        """
+        view = [slice(None)] * 3
+        for x in range(self.shape[axis]):
+            view[axis] = x
+            yield self._mask._include(data=self._data,
+                                      view=view,
+                                      wcs=self._wcs)
 
     def flattened(self, slice=(), weights=None):
         """
