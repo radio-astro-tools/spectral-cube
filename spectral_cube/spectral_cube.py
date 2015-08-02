@@ -534,8 +534,9 @@ class SpectralCube(object):
 
         if how == 'slice':
             if axis is None:
-                 raise NotImplementedError("Standard deviation cannot be computed "
-                                           "in a slicewise manner.  Please use a "
+                 raise NotImplementedError("The overall standard deviation "
+                                           "cannot be computed in a slicewise "
+                                           "manner.  Please use a "
                                            "different strategy.")
             counts = self._count_nonzero_slicewise(axis=axis)
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how='slice',
