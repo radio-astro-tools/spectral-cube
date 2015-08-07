@@ -9,6 +9,7 @@
    These operations will not be permitted on large cubes by default, but will
    require the user to specify that they are allowed using the attribute
    ``allow_huge_operations``
+ - Implemented slicewise stddev and mean (https://github.com/radio-astro-tools/spectral-cube/pull/225)
 
 0.2.2 (2015-03-12)
 ------------------
