@@ -1,6 +1,7 @@
 from astropy import units as u
 from astropy import wcs
 from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
+from astropy import wcs
 from .io.core import determine_format
 
 import numpy as np
