@@ -193,6 +193,15 @@ class MaskBase(object):
     def quicklook(self, view, wcs=None, filename=None):
         '''
         View a 2D slice of the mask, specified by view.
+
+        Parameters
+        ----------
+        view : tuple
+            Slicing to apply to the mask. Must return a 2D slice.
+        wcs : astropy.wcs.WCS, optional
+            WCS object to use in plotting the mask slice.
+        filename : str, optional
+            Filename of the output image. Enables saving of the plot.
         '''
 
         view_twod = self.include(view=view)
