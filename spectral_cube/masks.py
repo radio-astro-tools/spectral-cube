@@ -190,7 +190,7 @@ class MaskBase(object):
     def __getitem__(self):
         raise NotImplementedError("Slicing not supported by mask class {0}".format(self.__class__.__name__))
 
-    def quicklook(self, wcs=None, view=(), filename=None):
+    def quicklook(self, view, wcs=None, filename=None):
         '''
         View a 2D slice of the mask, specified by view.
         '''
