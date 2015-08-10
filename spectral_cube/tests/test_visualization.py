@@ -27,7 +27,7 @@ from .. import spectral_axis
 from .test_spectral_cube import cube_and_raw
 
 
-@pytest.mark.skipif(not PVEXTRACTOR_INSTALLED)
+@pytest.mark.skipif("not PVEXTRACTOR_INSTALLED")
 def test_to_pvextractor():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
@@ -35,7 +35,7 @@ def test_to_pvextractor():
     pv = cube.to_pvextractor()
 
 
-@pytest.mark.skipif(not MATPLOTLIB_INSTALLED)
+@pytest.mark.skipif("not MATPLOTLIB_INSTALLED")
 def test_projvis():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
@@ -43,7 +43,7 @@ def test_projvis():
     mom0 = cube.moment0()
     mom0.quicklook(use_aplpy=False)
 
-@pytest.mark.skipif(not APLPY_INSTALLED)
+@pytest.mark.skipif("not APLPY_INSTALLED")
 def test_projvis():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
