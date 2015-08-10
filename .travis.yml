@@ -106,7 +106,7 @@ before_install:
 
     # Make sure that interactive matplotlib backends work
     - export DISPLAY=:99.0
-    - if [[ $APLPY == yes ]] | [[ $MATPLOTLIB == yes ]] | [[ $PVEXTRACTOR == yes]]; then sh -e /etc/init.d/xvfb start; fi
+    - if [[ $APLPY == yes ]] || [[ $MATPLOTLIB == yes ]] || [[ $PVEXTRACTOR == yes]]; then sh -e /etc/init.d/xvfb start; fi
     # Make sure matplotlib uses PyQT not PySide
     - export QT_API=pyqt
 
