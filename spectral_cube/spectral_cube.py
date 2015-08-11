@@ -52,13 +52,13 @@ def cached(func):
     """
     Decorator to cache function calls
     """
-    cache = {}
 
     @wraps(func)
-    def wrapper(*args):
-        if args not in cache:
-            cache[args] = func(*args)
-        return cache[args]
+    def wrapper(self, *args):
+        # The cache lives in the instance so that it gets garbage collected
+        if func not in self._cache:
+            self._cache[func] = func(self, *args)
+        return self._cache[func]
 
     return wrapper
 
@@ -172,6 +172,8 @@ class SpectralCube(object):
         self._spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
 
         self.allow_huge_operations = allow_huge_operations
+
+        self._cache = {}
 
     @property
     def _is_huge(self):
