@@ -1,4 +1,5 @@
 from astropy import units as u
+from astropy import wcs
 from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
 from .io.core import determine_format
 
@@ -90,7 +91,7 @@ class Projection(LowerDimensionalObject):
         return self
 
 
-    def quicklook(self, filename=None):
+    def quicklook(self, filename=None, use_aplpy=True):
         """
         Use aplpy to make a quick-look image of the projection.  This will make
         the `FITSFigure` attribute available.
@@ -103,20 +104,26 @@ class Projection(LowerDimensionalObject):
         filename : str or Non
             Optional - the filename to save the quicklook to.
         """
-        try:
-            if not hasattr(self, 'FITSFigure'):
-                import aplpy
-                self.FITSFigure = aplpy.FITSFigure(self.hdu)
+        if use_aplpy:
+            try:
+                if not hasattr(self, 'FITSFigure'):
+                    import aplpy
+                    self.FITSFigure = aplpy.FITSFigure(self.hdu)
 
-            self.FITSFigure.show_grayscale()
-            self.FITSFigure.add_colorbar()
-            if filename is not None:
-                self.FITSFigure.save(filename)
-        except (wcs.InconsistentAxisTypesError, ImportError):
-            from matplotlib import pyplot
-            self.figure = pyplot.imshow(self.value)
-            if filename is not None:
-                self.figure.savefig(filename)
+                self.FITSFigure.show_grayscale()
+                self.FITSFigure.add_colorbar()
+                if filename is not None:
+                    self.FITSFigure.save(filename)
+            except (wcs.InconsistentAxisTypesError, ImportError):
+                self._quicklook_mpl(filename=filename)
+        else:
+            self._quicklook_mpl(filename=filename)
+
+    def _quicklook_mpl(self, filename=None):
+        from matplotlib import pyplot
+        self.figure = pyplot.imshow(self.value)
+        if filename is not None:
+            self.figure.savefig(filename)
 
 # A slice is just like a projection in every way
 class Slice(Projection):
