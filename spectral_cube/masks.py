@@ -4,6 +4,8 @@ import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
 from . import wcs_utils
+from .lower_dimensional_structures import Projection
+
 
 __all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
            'LazyMask', 'LazyComparisonMask', 'FunctionMask']
@@ -188,6 +190,26 @@ class MaskBase(object):
     def __getitem__(self):
         raise NotImplementedError("Slicing not supported by mask class {0}".format(self.__class__.__name__))
 
+    def quicklook(self, view, wcs=None, filename=None, use_aplpy=True):
+        '''
+        View a 2D slice of the mask, specified by view.
+
+        Parameters
+        ----------
+        view : tuple
+            Slicing to apply to the mask. Must return a 2D slice.
+        wcs : astropy.wcs.WCS, optional
+            WCS object to use in plotting the mask slice.
+        filename : str, optional
+            Filename of the output image. Enables saving of the plot.
+        '''
+
+        view_twod = self.include(view=view)
+
+        proj = Projection(view_twod, wcs=wcs)
+
+        proj.quicklook(filename=filename, use_aplpy=use_aplpy)
+
     def _get_new_wcs(self, unit, velocity_convention=None, rest_value=None):
         """
         Returns a new WCS with a different Spectral Axis unit
@@ -216,7 +238,7 @@ class InvertedMask(MaskBase):
 
     def __getitem__(self, view):
         return InvertedMask(self._mask[view])
-    
+
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """
         Get an InvertedMask copy with a WCS in the modified unit
@@ -432,7 +454,7 @@ class LazyComparisonMask(LazyMask):
     """
     A boolean mask defined by the evaluation of a comparison function between a
     fixed dataset and some other value.
-    
+
     This is conceptually similar to the :class:`LazyMask` but it will ensure
     that the comparison value can be compared to the data
 
@@ -487,7 +509,7 @@ class LazyComparisonMask(LazyMask):
 
             return self._function(self._data[view],
                                   self._comparison_value[cv_view])
-        
+
         else:
             return self._function(self._data[view],
                                   self._comparison_value)

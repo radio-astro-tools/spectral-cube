@@ -50,3 +50,10 @@ def test_projvis():
 
     mom0 = cube.moment0()
     mom0.quicklook(use_aplpy=True)
+
+@pytest.mark.skipif("not APLPY_INSTALLED")
+def test_mask_quicklook():
+
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+
+    cube.mask.quicklook(view=(0, slice(None), slice(None)), use_aplpy=True)
