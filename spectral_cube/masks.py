@@ -190,7 +190,7 @@ class MaskBase(object):
     def __getitem__(self):
         raise NotImplementedError("Slicing not supported by mask class {0}".format(self.__class__.__name__))
 
-    def quicklook(self, view, wcs=None, filename=None):
+    def quicklook(self, view, wcs=None, filename=None, use_aplpy=True):
         '''
         View a 2D slice of the mask, specified by view.
 
@@ -208,7 +208,7 @@ class MaskBase(object):
 
         proj = Projection(view_twod, wcs=wcs)
 
-        proj.quicklook(filename=filename)
+        proj.quicklook(filename=filename, use_aplpy=use_aplpy)
 
     def _get_new_wcs(self, unit, velocity_convention=None, rest_value=None):
         """
