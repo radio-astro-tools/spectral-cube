@@ -946,7 +946,7 @@ class SpectralCube(object):
                                     copy=False,
                                     unit=self.unit,
                                     meta=meta)
-                                
+
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
             return Slice(value=self.filled_data[view],
@@ -1982,8 +1982,8 @@ class SpectralCube(object):
                     return self._glue_app
 
             glue_app.add_datasets(self._glue_app.data_collection, result)
-        
-        
+
+
     def to_pvextractor(self):
         """
         Open the cube in a quick viewer written in matplotlib that allows you
@@ -2052,6 +2052,9 @@ class SpectralCube(object):
             header['CRVAL3'] *= self._spectral_scale
             header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
+        if 'beam' in self._meta:
+            header = self._meta['beam'].attach_to_header(header)
+
         # TODO: incorporate other relevant metadata here
         return header
 
@@ -2068,7 +2071,7 @@ class SpectralCube(object):
         Return the cube converted to the given unit (assuming it is equivalent).
         If conversion was required, this will be a copy, otherwise it will
         """
-        
+
         if not isinstance(unit, u.Unit):
             unit = u.Unit(unit)
 
