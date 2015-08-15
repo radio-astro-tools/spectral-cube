@@ -601,6 +601,14 @@ def test_read_write_rountrip(tmpdir):
         # maximized
         assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
+@pytest.mark.parametrize(('memmap', 'base'),
+                         ((True, np.memmap),
+                          (False, None)))
+def test_read_memmap(memmap, base):
+    cube = SpectralCube.read(path('adv.fits'), memmap=memmap)
+
+    assert cube.base == base
+
 
 def _dummy_cube():
     data = np.array([[[0, 1, 2, 3, 4]]])
