@@ -188,7 +188,8 @@ class MaskBase(object):
         return InvertedMask(self)
 
     def __getitem__(self):
-        raise NotImplementedError("Slicing not supported by mask class {0}".format(self.__class__.__name__))
+        raise NotImplementedError("Slicing not supported by mask class {0}"
+                                  .format(self.__class__.__name__))
 
     def quicklook(self, view, wcs=None, filename=None, use_aplpy=True):
         '''

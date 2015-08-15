@@ -2,6 +2,7 @@ import pytest
 import operator
 import itertools
 import warnings
+import mmap
 
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
@@ -600,6 +601,21 @@ def test_read_write_rountrip(tmpdir):
         # we should upgrade this for 5.10 when the absolute accuracy is
         # maximized
         assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
+
+@pytest.mark.parametrize(('memmap', 'base'),
+                         ((True, mmap.mmap),
+                          (False, None)))
+def test_read_memmap(memmap, base):
+    cube = SpectralCube.read(path('adv.fits'), memmap=memmap)
+
+    bb = cube.base
+    while hasattr(bb, 'base'):
+        bb = bb.base
+
+    if base is None:
+        assert bb is None
+    else:
+        assert isinstance(bb, base)
 
 
 def _dummy_cube():

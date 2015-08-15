@@ -242,6 +242,11 @@ class SpectralCube(object):
         """ Number of elements in the cube """
         return self._data.size
 
+    @property
+    def base(self):
+        """ The data type 'base' of the cube - useful for, e.g., joblib """
+        return self._data.base
+
     def __len__(self):
         return self.shape[0]
 
@@ -943,7 +948,7 @@ class SpectralCube(object):
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                return OneDSpectrum(value=self.filled_data[view],
+                return OneDSpectrum(value=self._data[view],
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
