@@ -222,6 +222,7 @@ class MaskBase(object):
 
         newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
                                        rest_value=rest_value)
+        newwcs.wcs.set()
 
         return newwcs
 

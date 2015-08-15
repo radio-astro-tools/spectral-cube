@@ -400,20 +400,22 @@ class SpectralCube(object):
                 # if operation is over two spatial dims
                 if set(axis) == set((1,2)):
                     new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
+                    header = self._nowcs_header
                     return OneDSpectrum(value=out,
                                         wcs=new_wcs,
                                         copy=False,
                                         unit=unit,
-                                        header=self._nowcs_header,
+                                        header=header,
                                         meta=meta)
                 else:
                     return out
 
             else:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                header = self._nowcs_header
 
                 return Projection(out, copy=False, wcs=new_wcs, meta=meta,
-                                  unit=unit, header=self._nowcs_header)
+                                  unit=unit, header=header)
         else:
             return out
 
@@ -949,11 +951,12 @@ class SpectralCube(object):
                                 
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
+            header = self._nowcs_header
             return Slice(value=self.filled_data[view],
                          wcs=newwcs,
                          copy=False,
                          unit=self.unit,
-                         header=self._nowcs_header,
+                         header=header,
                          meta=meta)
 
         newmask = self._mask[view] if self._mask is not None else None
@@ -1069,6 +1072,7 @@ class SpectralCube(object):
                                                 rest_value=rest_value)
         newmask._wcs = newwcs
 
+        newwcs.wcs.set()
         cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta,
                                    spectral_unit=unit)
 

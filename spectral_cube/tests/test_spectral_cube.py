@@ -217,6 +217,59 @@ class TestSpectralCube(object):
         # allclose fails on identical data?
         #assert_allclose(d1o, c1o.filled_data[:])
 
+    @pytest.mark.parametrize(('name', 'trans'), (
+                             ('advs', [0, 1, 2, 3]),
+                             ('dvsa', [2, 3, 0, 1]),
+                             ('sdav', [0, 2, 1, 3]),
+                             ('sadv', [0, 1, 2, 3]),
+                             ('vsad', [3, 0, 1, 2]),
+                             ('vad', [2, 0, 1]),
+                             ('vda', [0, 2, 1]),
+                             ('adv', [0, 1, 2]),
+                             ))
+    def test_getitem(self, name, trans):
+        c, d = cube_and_raw(name + '.fits')
+
+        expected = np.squeeze(d.transpose(trans))
+
+        assert_allclose(c[0,:,:].value, expected[0,:,:])
+        assert_allclose(c[:,:,0].value, expected[:,:,0])
+        assert_allclose(c[:,0,:].value, expected[:,0,:])
+
+        # Not implemented:
+        #assert_allclose(c[0,0,:].value, expected[0,0,:])
+        #assert_allclose(c[0,:,0].value, expected[0,:,0])
+        assert_allclose(c[:,0,0].value, expected[:,0,0])
+
+        assert_allclose(c[1,:,:].value, expected[1,:,:])
+        assert_allclose(c[:,:,1].value, expected[:,:,1])
+        assert_allclose(c[:,1,:].value, expected[:,1,:])
+
+        # Not implemented:
+        #assert_allclose(c[1,1,:].value, expected[1,1,:])
+        #assert_allclose(c[1,:,1].value, expected[1,:,1])
+        assert_allclose(c[:,1,1].value, expected[:,1,1])
+
+        c2 = c.with_spectral_unit(u.km/u.s, velocity_convention='radio')
+
+        assert_allclose(c2[0,:,:].value, expected[0,:,:])
+        assert_allclose(c2[:,:,0].value, expected[:,:,0])
+        assert_allclose(c2[:,0,:].value, expected[:,0,:])
+
+        # Not implemented:
+        #assert_allclose(c2[0,0,:].value, expected[0,0,:])
+        #assert_allclose(c2[0,:,0].value, expected[0,:,0])
+        assert_allclose(c2[:,0,0].value, expected[:,0,0])
+
+        assert_allclose(c2[1,:,:].value, expected[1,:,:])
+        assert_allclose(c2[:,:,1].value, expected[:,:,1])
+        assert_allclose(c2[:,1,:].value, expected[:,1,:])
+
+        # Not implemented:
+        #assert_allclose(c2[1,1,:].value, expected[1,1,:])
+        #assert_allclose(c2[1,:,1].value, expected[1,:,1])
+        assert_allclose(c2[:,1,1].value, expected[:,1,1])
+
 class TestArithmetic(object):
 
     def setup_method(self, method):
