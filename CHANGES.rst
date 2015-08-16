@@ -1,4 +1,4 @@
-0.2.3 (2015-08-16)
+0.3.0 (2015-08-16)
 ------------------
 
  - Add experimental line-finding tool using astroquery.splatalogue
