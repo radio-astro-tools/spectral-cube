@@ -1,4 +1,4 @@
-0.2.3 (unreleased)
+0.2.3 (2015-08-16)
 ------------------
 
  - Add experimental line-finding tool using astroquery.splatalogue
@@ -9,7 +9,17 @@
    These operations will not be permitted on large cubes by default, but will
    require the user to specify that they are allowed using the attribute
    ``allow_huge_operations``
- - Implemented slicewise stddev and mean (https://github.com/radio-astro-tools/spectral-cube/pull/225)
+ - Implemented slicewise stddev and mean
+   (https://github.com/radio-astro-tools/spectral-cube/pull/225)
+ - Bugfix: prevent a memory leak when creating a large number of Cubes
+   (https://github.com/radio-astro-tools/spectral-cube/pull/233)
+ - Provide a ``base`` attribute so that tools like joblib can operate on
+   ``SpectralCube`` s as memory maps
+   (https://github.com/radio-astro-tools/spectral-cube/pull/230)
+ - Masks have a quicklook method
+   (https://github.com/radio-astro-tools/spectral-cube/pull/228)
+ - Memory mapping can be disabled
+   (https://github.com/radio-astro-tools/spectral-cube/pull/226)
 
 0.2.2 (2015-03-12)
 ------------------
