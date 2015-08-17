@@ -41,7 +41,7 @@ except ImportError:
     bottleneckOK = False
 
 try:
-    import radio_beam
+    from radio_beam import Beam
     RADIO_BEAM_INSTALLED = True
 except ImportError:
     RADIO_BEAM_INSTALLED = False
@@ -644,7 +644,7 @@ def test_endians():
     mywcs.wcs.ctype[0] = 'RA'
     mywcs.wcs.ctype[1] = 'DEC'
     mywcs.wcs.ctype[2] = 'VELO'
-    
+
     bigcube = SpectralCube(data=big, wcs=mywcs)
     xbig = bigcube._get_filled_data(check_endian=True)
 
@@ -679,7 +679,7 @@ def test_slicing():
 
     sl = cube[:,1,:]
     assert sl.shape == (2,4)
-    
+
     v = cube[1:2,:,:]
     assert v.shape == (1,3,4)
 
@@ -850,6 +850,26 @@ def test_preserve_bunit():
 
     assert cube.unit == u.Jy
     assert cube.header['BUNIT'] == 'Jy'
+
+@pytest.mark.skipif("not RADIO_BEAM_INSTALLED")
+def test_preserve_beam():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    beam = Beam.from_fits_header("advs.fits")
+
+    assert cube.beam == beam
+
+@pytest.mark.skipif("not RADIO_BEAM_INSTALLED")
+def test_append_beam_to_hdr():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    orig_hdr = fits.getheader('advs.fits')
+
+    assert cube.header['BMAJ'] == orig_hdr['BMAJ']
+    assert cube.header['BMIN'] == orig_hdr['BMIN']
+    assert cube.header['BMPA'] == orig_hdr['BMPA']
 
 def test_cube_with_swapped_axes():
     """
