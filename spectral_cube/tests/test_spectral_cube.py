@@ -856,7 +856,7 @@ def test_preserve_beam():
 
     cube, data = cube_and_raw('advs.fits')
 
-    beam = Beam.from_fits_header("advs.fits")
+    beam = Beam.from_fits_header(path("advs.fits"))
 
     assert cube.beam == beam
 
@@ -865,7 +865,7 @@ def test_append_beam_to_hdr():
 
     cube, data = cube_and_raw('advs.fits')
 
-    orig_hdr = fits.getheader('advs.fits')
+    orig_hdr = fits.getheader(path('advs.fits'))
 
     assert cube.header['BMAJ'] == orig_hdr['BMAJ']
     assert cube.header['BMIN'] == orig_hdr['BMIN']
