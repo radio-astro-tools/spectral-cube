@@ -869,7 +869,7 @@ def test_append_beam_to_hdr():
 
     assert cube.header['BMAJ'] == orig_hdr['BMAJ']
     assert cube.header['BMIN'] == orig_hdr['BMIN']
-    assert cube.header['BMPA'] == orig_hdr['BMPA']
+    assert cube.header['BPA'] == orig_hdr['BPA']
 
 def test_cube_with_swapped_axes():
     """
