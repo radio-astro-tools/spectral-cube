@@ -23,6 +23,12 @@ from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
 
+try:
+    from radio_beam import Beam
+    beam_available = True
+except ImportError:
+    beam_available = False
+
 from distutils.version import StrictVersion
 
 __all__ = ['SpectralCube']
@@ -111,7 +117,7 @@ np2wcs = {2: 0, 1: 1, 0: 2}
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False):
+                 header=None, allow_huge_operations=False, read_beam=True):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
