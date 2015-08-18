@@ -111,27 +111,38 @@ np2wcs = {2: 0, 1: 1, 0: 2}
 class SpectralCube(object):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False):
+                 header=None, allow_huge_operations=False, read_beam=True):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
+
+        if read_beam:
+            self._try_load_beam(header)
+
         if 'BUNIT' in self._meta:
 
             # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
             if self._meta['BUNIT'].lower() == 'jy/beam':
                 self._unit = u.Jy
-                try:
-                    import radio_beam
-                    self.beam = radio_beam.Beam.from_fits_header(header)
-                    self._meta['beam'] = self.beam
-                    warnings.warn("Units were JY/BEAM.  The 'beam' is now "
-                                  "stored in the .beam attribute, and the "
-                                  "units are set to Jy")
-                except:
-                    warnings.warn("Could not parse JY/BEAM unit.  Either you "
-                                  "should install the radio_beam package "
-                                  "or manually replace the units.  For now, "
-                                  "the units are being interpreted as Jy.")
+
+                if not read_beam:
+
+                    warnings.warn("Units are in Jy/beam. Attempting to parse "
+                                  "header for beam information.")
+
+                    self._try_load_beam(header)
+
+                    if hasattr(self, 'beam'):
+                        warnings.warn("Units were JY/BEAM.  The 'beam' is now "
+                                      "stored in the .beam attribute, and the "
+                                      "units are set to Jy")
+                    else:
+                        warnings.warn("Could not parse JY/BEAM unit.  Either "
+                                      "you should install the radio_beam "
+                                      "package or manually replace the units."
+                                      " For now, the units are being interpreted "
+                                      "as Jy.")
+
             else:
                 try:
                     self._unit = u.Unit(self._meta['BUNIT'])
@@ -223,6 +234,20 @@ class SpectralCube(object):
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 
         return cube
+
+    def _try_load_beam(self, header):
+
+        try:
+            from radio_beam import Beam
+        except ImportError:
+            warnings.warn("radio_beam is not installed. No beam "
+                          "can be created.")
+
+        try:
+            self.beam = Beam.from_fits_header(header)
+            self._meta['beam'] = self.beam
+        except:
+            warnings.warn("Could not parse beam information from header.")
 
     @property
     def unit(self):
@@ -953,7 +978,7 @@ class SpectralCube(object):
                                     copy=False,
                                     unit=self.unit,
                                     meta=meta)
-                                
+
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
             header = self._nowcs_header
@@ -1991,8 +2016,8 @@ class SpectralCube(object):
                     return self._glue_app
 
             glue_app.add_datasets(self._glue_app.data_collection, result)
-        
-        
+
+
     def to_pvextractor(self):
         """
         Open the cube in a quick viewer written in matplotlib that allows you
@@ -2061,6 +2086,9 @@ class SpectralCube(object):
             header['CRVAL3'] *= self._spectral_scale
             header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
+        if 'beam' in self._meta:
+            header = self._meta['beam'].attach_to_header(header)
+
         # TODO: incorporate other relevant metadata here
         return header
 
@@ -2077,7 +2105,7 @@ class SpectralCube(object):
         Return the cube converted to the given unit (assuming it is equivalent).
         If conversion was required, this will be a copy, otherwise it will
         """
-        
+
         if not isinstance(unit, u.Unit):
             unit = u.Unit(unit)
 
