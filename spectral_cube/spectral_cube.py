@@ -127,8 +127,7 @@ class SpectralCube(object):
             if self._meta['BUNIT'].lower() == 'jy/beam':
                 self._unit = u.Jy
                 try:
-                    import radio_beam
-                    self.beam = radio_beam.Beam.from_fits_header(header)
+                    self.beam = Beam.from_fits_header(header)
                     self._meta['beam'] = self.beam
                     warnings.warn("Units were JY/BEAM.  The 'beam' is now "
                                   "stored in the .beam attribute, and the "
