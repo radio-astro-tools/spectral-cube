@@ -23,12 +23,6 @@ from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
 
-try:
-    from radio_beam import Beam
-    BEAM_AVAILABLE = True
-except ImportError:
-    BEAM_AVAILABLE = False
-
 from distutils.version import StrictVersion
 
 __all__ = ['SpectralCube']
@@ -123,10 +117,6 @@ class SpectralCube(object):
         self._meta = meta or {}
 
         if read_beam:
-            if not BEAM_AVAILABLE:
-                raise ImportError("radio_beam is not installed. No beam "
-                                  "can be created.")
-
             self._try_load_beam(header)
 
         if 'BUNIT' in self._meta:
@@ -246,6 +236,12 @@ class SpectralCube(object):
         return cube
 
     def _try_load_beam(self, header):
+
+        try:
+            from radio_beam import Beam
+        except ImportError:
+            warnings.warn("radio_beam is not installed. No beam "
+                          "can be created.")
 
         try:
             self.beam = Beam.from_fits_header(header)
