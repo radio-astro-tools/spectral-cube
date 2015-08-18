@@ -25,9 +25,9 @@ from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
 
 try:
     from radio_beam import Beam
-    beam_available = True
+    BEAM_AVAILABLE = True
 except ImportError:
-    beam_available = False
+    BEAM_AVAILABLE = False
 
 from distutils.version import StrictVersion
 
@@ -121,22 +121,38 @@ class SpectralCube(object):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
+
+        if read_beam:
+            if not BEAM_AVAILABLE:
+                raise ImportError("radio_beam is not installed. No beam "
+                                  "can be created.")
+
+            self._try_load_beam(header)
+
         if 'BUNIT' in self._meta:
 
             # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
             if self._meta['BUNIT'].lower() == 'jy/beam':
                 self._unit = u.Jy
-                try:
-                    self.beam = Beam.from_fits_header(header)
-                    self._meta['beam'] = self.beam
-                    warnings.warn("Units were JY/BEAM.  The 'beam' is now "
-                                  "stored in the .beam attribute, and the "
-                                  "units are set to Jy")
-                except:
-                    warnings.warn("Could not parse JY/BEAM unit.  Either you "
-                                  "should install the radio_beam package "
-                                  "or manually replace the units.  For now, "
-                                  "the units are being interpreted as Jy.")
+
+                if not read_beam:
+
+                    warnings.warn("Units are in Jy/beam. Attempting to parse "
+                                  "header for beam information.")
+
+                    self._try_load_beam(header)
+
+                    if hasattr(self, 'beam'):
+                        warnings.warn("Units were JY/BEAM.  The 'beam' is now "
+                                      "stored in the .beam attribute, and the "
+                                      "units are set to Jy")
+                    else:
+                        warnings.warn("Could not parse JY/BEAM unit.  Either "
+                                      "you should install the radio_beam "
+                                      "package or manually replace the units."
+                                      " For now, the units are being interpreted "
+                                      "as Jy.")
+
             else:
                 try:
                     self._unit = u.Unit(self._meta['BUNIT'])
@@ -228,6 +244,14 @@ class SpectralCube(object):
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 
         return cube
+
+    def _try_load_beam(self, header):
+
+        try:
+            self.beam = Beam.from_fits_header(header)
+            self._meta['beam'] = self.beam
+        except:
+            warnings.warn("Could not parse beam information from header.")
 
     @property
     def unit(self):
