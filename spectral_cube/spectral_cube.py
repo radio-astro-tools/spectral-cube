@@ -1064,6 +1064,10 @@ class SpectralCube(object):
         from .spectral_axis import (convert_spectral_axis,
                                     determine_ctype_from_vconv)
 
+        # Allow string specification of units, for example
+        if not isinstance(unit, u.Unit):
+            unit = u.Unit(unit)
+
         # Velocity conventions: required for frq <-> velo
         # convert_spectral_axis will handle the case of no velocity
         # convention specified & one is required
