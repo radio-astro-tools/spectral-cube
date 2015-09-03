@@ -778,16 +778,16 @@ class SpectralCube(object):
         out = np.empty([nx, ny]) * np.nan
 
         # iterate over "lines of sight" through the cube
-        for x, y, slc in self._iter_rays(axis):
+        for y, x, slc in self._iter_rays(axis):
             # acquire the flattened, valid data for the slice
             data = self.flattened(slc, weights=weights)
             if len(data) != 0:
                 result = function(data, **kwargs)
                 if hasattr(result, 'value'):
                     # store result in array
-                    out[x, y] = result.value
+                    out[y, x] = result.value
                 else:
-                    out[x, y] = result
+                    out[y, x] = result
 
         if projection and axis in (0,1,2):
             new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
@@ -804,15 +804,15 @@ class SpectralCube(object):
         Iterate over view corresponding to lines-of-sight through a cube
         along the specified axis
         """
-        nx, ny = self._get_flat_shape(axis)
+        ny, nx = self._get_flat_shape(axis)
 
-        for x in xrange(nx):
-            for y in xrange(ny):
+        for y in xrange(ny):
+            for x in xrange(nx):
                 # create length-1 view for each position
-                slc = [slice(x, x + 1), slice(y, y + 1)]
+                slc = [slice(y, y + 1), slice(x, x + 1), ]
                 # create a length-N slice (all-inclusive) along the selected axis
                 slc.insert(axis, slice(None))
-                yield x, y, slc
+                yield y, x, slc
 
     def _iter_slices(self, axis, fill=np.nan, check_endian=False):
         """
