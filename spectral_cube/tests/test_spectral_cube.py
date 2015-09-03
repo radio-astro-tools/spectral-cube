@@ -161,13 +161,15 @@ class TestSpectralCube(object):
             assert_allclose(w1, w2)
 
 
-    @pytest.mark.parametrize(('name','masktype'),
+    @pytest.mark.parametrize(('name','masktype','unit'),
                              itertools.product(('advs', 'dvsa', 'sdav', 'sadv', 'vsad', 'vad', 'adv',),
-                                               (BooleanArrayMask, LazyMask, FunctionMask, CompositeMask))
+                                               (BooleanArrayMask, LazyMask, FunctionMask, CompositeMask),
+                                               ('Hz', u.Hz),
+                                              )
                             )
-    def test_with_spectral_unit(self, name, masktype):
+    def test_with_spectral_unit(self, name, masktype, unit):
         cube, data = cube_and_raw(name + '.fits')
-        cube_freq = cube.with_spectral_unit(u.Hz)
+        cube_freq = cube.with_spectral_unit(unit)
 
         if masktype == BooleanArrayMask:
             mask = BooleanArrayMask(data>0, wcs=cube._wcs)
@@ -181,7 +183,7 @@ class TestSpectralCube(object):
             mask = CompositeMask(mask1, mask2)
 
         cube2 = cube.with_mask(mask)
-        cube_masked_freq = cube2.with_spectral_unit(u.Hz)
+        cube_masked_freq = cube2.with_spectral_unit(unit)
 
         assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ-W2F'
         assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ-W2F'
