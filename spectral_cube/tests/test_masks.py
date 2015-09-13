@@ -214,6 +214,13 @@ def test_mask_logic():
     m = (m1 | m3) & m2
     assert_allclose(m.include(data, wcs), [[[1, 1, 1, 1, 0]]])
 
+    m = m1 ^ m2
+    assert_allclose(m.include(data, wcs), [[[1, 0, 0, 0, 1]]])
+
+    m = m1 ^ m3
+    assert_allclose(m.include(data, wcs), [[[1, 0, 1, 0, 0]]])
+
+
 @pytest.mark.parametrize(('name'),
                          (('advs'),
                           ('dvsa'),
@@ -297,7 +304,7 @@ def is_broadcastable_try(shp1, shp2):
     except ValueError:
         return False
 
-shapes = ([1,5,5], [1,5,1], [5,5,1], [5,5], [5,5,2], 
+shapes = ([1,5,5], [1,5,1], [5,5,1], [5,5], [5,5,2],
           [2,3,4], [4,3,2], [4,2,3], [2,4,3])
 shape_combos = list(itertools.combinations(shapes,2))
 
