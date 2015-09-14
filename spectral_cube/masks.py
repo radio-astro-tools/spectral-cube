@@ -184,6 +184,9 @@ class MaskBase(object):
     def __or__(self, other):
         return CompositeMask(self, other, operation='or')
 
+    def __xor__(self, other):
+        return CompositeMask(self, other, operation='xor')
+
     def __invert__(self):
         return InvertedMask(self)
 
@@ -282,6 +285,8 @@ class CompositeMask(MaskBase):
             return result_mask_1 & result_mask_2
         elif self._operation == 'or':
             return result_mask_1 | result_mask_2
+        elif self._operation == 'xor':
+            return result_mask_1 ^ result_mask_2
         else:
             raise ValueError("Operation '{0}' not supported".format(self._operation))
 

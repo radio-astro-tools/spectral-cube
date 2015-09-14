@@ -20,6 +20,8 @@
    (https://github.com/radio-astro-tools/spectral-cube/pull/228)
  - Memory mapping can be disabled
    (https://github.com/radio-astro-tools/spectral-cube/pull/226)
+ - Add xor operations for Masks
+   (https://github.com/radio-astro-tools/spectral-cube/pull/241)
 
 0.2.2 (2015-03-12)
 ------------------
