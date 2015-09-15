@@ -96,7 +96,7 @@ def read_data_fits(input, hdu=None, **kwargs):
     return array_hdu.data, array_hdu.header
 
 
-def load_fits_cube(input, hdu=0, meta={}, **kwargs):
+def load_fits_cube(input, hdu=0, meta=None, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
 
@@ -111,6 +111,9 @@ def load_fits_cube(input, hdu=0, meta={}, **kwargs):
     """
 
     data, header = read_data_fits(input, hdu=hdu, **kwargs)
+
+    if meta is None:
+        meta = {}
 
     if 'BUNIT' in header:
         meta['BUNIT'] = header['BUNIT']

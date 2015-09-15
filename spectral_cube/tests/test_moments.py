@@ -64,7 +64,10 @@ def moment_cube():
     wcs.wcs.crval = np.array([0, 1e-3, 2e-3], dtype='float32')
     wcs.wcs.cunit = ['deg', 'deg', 'km/s']
 
-    hdu = fits.PrimaryHDU(data=cube, header=wcs.to_header())
+    header = wcs.to_header()
+    header['BUNIT'] = 'K'
+
+    hdu = fits.PrimaryHDU(data=cube, header=header)
     return hdu
 
 axis_order = pytest.mark.parametrize(('axis', 'order'),
