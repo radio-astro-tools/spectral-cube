@@ -903,7 +903,8 @@ class SpectralCube(object):
                                                projection=True,
                                                check_endian=True, **kwargs)
         except ImportError:
-            result = self.apply_function(np.median, axis=axis, **kwargs)
+            result = self.apply_function(np.median, projection=True, axis=axis,
+                                         **kwargs)
 
         return result
 
