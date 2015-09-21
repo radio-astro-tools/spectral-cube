@@ -436,7 +436,9 @@ class TestNumpyMethods(BaseTest):
                 ray = self.d[:, y, x]
                 ray = ray[ray > 0.5]
                 m[y, x] = np.median(ray)
-        assert_allclose(self.c.median(axis=0), m)
+        scmed = self.c.median(axis=0)
+        assert_allclose(scmed, m)
+        assert scmed.unit == self.c.unit
 
     def test_percentile(self):
         m = np.empty(self.d.sum(axis=0).shape)
@@ -584,7 +586,6 @@ class TestYt():
         # Now test round-trip conversions between yt and world coordinates
         ytc1,ytc2,ytc3 = self.ytc1,self.ytc2,self.ytc3
         ds1,ds2,ds3 = ytc1.dataset, ytc2.dataset, ytc3.dataset
-        cube = self.cube
         yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
         world_coord1 = ytc1.yt2world(yt_coord1)
         assert_allclose(ytc1.world2yt(world_coord1), yt_coord1)
@@ -603,8 +604,9 @@ def test_read_write_rountrip(tmpdir):
 
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
-    if ((hasattr(_wcs, '__version__') and StrictVersion(_wcs.__version__) != StrictVersion('5.9'))
-        or not hasattr(_wcs, '__version__')):
+    if (((hasattr(_wcs, '__version__')
+          and StrictVersion(_wcs.__version__) != StrictVersion('5.9'))
+         or not hasattr(_wcs, '__version__'))):
         # see https://github.com/astropy/astropy/pull/3992 for reasons:
         # we should upgrade this for 5.10 when the absolute accuracy is
         # maximized
@@ -767,11 +769,11 @@ def test_slicing():
 
 
 @pytest.mark.parametrize(('view','naxis'),
-                         [( (slice(None), 1, slice(None)), 2 ),
-                          ( (1, slice(None), slice(None)), 2 ),
-                          ( (slice(None), slice(None), 1), 2 ),
-                          ( (slice(None), slice(None), slice(1)), 3 ),
-                          ( (slice(1), slice(1), slice(1)), 3 ),
+                         [((slice(None), 1, slice(None)), 2),
+                          ((1, slice(None), slice(None)), 2),
+                          ((slice(None), slice(None), 1), 2),
+                          ((slice(None), slice(None), slice(1)), 3),
+                          ((slice(1), slice(1), slice(1)), 3),
                          ])
 def test_slice_wcs(view, naxis):
 
