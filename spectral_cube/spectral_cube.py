@@ -901,10 +901,11 @@ class SpectralCube(object):
             from bottleneck import nanmedian
             result = self.apply_numpy_function(nanmedian, axis=axis,
                                                projection=True,
+                                               unit=self.unit,
                                                check_endian=True, **kwargs)
         except ImportError:
-            result = self.apply_function(np.median, projection=True, axis=axis,
-                                         **kwargs)
+            result = self.apply_function(np.nanmedian, projection=True, axis=axis,
+                                         unit=self.unit, **kwargs)
 
         return result
 

@@ -430,7 +430,7 @@ class TestNumpyMethods(BaseTest):
         self._check_numpy(self.c.argmin, d, np.nanargmin)
 
     def test_median(self):
-        m = np.empty(self.d.sum(axis=0).shape)
+        m = np.empty(self.d.shape[1:])
         for y in range(m.shape[0]):
             for x in range(m.shape[1]):
                 ray = self.d[:, y, x]
@@ -438,7 +438,12 @@ class TestNumpyMethods(BaseTest):
                 m[y, x] = np.median(ray)
         scmed = self.c.median(axis=0)
         assert_allclose(scmed, m)
+        assert not np.any(np.isnan(scmed.value))
         assert scmed.unit == self.c.unit
+
+    def test_bad_median(self):
+        scmed = self.c.apply_numpy_function(np.median, axis=0)
+        assert np.count_nonzero(np.isnan(scmed)) == 5
 
     def test_percentile(self):
         m = np.empty(self.d.sum(axis=0).shape)
