@@ -100,6 +100,7 @@ Examples
    import aplpy
 
    cube = SpectralCube.read('file.fits')
+   prefix = 'HC3N'
    
    # chop out the NaN borders
    cmin = cube.minimal_subcube()
@@ -116,19 +117,25 @@ Examples
    p2 = cmin.closest_spectral_channel(v2)
 
    for jj,ii in enumerate(range(p1, p2-1)):
-       rgb = np.array([cmin[ii], cmin[ii+1], cmin[ii+1]]).T.swapaxes(0,1)
+       rgb = np.array([cmin[ii+2], cmin[ii+1], cmin[ii]]).T.swapaxes(0,1)
+
+       # in case you manually set min/max
+       rgb[rgb > max.value] = 1
+       rgb[rgb < min.value] = 0
 
        # this is the unsupported little bit...
+       F._ax1.clear()
        F._ax1.imshow((rgb-min.value)/(max-min).value, extent=F._extent)
 
        v1_ = int(np.round(cube.spectral_axis[ii].value))
        v2_ = int(np.round(cube.spectral_axis[ii+2].value))
 
        # then write out the files
-       F.save('rgb/HC3N_v{0}to{1}.png'.format(v1_, v2_))
+       F.save('rgb/{2}_v{0}to{1}.png'.format(v1_, v2_, prefix))
        # make a sorted version for use with ffmpeg
-       os.link('rgb/HC3N_v{0}to{1}.png'.format(v1_, v2_), 'rgb/{0:04d}.png'.format(jj))
+       os.remove('rgb/{0:04d}.png'.format(jj))
+       os.link('rgb/{2}_v{0}to{1}.png'.format(v1_, v2_, prefix), 'rgb/{0:04d}.png'.format(jj))
 
-       print("Done with channel {0}".format(ii))
+       print("Done with frame {1}: channel {0}".format(ii, jj))
 
-   os.system('ffmpeg -y -i rgb/%04d.png -c:v libx264 -pix_fmt yuv420p -vf scale=1024:768 -r 10 rgb/HC3N_RGB_movie.mp4')
+   os.system('ffmpeg -y -i rgb/%04d.png -c:v libx264 -pix_fmt yuv420p -vf "scale=1024:768,setpts=10*PTS" -r 10 rgb/{0}_RGB_movie.mp4'.format(prefix))
