@@ -66,6 +66,7 @@ Getting started
    beam_handling.rst
    spectral_extraction.rst
    continuum_subtraction.rst
+   examples.rst
 
 Advanced
 ^^^^^^^^
