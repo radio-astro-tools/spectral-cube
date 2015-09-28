@@ -112,19 +112,23 @@ Examples
    v2 = 60*u.km/u.s
 
    # determine pixel range
-   p1 = cmin.closest_spectral_pixel(v1)
-   p2 = cmin.closest_spectral_pixel(v2)
+   p1 = cmin.closest_spectral_channel(v1)
+   p2 = cmin.closest_spectral_channel(v2)
 
-   for ii in range(p1, p2-1):
+   for jj,ii in enumerate(range(p1, p2-1)):
        rgb = np.array([cmin[ii], cmin[ii+1], cmin[ii+1]]).T.swapaxes(0,1)
 
        # this is the unsupported little bit...
        F._ax1.imshow((rgb-min.value)/(max-min).value, extent=F._extent)
 
-       v1_ = cube.spectral_axis[ii]
-       v2_ = cube.spectral_axis[ii+2]
+       v1_ = int(np.round(cube.spectral_axis[ii].value))
+       v2_ = int(np.round(cube.spectral_axis[ii+2].value))
 
        # then write out the files
        F.save('rgb/HC3N_v{0}to{1}.png'.format(v1_, v2_))
+       # make a sorted version for use with ffmpeg
+       os.link('rgb/HC3N_v{0}to{1}.png'.format(v1_, v2_), 'rgb/{0:04d}.png'.format(jj))
 
        print("Done with channel {0}".format(ii))
+
+   os.system('ffmpeg -y -i rgb/%04d.png -c:v libx264 -pix_fmt yuv420p -vf scale=1024:768 -r 10 rgb/HC3N_RGB_movie.mp4')
