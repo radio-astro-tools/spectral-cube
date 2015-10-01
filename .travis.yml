@@ -159,7 +159,7 @@ install:
     - if [[ $SETUP_CMD == build_sphinx* ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION Sphinx=1.2 matplotlib; fi
 
     # COVERAGE DEPENDENCIES
-    - if [[ $SETUP_CMD == 'test --coverage' ]]; then $PIP_INSTALL coverage coveralls; fi
+    - if [[ $SETUP_CMD == 'test --coverage' ]]; then $PIP_INSTALL coverage=3.7.1 coveralls; fi
 
 script:
    - cd spectral_cube/tests/data ; make ; cd ../../../
