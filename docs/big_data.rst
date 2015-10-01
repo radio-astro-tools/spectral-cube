@@ -27,7 +27,7 @@ on an entire array at once. For example::
     x = <a numpy array>
     y = np.sum(np.abs(x * 3 + 10), axis=0)
 
-Unfortunately, this code code creates several temporary arrays
+Unfortunately, this code creates several temporary arrays
 whose size is equal to ``x``. This is infeasible if ``x`` is a large
 memory-mapped array, because an operation like ``(x * 3)`` will require
 more RAM than exists on your system. A better way to compute y is
