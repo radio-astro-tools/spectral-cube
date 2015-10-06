@@ -2347,49 +2347,34 @@ class StokesSpectralCube(object):
             return self._new_cube_with(mask=mask)
 
     def _new_cube_with(self, stokes_data=None, wcs=None, stokes_masks=None,
-                       mask=None, meta=None, fill_value=None,
-                       spectral_unit=None, unit=None):
+                       mask=None, meta=None, fill_value=None):
 
-        data = self._data if data is None else data
-        if unit is None and hasattr(data, 'unit'):
-            if data.unit != self.unit:
-                raise u.UnitsError("New data unit '{0}' does not"
-                                   " match cube unit '{1}'.  You can"
-                                   " override this by specifying the"
-                                   " `unit` keyword."
-                                   .format(data.unit, self.unit))
-            unit = data.unit
-        elif unit is not None:
-            # convert string units to Units
-            if not isinstance(unit, u.Unit):
-                unit = u.Unit(unit)
 
-            if hasattr(data, 'unit'):
-                if u.Unit(unit) != data.unit:
-                    raise u.UnitsError("The specified new cube unit '{0}' "
-                                       "does not match the input unit '{1}'."
-                                       .format(unit, data.unit))
-            else:
-                data = u.Quantity(data, unit=unit, copy=False)
-
+        stokes_masks = self._stokes_masks if stokes_masks is None else stokes_masks
+        data = self._stokes_data if stokes_data is None else stokes_data
         wcs = self._wcs if wcs is None else wcs
         mask = self._mask if mask is None else mask
         if meta is None:
             meta = {}
             meta.update(self._meta)
-        if unit is not None:
-            meta['BUNIT'] = unit.to_string(format='FITS')
 
         fill_value = self._fill_value if fill_value is None else fill_value
-        spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
 
-        cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
-                            fill_value=fill_value, header=self._header,
-                            allow_huge_operations=self.allow_huge_operations)
-        cube._spectral_unit = spectral_unit
-        cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
+        cube = StokesSpectralCube(stokes_data=data, wcs=wcs,
+                                  stokes_masks=stokes_masks, mask=mask,
+                                  meta=meta, fill_value=fill_value,
+                                  header=self._header,
+                                  allow_huge_operations=self.allow_huge_operations)
 
         return cube
+
+    def with_spectral_unit(self, unit, **kwargs):
+
+        stokes_data = {k: self._stokes_data[k].with_spectral_unit(unit, **kwargs)
+                       for k in self._stokes_data}
+
+        return self._new_cube_with(stokes_data=stokes_data)
+
 
     @classmethod
     def read(cls, filename, format=None, hdu=None):
