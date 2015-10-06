@@ -2268,26 +2268,128 @@ class SpectralCube(object):
         return result
 
 
-class StokesSpectralCube(SpectralCube):
+class StokesSpectralCube(object):
 
     """
-    A class to store a spectral cube with multiple Stokes parameters. By
-    default, this will act like a Stokes I spectral cube, but other stokes
-    parameters can be accessed with attribute notation.
+    A class to store a spectral cube with multiple Stokes parameters.
+
+    The individual Stokes cubes will share masks.
     """
 
-    def __init__(self, data, wcs, mask=None, meta=None, header=None):
+    def __init__(self, stokes_data, wcs, stokes_masks=None, mask=None,
+                 meta=None, header=None, fill_value=None):
 
-        # WCS should be 3-d, data should be dict of 3-d, mask should be disk
-        # of 3-d
+        self._stokes_data = stokes_data
+        self._stokes_masks = stokes_masks
+        self._mask = mask
+        self._wcs = wcs
+        self._fill_value = fill_value
 
-        # XXX: For now, let's just extract I and work with that
+        shape = set([dat.shape for name,dat in stokes_data.iteritems()])
+        if len(shape) != 1:
+            raise ValueError("The stokes cubes have different shapes."
+                             "  This is not supported.")
 
-        super(StokesSpectralCube, self).__init__(data["I"], wcs,
-                                                 mask=mask["I"], meta=meta,
-                                                 header=header)
+        self._shape = shape.pop()
 
-        # TODO: deal with the other stokes parameters here
+    @property
+    def shape(self):
+        return self._shape
+
+    def __get__(self, obj, type=None):
+        """
+        Descriptor to return the Stokes cubes
+        """
+        if obj is None:
+            return self
+        elif obj in ['IPQUV','RR','LL','RL','LR']:
+            if self.mask is not None:
+                return self._stokes_data[obj].with_mask(self._stokes_masks[obj] & self.mask)
+            else:
+                return self._stokes_data[obj].with_mask(self._stokes_masks[obj])
+        else:
+            raise AttributeError("StokesSpectralCube has no attribute {0}".format(obj))
+
+    def with_mask(self, mask, inherit_mask=True):
+        """
+        Return a new StokesSpectralCube instance that contains a composite mask
+        of the current StokesSpectralCube and the new ``mask``.
+
+        Parameters
+        ----------
+        mask : :class:`MaskBase` instance, or boolean numpy array
+            The mask to apply. If a boolean array is supplied,
+            it will be converted into a mask, assuming that
+            True values indicate included elements.
+
+        inherit_mask : bool (optional, default=True)
+            If True, combines the provided mask with the
+            mask currently attached to the cube
+
+        Returns
+        -------
+        new_cube : :class:`StokesSpectralCube`
+            A cube with the new mask applied.
+
+        Notes
+        -----
+        This operation returns a view into the data, and not a copy.
+        """
+        if isinstance(mask, np.ndarray):
+            if not is_broadcastable_and_smaller(mask.shape, self.shape):
+                raise ValueError("Mask shape is not broadcastable to data shape: "
+                                 "%s vs %s" % (mask.shape, self.shape))
+            mask = BooleanArrayMask(mask, self._wcs)
+
+        if self._mask is not None:
+            return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
+        else:
+            return self._new_cube_with(mask=mask)
+
+    def _new_cube_with(self, stokes_data=None, wcs=None, stokes_masks=None,
+                       mask=None, meta=None, fill_value=None,
+                       spectral_unit=None, unit=None):
+
+        data = self._data if data is None else data
+        if unit is None and hasattr(data, 'unit'):
+            if data.unit != self.unit:
+                raise u.UnitsError("New data unit '{0}' does not"
+                                   " match cube unit '{1}'.  You can"
+                                   " override this by specifying the"
+                                   " `unit` keyword."
+                                   .format(data.unit, self.unit))
+            unit = data.unit
+        elif unit is not None:
+            # convert string units to Units
+            if not isinstance(unit, u.Unit):
+                unit = u.Unit(unit)
+
+            if hasattr(data, 'unit'):
+                if u.Unit(unit) != data.unit:
+                    raise u.UnitsError("The specified new cube unit '{0}' "
+                                       "does not match the input unit '{1}'."
+                                       .format(unit, data.unit))
+            else:
+                data = u.Quantity(data, unit=unit, copy=False)
+
+        wcs = self._wcs if wcs is None else wcs
+        mask = self._mask if mask is None else mask
+        if meta is None:
+            meta = {}
+            meta.update(self._meta)
+        if unit is not None:
+            meta['BUNIT'] = unit.to_string(format='FITS')
+
+        fill_value = self._fill_value if fill_value is None else fill_value
+        spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
+
+        cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
+                            fill_value=fill_value, header=self._header,
+                            allow_huge_operations=self.allow_huge_operations)
+        cube._spectral_unit = spectral_unit
+        cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
+
+        return cube
 
     @classmethod
     def read(cls, filename, format=None, hdu=None):
