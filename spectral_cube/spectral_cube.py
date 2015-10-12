@@ -592,10 +592,10 @@ class SpectralCube(object):
 
         if how == 'slice':
             if axis is None:
-                 raise NotImplementedError("The overall standard deviation "
-                                           "cannot be computed in a slicewise "
-                                           "manner.  Please use a "
-                                           "different strategy.")
+                raise NotImplementedError("The overall standard deviation "
+                                          "cannot be computed in a slicewise "
+                                          "manner.  Please use a "
+                                          "different strategy.")
             counts = self._count_nonzero_slicewise(axis=axis)
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how='slice',
                                             axis=axis, unit=None,
@@ -2268,6 +2268,8 @@ class SpectralCube(object):
         return result
 
 
+VALID_STOKES = ['I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR']
+
 class StokesSpectralCube(object):
 
     """
@@ -2276,39 +2278,67 @@ class StokesSpectralCube(object):
     The individual Stokes cubes will share masks.
     """
 
-    def __init__(self, stokes_data, wcs, stokes_masks=None, mask=None,
-                 meta=None, header=None, fill_value=None):
+    def __init__(self, stokes_data, mask=None, meta=None, fill_value=None):
 
         self._stokes_data = stokes_data
-        self._stokes_masks = stokes_masks
-        self._mask = mask
-        self._wcs = wcs
+        self._meta = meta or {}
         self._fill_value = fill_value
 
-        shape = set([dat.shape for name,dat in stokes_data.iteritems()])
-        if len(shape) != 1:
-            raise ValueError("The stokes cubes have different shapes."
-                             "  This is not supported.")
+        reference = tuple(stokes_data.keys())[0]
 
-        self._shape = shape.pop()
+        for component in stokes_data:
+
+            if not isinstance(stokes_data[component], SpectralCube):
+                raise TypeError("stokes_data should be a dictionary of SpectralCube objects")
+
+            if not wcs_utils.check_equality(stokes_data[component].wcs,
+                                            stokes_data[reference].wcs):
+                raise ValueError("All spectral cubes in stokes_data should have the same WCS")
+
+            if component not in VALID_STOKES:
+                raise ValueError("Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR".format(component))
+                
+            if stokes_data[component].shape != stokes_data[reference].shape:
+                raise ValueError("All spectral cubes shoul have the same shape")
+                
+        self._wcs = stokes_data[reference].wcs
+        self._shape = stokes_data[reference].shape
+        
+        if isinstance(mask, BooleanArrayMask):
+            if mask.shape != self._shape:
+                raise ValueError("Mask shape is not broadcastable to data shape: {0} vs {1}".format(mask.shape, self._shape))
+
+        self._mask = mask
 
     @property
     def shape(self):
         return self._shape
 
-    def __get__(self, obj, type=None):
+    @property
+    def mask(self):
+        """
+        The underlying mask
+        """
+        return self._mask
+
+    @property
+    def wcs(self):
+        return self._wcs
+
+    def __dir__(self):
+        return list(self._stokes_data.keys())
+
+    def __getattr__(self, attribute):
         """
         Descriptor to return the Stokes cubes
         """
-        if obj is None:
-            return self
-        elif obj in ['IPQUV','RR','LL','RL','LR']:
+        if attribute in self._stokes_data:
             if self.mask is not None:
-                return self._stokes_data[obj].with_mask(self._stokes_masks[obj] & self.mask)
+                return self._stokes_data[attribute].with_mask(self.mask)
             else:
-                return self._stokes_data[obj].with_mask(self._stokes_masks[obj])
+                return self._stokes_data[attribute]
         else:
-            raise AttributeError("StokesSpectralCube has no attribute {0}".format(obj))
+            raise AttributeError("StokesSpectralCube has no attribute {0}".format(attribute))
 
     def with_mask(self, mask, inherit_mask=True):
         """
@@ -2346,13 +2376,11 @@ class StokesSpectralCube(object):
         else:
             return self._new_cube_with(mask=mask)
 
-    def _new_cube_with(self, stokes_data=None, wcs=None, stokes_masks=None,
+    def _new_cube_with(self, stokes_data=None,
                        mask=None, meta=None, fill_value=None):
 
 
-        stokes_masks = self._stokes_masks if stokes_masks is None else stokes_masks
         data = self._stokes_data if stokes_data is None else stokes_data
-        wcs = self._wcs if wcs is None else wcs
         mask = self._mask if mask is None else mask
         if meta is None:
             meta = {}
@@ -2360,11 +2388,8 @@ class StokesSpectralCube(object):
 
         fill_value = self._fill_value if fill_value is None else fill_value
 
-        cube = StokesSpectralCube(stokes_data=data, wcs=wcs,
-                                  stokes_masks=stokes_masks, mask=mask,
-                                  meta=meta, fill_value=fill_value,
-                                  header=self._header,
-                                  allow_huge_operations=self.allow_huge_operations)
+        cube = StokesSpectralCube(stokes_data=data, mask=mask,
+                                  meta=meta, fill_value=fill_value)
 
         return cube
 
