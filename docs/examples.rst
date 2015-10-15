@@ -139,3 +139,33 @@ Examples
        print("Done with frame {1}: channel {0}".format(ii, jj))
 
    os.system('ffmpeg -y -i rgb/%04d.png -c:v libx264 -pix_fmt yuv420p -vf "scale=1024:768,setpts=10*PTS" -r 10 rgb/{0}_RGB_movie.mp4'.format(prefix))
+
+
+3. Extract a beam-weighted spectrum from a cube
+
+
+Each spectral cube has a 'beam' parameter if you have radio_beam
+installed.  You can use that to create a beam kernel:
+
+.. code:: python
+
+    kernel = cube.beam.as_kernel(cube.wcs.pixel_scale_matrix[1,1])
+
+Find the pixel you want to integrate over form the image.  e.g.,
+
+.. code:: python
+    x,y = 500, 150
+
+Then, cut out an appropriate sub-cube and integrate over it
+
+.. code-block:: python
+
+    kernsize = kernel.shape[0]
+    subcube = cube[:,y-kernsize/2.:y+kernsize/2., x-kernsize/2.:x+kernsize/2.]
+    # create a boolean mask at the 1% of peak level (you can modify this)
+    mask = kernel.array > (0.01*kernel.array.max())
+    msubcube = subcube.with_mask(mask)
+    # Then, take an appropriate beam weighting
+    weighted_cube = msubcube * kernel.array
+    # and *sum* (do not average!) over the weighted cube.
+    beam_weighted_spectrum = weighted_cube.sum(axis=(1,2))
