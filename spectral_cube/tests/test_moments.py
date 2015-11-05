@@ -175,5 +175,7 @@ def test_how_withfluxunit(order, axis, how):
 
     assert sc.unit == u.K
     assert sc.filled_data[:].unit == u.K
+    assert 'beam' in sc.meta
+    assert 'beam' in sc.hdu.header
 
     assert_allclose(mom_sc, MOMENTSu[order][axis])
