@@ -151,10 +151,13 @@ class SpectralCube(object):
                     self._unit = None
         elif hasattr(data, 'unit'):
             self._unit = data.unit
-            # strip the unit so that it can be treated as cube metadata
-            data = data.value
         else:
             self._unit = None
+
+        # data must not be a quantity when stored in self._data
+        if hasattr(data, 'unit'):
+            # strip the unit so that it can be treated as cube metadata
+            data = data.value
 
         # TODO: mask should be oriented? Or should we assume correctly oriented here?
         self._data, self._wcs = cube_utils._orient(data, wcs)
