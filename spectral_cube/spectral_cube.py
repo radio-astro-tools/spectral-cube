@@ -697,7 +697,7 @@ class SpectralCube(object):
                                    self.unit, copy=False),
                         *args)
 
-        return self._new_cube_with(data=data, unit=data.unit)
+        return self._new_cube_with(data=data.value, unit=data.unit)
 
     @warn_slow
     def _cube_on_cube_operation(self, function, cube, equivalencies=[]):
