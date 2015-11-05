@@ -302,7 +302,7 @@ class TestArithmetic(object):
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
 
-        # regression test: the _data attribute must not be a quantity
+        # regression test #251: the _data attribute must not be a quantity
         assert not hasattr(c2._data, 'unit')
 
     def test_subtract_cubes(self):
@@ -312,7 +312,7 @@ class TestArithmetic(object):
         assert np.all(c2.filled_data[:].value == 0)
         assert c2.unit == u.K
 
-        # regression test: the _data attribute must not be a quantity
+        # regression test #251: the _data attribute must not be a quantity
         assert not hasattr(c2._data, 'unit')
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
