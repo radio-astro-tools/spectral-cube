@@ -1372,6 +1372,7 @@ class SpectralCube(object):
         meta = {'moment_order': order,
                 'moment_axis': axis,
                 'moment_method': how}
+        meta.update(self._meta)
 
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           header=self._nowcs_header)
