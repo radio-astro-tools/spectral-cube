@@ -985,11 +985,9 @@ def test_beam_proj_meta():
     slc = cube[0,:,:]
 
     assert 'beam' in slc.meta
-    assert 'beam' in slc.meta
 
     proj = cube.max(axis=0)
 
-    assert 'beam' in proj.meta
     assert 'beam' in proj.meta
 
 def test_proj_meta():
