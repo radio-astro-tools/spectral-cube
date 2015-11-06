@@ -980,17 +980,17 @@ def test_beam_proj_meta():
 
     # regression test for #250
     assert 'beam' in moment.meta
-    assert 'BMAJ' in moment.hdu.header
+    assert 'beam' in moment.hdu.header
 
     slc = cube[0,:,:]
 
     assert 'beam' in slc.meta
-    assert 'BMAJ' in slc.meta
+    assert 'beam' in slc.meta
 
     proj = cube.max(axis=0)
 
     assert 'beam' in proj.meta
-    assert 'BMAJ' in proj.meta
+    assert 'beam' in proj.meta
 
 def test_proj_meta():
 
