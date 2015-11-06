@@ -976,3 +976,41 @@ def test_jybeam_lower():
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
+        
+@pytest.mark.skipif("not RADIO_BEAM_INSTALLED")
+def test_beam_proj_meta():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    moment = cube.moment0(axis=0)
+
+    # regression test for #250
+    assert 'beam' in moment.meta
+    assert 'BMAJ' in moment.hdu.header
+
+    slc = cube[0,:,:]
+
+    assert 'beam' in slc.meta
+
+    proj = cube.max(axis=0)
+
+    assert 'beam' in proj.meta
+
+def test_proj_meta():
+
+    cube, data = cube_and_raw('advs.fits')
+
+    moment = cube.moment0(axis=0)
+
+    assert 'BUNIT' in moment.meta
+    assert moment.meta['BUNIT'] == 'K'
+
+    slc = cube[0,:,:]
+
+    assert 'BUNIT' in slc.meta
+    assert slc.meta['BUNIT'] == 'K'
+
+    proj = cube.max(axis=0)
+
+    assert 'BUNIT' in proj.meta
+    assert proj.meta['BUNIT'] == 'K'

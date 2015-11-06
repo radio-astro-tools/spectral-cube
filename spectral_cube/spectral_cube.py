@@ -428,6 +428,7 @@ class SpectralCube(object):
                 return out
         elif projection and reduce:
             meta = {'collapse_axis': axis}
+            meta.update(self._meta)
 
             if hasattr(axis, '__len__') and len(axis) == 2:
                 # if operation is over two spatial dims
@@ -539,8 +540,10 @@ class SpectralCube(object):
             out = ttl / counts
             if projection:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                meta = {'collapse_axis': axis}
+                meta.update(self._meta)
                 return Projection(out, copy=False, wcs=new_wcs,
-                                  meta={'collapse_axis': axis},
+                                  meta=meta,
                                   unit=self.unit, header=self._nowcs_header)
             else:
                 return out
@@ -592,8 +595,10 @@ class SpectralCube(object):
 
             if projection:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                meta = {'collapse_axis': axis}
+                meta.update(self._meta)
                 return Projection(out, copy=False, wcs=new_wcs,
-                                  meta={'collapse_axis': axis},
+                                  meta=meta,
                                   unit=self.unit, header=self._nowcs_header)
             else:
                 return out
@@ -796,6 +801,7 @@ class SpectralCube(object):
             new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
             meta = {'collapse_axis': axis}
+            meta.update(self._meta)
 
             return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                               unit=unit, header=self._nowcs_header)
@@ -1369,6 +1375,7 @@ class SpectralCube(object):
         meta = {'moment_order': order,
                 'moment_axis': axis,
                 'moment_method': how}
+        meta.update(self._meta)
 
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           header=self._nowcs_header)
