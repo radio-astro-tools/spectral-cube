@@ -899,11 +899,13 @@ class SpectralCube(object):
         """
         try:
             from bottleneck import nanmedian
+            log.debug("Using bottleneck nanmedian")
             result = self.apply_numpy_function(nanmedian, axis=axis,
                                                projection=True,
                                                unit=self.unit,
                                                check_endian=True, **kwargs)
         except ImportError:
+            log.debug("Using numpy nanmedian")
             result = self.apply_function(np.nanmedian, projection=True, axis=axis,
                                          unit=self.unit, **kwargs)
 
@@ -920,7 +922,8 @@ class SpectralCube(object):
         axis : int, or None
             Which axis to compute percentiles over
         """
-        return self.apply_function(np.percentile, q=q, axis=axis, **kwargs)
+        return self.apply_function(np.percentile, q=q, axis=axis,
+                                   unit=self.unit, **kwargs)
 
     def with_mask(self, mask, inherit_mask=True):
         """
