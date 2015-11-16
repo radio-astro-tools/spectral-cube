@@ -347,7 +347,9 @@ class SpectralCube(object):
                              reduce=True, how='auto',
                              projection=False,
                              unit=None,
-                             check_endian=False, **kwargs):
+                             check_endian=False,
+                             progressbar=False,
+                             **kwargs):
         """
         Apply a numpy function to the cube
 
@@ -381,6 +383,9 @@ class SpectralCube(object):
             A flag to check the endianness of the data before applying the
             function.  This is only needed for optimized functions, e.g. those
             in the `bottleneck` package.
+        progressbar : bool
+            Show a progressbar while iterating over the slices through the
+            cube?
         kwargs : dict
             Passed to the numpy function.
 
@@ -408,9 +413,8 @@ class SpectralCube(object):
 
         if strategy == 'slice' and reduce:
             try:
-                out = self._reduce_slicewise(function, fill,
-                                              check_endian,
-                                              **kwargs)
+                out = self._reduce_slicewise(function, fill, check_endian,
+                                             progressbar=progressbar, **kwargs)
             except NotImplementedError:
                 pass
         elif how not in ['auto', 'cube']:
