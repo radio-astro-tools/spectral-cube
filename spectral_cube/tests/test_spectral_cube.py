@@ -430,10 +430,12 @@ class TestNumpyMethods(BaseTest):
         self._check_numpy(self.c.argmin, d, np.nanargmin)
 
     def test_median(self):
+        # Make sure that medians ignore empty/bad/NaN values
         m = np.empty(self.d.shape[1:])
         for y in range(m.shape[0]):
             for x in range(m.shape[1]):
                 ray = self.d[:, y, x]
+                # the cube mask is for values >0.5
                 ray = ray[ray > 0.5]
                 m[y, x] = np.median(ray)
         scmed = self.c.median(axis=0)
@@ -442,17 +444,40 @@ class TestNumpyMethods(BaseTest):
         assert scmed.unit == self.c.unit
 
     def test_bad_median(self):
+        # for regular median, we expect a failure, which is why we don't use
+        # regular median.  Failure means all 6 pixels are NaN, even though one
+        # should include good data
         scmed = self.c.apply_numpy_function(np.median, axis=0)
-        assert np.count_nonzero(np.isnan(scmed)) == 5
+        assert np.count_nonzero(np.isnan(scmed)) == 6
 
-    def test_percentile(self):
+        scmed = self.c.apply_numpy_function(np.nanmedian, axis=0)
+        assert np.count_nonzero(np.isnan(scmed)) == 0
+
+        # use a more aggressive mask to force there to be some all-nan axes
+        m2 = self.c>0.65*self.c.unit
+        scmed = self.c.with_mask(m2).apply_numpy_function(np.nanmedian, axis=0)
+        assert np.count_nonzero(np.isnan(scmed)) == 1
+
+        # This should have the same result as np.nanmedian, though it might be
+        # faster if bottleneck loads
+        scmed = self.c.median(axis=0)
+        assert np.count_nonzero(np.isnan(scmed)) == 0
+
+        scmed = self.c.with_mask(m2).median(axis=0)
+        assert np.count_nonzero(np.isnan(scmed)) == 1
+
+    @pytest.mark.parametrize('pct',(3,25,50,75,97))
+    def test_percentile(self, pct):
         m = np.empty(self.d.sum(axis=0).shape)
         for y in range(m.shape[0]):
             for x in range(m.shape[1]):
                 ray = self.d[:, y, x]
                 ray = ray[ray > 0.5]
-                m[y, x] = np.percentile(ray, 3)
-        assert_allclose(self.c.percentile(3, axis=0), m)
+                m[y, x] = np.percentile(ray, pct)
+        scpct = self.c.percentile(pct, axis=0)
+        assert_allclose(scpct, m)
+        assert not np.any(np.isnan(scpct.value))
+        assert scpct.unit == self.c.unit
 
     @pytest.mark.parametrize('method', ('sum', 'min', 'max',
                              'median', 'argmin', 'argmax'))

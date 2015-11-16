@@ -291,9 +291,13 @@ def is_broadcastable_try(shp1, shp2):
     (this is the try/fail approach, which is guaranteed right.... right?)
     http://stackoverflow.com/questions/24743753/test-if-an-array-is-broadcastable-to-a-shape/24745359#24745359
     """
-    x = np.array([1])
-    a = as_strided(x, shape=shp1, strides=[0] * len(shp1))
-    b = as_strided(x, shape=shp2, strides=[0] * len(shp2))
+    #This variant does not work as of np 1.10: the strided arrays aren't
+    #writable and therefore apparently cannot be broadcast
+    # x = np.array([1])
+    # a = as_strided(x, shape=shp1, strides=[0] * len(shp1))
+    # b = as_strided(x, shape=shp2, strides=[0] * len(shp2))
+    a = np.ones(shp1)
+    b = np.ones(shp2)
     try:
         c = np.broadcast_arrays(a, b)
         # reverse order: compare last dim first (as broadcasting does)
