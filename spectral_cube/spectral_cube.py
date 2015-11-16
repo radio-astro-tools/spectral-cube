@@ -9,6 +9,7 @@ import operator
 from astropy import units as u
 from astropy.extern import six
 from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
+from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
 
@@ -455,7 +456,7 @@ class SpectralCube(object):
 
 
     def _reduce_slicewise(self, function, fill, check_endian,
-                          includemask=False, **kwargs):
+                          includemask=False, progressbar=False, **kwargs):
         """
         Compute a numpy aggregation by grabbing one slice at a time
         """
@@ -473,8 +474,17 @@ class SpectralCube(object):
         else:
             planes = self._iter_slices(ax, fill=fill, check_endian=check_endian)
         result = next(planes)
+
+        if progressbar:
+            progressbar = ProgressBar(self.shape[ax])
+            pbu = progressbar.update
+        else:
+            pbu = lambda: True
+
+
         for plane in planes:
             result = function(np.dstack((result, plane)), axis=2, **kwargs)
+            pbu()
 
         if full_reduce:
             result = function(result)
@@ -742,7 +752,7 @@ class SpectralCube(object):
         return self._new_cube_with(data=data, unit=unit)
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
-                       projection=False, **kwargs):
+                       projection=False, progressbar=False, **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
@@ -763,6 +773,9 @@ class SpectralCube(object):
             should return quantities with units.
         projection : bool
             Return a projection if the resulting array is 2D?
+        progressbar : bool
+            Show a progressbar while iterating over the slices/rays through the
+            cube?
 
         Returns
         -------
@@ -785,6 +798,12 @@ class SpectralCube(object):
         # allocate memory for output array
         out = np.empty([nx, ny]) * np.nan
 
+        if progressbar:
+            progressbar = ProgressBar(nx*ny)
+            pbu = progressbar.update
+        else:
+            pbu = lambda: True
+
         # iterate over "lines of sight" through the cube
         for y, x, slc in self._iter_rays(axis):
             # acquire the flattened, valid data for the slice
@@ -796,6 +815,7 @@ class SpectralCube(object):
                     out[y, x] = result.value
                 else:
                     out[y, x] = result
+            pbu()
 
         if projection and axis in (0,1,2):
             new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
