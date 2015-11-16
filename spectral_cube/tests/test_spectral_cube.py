@@ -635,12 +635,14 @@ def test_read_write_rountrip(tmpdir):
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
     if (((hasattr(_wcs, '__version__')
-          and StrictVersion(_wcs.__version__) != StrictVersion('5.9'))
+          and StrictVersion(_wcs.__version__) < StrictVersion('5.9'))
          or not hasattr(_wcs, '__version__'))):
         # see https://github.com/astropy/astropy/pull/3992 for reasons:
         # we should upgrade this for 5.10 when the absolute accuracy is
         # maximized
         assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
+        # in 5.11 and maybe even 5.12, the round trip fails.  Maybe
+        # https://github.com/astropy/astropy/issues/4292 will solve it?
 
 @pytest.mark.parametrize(('memmap', 'base'),
                          ((True, mmap.mmap),
