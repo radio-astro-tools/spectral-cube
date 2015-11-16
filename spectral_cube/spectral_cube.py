@@ -905,7 +905,7 @@ class SpectralCube(object):
                                      view=slice)
         return lat,lon,spec
 
-    def median(self, axis=None, **kwargs):
+    def median(self, axis=None, iterate_rays=False, **kwargs):
         """
         Compute the median of an array, optionally along an axis.
 
@@ -915,6 +915,9 @@ class SpectralCube(object):
         ----------
         axis : int (optional)
             The axis to collapse
+        iterate_rays : bool
+            Iterate over individual rays?  This mode is slower but can save RAM
+            costs, which may be extreme for large cubes
 
         Returns
         -------
@@ -923,26 +926,30 @@ class SpectralCube(object):
         """
         try:
             from bottleneck import nanmedian
+            bnok = True
+        except ImportError:
+            bnok = False
+
+        # slicewise median is nonsense, must force how = 'cube'
+        if bnok and not iterate_rays:
             log.debug("Using bottleneck nanmedian")
             result = self.apply_numpy_function(nanmedian, axis=axis,
-                                               projection=True,
-                                               unit=self.unit,
-                                               check_endian=True, **kwargs)
-        except ImportError:
-            if hasattr(np, 'nanmedian'):
-                log.debug("Using numpy nanmedian")
-                result = self.apply_numpy_function(np.nanmedian, axis=axis,
-                                                   projection=True,
-                                                   unit=self.unit,
-                                                   **kwargs)
-            else:
-                log.debug("Using numpy median iterating over slices")
-                result = self.apply_function(np.median, projection=True, axis=axis,
-                                             unit=self.unit, **kwargs)
+                                               projection=True, unit=self.unit,
+                                               how='cube', check_endian=True,
+                                               **kwargs)
+        elif hasattr(np, 'nanmedian') and not iterate_rays:
+            log.debug("Using numpy nanmedian")
+            result = self.apply_numpy_function(np.nanmedian, axis=axis,
+                                               projection=True, unit=self.unit,
+                                               how='cube',**kwargs)
+        else:
+            log.debug("Using numpy median iterating over rays")
+            result = self.apply_function(np.median, projection=True, axis=axis,
+                                         unit=self.unit, **kwargs)
 
         return result
 
-    def percentile(self, q, axis=None, **kwargs):
+    def percentile(self, q, axis=None, iterate_rays=False, **kwargs):
         """
         Return percentiles of the data.
 
@@ -952,11 +959,14 @@ class SpectralCube(object):
             The percentile to compute
         axis : int, or None
             Which axis to compute percentiles over
+        iterate_rays : bool
+            Iterate over individual rays?  This mode is slower but can save RAM
+            costs, which may be extreme for large cubes
         """
-        if hasattr(np, 'nanpercentile'):
+        if hasattr(np, 'nanpercentile') and not iterate_rays:
             result = self.apply_numpy_function(np.nanpercentile, q=q,
                                                axis=axis, projection=True,
-                                               unit=self.unit,
+                                               unit=self.unit, how='cube',
                                                **kwargs)
         else:
             result = self.apply_function(np.percentile, q=q, axis=axis,
