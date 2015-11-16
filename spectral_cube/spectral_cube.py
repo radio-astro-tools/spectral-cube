@@ -923,7 +923,7 @@ class SpectralCube(object):
             Which axis to compute percentiles over
         """
         return self.apply_function(np.percentile, q=q, axis=axis,
-                                   unit=self.unit, **kwargs)
+                                   projection=True, unit=self.unit, **kwargs)
 
     def with_mask(self, mask, inherit_mask=True):
         """
