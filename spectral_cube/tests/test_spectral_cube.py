@@ -469,6 +469,7 @@ class TestNumpyMethods(BaseTest):
         scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
         assert np.count_nonzero(np.isnan(scmed)) == 0
 
+        m2 = self.c>0.65*self.c.unit
         scmed = self.c.with_mask(m2).median(axis=0, iterate_rays=iterate_rays)
         assert np.count_nonzero(np.isnan(scmed)) == 1
 
