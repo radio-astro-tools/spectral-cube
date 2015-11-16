@@ -429,7 +429,8 @@ class TestNumpyMethods(BaseTest):
         d = np.where(self.d > 0.5, self.d, 10)
         self._check_numpy(self.c.argmin, d, np.nanargmin)
 
-    def test_median(self):
+    @pytest.mark.parametrize('iterate_rays', (True,False))
+    def test_median(self, iterate_rays):
         # Make sure that medians ignore empty/bad/NaN values
         m = np.empty(self.d.shape[1:])
         for y in range(m.shape[0]):
@@ -438,12 +439,15 @@ class TestNumpyMethods(BaseTest):
                 # the cube mask is for values >0.5
                 ray = ray[ray > 0.5]
                 m[y, x] = np.median(ray)
-        scmed = self.c.median(axis=0)
+        scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
         assert_allclose(scmed, m)
         assert not np.any(np.isnan(scmed.value))
         assert scmed.unit == self.c.unit
 
-    def test_bad_median(self):
+    def test_bad_median_apply(self):
+        # this is a test for manually-applied numpy medians, which are different
+        # from the cube.median method that does "the right thing"
+        #
         # for regular median, we expect a failure, which is why we don't use
         # regular median.  Failure means all 6 pixels are NaN, even though one
         # should include good data
@@ -458,23 +462,26 @@ class TestNumpyMethods(BaseTest):
         scmed = self.c.with_mask(m2).apply_numpy_function(np.nanmedian, axis=0)
         assert np.count_nonzero(np.isnan(scmed)) == 1
 
+    @pytest.mark.parametrize('iterate_rays', (True,False))
+    def test_bad_median(self, iterate_rays):
         # This should have the same result as np.nanmedian, though it might be
         # faster if bottleneck loads
-        scmed = self.c.median(axis=0)
+        scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
         assert np.count_nonzero(np.isnan(scmed)) == 0
 
-        scmed = self.c.with_mask(m2).median(axis=0)
+        scmed = self.c.with_mask(m2).median(axis=0, iterate_rays=iterate_rays)
         assert np.count_nonzero(np.isnan(scmed)) == 1
 
-    @pytest.mark.parametrize('pct',(3,25,50,75,97))
-    def test_percentile(self, pct):
+    @pytest.mark.parametrize(('pct', 'iterate_rays'),
+                             (zip((3,25,50,75,97)*2,(True,)*5 + (False,)*5)))
+    def test_percentile(self, pct, iterate_rays):
         m = np.empty(self.d.sum(axis=0).shape)
         for y in range(m.shape[0]):
             for x in range(m.shape[1]):
                 ray = self.d[:, y, x]
                 ray = ray[ray > 0.5]
                 m[y, x] = np.percentile(ray, pct)
-        scpct = self.c.percentile(pct, axis=0)
+        scpct = self.c.percentile(pct, axis=0, iterate_rays=iterate_rays)
         assert_allclose(scpct, m)
         assert not np.any(np.isnan(scpct.value))
         assert scpct.unit == self.c.unit
