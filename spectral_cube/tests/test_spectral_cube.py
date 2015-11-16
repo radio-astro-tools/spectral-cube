@@ -572,10 +572,11 @@ class TestYt():
         ds1,ds2,ds3 = ytc1.dataset, ytc2.dataset, ytc3.dataset
         assert_array_equal(ds1.domain_dimensions, ds2.domain_dimensions)
         assert_array_equal(ds2.domain_dimensions, ds3.domain_dimensions)
-        assert_allclose(ds1.domain_left_edge, ds2.domain_left_edge)
-        assert_allclose(ds2.domain_left_edge, ds3.domain_left_edge)
-        assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/self.spectral_factor]))
-        assert_allclose(ds1.domain_width, ds3.domain_width)
+        assert_allclose(ds1.domain_left_edge.value, ds2.domain_left_edge.value)
+        assert_allclose(ds2.domain_left_edge.value, ds3.domain_left_edge.value)
+        assert_allclose(ds1.domain_width.value,
+                        ds2.domain_width.value*np.array([1,1,1.0/self.spectral_factor]))
+        assert_allclose(ds1.domain_width.value, ds3.domain_width.value)
         assert self.nprocs == len(ds3.index.grids)
         assert ds1.spec_cube
         assert ds2.spec_cube

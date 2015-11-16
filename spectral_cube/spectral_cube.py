@@ -905,9 +905,16 @@ class SpectralCube(object):
                                                unit=self.unit,
                                                check_endian=True, **kwargs)
         except ImportError:
-            log.debug("Using numpy nanmedian")
-            result = self.apply_function(np.nanmedian, projection=True, axis=axis,
-                                         unit=self.unit, **kwargs)
+            if hasattr(np, 'nanmedian'):
+                log.debug("Using numpy nanmedian")
+                result = self.apply_numpy_function(np.nanmedian, axis=axis,
+                                                   projection=True,
+                                                   unit=self.unit,
+                                                   **kwargs)
+            else:
+                log.debug("Using numpy median iterating over slices")
+                result = self.apply_function(np.median, projection=True, axis=axis,
+                                             unit=self.unit, **kwargs)
 
         return result
 
@@ -922,8 +929,17 @@ class SpectralCube(object):
         axis : int, or None
             Which axis to compute percentiles over
         """
-        return self.apply_function(np.percentile, q=q, axis=axis,
-                                   projection=True, unit=self.unit, **kwargs)
+        if hasattr(np, 'nanpercentile'):
+            result = self.apply_numpy_function(np.nanpercentile, q=q,
+                                               axis=axis, projection=True,
+                                               unit=self.unit,
+                                               **kwargs)
+        else:
+            result = self.apply_function(np.percentile, q=q, axis=axis,
+                                         projection=True, unit=self.unit,
+                                         **kwargs)
+
+        return result
 
     def with_mask(self, mask, inherit_mask=True):
         """
