@@ -449,10 +449,13 @@ class TestNumpyMethods(BaseTest):
         # from the cube.median method that does "the right thing"
         #
         # for regular median, we expect a failure, which is why we don't use
-        # regular median.  Failure means all 6 pixels are NaN, even though one
-        # should include good data
+        # regular median.  
+
         scmed = self.c.apply_numpy_function(np.median, axis=0)
-        assert np.count_nonzero(np.isnan(scmed)) == 6
+        if StrictVersion(np.__version__) <= StrictVersion('1.9.3'):
+            assert np.count_nonzero(np.isnan(scmed)) == 5
+        else:
+            assert np.count_nonzero(np.isnan(scmed)) == 6
 
         scmed = self.c.apply_numpy_function(np.nanmedian, axis=0)
         assert np.count_nonzero(np.isnan(scmed)) == 0
