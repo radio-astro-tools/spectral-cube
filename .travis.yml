@@ -143,7 +143,7 @@ install:
     - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL https://github.com/radio-astro-tools/radio_beam/archive/master.zip; fi
 
     # Bottleneck
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $BOTTLENECK == yes ]] && [[ $NUMPY_VERSION == 1.10 ]]; then $CONDA_INSTALL --channel https://conda.binstar.org/asmeurer bottleneck; fi
+    - if [[ $SETUP_CMD != egg_info ]] && [[ $BOTTLENECK == yes ]] && [[ $NUMPY_VERSION == 1.10  || $NUMPY_VERSION == 1.9 ]]; then $CONDA_INSTALL --channel https://conda.binstar.org/asmeurer bottleneck; fi
 
     # OPTIONAL DEPENDENCIES
     # Here you can add any dependencies your package may have. You can use
