@@ -63,8 +63,8 @@ matrix:
           env: SETUP_CMD='test' APLPY=yes PVEXTRACTOR=yes
 
         # Try older numpy versions
-        - python: 3.5
-          env: NUMPY_VERSION=1.9 SETUP_CMD='test'
+        # drop support for 1.9+3.5 because travis can't test it - python: 3.5
+        # drop support for 1.9+3.5 because travis can't test it   env: NUMPY_VERSION=1.9 SETUP_CMD='test'
         - python: 2.7
           env: NUMPY_VERSION=1.9 SETUP_CMD='test'
         #- python: 2.7
@@ -77,8 +77,8 @@ matrix:
         # Test with bottleneck
         - python: 2.7
           env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
-        - python: 3.5
-          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
+        # drop support for 1.9+3.5 because travis can't test it - python: 3.5
+        # drop support for 1.9+3.5 because travis can't test it   env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
         - python: 2.7
           env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.10
         - python: 3.5
