@@ -10,6 +10,7 @@ import sys
 from astropy import units as u
 from astropy.extern import six
 from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
+from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
 
@@ -347,7 +348,9 @@ class SpectralCube(object):
                              reduce=True, how='auto',
                              projection=False,
                              unit=None,
-                             check_endian=False, **kwargs):
+                             check_endian=False,
+                             progressbar=False,
+                             **kwargs):
         """
         Apply a numpy function to the cube
 
@@ -381,6 +384,9 @@ class SpectralCube(object):
             A flag to check the endianness of the data before applying the
             function.  This is only needed for optimized functions, e.g. those
             in the `bottleneck` package.
+        progressbar : bool
+            Show a progressbar while iterating over the slices through the
+            cube?
         kwargs : dict
             Passed to the numpy function.
 
@@ -408,9 +414,8 @@ class SpectralCube(object):
 
         if strategy == 'slice' and reduce:
             try:
-                out = self._reduce_slicewise(function, fill,
-                                              check_endian,
-                                              **kwargs)
+                out = self._reduce_slicewise(function, fill, check_endian,
+                                             progressbar=progressbar, **kwargs)
             except NotImplementedError:
                 pass
         elif how not in ['auto', 'cube']:
@@ -456,7 +461,7 @@ class SpectralCube(object):
 
 
     def _reduce_slicewise(self, function, fill, check_endian,
-                          includemask=False, **kwargs):
+                          includemask=False, progressbar=False, **kwargs):
         """
         Compute a numpy aggregation by grabbing one slice at a time
         """
@@ -474,8 +479,17 @@ class SpectralCube(object):
         else:
             planes = self._iter_slices(ax, fill=fill, check_endian=check_endian)
         result = next(planes)
+
+        if progressbar:
+            progressbar = ProgressBar(self.shape[ax])
+            pbu = progressbar.update
+        else:
+            pbu = lambda: True
+
+
         for plane in planes:
             result = function(np.dstack((result, plane)), axis=2, **kwargs)
+            pbu()
 
         if full_reduce:
             result = function(result)
@@ -743,7 +757,7 @@ class SpectralCube(object):
         return self._new_cube_with(data=data, unit=unit)
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
-                       projection=False, **kwargs):
+                       projection=False, progressbar=False, **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
@@ -764,6 +778,9 @@ class SpectralCube(object):
             should return quantities with units.
         projection : bool
             Return a projection if the resulting array is 2D?
+        progressbar : bool
+            Show a progressbar while iterating over the slices/rays through the
+            cube?
 
         Returns
         -------
@@ -786,6 +803,12 @@ class SpectralCube(object):
         # allocate memory for output array
         out = np.empty([nx, ny]) * np.nan
 
+        if progressbar:
+            progressbar = ProgressBar(nx*ny)
+            pbu = progressbar.update
+        else:
+            pbu = lambda: True
+
         # iterate over "lines of sight" through the cube
         for y, x, slc in self._iter_rays(axis):
             # acquire the flattened, valid data for the slice
@@ -797,6 +820,7 @@ class SpectralCube(object):
                     out[y, x] = result.value
                 else:
                     out[y, x] = result
+            pbu()
 
         if projection and axis in (0,1,2):
             new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
@@ -882,7 +906,7 @@ class SpectralCube(object):
                                      view=slice)
         return lat,lon,spec
 
-    def median(self, axis=None, **kwargs):
+    def median(self, axis=None, iterate_rays=False, **kwargs):
         """
         Compute the median of an array, optionally along an axis.
 
@@ -892,6 +916,9 @@ class SpectralCube(object):
         ----------
         axis : int (optional)
             The axis to collapse
+        iterate_rays : bool
+            Iterate over individual rays?  This mode is slower but can save RAM
+            costs, which may be extreme for large cubes
 
         Returns
         -------
@@ -900,15 +927,30 @@ class SpectralCube(object):
         """
         try:
             from bottleneck import nanmedian
-            result = self.apply_numpy_function(nanmedian, axis=axis,
-                                               projection=True,
-                                               check_endian=True, **kwargs)
+            bnok = True
         except ImportError:
-            result = self.apply_function(np.median, axis=axis, **kwargs)
+            bnok = False
+
+        # slicewise median is nonsense, must force how = 'cube'
+        if bnok and not iterate_rays:
+            log.debug("Using bottleneck nanmedian")
+            result = self.apply_numpy_function(nanmedian, axis=axis,
+                                               projection=True, unit=self.unit,
+                                               how='cube', check_endian=True,
+                                               **kwargs)
+        elif hasattr(np, 'nanmedian') and not iterate_rays:
+            log.debug("Using numpy nanmedian")
+            result = self.apply_numpy_function(np.nanmedian, axis=axis,
+                                               projection=True, unit=self.unit,
+                                               how='cube',**kwargs)
+        else:
+            log.debug("Using numpy median iterating over rays")
+            result = self.apply_function(np.median, projection=True, axis=axis,
+                                         unit=self.unit, **kwargs)
 
         return result
 
-    def percentile(self, q, axis=None, **kwargs):
+    def percentile(self, q, axis=None, iterate_rays=False, **kwargs):
         """
         Return percentiles of the data.
 
@@ -918,8 +960,21 @@ class SpectralCube(object):
             The percentile to compute
         axis : int, or None
             Which axis to compute percentiles over
+        iterate_rays : bool
+            Iterate over individual rays?  This mode is slower but can save RAM
+            costs, which may be extreme for large cubes
         """
-        return self.apply_function(np.percentile, q=q, axis=axis, **kwargs)
+        if hasattr(np, 'nanpercentile') and not iterate_rays:
+            result = self.apply_numpy_function(np.nanpercentile, q=q,
+                                               axis=axis, projection=True,
+                                               unit=self.unit, how='cube',
+                                               **kwargs)
+        else:
+            result = self.apply_function(np.percentile, q=q, axis=axis,
+                                         projection=True, unit=self.unit,
+                                         **kwargs)
+
+        return result
 
     def with_mask(self, mask, inherit_mask=True):
         """

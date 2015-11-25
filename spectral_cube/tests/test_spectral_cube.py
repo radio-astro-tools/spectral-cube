@@ -429,23 +429,66 @@ class TestNumpyMethods(BaseTest):
         d = np.where(self.d > 0.5, self.d, 10)
         self._check_numpy(self.c.argmin, d, np.nanargmin)
 
-    def test_median(self):
-        m = np.empty(self.d.sum(axis=0).shape)
+    @pytest.mark.parametrize('iterate_rays', (True,False))
+    def test_median(self, iterate_rays):
+        # Make sure that medians ignore empty/bad/NaN values
+        m = np.empty(self.d.shape[1:])
         for y in range(m.shape[0]):
             for x in range(m.shape[1]):
                 ray = self.d[:, y, x]
+                # the cube mask is for values >0.5
                 ray = ray[ray > 0.5]
                 m[y, x] = np.median(ray)
-        assert_allclose(self.c.median(axis=0), m)
+        scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
+        assert_allclose(scmed, m)
+        assert not np.any(np.isnan(scmed.value))
+        assert scmed.unit == self.c.unit
 
-    def test_percentile(self):
+    def test_bad_median_apply(self):
+        # this is a test for manually-applied numpy medians, which are different
+        # from the cube.median method that does "the right thing"
+        #
+        # for regular median, we expect a failure, which is why we don't use
+        # regular median.  
+
+        scmed = self.c.apply_numpy_function(np.median, axis=0)
+        if StrictVersion(np.__version__) <= StrictVersion('1.9.3'):
+            assert np.count_nonzero(np.isnan(scmed)) == 5
+        else:
+            assert np.count_nonzero(np.isnan(scmed)) == 6
+
+        scmed = self.c.apply_numpy_function(np.nanmedian, axis=0)
+        assert np.count_nonzero(np.isnan(scmed)) == 0
+
+        # use a more aggressive mask to force there to be some all-nan axes
+        m2 = self.c>0.65*self.c.unit
+        scmed = self.c.with_mask(m2).apply_numpy_function(np.nanmedian, axis=0)
+        assert np.count_nonzero(np.isnan(scmed)) == 1
+
+    @pytest.mark.parametrize('iterate_rays', (True,False))
+    def test_bad_median(self, iterate_rays):
+        # This should have the same result as np.nanmedian, though it might be
+        # faster if bottleneck loads
+        scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
+        assert np.count_nonzero(np.isnan(scmed)) == 0
+
+        m2 = self.c>0.65*self.c.unit
+        scmed = self.c.with_mask(m2).median(axis=0, iterate_rays=iterate_rays)
+        assert np.count_nonzero(np.isnan(scmed)) == 1
+
+    @pytest.mark.parametrize(('pct', 'iterate_rays'),
+                             (zip((3,25,50,75,97)*2,(True,)*5 + (False,)*5)))
+    def test_percentile(self, pct, iterate_rays):
         m = np.empty(self.d.sum(axis=0).shape)
         for y in range(m.shape[0]):
             for x in range(m.shape[1]):
                 ray = self.d[:, y, x]
                 ray = ray[ray > 0.5]
-                m[y, x] = np.percentile(ray, 3)
-        assert_allclose(self.c.percentile(3, axis=0), m)
+                m[y, x] = np.percentile(ray, pct)
+        scpct = self.c.percentile(pct, axis=0, iterate_rays=iterate_rays)
+        assert_allclose(scpct, m)
+        assert not np.any(np.isnan(scpct.value))
+        assert scpct.unit == self.c.unit
 
     @pytest.mark.parametrize('method', ('sum', 'min', 'max',
                              'median', 'argmin', 'argmax'))
@@ -540,10 +583,11 @@ class TestYt():
         ds1,ds2,ds3 = ytc1.dataset, ytc2.dataset, ytc3.dataset
         assert_array_equal(ds1.domain_dimensions, ds2.domain_dimensions)
         assert_array_equal(ds2.domain_dimensions, ds3.domain_dimensions)
-        assert_allclose(ds1.domain_left_edge, ds2.domain_left_edge)
-        assert_allclose(ds2.domain_left_edge, ds3.domain_left_edge)
-        assert_allclose(ds1.domain_width, ds2.domain_width*np.array([1,1,1.0/self.spectral_factor]))
-        assert_allclose(ds1.domain_width, ds3.domain_width)
+        assert_allclose(ds1.domain_left_edge.value, ds2.domain_left_edge.value)
+        assert_allclose(ds2.domain_left_edge.value, ds3.domain_left_edge.value)
+        assert_allclose(ds1.domain_width.value,
+                        ds2.domain_width.value*np.array([1,1,1.0/self.spectral_factor]))
+        assert_allclose(ds1.domain_width.value, ds3.domain_width.value)
         assert self.nprocs == len(ds3.index.grids)
         assert ds1.spec_cube
         assert ds2.spec_cube
@@ -584,16 +628,15 @@ class TestYt():
         # Now test round-trip conversions between yt and world coordinates
         ytc1,ytc2,ytc3 = self.ytc1,self.ytc2,self.ytc3
         ds1,ds2,ds3 = ytc1.dataset, ytc2.dataset, ytc3.dataset
-        cube = self.cube
         yt_coord1 = ds1.domain_left_edge + np.random.random(size=3)*ds1.domain_width
         world_coord1 = ytc1.yt2world(yt_coord1)
-        assert_allclose(ytc1.world2yt(world_coord1), yt_coord1)
+        assert_allclose(ytc1.world2yt(world_coord1), yt_coord1.value)
         yt_coord2 = ds2.domain_left_edge + np.random.random(size=3)*ds2.domain_width
         world_coord2 = ytc2.yt2world(yt_coord2)
-        assert_allclose(ytc2.world2yt(world_coord2), yt_coord2)
+        assert_allclose(ytc2.world2yt(world_coord2), yt_coord2.value)
         yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
         world_coord3 = ytc3.yt2world(yt_coord3)
-        assert_allclose(ytc3.world2yt(world_coord3), yt_coord3)
+        assert_allclose(ytc3.world2yt(world_coord3), yt_coord3.value)
 
 def test_read_write_rountrip(tmpdir):
     cube = SpectralCube.read(path('adv.fits'))
@@ -603,12 +646,15 @@ def test_read_write_rountrip(tmpdir):
 
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
-    if ((hasattr(_wcs, '__version__') and StrictVersion(_wcs.__version__) != StrictVersion('5.9'))
-        or not hasattr(_wcs, '__version__')):
+    if (((hasattr(_wcs, '__version__')
+          and StrictVersion(_wcs.__version__) < StrictVersion('5.9'))
+         or not hasattr(_wcs, '__version__'))):
         # see https://github.com/astropy/astropy/pull/3992 for reasons:
         # we should upgrade this for 5.10 when the absolute accuracy is
         # maximized
         assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
+        # in 5.11 and maybe even 5.12, the round trip fails.  Maybe
+        # https://github.com/astropy/astropy/issues/4292 will solve it?
 
 @pytest.mark.parametrize(('memmap', 'base'),
                          ((True, mmap.mmap),
@@ -767,11 +813,11 @@ def test_slicing():
 
 
 @pytest.mark.parametrize(('view','naxis'),
-                         [( (slice(None), 1, slice(None)), 2 ),
-                          ( (1, slice(None), slice(None)), 2 ),
-                          ( (slice(None), slice(None), 1), 2 ),
-                          ( (slice(None), slice(None), slice(1)), 3 ),
-                          ( (slice(1), slice(1), slice(1)), 3 ),
+                         [((slice(None), 1, slice(None)), 2),
+                          ((1, slice(None), slice(None)), 2),
+                          ((slice(None), slice(None), 1), 2),
+                          ((slice(None), slice(None), slice(1)), 3),
+                          ((slice(1), slice(1), slice(1)), 3),
                          ])
 def test_slice_wcs(view, naxis):
 
