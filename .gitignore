@@ -51,5 +51,10 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+docs/api
 
 *.fits
+
+# Other generated stuff
+*/version.py
+*/cython_version.py
