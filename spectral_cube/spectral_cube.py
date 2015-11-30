@@ -1165,10 +1165,13 @@ class SpectralCube(object):
         newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
                                        rest_value=rest_value)
 
-        newmask = self._mask.with_spectral_unit(unit,
-                                                velocity_convention=vc,
-                                                rest_value=rest_value)
-        newmask._wcs = newwcs
+        if self._mask is not None:
+            newmask = self._mask.with_spectral_unit(unit,
+                                                    velocity_convention=vc,
+                                                    rest_value=rest_value)
+            newmask._wcs = newwcs
+        else:
+            newmask = None
 
         newwcs.wcs.set()
         cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta,
