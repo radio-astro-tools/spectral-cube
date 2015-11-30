@@ -5,6 +5,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 import warnings
 from functools import wraps
 import operator
+import sys
 
 from astropy import units as u
 from astropy.extern import six
@@ -2114,7 +2115,10 @@ class SpectralCube(object):
         newframe: bool
             Send the cube to a new frame or to the current frame?
         """
-        import ds9
+        try:
+            import ds9
+        except ImportError:
+            import pyds9 as ds9
 
         if ds9id is None:
             dd = ds9.ds9(start=True)
