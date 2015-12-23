@@ -124,7 +124,8 @@ class SpectralCube(object):
         if 'BUNIT' in self._meta:
 
             # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
-            if self._meta['BUNIT'].lower() == 'jy/beam':
+            bunit = "".join(self._meta['BUNIT'].lower().split())
+            if bunit == 'jy/beam':
                 self._unit = u.Jy
 
                 if not read_beam:
