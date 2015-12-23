@@ -1023,6 +1023,7 @@ def test_jybeam_lower():
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
+# Regression test for #257 (https://github.com/radio-astro-tools/spectral-cube/pull/257)
 def test_jybeam_whitespace():
 
     cube, data = cube_and_raw('vda_Jybeam_whitespace.fits')
