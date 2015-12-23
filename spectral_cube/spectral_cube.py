@@ -6,6 +6,7 @@ import warnings
 from functools import wraps
 import operator
 import sys
+import re
 
 from astropy import units as u
 from astropy.extern import six
@@ -124,7 +125,8 @@ class SpectralCube(object):
         if 'BUNIT' in self._meta:
 
             # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
-            if self._meta['BUNIT'].lower() == 'jy/beam':
+            bunit = re.sub("\s", "", self._meta['BUNIT'].lower())
+            if bunit == 'jy/beam':
                 self._unit = u.Jy
 
                 if not read_beam:
