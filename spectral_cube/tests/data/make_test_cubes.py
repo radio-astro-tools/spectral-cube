@@ -69,3 +69,5 @@ if __name__ == "__main__":
     fits.writeto('vda_JYBEAM_upper.fits', d, h, clobber=True)
     h['BUNIT'] = 'Jy/beam'
     fits.writeto('vda_Jybeam_lower.fits', d, h, clobber=True)
+    h['BUNIT'] = ' Jy / beam '
+    fits.writeto('vda_Jybeam_whitespace.fits', d, h, clobber=True)
