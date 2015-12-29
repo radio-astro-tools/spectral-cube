@@ -20,6 +20,10 @@ class LowerDimensionalObject(u.Quantity):
         return self._meta
 
     @property
+    def mask(self):
+        return self._mask
+
+    @property
     def header(self):
         header = self._header
         # This inplace update is OK; it's not bad to overwrite WCS in this
@@ -67,6 +71,24 @@ class LowerDimensionalObject(u.Quantity):
         else:
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
+
+    def to(self, unit, equivalencies=[]):
+        """
+        Return a new ``LowerDimensionalObject'' of the same class with the
+        specified unit.  See `astropy.units.Quantity.to` for furthe details.
+        """
+        converted_array = u.Quantity.to(self, unit,
+                                        equivalencies=equivalencies).value
+
+        # use private versions of variables, not the generated property
+        # versions
+        new = super(self, LowerDimensionalObject).__new__(
+            value=converted_array, unit=unit, copy=True,
+            wcs=self._wcs, meta=self._meta, mask=self._mask,
+            header=self._header)
+
+        return new
+
 
 class Projection(LowerDimensionalObject):
 
