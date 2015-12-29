@@ -449,7 +449,7 @@ class TestNumpyMethods(BaseTest):
         # from the cube.median method that does "the right thing"
         #
         # for regular median, we expect a failure, which is why we don't use
-        # regular median.  
+        # regular median.
 
         scmed = self.c.apply_numpy_function(np.median, axis=0)
         if StrictVersion(np.__version__) <= StrictVersion('1.9.3'):
@@ -1022,7 +1022,18 @@ def test_jybeam_lower():
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
-        
+
+# Regression test for #257 (https://github.com/radio-astro-tools/spectral-cube/pull/257)
+def test_jybeam_whitespace():
+
+    cube, data = cube_and_raw('vda_Jybeam_whitespace.fits')
+
+    assert cube.unit == u.Jy
+    if RADIO_BEAM_INSTALLED:
+        assert hasattr(cube, 'beam')
+        np.testing.assert_almost_equal(cube.beam.sr.value,
+                                       (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
+
 @pytest.mark.skipif("not RADIO_BEAM_INSTALLED")
 def test_beam_proj_meta():
 
