@@ -75,19 +75,42 @@ class LowerDimensionalObject(u.Quantity):
     def to(self, unit, equivalencies=[]):
         """
         Return a new ``LowerDimensionalObject'' of the same class with the
-        specified unit.  See `astropy.units.Quantity.to` for furthe details.
+        specified unit.  See `astropy.units.Quantity.to` for further details.
         """
         converted_array = u.Quantity.to(self, unit,
                                         equivalencies=equivalencies).value
 
         # use private versions of variables, not the generated property
         # versions
-        new = super(self, LowerDimensionalObject).__new__(
-            value=converted_array, unit=unit, copy=True,
-            wcs=self._wcs, meta=self._meta, mask=self._mask,
-            header=self._header)
+        # Not entirely sure the use of __class__ here is kosher, but we do want
+        # self.__class__, not super()
+        new = self.__class__(value=converted_array, unit=unit, copy=True,
+                             wcs=self._wcs, meta=self._meta, mask=self._mask,
+                             header=self._header)
 
         return new
+
+    def __getitem__(self, key):
+        """
+        Return a new ``LowerDimensionalObject'' of the same class while keeping
+        other properties fixed.
+        """
+        new_qty = super(LowerDimensionalObject, self).__getitem__(key)
+
+        if new_qty.ndim < 2:
+            # do not return a projection
+            return new_qty
+
+        new = self.__class__(value=new_qty.value,
+                             unit=new_qty.unit,
+                             copy=False,
+                             wcs=self._wcs,
+                             meta=self._meta,
+                             mask=self._mask,
+                             header=self._header)
+
+        return new
+
 
 
 class Projection(LowerDimensionalObject):
