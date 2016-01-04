@@ -99,12 +99,17 @@ class LowerDimensionalObject(u.Quantity):
 
         if new_qty.ndim < 2:
             # do not return a projection
-            return new_qty
+            return u.Quantity(new_qty)
+
+        if self._wcs is not None:
+            newwcs = self._wcs[key]
+        else:
+            newwcs = None
 
         new = self.__class__(value=new_qty.value,
                              unit=new_qty.unit,
                              copy=False,
-                             wcs=self._wcs,
+                             wcs=newwcs,
                              meta=self._meta,
                              mask=self._mask,
                              header=self._header)

@@ -4,13 +4,20 @@ from astropy import units as u
 from .helpers import assert_allclose
 from ..lower_dimensional_structures import Projection
 
+def test_slices_of_projections_not_projections():
+    # slices of projections that have <2 dimensions should not be projections
+    image = np.ones((2, 2)) * u.Jy
+    p = Projection(image, copy=False)
+
+    assert not isinstance(p[0,0], Projection)
+    assert not isinstance(p[0], Projection)
+
 
 def test_copy_false():
     image = np.ones((12, 12)) * u.Jy
     p = Projection(image, copy=False)
     image[3,4] = 2 * u.Jy
     assert_allclose(p[3,4], 2 * u.Jy)
-
 
 def test_write(tmpdir):
     image = np.ones((12, 12)) * u.Jy
