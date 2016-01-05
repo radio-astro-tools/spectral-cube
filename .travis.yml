@@ -61,8 +61,8 @@ install:
     - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL https://github.com/radio-astro-tools/radio_beam/archive/master.zip; fi
 
 script:
-   - cd spectral_cube/tests/data ; make ; cd ../../../
-   - python setup.py $SETUP_CMD
+    - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
+    - python setup.py $SETUP_CMD
 
 after_success:
     - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='spectral_cube/tests/coveragerc'; fi
