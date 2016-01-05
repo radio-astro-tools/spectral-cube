@@ -4,163 +4,61 @@ python:
     - 2.7
     - 3.4
     - 3.5
-    # This is just for "egg_info".  All other builds are explicitly given in the matrix
 env:
     global:
         # The following versions are the 'default' for tests, unless
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
+        - SETUP_CMD='test'
         - NUMPY_VERSION=1.10
         - ASTROPY_VERSION=stable
-        - CONDA_INSTALL='conda install -c astropy-ci-extras --yes'
-        - PIP_INSTALL='pip install'
-        - BOTTLENECK=no
-        - YT=no
-        - APLPY=no
-        - MATPLOTLIB=no
-        - PVEXTRACTOR=no
+        - CONDA_DEPENDENCIES='matplotlib yt'
+        - PIP_DEPENDENCIES='aplpy pvextractor'
     matrix:
         - SETUP_CMD='egg_info'
+        - SETUP_CMD='test'
+        - SETUP_CMD='test' ASTROPY_VERSION='development'
+        - SETUP_CMD='test' CONDA_DEPENDENCIES='' PIP_DEPENDENCIES=''
 
 matrix:
     include:
 
         # Do a coverage test in Python 2.
         - python: 2.7
-          env: SETUP_CMD='test --coverage' APLPY=yes PVEXTRACTOR=yes MATPLOTLIB=yes YT=yes
+          env: SETUP_CMD='test --coverage'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
         - python: 2.7
           env: SETUP_CMD='build_sphinx -w'
 
-        # Try Astropy development version
-        - python: 2.7
-          env: ASTROPY_VERSION=development SETUP_CMD='test' YT=yes
-        - python: 2.7
-          env: ASTROPY_VERSION=development SETUP_CMD='test' YT=no
-        - python: 2.7
-          env: ASTROPY_VERSION=development SETUP_CMD='test' APLPY=yes PVEXTRACTOR=yes
-        - python: 3.4
-          env: ASTROPY_VERSION=development SETUP_CMD='test'
-        - python: 3.5
-          env: ASTROPY_VERSION=development SETUP_CMD='test'
-        - python: 3.5
-          env: ASTROPY_VERSION=development SETUP_CMD='test' APLPY=yes PVEXTRACTOR=yes
-
-        # Try all python versions with the latest numpy
-        - python: 2.7
-          env: SETUP_CMD='test' YT=yes
-        - python: 2.7
-          env: SETUP_CMD='test' YT=no
-        - python: 2.7
-          env: SETUP_CMD='test' APLPY=yes PVEXTRACTOR=yes
-        - python: 3.4
-          env: SETUP_CMD='test'
-        - python: 3.5
-          env: SETUP_CMD='test'
-        - python: 3.5
-          env: SETUP_CMD='test' APLPY=yes PVEXTRACTOR=yes
-
         # Try older numpy versions
-        # drop support for 1.9+3.5 because travis can't test it - python: 3.5
-        # drop support for 1.9+3.5 because travis can't test it   env: NUMPY_VERSION=1.9 SETUP_CMD='test'
         - python: 2.7
-          env: NUMPY_VERSION=1.9 SETUP_CMD='test'
-        #- python: 2.7
-        #  env: NUMPY_VERSION=1.7 SETUP_CMD='test'
-        #- python: 2.7
-        #  env: NUMPY_VERSION=1.6 SETUP_CMD='test'
-        #- python: 2.7
-        #  env: NUMPY_VERSION=1.5 SETUP_CMD='test'
+          env: NUMPY_VERSION=1.9
+        - python: 2.7
+          env: NUMPY_VERSION=1.8
+        - python: 2.7
+          env: NUMPY_VERSION=1.7
 
         # Test with bottleneck
         - python: 2.7
-          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
-        # drop support for 1.9+3.5 because travis can't test it - python: 3.5
-        # drop support for 1.9+3.5 because travis can't test it   env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.9
-        - python: 2.7
-          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.10
+          env: CONDA_DEPENDENCIES='matplotlib yt bottleneck'
         - python: 3.5
-          env: ASTROPY_VERSION=stable SETUP_CMD='test' bottleneck=yes NUMPY_VERSION=1.10
+          env: CONDA_DEPENDENCIES='matplotlib yt bottleneck'
 
 before_install:
 
-    # Use utf8 encoding. Should be default, but this is insurance against
-    # future changes
-    - export PYTHONIOENCODING=UTF8
-
-    # http://conda.pydata.org/docs/travis.html#the-travis-yml-file
-    - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
-    - bash miniconda.sh -b -p $HOME/miniconda
-    - export PATH="$HOME/miniconda/bin:$PATH"
-    - hash -r
-    - conda config --set always_yes yes --set changeps1 no
-    - conda update -q conda
-    - conda info -a
-
-    # UPDATE APT-GET LISTINGS
-    - sudo apt-get update
-
-    # DOCUMENTATION DEPENDENCIES
-    - if [[ $SETUP_CMD == build_sphinx* ]]; then sudo apt-get install graphviz texlive-latex-extra dvipng; fi
+    - git clone git://github.com/astropy/ci-helpers.git
+    - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
 
     # Make sure that interactive matplotlib backends work
     - export DISPLAY=:99.0
-    - if [[ $APLPY == yes ]] || [[ $MATPLOTLIB == yes ]] || [[ $PVEXTRACTOR == yes ]]; then sh -e /etc/init.d/xvfb start; fi
-    # Make sure matplotlib uses PyQT not PySide
-    - export QT_API=pyqt
+    - sh -e /etc/init.d/xvfb start
 
 install:
 
-    # CONDA
-    - conda create --yes -n test -c astropy-ci-extras python=$TRAVIS_PYTHON_VERSION
-    - source activate test
-
-    # CORE DEPENDENCIES
-    - if [[ $SETUP_CMD != egg_info ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION pytest pip Cython jinja2; fi
-    - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL pytest-xdist; fi
-
-    # ASTROPY
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $ASTROPY_VERSION == development ]]; then $PIP_INSTALL git+http://github.com/astropy/astropy.git#egg=astropy; fi
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $ASTROPY_VERSION == stable ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION astropy; fi
-
-    # YT
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $TRAVIS_PYTHON_VERSION == 2.7 ]] && [[ $NUMPY_VERSION == 1.10 ]] && [[ $YT == yes ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION yt; fi
-
-    # matplotlib
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $MATPLOTLIB == yes ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION matplotlib; fi
-
-    # aplpy
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $APLPY == yes ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION matplotlib; fi
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $APLPY == yes ]]; then $PIP_INSTALL aplpy; fi
-
-    # pvextractor
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $PVEXTRACTOR == yes ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION matplotlib; fi
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $PVEXTRACTOR == yes ]]; then $PIP_INSTALL https://github.com/radio-astro-tools/pvextractor/archive/master.zip; fi
-
     # radio beam
     - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL https://github.com/radio-astro-tools/radio_beam/archive/master.zip; fi
-
-    # Bottleneck
-    - if [[ $SETUP_CMD != egg_info ]] && [[ $BOTTLENECK == yes ]] && [[ $NUMPY_VERSION == 1.10  || $NUMPY_VERSION == 1.9 ]]; then $CONDA_INSTALL --channel https://conda.binstar.org/asmeurer bottleneck; fi
-
-    # OPTIONAL DEPENDENCIES
-    # Here you can add any dependencies your package may have. You can use
-    # conda for packages available through conda, or pip for any other
-    # packages. You should leave the `numpy=$NUMPY_VERSION` in the `conda`
-    # install since this ensures Numpy does not get automatically upgraded.
-    # - if [[ $SETUP_CMD != egg_info ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION ... ; fi
-    # - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL ...; fi
-
-    # DOCUMENTATION DEPENDENCIES
-    # build_sphinx needs sphinx and matplotlib (for plot_directive). Note that
-    # this matplotlib will *not* work with py 3.x, but our sphinx build is
-    # currently 2.7, so that's fine
-    - if [[ $SETUP_CMD == build_sphinx* ]]; then $CONDA_INSTALL numpy=$NUMPY_VERSION Sphinx=1.2 matplotlib; fi
-
-    # COVERAGE DEPENDENCIES
-    - if [[ $SETUP_CMD == 'test --coverage' ]]; then $PIP_INSTALL coverage==3.7.1 coveralls; fi
 
 script:
    - cd spectral_cube/tests/data ; make ; cd ../../../
