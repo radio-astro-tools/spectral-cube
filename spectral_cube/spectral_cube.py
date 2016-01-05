@@ -2275,7 +2275,7 @@ class StokesSpectralCube(object):
     """
     A class to store a spectral cube with multiple Stokes parameters.
 
-    The individual Stokes cubes will share masks.
+    The individual Stokes cubes will share a common mask.
     """
 
     def __init__(self, stokes_data, mask=None, meta=None, fill_value=None):
@@ -2289,24 +2289,28 @@ class StokesSpectralCube(object):
         for component in stokes_data:
 
             if not isinstance(stokes_data[component], SpectralCube):
-                raise TypeError("stokes_data should be a dictionary of SpectralCube objects")
+                raise TypeError("stokes_data should be a dictionary of "
+                                "SpectralCube objects")
 
             if not wcs_utils.check_equality(stokes_data[component].wcs,
                                             stokes_data[reference].wcs):
-                raise ValueError("All spectral cubes in stokes_data should have the same WCS")
+                raise ValueError("All spectral cubes in stokes_data "
+                                 "should have the same WCS")
 
             if component not in VALID_STOKES:
-                raise ValueError("Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR".format(component))
+                raise ValueError("Invalid Stokes component: {0} - should be "
+                                 "one of I, Q, U, V, RR, LL, RL, LR".format(component))
                 
             if stokes_data[component].shape != stokes_data[reference].shape:
-                raise ValueError("All spectral cubes shoul have the same shape")
+                raise ValueError("All spectral cubes should have the same shape")
                 
         self._wcs = stokes_data[reference].wcs
         self._shape = stokes_data[reference].shape
         
         if isinstance(mask, BooleanArrayMask):
             if mask.shape != self._shape:
-                raise ValueError("Mask shape is not broadcastable to data shape: {0} vs {1}".format(mask.shape, self._shape))
+                raise ValueError("Mask shape is not broadcastable to data shape:"
+                                 " {0} vs {1}".format(mask.shape, self._shape))
 
         self._mask = mask
 
@@ -2326,7 +2330,7 @@ class StokesSpectralCube(object):
         return self._wcs
 
     def __dir__(self):
-        return list(self._stokes_data.keys())
+        return list(self._stokes_data.keys()) + object.__dir__(self)
 
     def __getattr__(self, attribute):
         """
@@ -2369,10 +2373,10 @@ class StokesSpectralCube(object):
             if not is_broadcastable_and_smaller(mask.shape, self.shape):
                 raise ValueError("Mask shape is not broadcastable to data shape: "
                                  "%s vs %s" % (mask.shape, self.shape))
-            mask = BooleanArrayMask(mask, self._wcs)
+            mask = BooleanArrayMask(mask, self.wcs)
 
         if self._mask is not None:
-            return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
+            return self._new_cube_with(mask=self.mask & mask if inherit_mask else mask)
         else:
             return self._new_cube_with(mask=mask)
 
