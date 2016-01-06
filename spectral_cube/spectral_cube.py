@@ -1288,7 +1288,7 @@ class SpectralCube(object):
         if axis == 0:
             # note that self._spectral_scale is required here because wcs
             # forces into units of m, m/s, or Hz
-            return self.wcs.pixel_scale_matrix[2,2] * self._spectral_scale
+            return np.abs(self.wcs.pixel_scale_matrix[2,2]) * self._spectral_scale
         elif axis in (1,2):
             # the pixel size is a projection.  I think the pixel_scale_matrix
             # must be symmetric, such that psm[axis,:]**2 == psm[:,axis]**2
