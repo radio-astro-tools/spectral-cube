@@ -1265,7 +1265,7 @@ class SpectralCube(object):
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
         y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
 
-        a, b, c = np.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+        x, y, spectral = np.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
 
         return spectral, y, x
 
