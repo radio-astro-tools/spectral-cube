@@ -1271,15 +1271,32 @@ class SpectralCube(object):
 
         return spectral, y, x
 
+    @cached
     def _pix_size_slice(self, axis):
         """
         Return the size of each pixel along any given direction.  Assumes
-        pixels have equal size.
+        pixels have equal size.  Also assumes that the spectral and spatial
+        directions are separable, which is enforced throughout this code.
+
+        Parameters
+        ----------
+        axis : 0, 1, or 2
+            The axis along which to compute the pixel size
+
+        Returns
+        -------
+        Pixel size in units of either degrees or the appropriate spectral unit
         """
         if axis == 0:
-            return self.wcs.wcs.cdelt[0] * self._spectral_scale
+            # note that self._spectral_scale is required here because wcs
+            # forces into units of m, m/s, or Hz
+            return self.wcs.pixel_scale_matrix[2,2] * self._spectral_scale
+        elif axis in (1,2):
+            # the pixel size is a projection.  I think the pixel_scale_matrix
+            # must be symmetric, such that psm[axis,:]**2 == psm[:,axis]**2
+            return np.sum(self.wcs.pixel_scale_matrix[axis,:]**2)**0.5
         else:
-            return self.wcs.wcs.cdelt[axis]
+            raise ValueError("Cubes have 3 axes.")
 
     @cached
     def _pix_size(self):
