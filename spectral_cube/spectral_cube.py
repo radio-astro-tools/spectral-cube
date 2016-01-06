@@ -1264,10 +1264,13 @@ class SpectralCube(object):
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
         y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
 
-        x = x.reshape(1, x.shape[0], x.shape[1])
-        y = y.reshape(1, y.shape[0], y.shape[1])
-        spectral = spectral.reshape(-1, 1, 1) - spectral.ravel()[0]
-        x, y, spectral = np.broadcast_arrays(x, y, spectral)
+        x = np.lib.stride_tricks.as_strided(x, shape=self.shape, strides=(0,) +
+                                            x.strides)
+        y = np.lib.stride_tricks.as_strided(y, shape=self.shape,
+                                            strides=(y.strides[0], 0,
+                                                     y.strides[1]))
+        spectral = np.lib.stride_tricks.as_strided(spectral, shape=self.shape,
+                                                   strides=spectral.strides + (0,))
 
         return spectral, y, x
 
