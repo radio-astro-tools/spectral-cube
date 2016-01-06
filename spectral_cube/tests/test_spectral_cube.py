@@ -1082,14 +1082,14 @@ def test_pix_sign():
     assert y>0
     assert x>0
 
-    cube.wcs.cdelt *= -1
+    cube.wcs.wcs.cdelt *= -1
     s,y,x = (cube._pix_size_slice(ii) for ii in range(3))
 
     assert s>0
     assert y>0
     assert x>0
 
-    cube.wcs.pc *= -1
+    cube.wcs.wcs.pc *= -1
     s,y,x = (cube._pix_size_slice(ii) for ii in range(3))
 
     assert s>0
