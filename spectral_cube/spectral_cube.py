@@ -1366,15 +1366,15 @@ class SpectralCube(object):
 
         _, _, spectral = self._wcs.all_pix2world(xpix, ypix, zpix, 0)
 
-        dspectral = np.diff(spectral)
+        # Take spectral units into account
+        # order of operations here is crucial!  If this is done after
+        # broadcasting, the full array size is allocated, which is bad!
+        dspectral = np.diff(spectral) * self._spectral_scale
 
         dx = np.abs(np.degrees(dx.reshape(1, dx.shape[0], dx.shape[1])))
         dy = np.abs(np.degrees(dy.reshape(1, dy.shape[0], dy.shape[1])))
         dspectral = np.abs(dspectral.reshape(-1, 1, 1))
         dx, dy, dspectral = np.broadcast_arrays(dx, dy, dspectral)
-
-        # Take spectral units into account
-        dspectral = dspectral * self._spectral_scale
 
         return dspectral, dy, dx
 
