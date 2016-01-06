@@ -1271,6 +1271,16 @@ class SpectralCube(object):
 
         return spectral, y, x
 
+    def _pix_size_slice(self, axis):
+        """
+        Return the size of each pixel along any given direction.  Assumes
+        pixels have equal size.
+        """
+        if axis == 0:
+            return self.wcs.wcs.cdelt[0] * self._spectral_scale
+        else:
+            return self.wcs.wcs.cdelt[axis]
+
     @cached
     def _pix_size(self):
         """
