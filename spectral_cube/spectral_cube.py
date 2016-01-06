@@ -60,8 +60,8 @@ def cached(func):
     def wrapper(self, *args):
         # The cache lives in the instance so that it gets garbage collected
         if func not in self._cache:
-            self._cache[func] = func(self, *args)
-        return self._cache[func]
+            self._cache[func, args] = func(self, *args)
+        return self._cache[func, args]
 
     return wrapper
 
@@ -1246,6 +1246,7 @@ class SpectralCube(object):
         # Start off by extracting the world coordinates of the pixels
         _, lat, lon = self.world[0, :, :]
         spectral, _, _ = self.world[:, 0, 0]
+        spectral -= spectral[0] # offset from first pixel
 
         # Convert to radians
         lon = np.radians(lon)
@@ -1264,13 +1265,25 @@ class SpectralCube(object):
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
         y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
 
-        x = np.lib.stride_tricks.as_strided(x, shape=self.shape, strides=(0,) +
-                                            x.strides)
-        y = np.lib.stride_tricks.as_strided(y, shape=self.shape,
-                                            strides=(y.strides[0], 0,
-                                                     y.strides[1]))
-        spectral = np.lib.stride_tricks.as_strided(spectral, shape=self.shape,
-                                                   strides=spectral.strides + (0,))
+        # "manual" approach to striding; there is a mistake somewhere in here.
+        #x = np.lib.stride_tricks.as_strided(x, shape=self.shape, strides=(0,) +
+        #                                    x.strides)
+        #y = np.lib.stride_tricks.as_strided(y, shape=self.shape,
+        #                                    strides=(y.strides[0], 0,
+        #                                             y.strides[1]))
+        #spectral = np.lib.stride_tricks.as_strided(spectral, shape=self.shape,
+        #                                           strides=spectral.strides + (0,0,))
+
+        a, b, c = np.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+
+        x = x.reshape(1, x.shape[0], x.shape[1])
+        y = y.reshape(1, y.shape[0], y.shape[1])
+        spectral = spectral.reshape(-1, 1, 1)
+        x, y, spectral = np.broadcast_arrays(x, y, spectral)
+
+        assert np.all(a==x)
+        assert np.all(b==y)
+        assert np.all(c==spectral)
 
         return spectral, y, x
 
@@ -1297,7 +1310,7 @@ class SpectralCube(object):
         elif axis in (1,2):
             # the pixel size is a projection.  I think the pixel_scale_matrix
             # must be symmetric, such that psm[axis,:]**2 == psm[:,axis]**2
-            return np.sum(self.wcs.pixel_scale_matrix[axis,:]**2)**0.5
+            return np.sum(self.wcs.pixel_scale_matrix[2-axis,:]**2)**0.5
         else:
             raise ValueError("Cubes have 3 axes.")
 
