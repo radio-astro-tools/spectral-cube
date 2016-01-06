@@ -20,6 +20,10 @@ class LowerDimensionalObject(u.Quantity):
         return self._meta
 
     @property
+    def mask(self):
+        return self._mask
+
+    @property
     def header(self):
         header = self._header
         # This inplace update is OK; it's not bad to overwrite WCS in this
@@ -67,6 +71,52 @@ class LowerDimensionalObject(u.Quantity):
         else:
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
+
+    def to(self, unit, equivalencies=[]):
+        """
+        Return a new ``LowerDimensionalObject'' of the same class with the
+        specified unit.  See `astropy.units.Quantity.to` for further details.
+        """
+        converted_array = u.Quantity.to(self, unit,
+                                        equivalencies=equivalencies).value
+
+        # use private versions of variables, not the generated property
+        # versions
+        # Not entirely sure the use of __class__ here is kosher, but we do want
+        # self.__class__, not super()
+        new = self.__class__(value=converted_array, unit=unit, copy=True,
+                             wcs=self._wcs, meta=self._meta, mask=self._mask,
+                             header=self._header)
+
+        return new
+
+    def __getitem__(self, key):
+        """
+        Return a new ``LowerDimensionalObject'' of the same class while keeping
+        other properties fixed.
+        """
+        new_qty = super(LowerDimensionalObject, self).__getitem__(key)
+
+        if new_qty.ndim < 2:
+            # do not return a projection
+            return u.Quantity(new_qty)
+
+        if self._wcs is not None:
+            newwcs = self._wcs[key]
+        else:
+            newwcs = None
+
+        new = self.__class__(value=new_qty.value,
+                             unit=new_qty.unit,
+                             copy=False,
+                             wcs=newwcs,
+                             meta=self._meta,
+                             mask=self._mask,
+                             header=self._header)
+
+        return new
+
+
 
 class Projection(LowerDimensionalObject):
 
