@@ -75,18 +75,31 @@ def test_huge_disallowed():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 
-    data = np.empty([1e2,1e3,1e3])
     cube = SpectralCube(data=data, wcs=cube.wcs)
 
-    assert cube._is_huge
+    assert not cube._is_huge
+    
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
 
-    with pytest.raises(ValueError) as exc:
+    try:
+        cube_utils.MEMORY_THRESHOLD = 10
+
+        assert cube._is_huge
+
+        with pytest.raises(ValueError) as exc:
+            cube + 5*cube.unit
+        assert 'entire cube into memory' in exc.value.args[0]
+
+        cube.allow_huge_operations = True
+
+        # just make sure it doesn't fail
         cube + 5*cube.unit
-    assert 'entire cube into memory' in exc.value.args[0]
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
 
-    cube.allow_huge_operations = True
-    # just make sure it doesn't fail
-    cube + 5*cube.unit
 
 class BaseTest(object):
 
