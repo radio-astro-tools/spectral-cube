@@ -57,9 +57,9 @@ matrix:
 
         # Test with bottleneck
         - python: 2.7
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib yt bottleneck'
+          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib bottleneck'
         - python: 3.4
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib yt bottleneck'
+          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib bottleneck'
 
 before_install:
 
