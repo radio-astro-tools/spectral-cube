@@ -118,15 +118,22 @@ class LowerDimensionalObject(u.Quantity):
 
         return new
 
-    def __array_wrap__(self, obj, context=None):
-        new = self.__class__(value=obj.value,
-                             unit=obj.unit,
-                             copy=False,
-                             wcs=self._wcs,
-                             meta=self._meta,
-                             mask=self._mask,
-                             header=self._header)
-        return new
+    def __array_finalize__(self, obj):
+        self._unit = getattr(obj, '_unit', None)
+        self._wcs = getattr(obj, '_wcs', None)
+        self._meta = getattr(obj, '_meta', None)
+        self._mask = getattr(obj, '_mask', None)
+        self._header = getattr(obj, '_header', None)
+
+    #def __array_wrap__(self, obj, context=None):
+    #    new = self.__class__(value=obj.value,
+    #                         unit=obj.unit,
+    #                         copy=False,
+    #                         wcs=self._wcs,
+    #                         meta=self._meta,
+    #                         mask=self._mask,
+    #                         header=self._header)
+    #    return new
 
     @property
     def __array_priority__(self):
