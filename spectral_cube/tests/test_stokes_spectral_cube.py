@@ -5,7 +5,8 @@ from astropy.wcs import WCS
 from astropy.tests.helper import pytest
 from astropy.utils import OrderedDict, NumpyRNGContext
 
-from ..spectral_cube import SpectralCube, StokesSpectralCube
+from ..spectral_cube import SpectralCube
+from ..stokes_spectral_cube import StokesSpectralCube
 from ..masks import BooleanArrayMask
 
 class TestStokesSpectralCube():
