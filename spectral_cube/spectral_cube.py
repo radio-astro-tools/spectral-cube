@@ -2273,11 +2273,11 @@ class SpectralCube(object):
 VALID_STOKES = ['I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR']
 
 class StokesSpectralCube(object):
-
     """
     A class to store a spectral cube with multiple Stokes parameters.
 
-    The individual Stokes cubes will share a common mask.
+    The individual Stokes cubes can share a common mask in addition to having
+    component-specific masks.
     """
 
     def __init__(self, stokes_data, mask=None, meta=None, fill_value=None):
