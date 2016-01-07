@@ -1,3 +1,5 @@
+from __future__ import print_function, absolute_import, division
+
 from astropy import units as u
 from astropy import wcs
 from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList

@@ -1,3 +1,5 @@
+from __future__ import print_function, absolute_import, division
+
 from astropy import units as u
 
 from numpy.testing import assert_allclose as assert_allclose_numpy, assert_array_equal

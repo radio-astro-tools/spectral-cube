@@ -1,3 +1,6 @@
+from __future__ import print_function, absolute_import, division
+
+
 def read(filename, format=None, hdu=None, **kwargs):
     """
     Read a file into a :class:`SpectralCube` or :class:`StokesSpectralCube`

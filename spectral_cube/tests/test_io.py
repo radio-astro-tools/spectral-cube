@@ -1,3 +1,5 @@
+from __future__ import print_function, absolute_import, division
+
 from astropy.io import fits as pyfits
 from ..io import class_lmv, fits
 from .. import SpectralCube
