@@ -38,7 +38,7 @@ def test_preserve_wcs_to():
 
     assert p2.wcs == p.wcs
 
-def test_division():
+def test_multiplication():
     # regression: 265
 
     image = np.ones((12, 12)) * u.Jy
@@ -46,4 +46,16 @@ def test_division():
 
     p2 = p * 5
 
+    assert hasattr(p2, '_wcs')
+    assert p2.wcs == p.wcs
+
+def test_unit_division():
+    # regression: 265
+
+    image = np.ones((12, 12)) * u.Jy
+    p = Projection(image, copy=False)
+
+    p2 = p / u.beam
+
+    assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
