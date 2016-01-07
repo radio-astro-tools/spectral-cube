@@ -37,3 +37,13 @@ def test_preserve_wcs_to():
     assert_allclose(p[3,4], 2000 * u.mJy)
 
     assert p2.wcs == p.wcs
+
+def test_division():
+    # regression: 265
+
+    image = np.ones((12, 12)) * u.Jy
+    p = Projection(image, copy=False)
+
+    p2 = p * 5
+
+    assert p2.wcs == p.wcs

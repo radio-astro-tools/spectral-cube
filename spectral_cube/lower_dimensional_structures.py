@@ -118,6 +118,15 @@ class LowerDimensionalObject(u.Quantity):
 
         return new
 
+    def __array_wrap__(self, obj, context=None):
+        new = self.__class__(value=self.value,
+                             unit=self.unit,
+                             copy=False,
+                             wcs=self._wcs,
+                             meta=self._meta,
+                             mask=self._mask,
+                             header=self._header)
+        return new
 
 
 class Projection(LowerDimensionalObject):
