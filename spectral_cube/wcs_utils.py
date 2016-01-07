@@ -1,4 +1,5 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import, division
+
 import numpy as np
 from astropy.wcs import WCS
 import warnings

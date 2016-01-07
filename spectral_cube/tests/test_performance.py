@@ -1,6 +1,9 @@
 """
 Performance-related tests to make sure we don't use more memory than we should
 """
+
+from __future__ import print_function, absolute_import, division
+
 from .test_moments import moment_cube
 from .helpers import assert_allclose
 from ..spectral_cube import SpectralCube

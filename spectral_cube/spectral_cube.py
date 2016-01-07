@@ -2,6 +2,8 @@
 A class to represent a 3-d position-position-velocity spectral cube.
 """
 
+from __future__ import print_function, absolute_import, division
+
 import warnings
 from functools import wraps
 import operator

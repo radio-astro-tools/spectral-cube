@@ -1,3 +1,5 @@
+from __future__ import print_function, absolute_import, division
+
 import warnings
 from astropy.io import fits
 from astropy.extern import six

@@ -1,3 +1,5 @@
+from __future__ import print_function, absolute_import, division
+
 import warnings
 
 from astropy.io import fits
@@ -78,7 +80,7 @@ def read_data_fits(input, hdu=None, **kwargs):
         elif len(arrays) == 1:
             array_hdu = arrays[first(arrays)]
         else:
-            raise ValueError("No table found")
+            raise ValueError("No arrays found")
 
     elif isinstance(input, (fits.PrimaryHDU, fits.ImageHDU)):
 

@@ -1,3 +1,5 @@
+from __future__ import print_function, absolute_import, division
+
 import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils

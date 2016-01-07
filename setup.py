@@ -102,6 +102,5 @@ setup(name='spectral-cube',
       long_description=LONG_DESCRIPTION,
       cmdclass=cmdclassd,
       zip_safe=False,
-      use_2to3=True,
       **package_info
 )
