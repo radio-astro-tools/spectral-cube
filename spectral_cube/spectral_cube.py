@@ -2332,7 +2332,7 @@ class StokesSpectralCube(object):
         return self._wcs
 
     def __dir__(self):
-        return list(self._stokes_data.keys()) + object.__dir__(self)
+        return list(self._stokes_data.keys()) + super(StokesSpectralCube, self).__dir__()
 
     def __getattr__(self, attribute):
         """

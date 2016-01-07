@@ -145,7 +145,7 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
         for component in data:
             comp_data, comp_wcs = cube_utils._orient(data[component], wcs)
             comp_mask = LazyMask(np.isfinite, data=comp_data, wcs=comp_wcs)
-            stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs, mask=comp_mask, meta=meta)
+            stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs, mask=comp_mask, meta=meta, header=header)
 
         cube = StokesSpectralCube(stokes_data)
 
