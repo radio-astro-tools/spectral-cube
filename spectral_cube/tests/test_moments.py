@@ -79,7 +79,7 @@ if StrictVersion(astropy.__version__[:3]) > StrictVersion('1.0'):
     # The relative error is slightly larger on astropy-dev
     # There is no obvious reason for this.
     rtol = 2e-7
-    atol = 1e-40
+    atol = 1e-30
 else:
     rtol = 1e-7
     atol = 0.0

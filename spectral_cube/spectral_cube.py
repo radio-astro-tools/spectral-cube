@@ -60,8 +60,8 @@ def cached(func):
     def wrapper(self, *args):
         # The cache lives in the instance so that it gets garbage collected
         if func not in self._cache:
-            self._cache[func] = func(self, *args)
-        return self._cache[func]
+            self._cache[func, args] = func(self, *args)
+        return self._cache[func, args]
 
     return wrapper
 
@@ -1246,6 +1246,7 @@ class SpectralCube(object):
         # Start off by extracting the world coordinates of the pixels
         _, lat, lon = self.world[0, :, :]
         spectral, _, _ = self.world[:, 0, 0]
+        spectral -= spectral[0] # offset from first pixel
 
         # Convert to radians
         lon = np.radians(lon)
@@ -1264,12 +1265,36 @@ class SpectralCube(object):
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
         y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
 
-        x = x.reshape(1, x.shape[0], x.shape[1])
-        y = y.reshape(1, y.shape[0], y.shape[1])
-        spectral = spectral.reshape(-1, 1, 1) - spectral.ravel()[0]
-        x, y, spectral = np.broadcast_arrays(x, y, spectral)
+        x, y, spectral = np.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
 
         return spectral, y, x
+
+    @cached
+    def _pix_size_slice(self, axis):
+        """
+        Return the size of each pixel along any given direction.  Assumes
+        pixels have equal size.  Also assumes that the spectral and spatial
+        directions are separable, which is enforced throughout this code.
+
+        Parameters
+        ----------
+        axis : 0, 1, or 2
+            The axis along which to compute the pixel size
+
+        Returns
+        -------
+        Pixel size in units of either degrees or the appropriate spectral unit
+        """
+        if axis == 0:
+            # note that self._spectral_scale is required here because wcs
+            # forces into units of m, m/s, or Hz
+            return np.abs(self.wcs.pixel_scale_matrix[2,2]) * self._spectral_scale
+        elif axis in (1,2):
+            # the pixel size is a projection.  I think the pixel_scale_matrix
+            # must be symmetric, such that psm[axis,:]**2 == psm[:,axis]**2
+            return np.sum(self.wcs.pixel_scale_matrix[2-axis,:]**2)**0.5
+        else:
+            raise ValueError("Cubes have 3 axes.")
 
     @cached
     def _pix_size(self):
@@ -1336,15 +1361,15 @@ class SpectralCube(object):
 
         _, _, spectral = self._wcs.all_pix2world(xpix, ypix, zpix, 0)
 
-        dspectral = np.diff(spectral)
+        # Take spectral units into account
+        # order of operations here is crucial!  If this is done after
+        # broadcasting, the full array size is allocated, which is bad!
+        dspectral = np.diff(spectral) * self._spectral_scale
 
         dx = np.abs(np.degrees(dx.reshape(1, dx.shape[0], dx.shape[1])))
         dy = np.abs(np.degrees(dy.reshape(1, dy.shape[0], dy.shape[1])))
         dspectral = np.abs(dspectral.reshape(-1, 1, 1))
         dx, dy, dspectral = np.broadcast_arrays(dx, dy, dspectral)
-
-        # Take spectral units into account
-        dspectral = dspectral * self._spectral_scale
 
         return dspectral, dy, dx
 

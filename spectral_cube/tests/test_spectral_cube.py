@@ -1071,3 +1071,27 @@ def test_proj_meta():
 
     assert 'BUNIT' in proj.meta
     assert proj.meta['BUNIT'] == 'K'
+
+def test_pix_sign():
+    
+    cube, data = cube_and_raw('advs.fits')
+
+    s,y,x = (cube._pix_size_slice(ii) for ii in range(3))
+
+    assert s>0
+    assert y>0
+    assert x>0
+
+    cube.wcs.wcs.cdelt *= -1
+    s,y,x = (cube._pix_size_slice(ii) for ii in range(3))
+
+    assert s>0
+    assert y>0
+    assert x>0
+
+    cube.wcs.wcs.pc *= -1
+    s,y,x = (cube._pix_size_slice(ii) for ii in range(3))
+
+    assert s>0
+    assert y>0
+    assert x>0
