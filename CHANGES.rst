@@ -22,6 +22,8 @@
    (https://github.com/radio-astro-tools/spectral-cube/pull/226)
  - Add xor operations for Masks
    (https://github.com/radio-astro-tools/spectral-cube/pull/241)
+ - Added a new StokesSpectralCube class to deal with 4-d cubes
+   (https://github.com/radio-astro-tools/spectral-cube/pull/249)
 
 0.2.2 (2015-03-12)
 ------------------
