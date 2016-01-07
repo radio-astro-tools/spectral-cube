@@ -10,7 +10,13 @@ from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
 
 import numpy as np
 import datetime
-from .. import version
+try:
+    from .. import version
+    SPECTRAL_CUBE_VERSION = version.version
+except ImportError:
+    # We might be running py.test on a clean checkout
+    SPECTRAL_CUBE_VERSION = 'dev'
+
 from .. import SpectralCube, StokesSpectralCube, LazyMask
 from .. import cube_utils
 
@@ -135,12 +141,13 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
 
         data, wcs = cube_utils._split_stokes(data, wcs)
 
-        mask = {}
+        stokes_data = {}
         for component in data:
-            data[component], wcs_slice = cube_utils._orient(data[component], wcs)
-            mask[component] = LazyMask(np.isfinite, data=data[component], wcs=wcs_slice)
+            comp_data, comp_wcs = cube_utils._orient(data[component], wcs)
+            comp_mask = LazyMask(np.isfinite, data=comp_data, wcs=comp_wcs)
+            stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs, mask=comp_mask, meta=meta)
 
-        cube = StokesSpectralCube(data, wcs_slice, mask, meta=meta, header=header)
+        cube = StokesSpectralCube(stokes_data)
 
     else:
 
@@ -160,7 +167,7 @@ def write_fits_cube(filename, cube, overwrite=False,
         now = datetime.datetime.strftime(datetime.datetime.now(),
                                          "%Y/%m/%d-%H:%M:%S")
         hdu.header.add_history("Written by spectral_cube v{version} on "
-                               "{date}".format(version=version.version,
+                               "{date}".format(version=SPECTRAL_CUBE_VERSION,
                                date=now))
         hdu.writeto(filename, clobber=overwrite)
     else:

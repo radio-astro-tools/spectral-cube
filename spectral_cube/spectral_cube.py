@@ -1969,9 +1969,11 @@ class SpectralCube(object):
         from .io.core import read
         cube = read(filename, format=format, hdu=hdu, **kwargs)
         if isinstance(cube, StokesSpectralCube):
-            return SpectralCube(data=cube._data, wcs=cube._wcs,
-                                meta=cube._meta, mask=cube._mask,
-                                header=cube._header)
+            if hasattr(cube, 'I'):
+                warnings.warn("Cube is a Stokes cube, returning spectral cube for I component")
+                return cube.I
+            else:
+                raise ValueError("Spectral cube is a Stokes cube that does not have an I component")
         else:
             return cube
 
