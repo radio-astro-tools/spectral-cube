@@ -1,12 +1,13 @@
-import pytest
 import operator
 import itertools
 import warnings
 import mmap
+from distutils.version import StrictVersion, LooseVersion
 
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
 
+import pytest
 
 from astropy.io import fits
 from astropy import units as u
@@ -23,29 +24,29 @@ from .. import spectral_axis
 from . import path
 from .helpers import assert_allclose, assert_array_equal
 
-from distutils.version import StrictVersion
 
 try:
     import yt
-    ytOK = True
-    yt_version = (StrictVersion(yt.__version__[:-4])
-                  if 'dev' in yt.__version__ else
-                  StrictVersion(yt.__version__))
+    YT_INSTALLED = True
+    YT_LT_301 = LooseVersion(yt.__version__) < LooseVersion('3.0.1')
 except ImportError:
-    yt_version = StrictVersion('0.0.0')
-    ytOK = False
+    YT_INSTALLED = False
+    YT_LT_301 = False
 
 try:
     import bottleneck
-    bottleneckOK = True
+    BOTTLENECK_INSTALLED = True
 except ImportError:
-    bottleneckOK = False
+    BOTTLENECK_INSTALLED = False
 
 try:
     from radio_beam import Beam
     RADIO_BEAM_INSTALLED = True
 except ImportError:
     RADIO_BEAM_INSTALLED = False
+
+
+NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
 
 
 def cube_and_raw(filename):
@@ -74,18 +75,31 @@ def test_huge_disallowed():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 
-    data = np.empty([1e2,1e3,1e3])
     cube = SpectralCube(data=data, wcs=cube.wcs)
 
-    assert cube._is_huge
+    assert not cube._is_huge
+    
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
 
-    with pytest.raises(ValueError) as exc:
+    try:
+        cube_utils.MEMORY_THRESHOLD = 10
+
+        assert cube._is_huge
+
+        with pytest.raises(ValueError) as exc:
+            cube + 5*cube.unit
+        assert 'entire cube into memory' in exc.value.args[0]
+
+        cube.allow_huge_operations = True
+
+        # just make sure it doesn't fail
         cube + 5*cube.unit
-    assert 'entire cube into memory' in exc.value.args[0]
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
 
-    cube.allow_huge_operations = True
-    # just make sure it doesn't fail
-    cube + 5*cube.unit
 
 class BaseTest(object):
 
@@ -444,6 +458,7 @@ class TestNumpyMethods(BaseTest):
         assert not np.any(np.isnan(scmed.value))
         assert scmed.unit == self.c.unit
 
+    @pytest.mark.skipif('NUMPY_LT_19')
     def test_bad_median_apply(self):
         # this is a test for manually-applied numpy medians, which are different
         # from the cube.median method that does "the right thing"
@@ -563,7 +578,7 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
         """.strip()
 
 
-@pytest.mark.skipif(not ytOK, reason='Could not import yt')
+@pytest.mark.skipif('not YT_INSTALLED')
 class TestYt():
     def setup_method(self, method):
         self.cube = SpectralCube.read(path('adv.fits'))
@@ -602,7 +617,7 @@ class TestYt():
         ds2.quan(1.0,unit2)
         ds3.quan(1.0,unit3)
 
-    @pytest.mark.skipif(yt_version < StrictVersion('3.0.1'), reason='yt 3.0 has a FITS-related bug')
+    @pytest.mark.skipif('YT_LT_301', reason='yt 3.0 has a FITS-related bug')
     def test_yt_fluxcompare(self):
         # Now check that we can compute quantities of the flux
         # and that they are equal
@@ -749,7 +764,7 @@ def test_preserve_spectral_unit():
     assert new_cube.spectral_axis.unit is u.GHz
 
 
-@pytest.mark.skipif(not bottleneckOK, reason='Bottleneck could not be imported')
+@pytest.mark.skipif('not BOTTLENECK_INSTALLED')
 def test_endians():
     """
     Test that the endianness checking returns something in Native form
@@ -974,7 +989,7 @@ def test_preserve_bunit():
     assert cube.unit == u.Jy
     assert cube.header['BUNIT'] == 'Jy'
 
-@pytest.mark.skipif("not RADIO_BEAM_INSTALLED")
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_preserve_beam():
 
     cube, data = cube_and_raw('advs.fits')
@@ -983,7 +998,7 @@ def test_preserve_beam():
 
     assert cube.beam == beam
 
-@pytest.mark.skipif("not RADIO_BEAM_INSTALLED")
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_append_beam_to_hdr():
 
     cube, data = cube_and_raw('advs.fits')
@@ -1034,7 +1049,7 @@ def test_jybeam_whitespace():
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
-@pytest.mark.skipif("not RADIO_BEAM_INSTALLED")
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_beam_proj_meta():
 
     cube, data = cube_and_raw('advs.fits')

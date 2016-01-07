@@ -195,8 +195,7 @@ class SpectralCube(object):
 
     @property
     def _is_huge(self):
-        # TODO: make threshold depend on memory?
-        return cube_utils.is_huge(self, threshold=1e8)
+        return cube_utils.is_huge(self)
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None, unit=None):

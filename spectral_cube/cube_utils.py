@@ -191,8 +191,13 @@ class SliceIndexer(object):
         raise Exception("You need to specify a slice (e.g. ``[:]`` or "
                         "``[0,:,:]`` in order to access this property.")
 
-def is_huge(cube, threshold=1e8):
-    if cube.size < threshold:  # smallish
+
+# TODO: make this into a proper configuration item
+# TODO: make threshold depend on memory?
+MEMORY_THRESHOLD=1e8
+
+def is_huge(cube):
+    if cube.size < MEMORY_THRESHOLD:  # smallish
         return False
     else:
         return True
