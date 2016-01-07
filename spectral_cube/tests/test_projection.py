@@ -46,8 +46,10 @@ def test_multiplication():
 
     p2 = p * 5
 
+    assert p2.unit == u.Jy
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
+    assert np.all(p2.value == 5)
 
 def test_unit_division():
     # regression: 265
@@ -57,5 +59,6 @@ def test_unit_division():
 
     p2 = p / u.beam
 
+    assert p2.unit == u.Jy/u.beam
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
