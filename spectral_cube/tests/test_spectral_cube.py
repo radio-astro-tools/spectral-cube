@@ -617,7 +617,7 @@ class TestYt():
         ds2.quan(1.0,unit2)
         ds3.quan(1.0,unit3)
 
-    @pytest.mark.skipif('YT_LT_301')
+    @pytest.mark.skipif('YT_LT_301', reason='yt 3.0 has a FITS-related bug')
     def test_yt_fluxcompare(self):
         # Now check that we can compute quantities of the flux
         # and that they are equal
