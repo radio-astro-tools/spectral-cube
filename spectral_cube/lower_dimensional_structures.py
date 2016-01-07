@@ -119,19 +119,6 @@ class LowerDimensionalObject(u.Quantity):
         return new
 
     def __array_wrap__(self, obj, context=None):
-        print("Context = {0}".format(context))
-        print("Array wrap for {0}->{1} called".format(self, obj))
-        print("Array wrap for {0}->{1} called".format(type(self), type(obj)))
-        print("self has wcs: {0} meta: {1} mask: {2} header: {3}"
-              .format(hasattr(self,'_wcs'),
-                      hasattr(self,'_meta'),
-                      hasattr(self,'_mask'),
-                      hasattr(self,'_header')))
-        print("obj has wcs: {0} meta: {1} mask: {2} header: {3}"
-              .format(hasattr(obj,'_wcs'),
-                      hasattr(obj,'_meta'),
-                      hasattr(obj,'_mask'),
-                      hasattr(obj,'_header')))
         new = self.__class__(value=obj.value,
                              unit=obj.unit,
                              copy=False,
@@ -140,6 +127,10 @@ class LowerDimensionalObject(u.Quantity):
                              mask=self._mask,
                              header=self._header)
         return new
+
+    @property
+    def __array_priority__(self):
+        return super(LowerDimensionalObject, self).__array_priority__*2
 
 
 class Projection(LowerDimensionalObject):
