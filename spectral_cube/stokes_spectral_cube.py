@@ -2,6 +2,7 @@ from __future__ import print_function, absolute_import, division
 
 import numpy as np
 
+from astropy.extern import six
 from .spectral_cube import SpectralCube
 from . import wcs_utils
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
@@ -71,7 +72,12 @@ class StokesSpectralCube(object):
         return self._wcs
 
     def __dir__(self):
-        return self.components + super(StokesSpectralCube, self).__dir__()
+        if six.PY2:
+            return self.components + ['shape', 'mask', 'wcs', 'components',
+                                      'components', 'with_mask',
+                                      'with_spectral_unit', 'read', 'write']
+        else:
+            return self.components + super(StokesSpectralCube, self).__dir__()
 
     @property
     def components(self):
