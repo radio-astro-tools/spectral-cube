@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
@@ -47,6 +49,7 @@ class TestStokesSpectralCube():
     def test_valid_component_name(self, component):
         stokes_data = {component: SpectralCube(self.data[0], wcs=self.wcs)}
         cube = StokesSpectralCube(stokes_data)
+        assert cube.components == [component]
 
     @pytest.mark.parametrize('component', ('A', 'B', 'IQUV'))
     def test_invalid_component_name(self, component):
@@ -65,15 +68,17 @@ class TestStokesSpectralCube():
         assert exc.value.args[0] == "All spectral cubes in stokes_data should have the same WCS"
 
     def test_attributes(self):
-        stokes_data = dict(I=SpectralCube(self.data[0], wcs=self.wcs),
-                           Q=SpectralCube(self.data[1], wcs=self.wcs),
-                           U=SpectralCube(self.data[2], wcs=self.wcs),
-                           V=SpectralCube(self.data[3], wcs=self.wcs))
+        stokes_data = OrderedDict()
+        stokes_data['I'] = SpectralCube(self.data[0], wcs=self.wcs)
+        stokes_data['Q'] = SpectralCube(self.data[1], wcs=self.wcs)
+        stokes_data['U'] = SpectralCube(self.data[2], wcs=self.wcs)
+        stokes_data['V'] = SpectralCube(self.data[3], wcs=self.wcs)
         cube = StokesSpectralCube(stokes_data)
         assert_allclose(cube.I.unmasked_data[...], 0)
         assert_allclose(cube.Q.unmasked_data[...], 1)
         assert_allclose(cube.U.unmasked_data[...], 2)
         assert_allclose(cube.V.unmasked_data[...], 3)
+        assert cube.components == ['I', 'Q', 'U', 'V']
 
     def test_dir(self):
         stokes_data = dict(I=SpectralCube(self.data[0], wcs=self.wcs),

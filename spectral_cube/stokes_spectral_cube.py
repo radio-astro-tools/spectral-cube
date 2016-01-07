@@ -6,6 +6,8 @@ from .spectral_cube import SpectralCube
 from . import wcs_utils
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 
+__all__ = ['StokesSpectalCube']
+
 VALID_STOKES = ['I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR']
 
 
@@ -39,13 +41,13 @@ class StokesSpectralCube(object):
             if component not in VALID_STOKES:
                 raise ValueError("Invalid Stokes component: {0} - should be "
                                  "one of I, Q, U, V, RR, LL, RL, LR".format(component))
-                
+
             if stokes_data[component].shape != stokes_data[reference].shape:
                 raise ValueError("All spectral cubes should have the same shape")
-                
+
         self._wcs = stokes_data[reference].wcs
         self._shape = stokes_data[reference].shape
-        
+
         if isinstance(mask, BooleanArrayMask):
             if mask.shape != self._shape:
                 raise ValueError("Mask shape is not broadcastable to data shape:"
@@ -69,7 +71,11 @@ class StokesSpectralCube(object):
         return self._wcs
 
     def __dir__(self):
-        return list(self._stokes_data.keys()) + super(StokesSpectralCube, self).__dir__()
+        return self.components + super(StokesSpectralCube, self).__dir__()
+
+    @property
+    def components(self):
+        return list(self._stokes_data.keys())
 
     def __getattr__(self, attribute):
         """
