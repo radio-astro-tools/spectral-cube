@@ -2,7 +2,7 @@ from __future__ import print_function, absolute_import, division
 
 from astropy.io import fits as pyfits
 from ..io import class_lmv, fits
-from .. import SpectralCube
+from .. import SpectralCube, StokesSpectralCube
 from . import path
 import pytest
 
@@ -29,3 +29,8 @@ def test_3d_4d_stokes():
 
     assert c1.shape == c3.shape
     # c2 has a different shape on disk...
+
+def test_4d_stokes():
+    f = pyfits.open(path('advs.fits'))
+    c = StokesSpectralCube.read(f)
+    assert isinstance(c, StokesSpectralCube)
