@@ -125,16 +125,6 @@ class LowerDimensionalObject(u.Quantity):
         self._mask = getattr(obj, '_mask', None)
         self._header = getattr(obj, '_header', None)
 
-    #def __array_wrap__(self, obj, context=None):
-    #    new = self.__class__(value=obj.value,
-    #                         unit=obj.unit,
-    #                         copy=False,
-    #                         wcs=self._wcs,
-    #                         meta=self._meta,
-    #                         mask=self._mask,
-    #                         header=self._header)
-    #    return new
-
     @property
     def __array_priority__(self):
         return super(LowerDimensionalObject, self).__array_priority__*2
