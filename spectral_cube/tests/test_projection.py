@@ -62,3 +62,15 @@ def test_unit_division():
     assert p2.unit == u.Jy/u.beam
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
+
+def test_isnan():
+    # Check that np.isnan strips units
+
+    image = np.ones((12, 12)) * u.Jy
+    image[5,6] = np.nan
+    p = Projection(image, copy=False)
+
+    mask = np.isnan(p)
+
+    assert mask.sum() == 1
+    assert not hasattr(mask, 'unit')
