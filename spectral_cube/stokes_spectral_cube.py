@@ -134,7 +134,6 @@ class StokesSpectralCube(object):
     def _new_cube_with(self, stokes_data=None,
                        mask=None, meta=None, fill_value=None):
 
-
         data = self._stokes_data if stokes_data is None else stokes_data
         mask = self._mask if mask is None else mask
         if meta is None:
@@ -154,7 +153,6 @@ class StokesSpectralCube(object):
                        for k in self._stokes_data}
 
         return self._new_cube_with(stokes_data=stokes_data)
-
 
     @classmethod
     def read(cls, filename, format=None, hdu=None, **kwargs):

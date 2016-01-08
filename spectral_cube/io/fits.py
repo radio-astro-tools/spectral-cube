@@ -20,6 +20,7 @@ except ImportError:
 from .. import SpectralCube, StokesSpectralCube, LazyMask
 from .. import cube_utils
 
+
 def first(iterable):
     return next(iter(iterable))
 
@@ -34,8 +35,8 @@ def is_fits(input, **kwargs):
     """
     if isinstance(input, six.string_types):
         if input.lower().endswith(('.fits', '.fits.gz',
-                                      '.fit', '.fit.gz',
-                                      '.fits.Z', '.fit.Z')):
+                                   '.fit', '.fit.gz',
+                                   '.fits.Z', '.fit.Z')):
             return True
     elif isinstance(input, (fits.HDUList, fits.PrimaryHDU, fits.ImageHDU)):
         return True
@@ -145,7 +146,9 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
         for component in data:
             comp_data, comp_wcs = cube_utils._orient(data[component], wcs)
             comp_mask = LazyMask(np.isfinite, data=comp_data, wcs=comp_wcs)
-            stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs, mask=comp_mask, meta=meta, header=header)
+            stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs,
+                                                  mask=comp_mask, meta=meta,
+                                                  header=header)
 
         cube = StokesSpectralCube(stokes_data)
 
@@ -168,7 +171,7 @@ def write_fits_cube(filename, cube, overwrite=False,
                                          "%Y/%m/%d-%H:%M:%S")
         hdu.header.add_history("Written by spectral_cube v{version} on "
                                "{date}".format(version=SPECTRAL_CUBE_VERSION,
-                               date=now))
+                                               date=now))
         hdu.writeto(filename, clobber=overwrite)
     else:
         raise NotImplementedError()

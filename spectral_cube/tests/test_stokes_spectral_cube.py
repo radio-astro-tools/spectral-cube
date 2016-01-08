@@ -11,13 +11,14 @@ from ..spectral_cube import SpectralCube
 from ..stokes_spectral_cube import StokesSpectralCube
 from ..masks import BooleanArrayMask
 
+
 class TestStokesSpectralCube():
 
     def setup_class(self):
 
         self.wcs = WCS(naxis=3)
         self.wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
-        self.data = np.arange(4)[:,None,None,None] * np.ones((5, 20, 30))
+        self.data = np.arange(4)[:, None, None, None] * np.ones((5, 20, 30))
 
     def test_direct_init(self):
         stokes_data = dict(I=SpectralCube(self.data[0], wcs=self.wcs),
@@ -43,7 +44,6 @@ class TestStokesSpectralCube():
         with pytest.raises(ValueError) as exc:
             cube = StokesSpectralCube(stokes_data)
         assert exc.value.args[0] == "All spectral cubes should have the same shape"
-
 
     @pytest.mark.parametrize('component', ('I', 'Q', 'U', 'V', 'RR', 'RL', 'LR', 'LL'))
     def test_valid_component_name(self, component):
@@ -87,7 +87,7 @@ class TestStokesSpectralCube():
         cube = StokesSpectralCube(stokes_data)
 
         attributes = dir(cube)
-        
+
         for stokes in 'IQU':
             assert stokes in attributes
         assert 'V' not in attributes
