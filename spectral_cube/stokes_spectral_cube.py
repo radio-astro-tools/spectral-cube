@@ -73,9 +73,7 @@ class StokesSpectralCube(object):
 
     def __dir__(self):
         if six.PY2:
-            return self.components + ['shape', 'mask', 'wcs', 'components',
-                                      'components', 'with_mask',
-                                      'with_spectral_unit', 'read', 'write']
+            return self.components + dir(type(self)) + list(self.__dict__)
         else:
             return self.components + super(StokesSpectralCube, self).__dir__()
 
