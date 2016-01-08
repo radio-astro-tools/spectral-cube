@@ -141,10 +141,10 @@ class TestStokesSpectralCube():
 
         cube1 = StokesSpectralCube(stokes_data, mask=mask1)
 
-        assert_equal(cube1.I.mask.include(), (mask1 & mask2[0])._include())
-        assert_equal(cube1.Q.mask.include(), (mask1 & mask2[1])._include())
-        assert_equal(cube1.U.mask.include(), (mask1 & mask2[2])._include())
-        assert_equal(cube1.V.mask.include(), (mask1 & mask2[3])._include())
+        assert_equal(cube1.I.mask.include(), (mask1 & mask2[0]).include())
+        assert_equal(cube1.Q.mask.include(), (mask1 & mask2[1]).include())
+        assert_equal(cube1.U.mask.include(), (mask1 & mask2[2]).include())
+        assert_equal(cube1.V.mask.include(), (mask1 & mask2[3]).include())
 
         cube2 = cube1.I.with_mask(mask3)
-        assert_equal(cube2.mask.include(), (mask1 & mask2[0] & mask3)._include())
+        assert_equal(cube2.mask.include(), (mask1 & mask2[0] & mask3).include())

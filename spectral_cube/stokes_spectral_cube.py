@@ -50,7 +50,7 @@ class StokesSpectralCube(object):
         self._shape = stokes_data[reference].shape
 
         if isinstance(mask, BooleanArrayMask):
-            if mask.shape != self._shape:
+            if not is_broadcastable_and_smaller(mask.shape, self._shape):
                 raise ValueError("Mask shape is not broadcastable to data shape:"
                                  " {0} vs {1}".format(mask.shape, self._shape))
 
