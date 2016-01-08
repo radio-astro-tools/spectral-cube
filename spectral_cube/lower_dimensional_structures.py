@@ -118,6 +118,16 @@ class LowerDimensionalObject(u.Quantity):
 
         return new
 
+    def __array_finalize__(self, obj):
+        self._unit = getattr(obj, '_unit', None)
+        self._wcs = getattr(obj, '_wcs', None)
+        self._meta = getattr(obj, '_meta', None)
+        self._mask = getattr(obj, '_mask', None)
+        self._header = getattr(obj, '_header', None)
+
+    @property
+    def __array_priority__(self):
+        return super(LowerDimensionalObject, self).__array_priority__*2
 
 
 class Projection(LowerDimensionalObject):
