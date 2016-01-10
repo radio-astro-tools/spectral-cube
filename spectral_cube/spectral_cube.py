@@ -592,10 +592,10 @@ class SpectralCube(object):
 
         if how == 'slice':
             if axis is None:
-                 raise NotImplementedError("The overall standard deviation "
-                                           "cannot be computed in a slicewise "
-                                           "manner.  Please use a "
-                                           "different strategy.")
+                raise NotImplementedError("The overall standard deviation "
+                                          "cannot be computed in a slicewise "
+                                          "manner.  Please use a "
+                                          "different strategy.")
             counts = self._count_nonzero_slicewise(axis=axis)
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how='slice',
                                             axis=axis, unit=None,
@@ -1967,11 +1967,14 @@ class SpectralCube(object):
             :func:`~astropy.io.fits.open`.
         """
         from .io.core import read
+        from .stokes_spectral_cube import StokesSpectralCube
         cube = read(filename, format=format, hdu=hdu, **kwargs)
         if isinstance(cube, StokesSpectralCube):
-            return SpectralCube(data=cube._data, wcs=cube._wcs,
-                                meta=cube._meta, mask=cube._mask,
-                                header=cube._header)
+            if hasattr(cube, 'I'):
+                warnings.warn("Cube is a Stokes cube, returning spectral cube for I component")
+                return cube.I
+            else:
+                raise ValueError("Spectral cube is a Stokes cube that does not have an I component")
         else:
             return cube
 
@@ -2267,67 +2270,6 @@ class SpectralCube(object):
 
         return result
 
-
-class StokesSpectralCube(SpectralCube):
-
-    """
-    A class to store a spectral cube with multiple Stokes parameters. By
-    default, this will act like a Stokes I spectral cube, but other stokes
-    parameters can be accessed with attribute notation.
-    """
-
-    def __init__(self, data, wcs, mask=None, meta=None, header=None):
-
-        # WCS should be 3-d, data should be dict of 3-d, mask should be disk
-        # of 3-d
-
-        # XXX: For now, let's just extract I and work with that
-
-        super(StokesSpectralCube, self).__init__(data["I"], wcs,
-                                                 mask=mask["I"], meta=meta,
-                                                 header=header)
-
-        # TODO: deal with the other stokes parameters here
-
-    @classmethod
-    def read(cls, filename, format=None, hdu=None):
-        """
-        Read a spectral cube from a file.
-
-        If the file contains Stokes axes, they will be read in. If you are
-        only interested in the unpolarized emission (I), you can use
-        :meth:`~spectral_cube.SpectralCube.read` instead.
-
-        Parameters
-        ----------
-        filename : str
-            The file to read the cube from
-        format : str
-            The format of the file to read. (Currently limited to 'fits' and 'casa_image')
-        hdu : int or str
-            For FITS files, the HDU to read in (can be the ID or name of an
-            HDU).
-
-        Returns
-        -------
-        cube : :class:`SpectralCube`
-        """
-        raise NotImplementedError("")
-
-    def write(self, filename, overwrite=False, format=None):
-        """
-        Write the spectral cube to a file.
-
-        Parameters
-        ----------
-        filename : str
-            The path to write the file to
-        format : str
-            The format of the file to write. (Currently limited to 'fits')
-        overwrite : bool
-            If True, overwrite `filename` if it exists
-        """
-        raise NotImplementedError("")
 
 def determine_format_from_filename(filename):
     if filename[-4:] == 'fits':

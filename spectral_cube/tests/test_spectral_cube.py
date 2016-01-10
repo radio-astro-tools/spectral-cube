@@ -80,7 +80,7 @@ def test_huge_disallowed():
     cube = SpectralCube(data=data, wcs=cube.wcs)
 
     assert not cube._is_huge
-    
+
     # We need to reduce the memory threshold rather than use a large cube to
     # make sure we don't use too much memory during testing.
     from .. import cube_utils
@@ -403,10 +403,8 @@ class TestFilters(BaseTest):
         expected = d[d > 0.5] ** 2
         assert_allclose(c.flattened(weights=d), expected)
 
-    @pytest.mark.xfail
     def test_slice(self):
         c, d = self.c, self.d
-
         expected = d[:3, :2, ::2]
         expected = expected[expected > 0.5]
         assert_allclose(c[0:3, 0:2, 0::2].flattened(), expected)
@@ -1090,7 +1088,7 @@ def test_proj_meta():
     assert proj.meta['BUNIT'] == 'K'
 
 def test_pix_sign():
-    
+
     cube, data = cube_and_raw('advs.fits')
 
     s,y,x = (cube._pix_size_slice(ii) for ii in range(3))
