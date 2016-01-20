@@ -254,9 +254,9 @@ class SpectralCube(object):
         try:
             self.beam = Beam.from_fits_header(header)
             self._meta['beam'] = self.beam
-            self.beam_area_pixels = (self.beam.sr /
-                                     (wcs.utils.proj_plane_pixel_area(self.wcs) *
-                                      u.deg**2)).to(u.dimensionless_unscaled).value
+            self.pixels_per_beam = (self.beam.sr /
+                                    (wcs.utils.proj_plane_pixel_area(self.wcs) *
+                                     u.deg**2)).to(u.dimensionless_unscaled).value
         except:
             warnings.warn("Could not parse beam information from header.")
 
