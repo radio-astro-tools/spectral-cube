@@ -139,11 +139,11 @@ class SpectralCube(object):
                     self._try_load_beam(header)
 
                     if hasattr(self, 'beam'):
-                        warnings.warn("Units were JY/BEAM.  The 'beam' is now "
+                        warnings.warn("Units were Jy/beam.  The 'beam' is now "
                                       "stored in the .beam attribute, and the "
                                       "units are set to Jy")
                     else:
-                        warnings.warn("Could not parse JY/BEAM unit.  Either "
+                        warnings.warn("Could not parse Jy/beam unit.  Either "
                                       "you should install the radio_beam "
                                       "package or manually replace the units."
                                       " For now, the units are being interpreted "
