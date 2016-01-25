@@ -121,6 +121,24 @@ class SpectralCube(object):
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
 
+        # data must not be a quantity when stored in self._data
+        if hasattr(data, 'unit'):
+            # strip the unit so that it can be treated as cube metadata
+            data = data.value
+
+        # TODO: mask should be oriented? Or should we assume correctly oriented here?
+        self._data, self._wcs = cube_utils._orient(data, wcs)
+        self._spectral_axis = None
+        self._mask = mask  # specifies which elements to Nan/blank/ignore
+                           # object or array-like object, given that WCS needs
+                           # to be consistent with data?
+        #assert mask._wcs == self._wcs
+        self._fill_value = fill_value
+
+        self._header = Header() if header is None else header
+        if not isinstance(self._header, Header):
+            raise TypeError("If a header is given, it must be a fits.Header")
+
         if read_beam:
             self._try_load_beam(header)
 
@@ -159,24 +177,6 @@ class SpectralCube(object):
             self._unit = data.unit
         else:
             self._unit = None
-
-        # data must not be a quantity when stored in self._data
-        if hasattr(data, 'unit'):
-            # strip the unit so that it can be treated as cube metadata
-            data = data.value
-
-        # TODO: mask should be oriented? Or should we assume correctly oriented here?
-        self._data, self._wcs = cube_utils._orient(data, wcs)
-        self._spectral_axis = None
-        self._mask = mask  # specifies which elements to Nan/blank/ignore
-                           # object or array-like object, given that WCS needs
-                           # to be consistent with data?
-        #assert mask._wcs == self._wcs
-        self._fill_value = fill_value
-
-        self._header = Header() if header is None else header
-        if not isinstance(self._header, Header):
-            raise TypeError("If a header is given, it must be a fits.Header")
 
         # We don't pass the spectral unit via the initializer since the user
         # should be using ``with_spectral_unit`` if they want to set it.
