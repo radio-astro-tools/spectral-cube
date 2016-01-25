@@ -22,14 +22,16 @@ env:
         # The following versions are the 'default' for tests, unless
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
-        # We run the tests in 'boxed' mode, i.e. one subprocess per test, 
-        # because there are memory leaks in Astropy that currently cause the 
+        # We run the tests in 'boxed' mode, i.e. one subprocess per test,
+        # because there are memory leaks in Astropy that currently cause the
         # memory to go up to levels that cause the tests to be slow.
         - SETUP_CMD='test -a "--boxed"'
         - NUMPY_VERSION=1.10
         - ASTROPY_VERSION=stable
         - CONDA_DEPENDENCIES='matplotlib'
-        - PIP_DEPENDENCIES='pytest-xdist aplpy pvextractor'
+        - PIP_DEPENDENCIES='pytest-xdist aplpy pvextractor https://github.com/radio-astro-tools/radio_beam/archive/master.zip'
+        - SETUP_XVFB=True
+
     matrix:
         - SETUP_CMD='egg_info'
         - # run with default settings
@@ -61,19 +63,9 @@ matrix:
         - python: 3.4
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib bottleneck'
 
-before_install:
-
+install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
-
-    # Make sure that interactive matplotlib backends work
-    - export DISPLAY=:99.0
-    - sh -e /etc/init.d/xvfb start
-
-install:
-
-    # radio beam
-    - if [[ $SETUP_CMD != egg_info ]]; then $PIP_INSTALL https://github.com/radio-astro-tools/radio_beam/archive/master.zip; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
