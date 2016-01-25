@@ -135,6 +135,10 @@ class SpectralCube(object):
         #assert mask._wcs == self._wcs
         self._fill_value = fill_value
 
+        self._header = Header() if header is None else header
+        if not isinstance(self._header, Header):
+            raise TypeError("If a header is given, it must be a fits.Header")
+
         # Beam loading must happen *after* WCS is read
         if read_beam:
             self._try_load_beam(header)
@@ -154,11 +158,11 @@ class SpectralCube(object):
                     self._try_load_beam(header)
 
                     if hasattr(self, 'beam'):
-                        warnings.warn("Units were JY/BEAM.  The 'beam' is now "
+                        warnings.warn("Units were Jy/beam.  The 'beam' is now "
                                       "stored in the .beam attribute, and the "
                                       "units are set to Jy")
                     else:
-                        warnings.warn("Could not parse JY/BEAM unit.  Either "
+                        warnings.warn("Could not parse Jy/beam unit.  Either "
                                       "you should install the radio_beam "
                                       "package or manually replace the units."
                                       " For now, the units are being interpreted "
@@ -174,11 +178,6 @@ class SpectralCube(object):
             self._unit = data.unit
         else:
             self._unit = None
-
-
-        self._header = Header() if header is None else header
-        if not isinstance(self._header, Header):
-            raise TypeError("If a header is given, it must be a fits.Header")
 
         # We don't pass the spectral unit via the initializer since the user
         # should be using ``with_spectral_unit`` if they want to set it.
