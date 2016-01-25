@@ -28,8 +28,8 @@ env:
         - SETUP_CMD='test -a "--boxed"'
         - NUMPY_VERSION=1.10
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='matplotlib'
-        - PIP_DEPENDENCIES='pytest-xdist aplpy pvextractor https://github.com/radio-astro-tools/radio_beam/archive/master.zip'
+        - CONDA_DEPENDENCIES='matplotlib aplpy'
+        - PIP_DEPENDENCIES='pytest-xdist pvextractor https://github.com/radio-astro-tools/radio_beam/archive/master.zip'
         - SETUP_XVFB=True
 
     matrix:
@@ -44,7 +44,7 @@ matrix:
         # Do a coverage test in Python 2.
         - python: 2.7
           env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib yt'
+               CONDA_DEPENDENCIES='matplotlib aplpy yt'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -59,9 +59,9 @@ matrix:
 
         # Test with bottleneck
         - python: 2.7
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib bottleneck'
+          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
         - python: 3.4
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib bottleneck'
+          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
 
 install:
     - git clone git://github.com/astropy/ci-helpers.git
