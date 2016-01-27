@@ -6,7 +6,6 @@ from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
 from astropy import wcs
 from .io.core import determine_format
 from . import spectral_axis
-from . import wcs_utils
 
 import numpy as np
 
