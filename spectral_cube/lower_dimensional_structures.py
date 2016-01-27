@@ -5,6 +5,7 @@ from astropy import wcs
 from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
 from astropy import wcs
 from .io.core import determine_format
+from . import spectral_axis
 
 import numpy as np
 
@@ -214,6 +215,11 @@ class OneDSpectrum(LowerDimensionalObject):
         else:
             self._header = Header()
 
+        self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
+
+        if spectral_axis.unit_from_header(self._header) is not None:
+            self._spectral_unit = spectral_axis.unit_from_header(self._header)
+
         return self
 
     @property
@@ -222,8 +228,13 @@ class OneDSpectrum(LowerDimensionalObject):
         A `~astropy.units.Quantity` array containing the central values of
         each channel along the spectral axis.
         """
-        spec_unit = u.Unit(self.wcs.wcs.cunit[0])
-        return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0] * spec_unit
+
+        spec_axis = self.wcs.wcs_pix2world(np.arange(self.size), 0)[0] * \
+            u.Unit(self.wcs.wcs.cunit[0])
+        if self._spectral_unit is not None:
+            spec_axis = spec_axis.to(self._spectral_unit)
+
+        return spec_axis
 
     def quicklook(self, filename=None, drawstyle='steps-mid', **kwargs):
         """
