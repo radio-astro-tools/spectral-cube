@@ -3,6 +3,7 @@ from __future__ import print_function, absolute_import, division
 import pytest
 import numpy as np
 from astropy import units as u
+from astropy.wcs import WCS
 
 from .helpers import assert_allclose
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
@@ -120,3 +121,12 @@ def test_self_arith(LDO, data):
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
     assert np.all(p2.value==0)
+
+def test_onedspectrum_specaxis_units():
+
+    test_wcs = WCS(naxis=1)
+    test_wcs.wcs.cunit = ["m/s"]
+
+    p = OneDSpectrum(twelve_qty_1d, wcs=test_wcs)
+
+    assert p.spectral_axis.unit == u.Unit("m/s")
