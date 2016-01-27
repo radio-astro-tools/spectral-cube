@@ -215,7 +215,10 @@ class OneDSpectrum(LowerDimensionalObject):
         else:
             self._header = Header()
 
-        self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
+        self._spectral_unit = None
+
+        if self._wcs is not None:
+            self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
 
         if spectral_axis.unit_from_header(self._header) is not None:
             self._spectral_unit = spectral_axis.unit_from_header(self._header)
@@ -229,10 +232,13 @@ class OneDSpectrum(LowerDimensionalObject):
         each channel along the spectral axis.
         """
 
-        spec_axis = self.wcs.wcs_pix2world(np.arange(self.size), 0)[0] * \
-            u.Unit(self.wcs.wcs.cunit[0])
-        if self._spectral_unit is not None:
-            spec_axis = spec_axis.to(self._spectral_unit)
+        if self._wcs is None:
+            spec_axis = np.arange(self.size) * u.dimensionless_unscaled
+        else:
+            spec_axis = self.wcs.wcs_pix2world(np.arange(self.size), 0)[0] * \
+                u.Unit(self.wcs.wcs.cunit[0])
+            if self._spectral_unit is not None:
+                spec_axis = spec_axis.to(self._spectral_unit)
 
         return spec_axis
 
