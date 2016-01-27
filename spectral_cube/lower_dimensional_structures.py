@@ -222,7 +222,8 @@ class OneDSpectrum(LowerDimensionalObject):
         A `~astropy.units.Quantity` array containing the central values of
         each channel along the spectral axis.
         """
-        return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0]
+        spec_unit = u.Unit(self.wcs.wcs.cunit[0])
+        return self.wcs.wcs_pix2world(np.arange(self.size), 0)[0] * spec_unit
 
     def quicklook(self, filename=None, drawstyle='steps-mid', **kwargs):
         """
