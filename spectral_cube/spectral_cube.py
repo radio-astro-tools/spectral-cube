@@ -1395,7 +1395,7 @@ class SpectralCube(object):
 
         Moment N:
 
-        .. math:: M_N = \\frac{\\int I (l - M1)^N dl}{M_0}
+        .. math:: M_N = \\frac{\\int I (l - M_1)^N dl}{M_0}
 
         Parameters
         ----------
