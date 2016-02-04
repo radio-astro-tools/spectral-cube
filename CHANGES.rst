@@ -1,3 +1,27 @@
+0.3.1 (2016-02-04)
+------------------
+
+ - Preserve metadata when making projections
+   (https://github.com/radio-astro-tools/spectral-cube/pull/250)
+ - bugfix: cube._data cannot be a quantity
+   (https://github.com/radio-astro-tools/spectral-cube/pull/251)
+ - partial fix for ds9 import bug
+   (https://github.com/radio-astro-tools/spectral-cube/pull/253)
+ - preserve WCS information in projections
+   (https://github.com/radio-astro-tools/spectral-cube/pull/256)
+ - whitespace stripped from BUNIT
+   (https://github.com/radio-astro-tools/spectral-cube/pull/257)
+ - bugfix: sometimes cube would be read into memory when it should not be
+   (https://github.com/radio-astro-tools/spectral-cube/pull/259)
+ - more projection preservation fixes
+   (https://github.com/radio-astro-tools/spectral-cube/pull/265)
+ - correct jy/beam capitalization
+   (https://github.com/radio-astro-tools/spectral-cube/pull/267)
+ - convenience attribute for beam access
+   (https://github.com/radio-astro-tools/spectral-cube/pull/268)
+ - fix beam reading, which would claim failure even during success
+   (https://github.com/radio-astro-tools/spectral-cube/pull/271)
+
 0.3.0 (2015-08-16)
 ------------------
 
