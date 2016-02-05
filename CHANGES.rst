@@ -1,3 +1,11 @@
+0.4.0 (unreleased)
+------------------
+
+ - added new linewidth_sigma and linewidth_fwhm methods to SpectralCube for
+   computing linewidth maps, and make sure the documentation is clear that
+   moment(order=2) is a variance map.
+   (https://github.com/radio-astro-tools/spectral-cube/pull/275)
+
 0.3.1 (2016-02-04)
 ------------------
 
