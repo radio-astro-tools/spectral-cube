@@ -47,8 +47,8 @@ Linewidth maps
 Making linewidth maps (sometimes referered to as second moment maps in radio
 astronomy), you can use:
 
-    >>> sigma_map = cube.linewidth_sigma()
-    >>> fwhm_map = cube.linewidth_fwhm()
+    >>> sigma_map = cube.linewidth_sigma()  # doctest: +SKIP
+    >>> fwhm_map = cube.linewidth_fwhm()  # doctest: +SKIP
 
 These also return :class:`~spectral_cube.Projection` instances as for the
 `Moment maps`_.
