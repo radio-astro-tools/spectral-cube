@@ -1,6 +1,9 @@
 Moment maps and statistics
 ==========================
 
+Moment maps
+-----------
+
 Producing moment maps from a
 :class:`~spectral_cube.SpectralCube` instance is
 straightforward::
@@ -14,6 +17,10 @@ possible to pass the ``axis`` argument to compute them along a different
 axis::
 
     >>> moment_0_along_x = cube.moment(order=0, axis=2)  # doctest: +SKIP
+
+.. note:: these follow the mathematical definition of moments, so the second
+          moment is computed as the variance. For linewidth maps, see the
+          `Linewidth maps`_ section.
 
 The moment maps returned are :class:`~spectral_cube.Projection` instances,
 which act like :class:`~astropy.units.Quantity` objects, and also have
@@ -33,3 +40,15 @@ plotting packages such as APLpy::
     >>> f = aplpy.FITSFigure(moment_0.hdu)  # doctest: +SKIP
     >>> f.show_colorscale()  # doctest: +SKIP
     >>> f.save('moment_0.png')  # doctest: +SKIP
+
+Linewidth maps
+--------------
+
+Making linewidth maps (sometimes referered to as second moment maps in radio
+astronomy), you can use:
+
+    >>> sigma_map = cube.linewidth_sigma()
+    >>> fwhm_map = cube.linewidth_fwhm()
+
+These also return :class:`~spectral_cube.Projection` instances as for the
+`Moment maps`_.
