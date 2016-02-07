@@ -53,6 +53,13 @@ DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
 DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
 
 
+class VarianceWarning(UserWarning):
+    pass
+
+
+SIGMA2FWHM = 2. * np.sqrt(2. * np.log(2.))
+
+
 def cached(func):
     """
     Decorator to cache function calls
@@ -1397,6 +1404,12 @@ class SpectralCube(object):
 
         .. math:: M_N = \\frac{\\int I (l - M_1)^N dl}{M_0}
 
+        .. warning:: Note that these follow the mathematical definitions of
+                     moments, and therefore the second moment will return a
+                     variance map. To get linewidth maps, you can instead use
+                     the :meth:`~SpectralCube.linewidth_fwhm` or
+                     :meth:`~SpectralCube.linewidth_sigma` methods.
+
         Parameters
         ----------
         order : int
@@ -1429,6 +1442,14 @@ class SpectralCube(object):
         offset *relative to the cube face*. For axis=0, it is the
         *absolute* velocity/frequency of the first moment.
         """
+
+        if axis == 0 and order == 2:
+            warnings.warn("Note that the second moment returned will be a "
+                          "variance map. To get a linewidth map, use the "
+                          "SpectralCube.linewidth_fwhm() or "
+                          "SpectralCube.linewidth_sigma() methods instead.",
+                          VarianceWarning)
+
         from ._moments import (moment_slicewise, moment_cubewise,
                                moment_raywise, moment_auto)
 
@@ -1473,7 +1494,9 @@ class SpectralCube(object):
                           header=self._nowcs_header)
 
     def moment0(self, axis=0, how='auto'):
-        """Compute the zeroth moment along an axis.
+        """
+        Compute the zeroth moment along an axis.
+
         See :meth:`moment`.
         """
         return self.moment(axis=axis, order=0, how=how)
@@ -1481,16 +1504,37 @@ class SpectralCube(object):
     def moment1(self, axis=0, how='auto'):
         """
         Compute the 1st moment along an axis.
-        See :meth:`moment`
+
+        For an explanation of the ``axis`` and ``how`` parameters, see :meth:`moment`.
         """
         return self.moment(axis=axis, order=1, how=how)
 
     def moment2(self, axis=0, how='auto'):
         """
         Compute the 2nd moment along an axis.
-        See :meth:`moment`
+
+        For an explanation of the ``axis`` and ``how`` parameters, see :meth:`moment`.
         """
         return self.moment(axis=axis, order=2, how=how)
+
+    def linewidth_sigma(self, how='auto'):
+        """
+        Compute a (sigma) linewidth map along the spectral axis.
+
+        For an explanation of the ``how`` parameter, see :meth:`moment`.
+        """
+        with np.errstate(invalid='ignore'):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", VarianceWarning)
+                return np.sqrt(self.moment2(how=how))
+
+    def linewidth_fwhm(self, how='auto'):
+        """
+        Compute a (FWHM) linewidth map along the spectral axis.
+
+        For an explanation of the ``how`` parameter, see :meth:`moment`.
+        """
+        return self.linewidth_sigma() * SIGMA2FWHM
 
     @property
     def spectral_axis(self):

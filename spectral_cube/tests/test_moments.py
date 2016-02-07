@@ -1,5 +1,8 @@
 from __future__ import print_function, absolute_import, division
 
+import warnings
+from distutils.version import StrictVersion
+
 import pytest
 import numpy as np
 
@@ -8,10 +11,8 @@ from astropy.wcs import WCS
 from astropy import units as u
 from astropy.io import fits
 
-from ..spectral_cube import SpectralCube
+from ..spectral_cube import SpectralCube, VarianceWarning
 from .helpers import assert_allclose
-
-from distutils.version import StrictVersion
 
 # the back of the book
 dv = 3e-2 * u.Unit('m/s')
@@ -131,6 +132,28 @@ def test_convenience_methods():
     assert_allclose(sc.moment0(axis=0), MOMENTS[0][0])
     assert_allclose(sc.moment1(axis=2), MOMENTS[1][2])
     assert_allclose(sc.moment2(axis=1), MOMENTS[2][1])
+
+
+def test_linewidth():
+    mc_hdu = moment_cube()
+    sc = SpectralCube.read(mc_hdu)
+
+    with warnings.catch_warnings(record=True) as w:
+        assert_allclose(sc.moment2(), MOMENTS[2][0])
+
+    assert len(w) == 1
+    assert w[0].category == VarianceWarning
+    assert str(w[0].message) == ("Note that the second moment returned will be a "
+                                 "variance map. To get a linewidth map, use the "
+                                 "SpectralCube.linewidth_fwhm() or "
+                                 "SpectralCube.linewidth_sigma() methods instead.")
+
+    with warnings.catch_warnings(record=True) as w:
+        assert_allclose(sc.linewidth_sigma(), MOMENTS[2][0] ** 0.5)
+        assert_allclose(sc.linewidth_fwhm(), MOMENTS[2][0] ** 0.5 * 2.3548200450309493)
+
+    assert len(w) == 0
+
 
 def test_preserve_unit():
     mc_hdu = moment_cube()
