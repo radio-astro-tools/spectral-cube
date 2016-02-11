@@ -232,7 +232,9 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
 
     # Load the input values
     crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit)
-    cdelt_in = (mywcs.wcs.cdelt[mywcs.wcs.spec] * inunit)
+    # the cdelt matrix may not be correctly populated: need to account for cd,
+    # cdelt, and pc
+    cdelt_in = mywcs.pixel_scale_matrix[mywcs.wcs.spec] * inunit
 
     if in_spec_ctype == 'AWAV':
         warnings.warn("Support for air wavelengths is experimental and only "

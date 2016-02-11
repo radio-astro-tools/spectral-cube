@@ -519,3 +519,45 @@ def test_byhand_awav2wav():
     # At least one of the components MUST change
     assert not (mywcs.wcs.crval[0] == newwcs.wcs.crval[0]
                 and mywcs.wcs.crpix[0] == newwcs.wcs.crpix[0])
+
+def test_nir_sinfoni_example():
+
+    CD3_3   = 0.000245000002905726 # CD rotation matrix
+    CTYPE3  = 'WAVE    '           # wavelength axis in microns
+    CRPIX3  =                1109. # Reference pixel in z
+    CRVAL3  =     2.20000004768372 # central wavelength
+    CDELT3  = 0.000245000002905726 # microns per pixel
+    CUNIT3  = 'um      '           # spectral unit
+    SPECSYS = 'TOPOCENT'           # Coordinate reference frame
+
+    rest_wavelength = 2.1218*u.um
+
+    mywcs = wcs.WCS(naxis=1)
+    mywcs.wcs.ctype[0] = CTYPE3
+    mywcs.wcs.crval[0] = CRVAL3
+    mywcs.wcs.crpix[0] = CRPIX3
+    mywcs.wcs.cunit[0] = CUNIT3
+    mywcs.wcs.cdelt[0] = CDELT3
+    mywcs.wcs.cd = [[CD3_3]]
+    mywcs.wcs.specsys = SPECSYS
+    mywcs.wcs.set()
+
+    wavelengths = np.array([[2.12160005e-06,   2.12184505e-06,   2.12209005e-06]])
+    np.testing.assert_almost_equal(mywcs.wcs_pix2world([788,789,790], 0),
+                                   wavelengths)
+
+    velocities_opt = ((rest_wavelength-wavelengths*u.m)/(wavelengths*u.m) * constants.c).to(u.km/u.s)
+
+    newwcs_opt = convert_spectral_axis(mywcs, u.km/u.s, 'VOPT',
+                                       rest_value=rest_wavelength)
+
+    np.testing.assert_almost_equal(newwcs_opt.wcs_pix2world([788,789,790], 0),
+                                   velocities_opt.value)
+
+    velocities_rad = ((rest_wavelength-wavelengths*u.m)/(wavelengths*u.m) * constants.c).to(u.km/u.s)
+
+    newwcs_rad = convert_spectral_axis(mywcs, u.km/u.s, 'VRAD',
+                                       rest_value=rest_wavelength)
+
+    np.testing.assert_almost_equal(newwcs_rad.wcs_pix2world([788,789,790], 0),
+                                   velocities_rad.value)
