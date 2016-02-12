@@ -1,3 +1,5 @@
+from astropy import units as u
+
 from . import wcs_utils
 
 DOPPLER_CONVENTIONS = {}
