@@ -144,4 +144,4 @@ def test_onedspectrum_with_spectral_unit():
 
     assert p_new.spectral_axis.unit == u.Unit("km/s")
     np.testing.assert_equal(p_new.spectral_axis.value,
-                            1e3*p.spectral_axis.value)
+                            1e-3*p.spectral_axis.value)
