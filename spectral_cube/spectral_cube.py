@@ -27,7 +27,7 @@ from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
 from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
-from .base_class import BaseNDClass, DOPPLER_CONVENTIONS
+from .base_class import BaseNDClass, SpectralAxisMixinClass
 
 from distutils.version import StrictVersion
 
@@ -115,7 +115,7 @@ def aggregation_docstring(func):
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
 
-class SpectralCube(BaseNDClass):
+class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, read_beam=True):
@@ -1136,56 +1136,20 @@ class SpectralCube(BaseNDClass):
                      even if your cube has air wavelength units
 
         """
-        from .spectral_axis import (convert_spectral_axis,
-                                    determine_ctype_from_vconv)
-
-        # Allow string specification of units, for example
-        if not isinstance(unit, u.Unit):
-            unit = u.Unit(unit)
-
-        # Velocity conventions: required for frq <-> velo
-        # convert_spectral_axis will handle the case of no velocity
-        # convention specified & one is required
-        if velocity_convention in DOPPLER_CONVENTIONS:
-            velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
-        elif (velocity_convention is not None and
-              velocity_convention not in DOPPLER_CONVENTIONS.values()):
-            raise ValueError("Velocity convention must be radio, optical, "
-                             "or relativistic.")
-
-        # If rest value is specified, it must be a quantity
-        if (rest_value is not None and
-            (not hasattr(rest_value, 'unit') or
-             not rest_value.unit.is_equivalent(u.m, u.spectral()))):
-            raise ValueError("Rest value must be specified as an astropy "
-                             "quantity with spectral equivalence.")
-
-        # Shorter versions to keep lines under 80
-        ctype_from_vconv = determine_ctype_from_vconv
-        vc = velocity_convention
-
-        meta = self._meta.copy()
-        if 'Original Unit' not in self._meta:
-            meta['Original Unit'] = self._wcs.wcs.cunit[self._wcs.wcs.spec]
-            meta['Original Type'] = self._wcs.wcs.ctype[self._wcs.wcs.spec]
-
-        out_ctype = ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
-                                     unit,
-                                     velocity_convention=velocity_convention)
-
-        newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
-                                       rest_value=rest_value)
+        newwcs,newmeta = self._new_spectral_wcs(unit=unit,
+                                                velocity_convention=velocity_convention,
+                                                rest_value=rest_value)
 
         if self._mask is not None:
             newmask = self._mask.with_spectral_unit(unit,
-                                                    velocity_convention=vc,
+                                                    velocity_convention=velocity_convention,
                                                     rest_value=rest_value)
             newmask._wcs = newwcs
         else:
             newmask = None
 
-        newwcs.wcs.set()
-        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=meta,
+
+        cube = self._new_cube_with(wcs=newwcs, mask=newmask, meta=newmeta,
                                    spectral_unit=unit)
 
         return cube
