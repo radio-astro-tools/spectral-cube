@@ -520,52 +520,55 @@ def test_byhand_awav2wav():
     assert not (mywcs.wcs.crval[0] == newwcs.wcs.crval[0]
                 and mywcs.wcs.crpix[0] == newwcs.wcs.crpix[0])
 
-def test_nir_sinfoni_example():
+class test_nir_sinfoni_base(object):
+    def setup_method(self, method):
+        CD3_3   = 0.000245000002905726 # CD rotation matrix
+        CTYPE3  = 'WAVE    '           # wavelength axis in microns
+        CRPIX3  =                1109. # Reference pixel in z
+        CRVAL3  =     2.20000004768372 # central wavelength
+        CDELT3  = 0.000245000002905726 # microns per pixel
+        CUNIT3  = 'um      '           # spectral unit
+        SPECSYS = 'TOPOCENT'           # Coordinate reference frame
 
-    CD3_3   = 0.000245000002905726 # CD rotation matrix
-    CTYPE3  = 'WAVE    '           # wavelength axis in microns
-    CRPIX3  =                1109. # Reference pixel in z
-    CRVAL3  =     2.20000004768372 # central wavelength
-    CDELT3  = 0.000245000002905726 # microns per pixel
-    CUNIT3  = 'um      '           # spectral unit
-    SPECSYS = 'TOPOCENT'           # Coordinate reference frame
+        self.rest_wavelength = 2.1218*u.um
 
-    rest_wavelength = 2.1218*u.um
+        self.mywcs = wcs.WCS(naxis=1)
+        self.mywcs.wcs.ctype[0] = CTYPE3
+        self.mywcs.wcs.crval[0] = CRVAL3
+        self.mywcs.wcs.crpix[0] = CRPIX3
+        self.mywcs.wcs.cunit[0] = CUNIT3
+        self.mywcs.wcs.cdelt[0] = CDELT3
+        self.mywcs.wcs.cd = [[CD3_3]]
+        self.mywcs.wcs.specsys = SPECSYS
+        self.mywcs.wcs.set()
 
-    mywcs = wcs.WCS(naxis=1)
-    mywcs.wcs.ctype[0] = CTYPE3
-    mywcs.wcs.crval[0] = CRVAL3
-    mywcs.wcs.crpix[0] = CRPIX3
-    mywcs.wcs.cunit[0] = CUNIT3
-    mywcs.wcs.cdelt[0] = CDELT3
-    mywcs.wcs.cd = [[CD3_3]]
-    mywcs.wcs.specsys = SPECSYS
-    mywcs.wcs.set()
+        self.wavelengths = np.array([[2.12160005e-06,   2.12184505e-06,   2.12209005e-06]])
 
-    wavelengths = np.array([[2.12160005e-06,   2.12184505e-06,   2.12209005e-06]])
-    np.testing.assert_almost_equal(mywcs.wcs_pix2world([788,789,790], 0),
-                                   wavelengths)
+    def test_nir_sinfoni_example_radio(self):
+        velocities_rad = ((self.wavelengths*u.m-self.rest_wavelength)/(self.rest_wavelength) * constants.c).to(u.km/u.s)
 
-    velocities_opt = ((rest_wavelength-wavelengths*u.m)/(wavelengths*u.m) * constants.c).to(u.km/u.s)
+        newwcs_rad = convert_spectral_axis(self.mywcs, u.km/u.s, 'VRAD',
+                                           rest_value=self.rest_wavelength)
+        assert newwcs_rad.wcs.cunit[0] == u.km/u.s
+        newwcs_rad.wcs.set()
+        worldpix_rad = newwcs_rad.wcs_pix2world([788,789,790], 0)
+        assert newwcs_rad.wcs.cunit[0] == u.m/u.s
 
-    newwcs_opt = convert_spectral_axis(mywcs, u.km/u.s, 'VOPT',
-                                       rest_value=rest_wavelength)
-    assert newwcs_opt.wcs.cunit[0] == u.km/u.s
-    newwcs_opt.wcs.set()
-    worldpix_opt = newwcs_opt.wcs_pix2world([788,789,790], 0)
-    assert newwcs_opt.wcs.cunit[0] == u.m/u.s
+        np.testing.assert_almost_equal(worldpix_rad,
+                                       velocities_rad.to(newwcs_rad.wcs.cunit[0]).value)
 
-    np.testing.assert_almost_equal(worldpix_opt,
-                                   velocities_opt.to(newwcs_opt.wcs.cunit[0]).value)
+    def test_nir_sinfoni_example_optical(self):
+        np.testing.assert_almost_equal(self.mywcs.wcs_pix2world([788,789,790], 0),
+                                       self.wavelengths)
 
-    velocities_rad = ((rest_wavelength-wavelengths*u.m)/(wavelengths*u.m) * constants.c).to(u.km/u.s)
+        velocities_opt = ((self.wavelengths*u.m-self.rest_wavelength)/(self.wavelengths*u.m) * constants.c).to(u.km/u.s)
 
-    newwcs_rad = convert_spectral_axis(mywcs, u.km/u.s, 'VRAD',
-                                       rest_value=rest_wavelength)
-    assert newwcs_rad.wcs.cunit[0] == u.km/u.s
-    newwcs_rad.wcs.set()
-    worldpix_rad = newwcs_rad.wcs_pix2world([788,789,790], 0)
-    assert newwcs_rad.wcs.cunit[0] == u.m/u.s
+        newwcs_opt = convert_spectral_axis(self.mywcs, u.km/u.s, 'VOPT',
+                                           rest_value=self.rest_wavelength)
+        assert newwcs_opt.wcs.cunit[0] == u.km/u.s
+        newwcs_opt.wcs.set()
+        worldpix_opt = newwcs_opt.wcs_pix2world([788,789,790], 0)
+        assert newwcs_opt.wcs.cunit[0] == u.m/u.s
 
-    np.testing.assert_almost_equal(worldpix_rad,
-                                   velocities_rad.to(newwcs_rad.wcs.cunit[0]).value)
+        np.testing.assert_almost_equal(worldpix_opt,
+                                       velocities_opt.to(newwcs_opt.wcs.cunit[0]).value)
