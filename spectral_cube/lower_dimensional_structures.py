@@ -40,6 +40,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         for ind,sh in enumerate(self.shape[::-1]):
             header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                       value=sh))
+
         return header
 
     @property
@@ -226,6 +227,30 @@ class OneDSpectrum(LowerDimensionalObject):
             self._spectral_unit = spectral_axis.unit_from_header(self._header)
 
         return self
+
+
+    @property
+    def header(self):
+        header = self._header
+        # This inplace update is OK; it's not bad to overwrite WCS in this
+        # header
+        if self.wcs is not None:
+            header.update(self.wcs.to_header())
+        header['BUNIT'] = self.unit.to_string(format='fits')
+        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
+        for ind,sh in enumerate(self.shape[::-1]):
+            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
+                                      value=sh))
+
+        # Preserve the spectrum's spectral units
+        if self._spectral_unit != u.Unit(header['CUNIT3']):
+            spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
+            header['CDELT1'] *= spectral_scale
+            header['CRVAL1'] *= spectral_scale
+            header['CUNIT1'] = self.unit.to_string(format='FITS')
+
+        return header
+
 
     @property
     def spectral_axis(self):
