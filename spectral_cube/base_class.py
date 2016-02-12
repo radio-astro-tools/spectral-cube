@@ -17,6 +17,18 @@ class BaseNDClass(object):
         """
         return wcs_utils.strip_wcs_from_header(self._header)
 
+    @property
+    def wcs(self):
+        return self._wcs
+
+    @property
+    def meta(self):
+        return self._meta
+
+    @property
+    def mask(self):
+        return self._mask
+
 class SpectralAxisMixinClass(object):
 
     def _new_spectral_wcs(self, unit, velocity_convention=None,

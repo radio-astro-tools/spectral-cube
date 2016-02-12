@@ -512,13 +512,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         """
         return self._mask.include(data=self._data, wcs=self._wcs)
 
-    @property
-    def mask(self):
-        """
-        The underlying mask
-        """
-        return self._mask
-
     def _naxes_dropped(self, view):
         """
         Determine how many axes are being selected given a view.
@@ -1190,13 +1183,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             The unmasked data
         """
         return u.Quantity(self._data[view], self.unit, copy=False)
-
-    @property
-    def wcs(self):
-        """
-        The WCS describing the cube
-        """
-        return self._wcs
 
     @cached
     def _pix_cen(self):
