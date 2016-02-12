@@ -286,7 +286,7 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
                                                  rest_value=rest_value)
 
         newheader = self._nowcs_header.copy()
-        newheader['CUNIT1'] = unit.format('FITS')
+        newheader['CUNIT1'] = unit.to_string(format='FITS')
 
 
         return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
