@@ -27,6 +27,7 @@ from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
 from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
+from .base_class import BaseNDClass
 
 from distutils.version import StrictVersion
 
@@ -120,7 +121,7 @@ def aggregation_docstring(func):
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
 
-class SpectralCube(object):
+class SpectralCube(BaseNDClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, read_beam=True):
@@ -2212,13 +2213,6 @@ class SpectralCube(object):
 
         return dd
 
-
-    @property
-    def _nowcs_header(self):
-        """
-        Return a copy of the header with no WCS information attached
-        """
-        return wcs_utils.strip_wcs_from_header(self._header)
 
     @property
     def header(self):

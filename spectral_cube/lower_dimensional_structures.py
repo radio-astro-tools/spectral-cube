@@ -2,21 +2,18 @@ from __future__ import print_function, absolute_import, division
 
 from astropy import units as u
 from astropy import wcs
-from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
-from astropy import wcs
+from astropy.io.fits import Header, Card
 from .io.core import determine_format
 from . import spectral_axis
 from . import wcs_utils
 
 import numpy as np
 
-DOPPLER_CONVENTIONS = {}
-DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
-DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
-DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
+from .spectral_cube import DOPPLER_CONVENTIONS
+from .base_class import BaseNDClass
 
 
-class LowerDimensionalObject(u.Quantity):
+class LowerDimensionalObject(u.Quantity, BaseNDClass):
     """
     Generic class for 1D and 2D objects
     """
@@ -46,13 +43,6 @@ class LowerDimensionalObject(u.Quantity):
             header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                       value=sh))
         return header
-
-    @property
-    def _nowcs_header(self):
-        """
-        Return a copy of the header with no WCS information attached
-        """
-        return wcs_utils.strip_wcs_from_header(self._header)
 
     @property
     def hdu(self):
