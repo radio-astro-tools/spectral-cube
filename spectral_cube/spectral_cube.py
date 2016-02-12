@@ -27,7 +27,7 @@ from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
 from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
-from .base_class import BaseNDClass, SpectralAxisMixinClass
+from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS
 
 from distutils.version import StrictVersion
 
