@@ -27,7 +27,7 @@ from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
 from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
-from .base_class import BaseNDClass
+from .base_class import BaseNDClass, DOPPLER_CONVENTIONS
 
 from distutils.version import StrictVersion
 
@@ -46,12 +46,6 @@ try:
     scipyOK = True
 except ImportError:
     scipyOK = False
-
-
-DOPPLER_CONVENTIONS = {}
-DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
-DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
-DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
 
 
 class VarianceWarning(UserWarning):

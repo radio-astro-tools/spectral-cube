@@ -5,12 +5,10 @@ from astropy import wcs
 from astropy.io.fits import Header, Card
 from .io.core import determine_format
 from . import spectral_axis
-from . import wcs_utils
 
 import numpy as np
 
-from .spectral_cube import DOPPLER_CONVENTIONS
-from .base_class import BaseNDClass
+from .base_class import BaseNDClass, DOPPLER_CONVENTIONS
 
 
 class LowerDimensionalObject(u.Quantity, BaseNDClass):
