@@ -131,6 +131,7 @@ def test_onedspectrum_specaxis_units():
 
     assert p.spectral_axis.unit == u.Unit("m/s")
 
+
 def test_onedspectrum_with_spectral_unit():
 
     test_wcs = WCS(naxis=1)
@@ -140,3 +141,5 @@ def test_onedspectrum_with_spectral_unit():
     p_new = p.with_spectral_unit(u.km/u.s)
 
     assert p_new.spectral_axis.unit == u.Unit("km/s")
+    np.testing.assert_equal(p_new.spectral_axis.value,
+                            1e3*p.spectral_axis.value)
