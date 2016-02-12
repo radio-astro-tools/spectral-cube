@@ -1,6 +1,8 @@
 0.4.0 (unreleased)
 ------------------
-
+ - Added tests for new functionality in OneDSpectrum (https://github.com/radio-astro-tools/spectral-cube/pull/279)
+ - Split out common functionality between SpectralCube and LowerDimensionalObject
+   into BaseNDClass and SpectralAxisMixinClass *Manually merged by @keflavich* (https://github.com/radio-astro-tools/spectral-cube/pull/274)
  - added new linewidth_sigma and linewidth_fwhm methods to SpectralCube for
    computing linewidth maps, and make sure the documentation is clear that
    moment(order=2) is a variance map.
