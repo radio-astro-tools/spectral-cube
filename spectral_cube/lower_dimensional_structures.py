@@ -17,18 +17,6 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
     """
 
     @property
-    def wcs(self):
-        return self._wcs
-
-    @property
-    def meta(self):
-        return self._meta
-
-    @property
-    def mask(self):
-        return self._mask
-
-    @property
     def header(self):
         header = self._header
         # This inplace update is OK; it's not bad to overwrite WCS in this
