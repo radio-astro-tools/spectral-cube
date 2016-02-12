@@ -550,14 +550,22 @@ def test_nir_sinfoni_example():
 
     newwcs_opt = convert_spectral_axis(mywcs, u.km/u.s, 'VOPT',
                                        rest_value=rest_wavelength)
+    assert newwcs_opt.wcs.cunit[0] == u.km/u.s
+    newwcs_opt.wcs.set()
+    worldpix_opt = newwcs_opt.wcs_pix2world([788,789,790], 0)
+    assert newwcs_opt.wcs.cunit[0] == u.m/u.s
 
-    np.testing.assert_almost_equal(newwcs_opt.wcs_pix2world([788,789,790], 0),
-                                   velocities_opt.value)
+    np.testing.assert_almost_equal(worldpix_opt,
+                                   velocities_opt.to(newwcs_opt.wcs.cunit[0]).value)
 
     velocities_rad = ((rest_wavelength-wavelengths*u.m)/(wavelengths*u.m) * constants.c).to(u.km/u.s)
 
     newwcs_rad = convert_spectral_axis(mywcs, u.km/u.s, 'VRAD',
                                        rest_value=rest_wavelength)
+    assert newwcs_rad.wcs.cunit[0] == u.km/u.s
+    newwcs_rad.wcs.set()
+    worldpix_rad = newwcs_rad.wcs_pix2world([788,789,790], 0)
+    assert newwcs_rad.wcs.cunit[0] == u.m/u.s
 
-    np.testing.assert_almost_equal(newwcs_rad.wcs_pix2world([788,789,790], 0),
-                                   velocities_rad.value)
+    np.testing.assert_almost_equal(worldpix_rad,
+                                   velocities_rad.to(newwcs_rad.wcs.cunit[0]).value)

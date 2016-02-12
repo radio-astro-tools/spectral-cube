@@ -172,8 +172,9 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
 
     # If wcs_rv is set and speed -> speed, then we're changing the reference
     # location and we need to convert to meters or Hz first
-    if (inunit.physical_type == 'speed' and outunit.physical_type == 'speed'
-        and wcs_rv is not None):
+    if ((inunit.physical_type == 'speed' and
+         outunit.physical_type == 'speed' and
+         wcs_rv is not None)):
         mywcs = convert_spectral_axis(mywcs, wcs_rv.unit,
                                       ALL_CTYPES[wcs_rv.unit.physical_type],
                                       rest_value=wcs_rv)
@@ -234,7 +235,8 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     crval_in = (mywcs.wcs.crval[mywcs.wcs.spec] * inunit)
     # the cdelt matrix may not be correctly populated: need to account for cd,
     # cdelt, and pc
-    cdelt_in = mywcs.pixel_scale_matrix[mywcs.wcs.spec] * inunit
+    cdelt_in = (mywcs.pixel_scale_matrix[mywcs.wcs.spec, mywcs.wcs.spec] *
+                inunit)
 
     if in_spec_ctype == 'AWAV':
         warnings.warn("Support for air wavelengths is experimental and only "
@@ -302,7 +304,13 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
         raise ValueError("Conversion failed: the output CDELT would be 0.")
 
     newwcs = mywcs.deepcopy()
-    newwcs.wcs.cdelt[newwcs.wcs.spec] = cdelt_out.value
+    if hasattr(newwcs.wcs,'cd'):
+        newwcs.wcs.cd[newwcs.wcs.spec, newwcs.wcs.spec] = cdelt_out.value
+        # todo: would be nice to have an assertion here that no off-diagonal
+        # values for the spectral WCS are nonzero, but this is a nontrivial
+        # check
+    else:
+        newwcs.wcs.cdelt[newwcs.wcs.spec] = cdelt_out.value
     newwcs.wcs.cunit[newwcs.wcs.spec] = cdelt_out.unit.to_string(format='fits')
     newwcs.wcs.crval[newwcs.wcs.spec] = crval_out.value
     newwcs.wcs.ctype[newwcs.wcs.spec] = out_ctype
