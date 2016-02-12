@@ -2,36 +2,19 @@ from __future__ import print_function, absolute_import, division
 
 from astropy import units as u
 from astropy import wcs
-from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
-from astropy import wcs
+from astropy.io.fits import Header, Card
 from .io.core import determine_format
 from . import spectral_axis
-from . import wcs_utils
 
 import numpy as np
 
-DOPPLER_CONVENTIONS = {}
-DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
-DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
-DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
+from .base_class import BaseNDClass, SpectralAxisMixinClass
 
 
-class LowerDimensionalObject(u.Quantity):
+class LowerDimensionalObject(u.Quantity, BaseNDClass):
     """
     Generic class for 1D and 2D objects
     """
-
-    @property
-    def wcs(self):
-        return self._wcs
-
-    @property
-    def meta(self):
-        return self._meta
-
-    @property
-    def mask(self):
-        return self._mask
 
     @property
     def header(self):
@@ -45,14 +28,8 @@ class LowerDimensionalObject(u.Quantity):
         for ind,sh in enumerate(self.shape[::-1]):
             header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                       value=sh))
-        return header
 
-    @property
-    def _nowcs_header(self):
-        """
-        Return a copy of the header with no WCS information attached
-        """
-        return wcs_utils.strip_wcs_from_header(self._header)
+        return header
 
     @property
     def hdu(self):
@@ -208,7 +185,7 @@ class Slice(Projection):
     pass
 
 
-class OneDSpectrum(LowerDimensionalObject):
+class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None):
@@ -239,6 +216,30 @@ class OneDSpectrum(LowerDimensionalObject):
 
         return self
 
+
+    @property
+    def header(self):
+        header = self._header
+        # This inplace update is OK; it's not bad to overwrite WCS in this
+        # header
+        if self.wcs is not None:
+            header.update(self.wcs.to_header())
+        header['BUNIT'] = self.unit.to_string(format='fits')
+        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
+        for ind,sh in enumerate(self.shape[::-1]):
+            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
+                                      value=sh))
+
+        # Preserve the spectrum's spectral units
+        if self._spectral_unit != u.Unit(header['CUNIT1']):
+            spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
+            header['CDELT1'] *= spectral_scale
+            header['CRVAL1'] *= spectral_scale
+            header['CUNIT1'] = self.unit.to_string(format='FITS')
+
+        return header
+
+
     @property
     def spectral_axis(self):
         """
@@ -255,75 +256,6 @@ class OneDSpectrum(LowerDimensionalObject):
                 spec_axis = spec_axis.to(self._spectral_unit)
 
         return spec_axis
-
-    def with_spectral_unit(self, unit, velocity_convention=None,
-                           rest_value=None):
-        """
-        Returns a new OneDSpectrum with a different Spectral Axis unit
-
-        Parameters
-        ----------
-        unit : :class:`~astropy.units.Unit`
-            Any valid spectral unit: velocity, (wave)length, or frequency.
-            Only vacuum units are supported.
-        velocity_convention : 'relativistic', 'radio', or 'optical'
-            The velocity convention to use for the output velocity axis.
-            Required if the output type is velocity. This can be either one
-            of the above strings, or an `astropy.units` equivalency.
-        rest_value : :class:`~astropy.units.Quantity`
-            A rest wavelength or frequency with appropriate units.  Required if
-            output type is velocity.  The cube's WCS should include this
-            already if the *input* type is velocity, but the WCS's rest
-            wavelength/frequency can be overridden with this parameter.
-
-            .. note: This must be the rest frequency/wavelength *in vacuum*,
-                     even if your cube has air wavelength units
-
-        """
-        from .spectral_axis import (convert_spectral_axis,
-                                    determine_ctype_from_vconv)
-
-        # Allow string specification of units, for example
-        if not isinstance(unit, u.Unit):
-            unit = u.Unit(unit)
-
-        # Velocity conventions: required for frq <-> velo
-        # convert_spectral_axis will handle the case of no velocity
-        # convention specified & one is required
-        if velocity_convention in DOPPLER_CONVENTIONS:
-            velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
-        elif (velocity_convention is not None and
-              velocity_convention not in DOPPLER_CONVENTIONS.values()):
-            raise ValueError("Velocity convention must be radio, optical, "
-                             "or relativistic.")
-
-        # If rest value is specified, it must be a quantity
-        if (rest_value is not None and
-            (not hasattr(rest_value, 'unit') or
-             not rest_value.unit.is_equivalent(u.m, u.spectral()))):
-            raise ValueError("Rest value must be specified as an astropy "
-                             "quantity with spectral equivalence.")
-
-        # Shorter versions to keep lines under 80
-        ctype_from_vconv = determine_ctype_from_vconv
-        vc = velocity_convention
-
-        meta = self._meta.copy()
-        if 'Original Unit' not in self._meta:
-            meta['Original Unit'] = self._wcs.wcs.cunit[self._wcs.wcs.spec]
-            meta['Original Type'] = self._wcs.wcs.ctype[self._wcs.wcs.spec]
-
-        out_ctype = ctype_from_vconv(self._wcs.wcs.ctype[self._wcs.wcs.spec],
-                                     unit,
-                                     velocity_convention=velocity_convention)
-
-        newwcs = convert_spectral_axis(self._wcs, unit, out_ctype,
-                                       rest_value=rest_value)
-        newwcs.wcs.set()
-
-        return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
-                            header=self._nowcs_header, meta=self.meta,
-                            copy=True)
 
     def quicklook(self, filename=None, drawstyle='steps-mid', **kwargs):
         """
@@ -345,3 +277,18 @@ class OneDSpectrum(LowerDimensionalObject):
         if filename is not None:
             pyplot.gcf().savefig(filename)
 
+
+    def with_spectral_unit(self, unit, velocity_convention=None,
+                           rest_value=None):
+
+        newwcs, newmeta = self._new_spectral_wcs(unit,
+                                                 velocity_convention=velocity_convention,
+                                                 rest_value=rest_value)
+
+        newheader = self._nowcs_header.copy()
+        newheader['CUNIT1'] = unit.format('FITS')
+
+
+        return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
+                            header=newheader, meta=newmeta,
+                            copy=False)
