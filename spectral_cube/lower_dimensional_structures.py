@@ -290,5 +290,5 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
 
         return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
-                            header=newheader, meta=newmeta,
-                            copy=False)
+                            header=newheader, meta=newmeta, copy=False,
+                            spectral_unit=unit)
