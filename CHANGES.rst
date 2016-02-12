@@ -5,6 +5,9 @@
    computing linewidth maps, and make sure the documentation is clear that
    moment(order=2) is a variance map.
    (https://github.com/radio-astro-tools/spectral-cube/pull/275)
+ - fixed significant error when the cube WCS includes a cd matrix.  This
+   error resulted in incorrect spectral coordinate conversions
+   (https://github.com/radio-astro-tools/spectral-cube/pull/276)
 
 0.3.1 (2016-02-04)
 ------------------
