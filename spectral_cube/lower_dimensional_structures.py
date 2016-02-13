@@ -188,7 +188,7 @@ class Slice(Projection):
 class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None, header=None):
+                meta=None, mask=None, header=None, spectral_unit=None):
 
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
@@ -206,13 +206,13 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         else:
             self._header = Header()
 
-        self._spectral_unit = None
+        self._spectral_unit = spectral_unit
 
-        if self._wcs is not None:
-            self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
-
-        if spectral_axis.unit_from_header(self._header) is not None:
-            self._spectral_unit = spectral_axis.unit_from_header(self._header)
+        if spectral_unit is None:
+            if 'CUNIT1' in self._header:
+                self._spectral_unit = u.Unit(self._header['CUNIT1'])
+            elif self._wcs is not None:
+                self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
 
         return self
 
@@ -286,9 +286,9 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
                                                  rest_value=rest_value)
 
         newheader = self._nowcs_header.copy()
-        newheader['CUNIT1'] = unit.format('FITS')
+        newheader['CUNIT1'] = unit.to_string(format='FITS')
 
 
         return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
-                            header=newheader, meta=newmeta,
-                            copy=False)
+                            header=newheader, meta=newmeta, copy=False,
+                            spectral_unit=unit)

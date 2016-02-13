@@ -126,7 +126,22 @@ def test_onedspectrum_specaxis_units():
 
     test_wcs = WCS(naxis=1)
     test_wcs.wcs.cunit = ["m/s"]
+    test_wcs.wcs.ctype = ["VELO-LSR"]
 
     p = OneDSpectrum(twelve_qty_1d, wcs=test_wcs)
 
     assert p.spectral_axis.unit == u.Unit("m/s")
+
+
+def test_onedspectrum_with_spectral_unit():
+
+    test_wcs = WCS(naxis=1)
+    test_wcs.wcs.cunit = ["m/s"]
+    test_wcs.wcs.ctype = ["VELO-LSR"]
+
+    p = OneDSpectrum(twelve_qty_1d, wcs=test_wcs)
+    p_new = p.with_spectral_unit(u.km/u.s)
+
+    assert p_new.spectral_axis.unit == u.Unit("km/s")
+    np.testing.assert_equal(p_new.spectral_axis.value,
+                            1e-3*p.spectral_axis.value)
