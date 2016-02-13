@@ -126,7 +126,7 @@ def _orient(array, wcs):
     if wcs.wcs.naxis != 3:
         raise ValueError("Input WCS must be 3-dimensional")
 
-    wcs = _fix_spectral(wcs)
+    wcs = wcs_utils.diagonal_wcs_to_cdelt(_fix_spectral(wcs))
 
     # reverse from wcs -> numpy convention
     axtypes = wcs.get_axis_types()[::-1]

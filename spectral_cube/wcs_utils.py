@@ -344,3 +344,17 @@ def strip_wcs_from_header(header):
 
 
     return newheader
+
+def diagonal_wcs_to_cdelt(mywcs):
+    """
+    If a WCS has only diagonal pixel scale matrix elements (which are composed
+    from cdelt*pc), use them to reform the wcs as a CDELT-style wcs with no pc
+    or cd elements
+    """
+    offdiag = ~np.eye(mywcs.pixel_scale_matrix.shape[0], dtype='bool')
+    if not any(mywcs.pixel_scale_matrix[offdiag]):
+        cdelt = mywcs.pixel_scale_matrix.diagonal()
+        del mywcs.wcs.pc
+        del mywcs.wcs.cd
+        mywcs.wcs.cdelt = cdelt
+    return mywcs
