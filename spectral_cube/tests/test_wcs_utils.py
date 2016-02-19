@@ -93,6 +93,6 @@ def test_wcs_comparison():
 
     assert check_equality(wcs1,wcs2)
     assert not check_equality(wcs1,wcs3)
-    assert check_equality(wcs1, wcs3, decimal=-1)
+    assert check_equality(wcs1, wcs3, wcs_tolerance=1.0e1)
     assert not check_equality(wcs1,wcs4)
-    assert check_equality(wcs1, wcs4, decimal=3)
+    assert check_equality(wcs1, wcs4, wcs_tolerance=1e-3)
