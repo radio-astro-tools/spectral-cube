@@ -358,7 +358,7 @@ class BooleanArrayMask(MaskBase):
         Parameters
         ----------
         kwargs : dict
-            Passed to np.testing.assert_almost_equal
+            Passed to `wcs_utils.check_equality`
         """
         if new_data is not None and not is_broadcastable_and_smaller(self._mask.shape,
                                                                      new_data.shape):
@@ -447,7 +447,7 @@ class LazyMask(MaskBase):
         Parameters
         ----------
         kwargs : dict
-            Passed to np.testing.assert_almost_equal
+            Passed to `wcs_utils.check_equality`
         """
         if new_data is not None:
             if not is_broadcastable_and_smaller(new_data.shape, self._data.shape):

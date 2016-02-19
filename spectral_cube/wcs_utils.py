@@ -238,7 +238,7 @@ def slice_wcs(mywcs, view, numpy_order=True):
 
 def check_equality(wcs1, wcs2, warn_missing=False,
                    ignore_keywords=['MJD-OBS', 'VELOSYS'],
-                   **kwargs):
+                   wcs_tolerance=0.0):
     """
     Check if two WCSs are equal
 
@@ -251,13 +251,22 @@ def check_equality(wcs1, wcs2, warn_missing=False,
     ignore_keywords: list of str
         Keywords that are stored as part of the WCS but do not define part of
         the coordinate system and therefore can be safely ignored.
-    kwargs : dict
-        Passed to np.testing.assert_almost_equal.  Can be used for partial or
-        near equality checks.
+    wcs_tolerance : float
+        The decimal level to check for equality.
+        For example, 1e-2 would have 0.001 and 0.002 as equal, but 1e-3 would
+        have them as inequal
     """
     # TODO: use this to replace the rest of the check_equality code
     #return wcs1.wcs.compare(wcs2.wcs, cmp=wcs.WCSCOMPARE_ANCILLARY,
     #                        tolerance=tolerance)
+    #Until we've switched to the wcs.compare approach, we need to have
+    #np.testing.assert_almost_equal work
+    if decimal == 0:
+        exact = True
+    else:
+        exact = False
+        decimal = -np.log10(wcs_tolerance)
+
 
     # naive version:
     # return str(wcs1.to_header()) != str(wcs2.to_header())
@@ -288,7 +297,10 @@ def check_equality(wcs1, wcs2, warn_missing=False,
                         log.debug("Header 1, {0}: {1} != {2}".format(key,u1,u2))
             elif isinstance(c1[1], (float, np.float)):
                 try:
-                    np.testing.assert_almost_equal(c1[1], c2[1], **kwargs)
+                    if exact:
+                        assert c1[1] == c2[1]
+                    else:
+                        np.testing.assert_almost_equal(c1[1], c2[1], decimal=decimal)
                 except AssertionError:
                     if key in ('RESTFRQ','RESTWAV'):
                         warnings.warn("{0} is not equal in WCS; ignoring ".format(key)+
