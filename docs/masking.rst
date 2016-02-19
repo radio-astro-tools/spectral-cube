@@ -198,5 +198,5 @@ In order to compose masks from these, we need to set the ``wcs_tolerance`` param
 
     >>> masked_cube13co = cube13co.with_mask(mask_12co, wcs_tolerance=1e-3)  # doctest: +SKIP
 
-which in this case will check fro equality at the 1e-3 level, which truncates
+which in this case will check equality at the 1e-3 level, which truncates
 the 3rd CRVAL to the point of equality before comparing the values.
