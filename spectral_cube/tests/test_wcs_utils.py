@@ -88,5 +88,11 @@ def test_wcs_comparison():
     wcs3 = WCS(naxis=3)
     wcs3.wcs.crpix = np.array([50., 45., 31.], dtype='float64')
 
+    wcs4 = WCS(naxis=3)
+    wcs4.wcs.crpix = np.array([50., 45., 30.0001], dtype='float64')
+
     assert check_equality(wcs1,wcs2)
     assert not check_equality(wcs1,wcs3)
+    assert check_equality(wcs1, wcs3, wcs_tolerance=1.0e1)
+    assert not check_equality(wcs1,wcs4)
+    assert check_equality(wcs1, wcs4, wcs_tolerance=1e-3)

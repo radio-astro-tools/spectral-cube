@@ -236,8 +236,9 @@ def slice_wcs(mywcs, view, numpy_order=True):
                 wcs_new.wcs.crpix[wcs_index] -= iview.start
     return wcs_new
 
-def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',
-                                                                    'VELOSYS']):
+def check_equality(wcs1, wcs2, warn_missing=False,
+                   ignore_keywords=['MJD-OBS', 'VELOSYS'],
+                   wcs_tolerance=0.0):
     """
     Check if two WCSs are equal
 
@@ -250,7 +251,24 @@ def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',
     ignore_keywords: list of str
         Keywords that are stored as part of the WCS but do not define part of
         the coordinate system and therefore can be safely ignored.
+    wcs_tolerance : float
+        The decimal level to check for equality.
+        For example, 1e-2 would have 0.001 and 0.002 as equal, but 1e-3 would
+        have them as inequal
     """
+    # TODO: use this to replace the rest of the check_equality code
+    #return wcs1.wcs.compare(wcs2.wcs, cmp=wcs.WCSCOMPARE_ANCILLARY,
+    #                        tolerance=tolerance)
+    #Until we've switched to the wcs.compare approach, we need to have
+    #np.testing.assert_almost_equal work
+    if wcs_tolerance == 0:
+        exact = True
+    else:
+        exact = False
+        # np.testing.assert_almost_equal wants an integer
+        # e.g., for 0.0001, the integer is 4
+        decimal = int(np.ceil(-np.log10(wcs_tolerance)))
+
 
     # naive version:
     # return str(wcs1.to_header()) != str(wcs2.to_header())
@@ -281,7 +299,10 @@ def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',
                         log.debug("Header 1, {0}: {1} != {2}".format(key,u1,u2))
             elif isinstance(c1[1], (float, np.float)):
                 try:
-                    np.testing.assert_almost_equal(c1[1], c2[1])
+                    if exact:
+                        assert c1[1] == c2[1]
+                    else:
+                        np.testing.assert_almost_equal(c1[1], c2[1], decimal=decimal)
                 except AssertionError:
                     if key in ('RESTFRQ','RESTWAV'):
                         warnings.warn("{0} is not equal in WCS; ignoring ".format(key)+

@@ -118,7 +118,8 @@ np2wcs = {2: 0, 1: 1, 0: 2}
 class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, read_beam=True):
+                 header=None, allow_huge_operations=False, read_beam=True,
+                 wcs_tolerance=0.0):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
@@ -130,6 +131,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         # TODO: mask should be oriented? Or should we assume correctly oriented here?
         self._data, self._wcs = cube_utils._orient(data, wcs)
+        self._wcs_tolerance = wcs_tolerance
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore
                            # object or array-like object, given that WCS needs
@@ -203,7 +205,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         return cube_utils.is_huge(self)
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
-                       fill_value=None, spectral_unit=None, unit=None):
+                       fill_value=None, spectral_unit=None, unit=None,
+                       wcs_tolerance=None):
 
         data = self._data if data is None else data
         if unit is None and hasattr(data, 'unit'):
@@ -240,7 +243,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
                             fill_value=fill_value, header=self._header,
-                            allow_huge_operations=self.allow_huge_operations)
+                            allow_huge_operations=self.allow_huge_operations,
+                            wcs_tolerance=wcs_tolerance or self._wcs_tolerance)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 
@@ -510,7 +514,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         """
         Convert the mask to a boolean numpy array
         """
-        return self._mask.include(data=self._data, wcs=self._wcs)
+        return self._mask.include(data=self._data, wcs=self._wcs,
+                                  wcs_tolerance=self._wcs_tolerance)
 
     def _naxes_dropped(self, view):
         """
@@ -726,16 +731,28 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         return self._new_cube_with(data=data, unit=data.unit)
 
     @warn_slow
-    def _cube_on_cube_operation(self, function, cube, equivalencies=[]):
+    def _cube_on_cube_operation(self, function, cube, equivalencies=[], **kwargs):
         """
         Apply an operation between two cubes.  Inherits the metadata of the
         left cube.
+
+        Parameters
+        ----------
+        function : function
+            A function to apply to the cubes
+        cube : SpectralCube
+            Another cube to put into the function
+        equivalencies : list
+            A list of astropy equivalencies
+        kwargs : dict
+            Passed to np.testing.assert_almost_equal
         """
         assert cube.shape == self.shape
         if not self.unit.is_equivalent(cube.unit, equivalencies=equivalencies):
             raise u.UnitsError("{0} is not equivalent to {1}"
                                .format(self.unit, cube.unit))
-        if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True):
+        if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True,
+                                        **kwargs):
             warnings.warn("Cube WCSs do not match, but their shapes do")
         try:
             test_result = function(np.ones([1,1,1])*self.unit,
@@ -870,9 +887,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         view = [slice(None)] * 3
         for x in range(self.shape[axis]):
             view[axis] = x
-            yield self._mask._include(data=self._data,
-                                      view=view,
-                                      wcs=self._wcs)
+            yield self._mask.include(data=self._data,
+                                     view=view,
+                                     wcs=self._wcs,
+                                     wcs_tolerance=self._wcs_tolerance,
+                                    )
 
     def flattened(self, slice=(), weights=None):
         """
@@ -979,7 +998,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         return result
 
-    def with_mask(self, mask, inherit_mask=True):
+    def with_mask(self, mask, inherit_mask=True, wcs_tolerance=None):
         """
         Return a new SpectralCube instance that contains a composite mask of
         the current SpectralCube and the new ``mask``.
@@ -994,6 +1013,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         inherit_mask : bool (optional, default=True)
             If True, combines the provided mask with the
             mask currently attached to the cube
+
+        wcs_tolerance : None or float
+            The tolerance of difference in WCS parameters between the cube and
+            the mask.  Defaults to `self._wcs_tolerance` (which itself defaults
+            to 0.0) if unspecified
 
         Returns
         -------
@@ -1011,9 +1035,14 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             mask = BooleanArrayMask(mask, self._wcs)
 
         if self._mask is not None:
-            return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
+            new_mask = self._mask & mask if inherit_mask else mask
         else:
-            return self._new_cube_with(mask=mask)
+            new_mask = mask
+
+        new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs,
+                               wcs_tolerance=wcs_tolerance or self._wcs_tolerance)
+
+        return self._new_cube_with(mask=new_mask, wcs_tolerance=wcs_tolerance)
 
     def __getitem__(self, view):
 
@@ -1169,7 +1198,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             return data[view]
 
         return self._mask._filled(data=data, wcs=self._wcs, fill=fill,
-                                  view=view)
+                                  view=view, wcs_tolerance=self._wcs_tolerance)
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
@@ -1632,7 +1661,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             else:
                 raise ValueError("Mask shape does not match cube shape.")
 
-        include = region_mask.include(self._data, self._wcs)
+        include = region_mask.include(self._data, self._wcs,
+                                      wcs_tolerance=self._wcs_tolerance)
 
         slices = ndimage.find_objects(np.broadcast_arrays(include,
                                                           self._data)[0])[0]

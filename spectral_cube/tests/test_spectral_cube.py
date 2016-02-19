@@ -188,7 +188,11 @@ class TestSpectralCube(object):
         cube_freq = cube.with_spectral_unit(unit)
 
         if masktype == BooleanArrayMask:
-            mask = BooleanArrayMask(data>0, wcs=cube._wcs)
+            # don't use data here:
+            # data haven't necessarily been rearranged to the correct shape by
+            # cube_utils.orient
+            mask = BooleanArrayMask(cube.filled_data[:].value>0,
+                                    wcs=cube._wcs)
         elif masktype == LazyMask:
             mask = LazyMask(lambda x: x>0, cube=cube)
         elif masktype == FunctionMask:
