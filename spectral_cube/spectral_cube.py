@@ -131,6 +131,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         # TODO: mask should be oriented? Or should we assume correctly oriented here?
         self._data, self._wcs = cube_utils._orient(data, wcs)
+        self._wcs_tolerance = wcs_tolerance
         self._spectral_axis = None
         self._mask = mask  # specifies which elements to Nan/blank/ignore
                            # object or array-like object, given that WCS needs
@@ -205,7 +206,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None, unit=None,
-                       wcs_tolerance=0.0):
+                       wcs_tolerance=None):
 
         data = self._data if data is None else data
         if unit is None and hasattr(data, 'unit'):
@@ -243,7 +244,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
                             fill_value=fill_value, header=self._header,
                             allow_huge_operations=self.allow_huge_operations,
-                            wcs_tolerance=wcs_tolerance)
+                            wcs_tolerance=wcs_tolerance or self._wcs_tolerance)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 

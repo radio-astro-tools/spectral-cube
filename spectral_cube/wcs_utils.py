@@ -265,7 +265,9 @@ def check_equality(wcs1, wcs2, warn_missing=False,
         exact = True
     else:
         exact = False
-        decimal = -np.log10(wcs_tolerance)
+        # np.testing.assert_almost_equal wants an integer
+        # e.g., for 0.0001, the integer is 4
+        decimal = int(np.ceil(-np.log10(wcs_tolerance)))
 
 
     # naive version:

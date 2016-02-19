@@ -271,7 +271,8 @@ def test_wcs_validity_check_failure():
     assert exc.value.args[0] == "WCS does not match mask WCS"
 
     # this one should work though
-    cube = cube.with_mask(mask, decimal=4)
+    cube = cube.with_mask(mask, wcs_tolerance=1e-4)
+    assert cube._wcs_tolerance == 1e-4
 
     # then the rest of this should be OK
     s2 = cube.spectral_slab(-2 * u.km / u.s, 2 * u.km / u.s)
