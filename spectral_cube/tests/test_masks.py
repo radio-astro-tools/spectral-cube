@@ -259,7 +259,8 @@ def test_wcs_validity_check():
 def test_wcs_validity_check_failure():
     cube, data = cube_and_raw('adv.fits')
     wcs2 = cube.wcs.copy()
-    wcs2.wcs.crval[2] *= 1.00001
+    # add some difference in the 4th decimal place
+    wcs2.wcs.crval[2] += 0.00001
 
     # can make a mask
     mask = BooleanArrayMask(data>0, cube._wcs)

@@ -103,7 +103,7 @@ class MaskBase(object):
         self._validate_wcs(data, wcs, **kwargs)
         return self._include(data=data, wcs=wcs, view=view)
 
-    def _validate_wcs(self, data, wcs):
+    def _validate_wcs(self, new_data, new_wcs, **kwargs):
         """
         This method can be overridden in cases where the data and WCS have to
         conform to some rules. This gets called automatically when
@@ -153,7 +153,7 @@ class MaskBase(object):
         """
         return data[view][self.include(data=data, wcs=wcs, view=view)]
 
-    def _filled(self, data, wcs=None, fill=np.nan, view=()):
+    def _filled(self, data, wcs=None, fill=np.nan, view=(), **kwargs):
         """
         Replace the exluded elements of *array* with *fill*.
 
@@ -180,7 +180,7 @@ class MaskBase(object):
         # type otherwise
         dt = np.find_common_type([data.dtype], [np.float])
         sliced_data = data[view].astype(dt)
-        ex = self.exclude(data=data, wcs=wcs, view=view)
+        ex = self.exclude(data=data, wcs=wcs, view=view, **kwargs)
         sliced_data[ex] = fill
         return sliced_data
 
@@ -280,9 +280,9 @@ class CompositeMask(MaskBase):
         self._mask2 = mask2
         self._operation = operation
 
-    def _validate_wcs(self, new_data, new_wcs):
-        self._mask1._validate_wcs(new_data, new_wcs)
-        self._mask2._validate_wcs(new_data, new_wcs)
+    def _validate_wcs(self, new_data, new_wcs, **kwargs):
+        self._mask1._validate_wcs(new_data, new_wcs, **kwargs)
+        self._mask2._validate_wcs(new_data, new_wcs, **kwargs)
 
     def _include(self, data=None, wcs=None, view=()):
         result_mask_1 = self._mask1._include(data=data, wcs=wcs, view=view)
@@ -592,7 +592,7 @@ class FunctionMask(MaskBase):
     def __init__(self, function):
         self._function = function
 
-    def _validate_wcs(self, data, wcs):
+    def _validate_wcs(self, new_data, new_wcs, **kwargs):
         pass
 
     def _include(self, data=None, wcs=None, view=()):

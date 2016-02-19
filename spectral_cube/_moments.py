@@ -131,8 +131,8 @@ def moment_raywise(cube, order, axis):
 
     for x, y, slc in cube._iter_rays(axis):
         # the intensity, i.e. the weights
-        include = cube._mask.include(data=cube._data, wcs=cube._wcs,
-                                     view=slc)
+        include = cube._mask.include(data=cube._data, wcs=cube._wcs, view=slc,
+                                     wcs_tolerance=cube._wcs_tolerance)
         if not include.any():
             continue
 

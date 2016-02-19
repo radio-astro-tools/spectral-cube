@@ -255,6 +255,9 @@ def check_equality(wcs1, wcs2, warn_missing=False,
         Passed to np.testing.assert_almost_equal.  Can be used for partial or
         near equality checks.
     """
+    # TODO: use this to replace the rest of the check_equality code
+    #return wcs1.wcs.compare(wcs2.wcs, cmp=wcs.WCSCOMPARE_ANCILLARY,
+    #                        tolerance=tolerance)
 
     # naive version:
     # return str(wcs1.to_header()) != str(wcs2.to_header())
