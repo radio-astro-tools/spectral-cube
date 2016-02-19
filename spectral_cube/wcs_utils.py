@@ -261,7 +261,7 @@ def check_equality(wcs1, wcs2, warn_missing=False,
     #                        tolerance=tolerance)
     #Until we've switched to the wcs.compare approach, we need to have
     #np.testing.assert_almost_equal work
-    if decimal == 0:
+    if wcs_threshold == 0:
         exact = True
     else:
         exact = False
