@@ -726,16 +726,28 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         return self._new_cube_with(data=data, unit=data.unit)
 
     @warn_slow
-    def _cube_on_cube_operation(self, function, cube, equivalencies=[]):
+    def _cube_on_cube_operation(self, function, cube, equivalencies=[], **kwargs):
         """
         Apply an operation between two cubes.  Inherits the metadata of the
         left cube.
+
+        Parameters
+        ----------
+        function : function
+            A function to apply to the cubes
+        cube : SpectralCube
+            Another cube to put into the function
+        equivalencies : list
+            A list of astropy equivalencies
+        kwargs : dict
+            Passed to np.testing.assert_almost_equal
         """
         assert cube.shape == self.shape
         if not self.unit.is_equivalent(cube.unit, equivalencies=equivalencies):
             raise u.UnitsError("{0} is not equivalent to {1}"
                                .format(self.unit, cube.unit))
-        if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True):
+        if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True,
+                                        **kwargs):
             warnings.warn("Cube WCSs do not match, but their shapes do")
         try:
             test_result = function(np.ones([1,1,1])*self.unit,
@@ -979,7 +991,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         return result
 
-    def with_mask(self, mask, inherit_mask=True):
+    def with_mask(self, mask, inherit_mask=True, **kwargs):
         """
         Return a new SpectralCube instance that contains a composite mask of
         the current SpectralCube and the new ``mask``.
@@ -994,6 +1006,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         inherit_mask : bool (optional, default=True)
             If True, combines the provided mask with the
             mask currently attached to the cube
+
+        kwargs : dict
+            Dictionary of keyword arguments to pass to
+            np.testing.assert_almost_equal when checking to make sure WCSes are
+            equal
 
         Returns
         -------
@@ -1011,9 +1028,13 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             mask = BooleanArrayMask(mask, self._wcs)
 
         if self._mask is not None:
-            return self._new_cube_with(mask=self._mask & mask if inherit_mask else mask)
+            new_mask = self._mask & mask if inherit_mask else mask
         else:
-            return self._new_cube_with(mask=mask)
+            new_mask = mask
+
+        new_mask._validate_wcs(wcs=self._wcs, **kwargs)
+
+        return self._new_cube_with(mask=new_mask)
 
     def __getitem__(self, view):
 

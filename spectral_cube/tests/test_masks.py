@@ -256,6 +256,28 @@ def test_wcs_validity_check():
     # just checking that this works, not that it does anything in particular
     moment_map = s3.moment(order=1)
 
+def test_wcs_validity_check_failure():
+    cube, data = cube_and_raw('adv.fits')
+    wcs2 = cube.wcs.copy()
+    wcs2.wcs.crval[2] *= 1.00001
+
+    # can make a mask
+    mask = BooleanArrayMask(data>0, cube._wcs)
+
+    # but if it's not exactly equal, an error should be raised at this step
+    with pytest.raises(ValueError) as exc:
+        cube = cube.with_mask(mask)
+    assert exc.value.args[0] == "WCS does not match mask WCS"
+
+    # this one should work though
+    cube = cube.with_mask(mask, decimal=4)
+
+    # then the rest of this should be OK
+    s2 = cube.spectral_slab(-2 * u.km / u.s, 2 * u.km / u.s)
+    s3 = s2.with_spectral_unit(u.km / u.s, velocity_convention=u.doppler_radio)
+    # just checking that this works, not that it does anything in particular
+    moment_map = s3.moment(order=1)
+
 def test_mask_spectral_unit_functions():
     cube, data = cube_and_raw('adv.fits')
 

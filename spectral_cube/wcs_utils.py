@@ -236,8 +236,9 @@ def slice_wcs(mywcs, view, numpy_order=True):
                 wcs_new.wcs.crpix[wcs_index] -= iview.start
     return wcs_new
 
-def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',
-                                                                    'VELOSYS']):
+def check_equality(wcs1, wcs2, warn_missing=False,
+                   ignore_keywords=['MJD-OBS', 'VELOSYS'],
+                   **kwargs):
     """
     Check if two WCSs are equal
 
@@ -250,6 +251,9 @@ def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',
     ignore_keywords: list of str
         Keywords that are stored as part of the WCS but do not define part of
         the coordinate system and therefore can be safely ignored.
+    kwargs : dict
+        Passed to np.testing.assert_almost_equal.  Can be used for partial or
+        near equality checks.
     """
 
     # naive version:
@@ -281,7 +285,7 @@ def check_equality(wcs1, wcs2, warn_missing=False, ignore_keywords=['MJD-OBS',
                         log.debug("Header 1, {0}: {1} != {2}".format(key,u1,u2))
             elif isinstance(c1[1], (float, np.float)):
                 try:
-                    np.testing.assert_almost_equal(c1[1], c2[1])
+                    np.testing.assert_almost_equal(c1[1], c2[1], **kwargs)
                 except AssertionError:
                     if key in ('RESTFRQ','RESTWAV'):
                         warnings.warn("{0} is not equal in WCS; ignoring ".format(key)+

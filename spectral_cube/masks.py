@@ -90,15 +90,17 @@ class MaskBase(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def include(self, data=None, wcs=None, view=()):
+    def include(self, data=None, wcs=None, view=(), **kwargs):
         """
         Return a boolean array indicating which values should be included.
 
         If ``view`` is passed, only the sliced mask will be returned, which
         avoids having to load the whole mask in memory. Otherwise, the whole
         mask is returned in-memory.
+
+        kwargs are passed to _validate_wcs
         """
-        self._validate_wcs(data, wcs)
+        self._validate_wcs(data, wcs, **kwargs)
         return self._include(data=data, wcs=wcs, view=view)
 
     def _validate_wcs(self, data, wcs):
@@ -113,15 +115,17 @@ class MaskBase(object):
     def _include(self, data=None, wcs=None, view=()):
         pass
 
-    def exclude(self, data=None, wcs=None, view=()):
+    def exclude(self, data=None, wcs=None, view=(), **kwargs):
         """
         Return a boolean array indicating which values should be excluded.
 
         If ``view`` is passed, only the sliced mask will be returned, which
         avoids having to load the whole mask in memory. Otherwise, the whole
         mask is returned in-memory.
+
+        kwargs are passed to _validate_wcs
         """
-        self._validate_wcs(data, wcs)
+        self._validate_wcs(data, wcs, **kwargs)
         return self._exclude(data=data, wcs=wcs, view=view)
 
     def _exclude(self, data=None, wcs=None, view=()):
@@ -347,14 +351,23 @@ class BooleanArrayMask(MaskBase):
         else:
             self._mask = mask
 
-    def _validate_wcs(self, new_data=None, new_wcs=None):
+    def _validate_wcs(self, new_data=None, new_wcs=None, **kwargs):
+        """
+        Check that the new WCS matches the current one
+
+        Parameters
+        ----------
+        kwargs : dict
+            Passed to np.testing.assert_almost_equal
+        """
         if new_data is not None and not is_broadcastable_and_smaller(self._mask.shape,
                                                                      new_data.shape):
             raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs is not None:
             if new_wcs not in self._wcs_whitelist:
                 if not wcs_utils.check_equality(new_wcs, self._wcs,
-                                                warn_missing=True):
+                                                warn_missing=True,
+                                                **kwargs):
                     raise ValueError("WCS does not match mask WCS")
                 else:
                     self._wcs_whitelist.add(new_wcs)
@@ -427,14 +440,22 @@ class LazyMask(MaskBase):
 
         self._wcs_whitelist = set()
 
-    def _validate_wcs(self, new_data=None, new_wcs=None):
+    def _validate_wcs(self, new_data=None, new_wcs=None, **kwargs):
+        """
+        Check that the new WCS matches the current one
+
+        Parameters
+        ----------
+        kwargs : dict
+            Passed to np.testing.assert_almost_equal
+        """
         if new_data is not None:
             if not is_broadcastable_and_smaller(new_data.shape, self._data.shape):
                 raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs is not None:
             if new_wcs not in self._wcs_whitelist:
                 if not wcs_utils.check_equality(new_wcs, self._wcs,
-                                                warn_missing=True):
+                                                warn_missing=True, **kwargs):
                     raise ValueError("WCS does not match mask WCS")
                 else:
                     self._wcs_whitelist.add(new_wcs)
