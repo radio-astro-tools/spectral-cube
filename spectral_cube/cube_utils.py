@@ -22,7 +22,7 @@ def _fix_spectral(wcs):
 
     # sanitize noncompliant headers
     if 'spectral' not in types:
-        log.warn("No spectral axis found; header may be non-compliant.")
+        log.warning("No spectral axis found; header may be non-compliant.")
         for ind,tp in enumerate(types):
             if tp not in ('celestial','stokes'):
                 if wcs.wcs.ctype[ind] in wcs_utils.bad_spectypes_mapping:
@@ -67,7 +67,7 @@ def _split_stokes(array, wcs):
         if types.count('celestial') == 2 and types.count('spectral') == 1:
             if None in types:
                 stokes_index = types.index(None)
-                log.warn("FITS file has no STOKES axis, but it has a blank"
+                log.warning("FITS file has no STOKES axis, but it has a blank"
                          " axis type at index {0} that is assumed to be "
                          "stokes.".format(4-stokes_index))
             else:
@@ -76,7 +76,7 @@ def _split_stokes(array, wcs):
                         stokes_index = ii
                         stokes_type = tp
 
-                log.warn("FITS file has no STOKES axis, but it has an axis"
+                log.warning("FITS file has no STOKES axis, but it has an axis"
                          " of type {1} at index {0} that is assumed to be "
                          "stokes.".format(4-stokes_index, stokes_type))
         else:

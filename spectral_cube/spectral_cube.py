@@ -1716,7 +1716,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                 spine = self.world[sl][dim]
                 val = np.argmin(np.abs(limval-spine))
                 if limval > spine.max() or limval < spine.min():
-                    log.warn("The limit {0} is out of bounds."
+                    log.warning("The limit {0} is out of bounds."
                              "  Using min/max instead.".format(lim))
                 if lim[1:] == 'hi':
                     # End-inclusive indexing: need to add one for the high
