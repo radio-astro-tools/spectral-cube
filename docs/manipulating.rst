@@ -90,12 +90,19 @@ corresponding to the ds9 region.  `pyregion
     >>> region_list = pyregion.open('file.reg')  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_ds9region(region_list)  # doctest: +SKIP
 
+If you want to loop over individual regions with a single region file, you need to convert the individual
+region to a shape list due to limitations in pyregion::
+  >>> region_list = pyregion.open('file.reg')  #doctest: +SKIP
+  >>> for region in region_list: #doctest: +SKIP
+  >>>     sub_cube = cube.subcube_from_ds9region(pyregion.ShapeList([region])) #doctest: +SKIP
+    
 You can also create a region on the fly using ds9 region syntax.  This extracts
 a 0.1 degree circle around the Galactic Center::
 
     >>> region_list = pyregion.parse("galactic; circle(0,0,0.1)")  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_ds9region(region_list)  # doctest: +SKIP
 
+    
 Extract the minimal valid subcube
 ---------------------------------
 
