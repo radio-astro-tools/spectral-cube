@@ -92,6 +92,7 @@ corresponding to the ds9 region.  `pyregion
 
 If you want to loop over individual regions with a single region file, you need to convert the individual
 region to a shape list due to limitations in pyregion::
+
   >>> region_list = pyregion.open('file.reg')  #doctest: +SKIP
   >>> for region in region_list: #doctest: +SKIP
   >>>     sub_cube = cube.subcube_from_ds9region(pyregion.ShapeList([region])) #doctest: +SKIP
