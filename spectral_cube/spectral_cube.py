@@ -2271,11 +2271,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
         if velocity_offset is not None:
-            spectral_axis = (self.with_spectral_unit(u.km/u.s,
-                                                    velocity_convention=velocity_convention,
-                                                    rest_value=rest_value).spectral_axis
-                             + velocity_offset).to(u.GHz,
-                                                   velocity_convention(rest_value))
+            newspecaxis = self.with_spectral_unit(u.km/u.s,
+                                                  velocity_convention=velocity_convention,
+                                                  rest_value=rest_value).spectral_axis
+            spectral_axis = (newspecaxis + velocity_offset).to(u.GHz,
+                                                               velocity_convention(rest_value))
         else:
             spectral_axis = self.spectral_axis.to(u.GHz)
 
@@ -2286,6 +2286,47 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         result = Splatalogue.query_lines(numin, numax, **kwargs)
 
         return result
+
+    def reproject(self, header, order='bilinear'):
+        """
+        Reproject the cube into a new header.  Fills the data with the cube's
+        ``fill_value`` to replace bad values before reprojection.
+
+        Parameters
+        ----------
+        header : `astropy.io.fits.Header`
+            A header specifying a cube in valid WCS
+        order : int or str, optional
+            The order of the interpolation (if ``mode`` is set to
+            ``'interpolation'``). This can be either one of the following
+            strings:
+
+                * 'nearest-neighbor'
+                * 'bilinear'
+                * 'biquadratic'
+                * 'bicubic'
+
+            or an integer. A value of ``0`` indicates nearest neighbor
+            interpolation.
+        """
+        from reproject import reproject_interp
+
+        # TODO: Find the minimal subcube that contains the header and only reproject that
+        # (see FITS_tools.regrid_cube for a guide on how to do this)
+
+        newwcs = wcs.WCS(header)
+        shape_out = [header['NAXIS{0}'.format(i + 1)] for i in range(header['NAXIS'])][::-1]
+
+        newcube, newcube_valid = reproject_interp((self.filled_data[:],
+                                                   self.header),
+                                                  (newwcs, shape_out),
+                                                  order=order)
+
+        return self._new_cube_with(data=newcube,
+                                   wcs=newwcs,
+                                   mask=BooleanArrayMask(newcube_valid.astype('bool')),
+                                   meta=self.meta,
+                                  )
 
 
 def determine_format_from_filename(filename):
