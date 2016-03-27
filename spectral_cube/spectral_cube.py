@@ -2320,7 +2320,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         newcube, newcube_valid = reproject_interp((self.filled_data[:],
                                                    self.header),
                                                   (newwcs, shape_out),
-                                                  order=order)
+                                                  order=order,
+                                                  independent_celestial_slices=True)
 
         return self._new_cube_with(data=newcube,
                                    wcs=newwcs,
