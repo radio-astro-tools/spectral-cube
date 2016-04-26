@@ -1032,7 +1032,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             if not is_broadcastable_and_smaller(mask.shape, self._data.shape):
                 raise ValueError("Mask shape is not broadcastable to data shape: "
                                  "%s vs %s" % (mask.shape, self._data.shape))
-            mask = BooleanArrayMask(mask, self._wcs)
+            mask = BooleanArrayMask(mask, self._wcs, shape=self._data.shape)
 
         if self._mask is not None:
             new_mask = self._mask & mask if inherit_mask else mask
