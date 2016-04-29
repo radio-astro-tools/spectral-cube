@@ -56,7 +56,7 @@ def read_lmv(filename):
 
     Specification is primarily in GILDAS image_def.f90
     """
-    log.warn("CLASS LMV cube reading is tentatively supported.  "
+    log.warning("CLASS LMV cube reading is tentatively supported.  "
              "Please post bug reports at the first sign of danger!")
 
     with open(filename,'rb') as lf:
@@ -78,7 +78,7 @@ def read_lmv(filename):
 
         if imcode in ('<','>'):
             if imcode =='>':
-                log.warn("Swap the endianness first...")
+                log.warning("Swap the endianness first...")
             return read_lmv_type2(lf)
         else:
             return read_lmv_type1(lf)
@@ -298,7 +298,7 @@ def _read_float64(f):
 
 def _check_val(name, got,expected):
     if got != expected:
-        log.warn("{2} = {0} instead of {1}".format(got, expected, name))
+        log.warning("{2} = {0} instead of {1}".format(got, expected, name))
 
 def read_lmv_type2(lf):
     """ See image_def.f90 """
@@ -322,19 +322,19 @@ def read_lmv_type2(lf):
     pad_trail = _read_int32(lf) # 12
 
     if dim_start % 2 == 0:
-        log.warn("Got even dim_start in lmv cube: this is not expected.")
+        log.warning("Got even dim_start in lmv cube: this is not expected.")
     if dim_start > 17:
-        log.warn("dim_start > 17 in lmv cube: this is not expected.")
+        log.warning("dim_start > 17 in lmv cube: this is not expected.")
 
     lf.seek(16*4)
     gdf_maxdims=7
     dim_words = _read_int32(lf) # 17
     if dim_words != 2*gdf_maxdims+2:
-        log.warn("dim_words = {0} instead of {1}".format(dim_words,
+        log.warning("dim_words = {0} instead of {1}".format(dim_words,
                                                          gdf_maxdims*2+2))
     blan_start = _read_int32(lf) # 18
     if blan_start != dim_start+dim_words+2:
-        log.warn("blan_star = {0} instead of {1}".format(blan_start,
+        log.warning("blan_star = {0} instead of {1}".format(blan_start,
                                                          dim_start+dim_words+2))
 
     mdim = _read_int32(lf) # 19
@@ -353,7 +353,7 @@ def read_lmv_type2(lf):
 
     blan_words = _read_int32(lf)
     if blan_words != 2:
-        log.warn("blan_words = {0} instead of 2".format(blan_words))
+        log.warning("blan_words = {0} instead of 2".format(blan_words))
     extr_start = _read_int32(lf)
     bval = _read_float32(lf) # blanking value
     bval_tol = _read_float32(lf) # eval = tolerance
@@ -363,10 +363,10 @@ def read_lmv_type2(lf):
 
     extr_words = _read_int32(lf)
     if extr_words != 6:
-        log.warn("extr_words = {0} instead of 6".format(extr_words))
+        log.warning("extr_words = {0} instead of 6".format(extr_words))
     coor_start = _read_int32(lf)
     if coor_start != extr_start+extr_words+2:
-        log.warn("coor_start = {0} instead of {1}".format(coor_start,
+        log.warning("coor_start = {0} instead of {1}".format(coor_start,
                                                           extr_start+extr_words+2))
     rmin = _read_float32(lf)
     rmax = _read_float32(lf)
@@ -378,11 +378,11 @@ def read_lmv_type2(lf):
     # lf.seek(184)
     coor_words = _read_int32(lf)
     if coor_words != gdf_maxdims*6:
-        log.warn("coor_words = {0} instead of {1}".format(coor_words,
+        log.warning("coor_words = {0} instead of {1}".format(coor_words,
                                                           gdf_maxdims*6))
     desc_start = _read_int32(lf)
     if desc_start != coor_start+coor_words+2:
-        log.warn("desc_start = {0} instead of {1}".format(desc_start,
+        log.warning("desc_start = {0} instead of {1}".format(desc_start,
                                                           coor_start+coor_words+2))
 
     convert = np.fromfile(lf, count=3*gdf_maxdims, dtype='float64').reshape([gdf_maxdims,3])
@@ -391,11 +391,11 @@ def read_lmv_type2(lf):
 
     desc_words = _read_int32(lf)
     if desc_words != 3*(gdf_maxdims+1):
-        log.warn("desc_words = {0} instead of {1}".format(desc_words,
+        log.warning("desc_words = {0} instead of {1}".format(desc_words,
                                                           3*(gdf_maxdims+1)))
     null_start = _read_int32(lf)
     if null_start != desc_start+desc_words+2:
-        log.warn("null_start = {0} instead of {1}".format(null_start,
+        log.warning("null_start = {0} instead of {1}".format(null_start,
                                                           desc_start+desc_words+2))
     ijuni = _read_string(lf, 12) # data unit
     ijcode = [_read_string(lf, 12) for ii in range(gdf_maxdims)]
