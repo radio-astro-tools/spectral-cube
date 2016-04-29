@@ -2340,12 +2340,15 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
     __name__ = "VaryingResolutionSpectralCube"
 
-    def __init__(self, *args, beam_table=None, beams=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Create a SpectralCube with an associated beam table
         """
         # these types of cube are undefined without the radio_beam package
         from radio_beam import Beam
+
+        beam_table = kwargs.pop('beam_table', None)
+        beams = kwargs.pop('beams', None)
 
         assert((beam_table is not None or beams is not None),
                "Must give either a beam table or a list of beams to "
