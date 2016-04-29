@@ -81,6 +81,7 @@ if __name__ == "__main__":
     beams['POL'] = [0,0,0,0]
     beams = fits.BinTableHDU(beams)
 
+    del h['BMAJ'], h['BMIN'], h['BPA']
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
-    hdul.writeto('vda_beams.fits')
+    hdul.writeto('vda_beams.fits', clobber=True)

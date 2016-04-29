@@ -2411,7 +2411,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
                                     meta=meta)
 
             # only one element, so drop an axis
-            newwcs = wcs_utils.drop_axis(self._wcs, specslice)
+            newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
             header = self._nowcs_header
 
             # Slice objects know how to parse Beam objects stored in the
@@ -2479,8 +2479,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
         return slab
 
     def _new_cube_with(self, **kwargs):
-        newcube = super(VaryingResolutionSpectralCube, self)._new_cube_with(self,
-                                                                            beams=self.beams,
+        newcube = super(VaryingResolutionSpectralCube, self)._new_cube_with(beams=self.beams,
                                                                             **kwargs)
         return newcube
 

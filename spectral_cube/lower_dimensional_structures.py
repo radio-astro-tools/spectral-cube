@@ -29,6 +29,9 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                       value=sh))
 
+        if 'beam' in self.meta:
+            header.update(self.meta['beam'].to_header_keywords())
+
         return header
 
     @property

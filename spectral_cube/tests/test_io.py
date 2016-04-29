@@ -1,5 +1,6 @@
 from __future__ import print_function, absolute_import, division
 
+import numpy as np
 from astropy.io import fits as pyfits
 from astropy import units as u
 from ..io import class_lmv, fits
@@ -45,4 +46,4 @@ def test_4d_stokes():
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_3d_beams():
     c = SpectralCube.read(path('vda_beams.fits'))
-    assert c.beams[0].major == 0.1*u.deg
+    np.testing.assert_almost_equal(c.beams[0].major.value, 0.1)

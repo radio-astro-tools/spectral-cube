@@ -1006,13 +1006,18 @@ def test_multibeam_slice():
     cube, data = cube_and_raw('vda_beams.fits')
 
     assert isinstance(cube, VaryingResolutionSpectralCube)
-    assert cube.beams[0].major == 0.1*u.deg
-    assert cube.beams[3].major == 0.4*u.deg
+    np.testing.assert_almost_equal(cube.beams[0].major.value, 0.1)
+    np.testing.assert_almost_equal(cube.beams[3].major.value, 0.4)
 
     scube = cube[:2,:,:]
 
-    assert scube.beams[0].major == 0.1*u.deg
-    assert scube.beams[1].major == 0.2*u.deg
+    np.testing.assert_almost_equal(scube.beams[0].major.value, 0.1)
+    np.testing.assert_almost_equal(scube.beams[1].major.value, 0.2)
+
+    flatslice = cube[0,:,:]
+
+    np.testing.assert_almost_equal(flatslice.header['BMAJ'],
+                                   (0.1/3600.))
 
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
