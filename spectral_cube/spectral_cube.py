@@ -239,7 +239,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             meta['BUNIT'] = unit.to_string(format='FITS')
 
         fill_value = self._fill_value if fill_value is None else fill_value
-        spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
+        spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
 
         cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
                             fill_value=fill_value, header=self._header,
