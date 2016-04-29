@@ -71,3 +71,16 @@ if __name__ == "__main__":
     fits.writeto('vda_Jybeam_lower.fits', d, h, clobber=True)
     h['BUNIT'] = ' Jy / beam '
     fits.writeto('vda_Jybeam_whitespace.fits', d, h, clobber=True)
+
+    beams = np.recarray(d.shape[0],
+                        dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'), ('BPA', '>f4'), ('CHAN', '>i4'), ('POL', '>i4')])
+    beams['BMAJ'] = [0.1,0.2,0.3,0.4]
+    beams['BMIN'] = [0.4,0.3,0.2,0.1]
+    beams['BPA'] = [0,45,60,30]
+    beams['CHAN'] = [0,0,0,0]
+    beams['POL'] = [0,0,0,0]
+    beams = fits.BinTableHDU(beams)
+
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto('vda_beams.fits')

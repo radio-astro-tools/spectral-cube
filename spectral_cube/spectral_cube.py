@@ -12,7 +12,7 @@ import re
 
 from astropy import units as u
 from astropy.extern import six
-from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
+from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
 from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
@@ -31,7 +31,7 @@ from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS
 
 from distutils.version import StrictVersion
 
-__all__ = ['SpectralCube']
+__all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
 __doctest_skip__ = ['SpectralCube.world', 'SpectralCube._apply_everywhere']
@@ -116,6 +116,8 @@ def aggregation_docstring(func):
 np2wcs = {2: 0, 1: 1, 0: 2}
 
 class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
+
+    __name__ = "SpectralCube"
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, read_beam=True,
@@ -301,7 +303,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         return self._data.ndim
 
     def __repr__(self):
-        s = "SpectralCube with shape={0}".format(self.shape)
+        s = "{1} with shape={0}".format(self.shape, self.__class__.__name__)
         if self.unit is u.dimensionless_unscaled:
             s += ":\n"
         else:
@@ -2335,6 +2337,9 @@ class VaryingResolutionSpectralCube(SpectralCube):
     A variant of the SpectralCube class that has PSF (beam) information on a
     per-channel basis.
     """
+
+    __name__ = "VaryingResolutionSpectralCube"
+
     def __init__(self, *args, beam_table=None, beams=None, **kwargs):
         """
         Create a SpectralCube with an associated beam table
@@ -2346,13 +2351,18 @@ class VaryingResolutionSpectralCube(SpectralCube):
                "Must give either a beam table or a list of beams to "
                "initialize a VaryingResolutionSpectralCube")
 
-        super(SpectralCube, self).__init__(*args, **kwargs)
+        super(VaryingResolutionSpectralCube, self).__init__(*args, **kwargs)
+
+        if isinstance(beam_table, BinTableHDU):
+            beam_data_table = beam_table.data
+        else:
+            beam_data_table = beam_table
 
         beams = [Beam(major=u.Quantity(row['BMAJ'], u.deg),
                       minor=u.Quantity(row['BMIN'], u.deg),
                       pa=u.Quantity(row['BPA'], u.deg),
                      )
-                 for row in beam_table]
+                 for row in beam_data_table]
 
         assert(len(beams) == self.shape[0],
                "Beam list must have same size as spectral dimension")

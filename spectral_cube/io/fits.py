@@ -71,7 +71,7 @@ def read_data_fits(input, hdu=None, **kwargs):
                 arrays[ihdu] = hdu_item
             elif isinstance(hdu_item, fits.BinTableHDU):
                 if 'BPA' in hdu_item.data.names:
-                    beam_table = hdu_item
+                    beam_table = hdu_item.data
 
         if len(arrays) > 1:
             if hdu is None:

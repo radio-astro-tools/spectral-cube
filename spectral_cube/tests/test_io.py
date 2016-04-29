@@ -1,10 +1,17 @@
 from __future__ import print_function, absolute_import, division
 
 from astropy.io import fits as pyfits
+from astropy import units as u
 from ..io import class_lmv, fits
 from .. import SpectralCube, StokesSpectralCube
 from . import path
 import pytest
+
+try:
+    from radio_beam import Beam
+    RADIO_BEAM_INSTALLED = True
+except ImportError:
+    RADIO_BEAM_INSTALLED = False
 
 def test_lmv_fits():
     c1 = SpectralCube.read(path('example_cube.fits'))
@@ -34,3 +41,8 @@ def test_4d_stokes():
     f = pyfits.open(path('advs.fits'))
     c = StokesSpectralCube.read(f)
     assert isinstance(c, StokesSpectralCube)
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_3d_beams():
+    c = SpectralCube.read(path('vda_beams.fits'))
+    assert c.beams[0].major == 0.1*u.deg
