@@ -2483,7 +2483,8 @@ class VaryingResolutionSpectralCube(SpectralCube):
         return slab
 
     def _new_cube_with(self, **kwargs):
-        newcube = super(VaryingResolutionSpectralCube, self)._new_cube_with(beams=self.beams,
+        beams = kwargs.pop('beams', self.beams)
+        newcube = super(VaryingResolutionSpectralCube, self)._new_cube_with(beams=beams,
                                                                             **kwargs)
         return newcube
 
