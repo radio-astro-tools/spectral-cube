@@ -879,7 +879,7 @@ class _AHBootstrapSystemExit(SystemExit):
 
 
 if sys.version_info[:2] < (2, 7):
-    # In Python 2.6 the distutils log does not log.warns, errors, etc. to
+    # In Python 2.6 the distutils log does not log warnings, errors, etc. to
     # stderr so we have to wrap it to ensure consistency at least in this
     # module
     import distutils
