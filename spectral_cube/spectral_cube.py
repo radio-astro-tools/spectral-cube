@@ -2358,11 +2358,12 @@ class VaryingResolutionSpectralCube(SpectralCube):
         else:
             beam_data_table = beam_table
 
-        beams = [Beam(major=u.Quantity(row['BMAJ'], u.deg),
-                      minor=u.Quantity(row['BMIN'], u.deg),
-                      pa=u.Quantity(row['BPA'], u.deg),
-                     )
-                 for row in beam_data_table]
+        if beam_table is not None:
+            beams = [Beam(major=u.Quantity(row['BMAJ'], u.deg),
+                          minor=u.Quantity(row['BMIN'], u.deg),
+                          pa=u.Quantity(row['BPA'], u.deg),
+                         )
+                     for row in beam_data_table]
 
         assert(len(beams) == self.shape[0],
                "Beam list must have same size as spectral dimension")
