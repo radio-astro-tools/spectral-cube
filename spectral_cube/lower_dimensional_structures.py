@@ -84,7 +84,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
         return new
 
-    def __getitem__(self, key):
+    def __getitem__(self, key, **kwargs):
         """
         Return a new ``LowerDimensionalObject'' of the same class while keeping
         other properties fixed.
@@ -106,7 +106,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
                              wcs=newwcs,
                              meta=self._meta,
                              mask=self._mask,
-                             header=self._header)
+                             header=self._header,
+                             **kwargs)
 
         return new
 
@@ -188,7 +189,8 @@ class Slice(Projection):
 class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None, header=None, spectral_unit=None):
+                meta=None, mask=None, header=None, spectral_unit=None,
+                beams=None):
 
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
@@ -213,6 +215,9 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
                 self._spectral_unit = u.Unit(self._header['CUNIT1'])
             elif self._wcs is not None:
                 self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
+
+        if beams is not None:
+            self.beams = beams
 
         return self
 
@@ -292,3 +297,11 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
                             header=newheader, meta=newmeta, copy=False,
                             spectral_unit=unit)
+
+    def __getitem__(self, key, **kwargs):
+        try:
+            beams = self.beams[key]
+        except (AttributeError,TypeError):
+            beams = None
+
+        return super(OneDSpectrum, self).__getitem__(key, beams=beams)

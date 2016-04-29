@@ -17,7 +17,7 @@ except ImportError:
     # We might be running py.test on a clean checkout
     SPECTRAL_CUBE_VERSION = 'dev'
 
-from .. import SpectralCube, StokesSpectralCube, LazyMask
+from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpectralCube
 from .. import cube_utils
 
 
@@ -60,6 +60,8 @@ def read_data_fits(input, hdu=None, **kwargs):
         The HDU to read the table from.
     """
 
+    beam_table = None
+
     if isinstance(input, fits.HDUList):
 
         # Parse all array objects
@@ -67,6 +69,9 @@ def read_data_fits(input, hdu=None, **kwargs):
         for ihdu, hdu_item in enumerate(input):
             if isinstance(hdu_item, (fits.PrimaryHDU, fits.ImageHDU)):
                 arrays[ihdu] = hdu_item
+            elif isinstance(hdu_item, fits.BinTableHDU):
+                if 'BPA' in hdu_item.data.names:
+                    beam_table = hdu_item
 
         if len(arrays) > 1:
             if hdu is None:
@@ -102,7 +107,7 @@ def read_data_fits(input, hdu=None, **kwargs):
         finally:
             hdulist.close()
 
-    return array_hdu.data, array_hdu.header
+    return array_hdu.data, array_hdu.header, beam_table
 
 
 def load_fits_cube(input, hdu=0, meta=None, **kwargs):
@@ -119,7 +124,7 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
         Metadata (can be inherited from other readers, for example)
     """
 
-    data, header = read_data_fits(input, hdu=hdu, **kwargs)
+    data, header, beam_table = read_data_fits(input, hdu=hdu, **kwargs)
 
     if meta is None:
         meta = {}
@@ -135,7 +140,12 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
 
         mask = LazyMask(np.isfinite, data=data, wcs=wcs)
         assert data.shape == mask._data.shape
-        cube = SpectralCube(data, wcs, mask, meta=meta, header=header)
+        if beam_table is None:
+            cube = SpectralCube(data, wcs, mask, meta=meta, header=header)
+        else:
+            cube = VaryingResolutionSpectralCube(data, wcs, mask, meta=meta,
+                                                 header=header,
+                                                 beam_table=beam_table)
         assert cube._data.shape == cube._mask._data.shape
 
     elif wcs.wcs.naxis == 4:
@@ -146,9 +156,16 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
         for component in data:
             comp_data, comp_wcs = cube_utils._orient(data[component], wcs)
             comp_mask = LazyMask(np.isfinite, data=comp_data, wcs=comp_wcs)
-            stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs,
-                                                  mask=comp_mask, meta=meta,
-                                                  header=header)
+            if beam_table is None:
+                stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs,
+                                                      mask=comp_mask, meta=meta,
+                                                      header=header)
+            else:
+                stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs,
+                                                      mask=comp_mask, meta=meta,
+                                                      header=header,
+                                                      beam_table=beam_table
+                                                     )
 
         cube = StokesSpectralCube(stokes_data)
 

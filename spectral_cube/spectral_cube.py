@@ -206,7 +206,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None, unit=None,
-                       wcs_tolerance=None):
+                       wcs_tolerance=None, **kwargs):
 
         data = self._data if data is None else data
         if unit is None and hasattr(data, 'unit'):
@@ -241,10 +241,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else spectral_unit
 
-        cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
-                            fill_value=fill_value, header=self._header,
-                            allow_huge_operations=self.allow_huge_operations,
-                            wcs_tolerance=wcs_tolerance or self._wcs_tolerance)
+        cube = self.__class__(data=data, wcs=wcs, mask=mask, meta=meta,
+                              fill_value=fill_value, header=self._header,
+                              allow_huge_operations=self.allow_huge_operations,
+                              wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                              **kwargs)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 
@@ -2328,6 +2329,153 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                    mask=BooleanArrayMask(newcube_valid.astype('bool')),
                                    meta=self.meta,
                                   )
+
+class VaryingResolutionSpectralCube(SpectralCube):
+    """
+    A variant of the SpectralCube class that has PSF (beam) information on a
+    per-channel basis.
+    """
+    def __init__(self, *args, beam_table=None, beams=None, **kwargs):
+        """
+        Create a SpectralCube with an associated beam table
+        """
+        # these types of cube are undefined without the radio_beam package
+        from radio_beam import Beam
+
+        assert((beam_table is not None or beams is not None),
+               "Must give either a beam table or a list of beams to "
+               "initialize a VaryingResolutionSpectralCube")
+
+        super(SpectralCube, self).__init__(*args, **kwargs)
+
+        beams = [Beam(major=u.Quantity(row['BMAJ'], u.deg),
+                      minor=u.Quantity(row['BMIN'], u.deg),
+                      pa=u.Quantity(row['BPA'], u.deg),
+                     )
+                 for row in beam_table]
+
+        assert(len(beams) == self.shape[0],
+               "Beam list must have same size as spectral dimension")
+
+        self.beams = beams
+
+
+    def __getitem__(self, view):
+
+        # Need to allow self[:], self[:,:]
+        if isinstance(view, (slice,int)):
+            view = (view, slice(None), slice(None))
+        elif len(view) == 2:
+            view = view + (slice(None),)
+        elif len(view) > 3:
+            raise IndexError("Too many indices")
+
+        meta = {}
+        meta.update(self._meta)
+        meta['slice'] = [(s.start, s.stop, s.step)
+                         if hasattr(s,'start') else s
+                         for s in view]
+
+        # intslices identifies the slices that are given by integers, i.e.
+        # indices.  Other slices are slice objects, e.g. obj[5:10], and have
+        # 'start' attributes.
+        intslices = [2-ii for ii,s in enumerate(view) if not hasattr(s,'start')]
+
+        # for beams, we care only about the first slice, independent of its
+        # type
+        specslice = view[0]
+
+        if intslices:
+            if len(intslices) > 1:
+                if 2 in intslices:
+                    raise NotImplementedError("1D slices along non-spectral "
+                                              "axes are not yet implemented.")
+                newwcs = self._wcs.sub([a
+                                        for a in (1,2,3)
+                                        if a not in [x+1 for x in intslices]])
+                return OneDSpectrum(value=self._data[view],
+                                    wcs=newwcs,
+                                    copy=False,
+                                    unit=self.unit,
+                                    beams=self.beams[specslice],
+                                    meta=meta)
+
+            # only one element, so drop an axis
+            newwcs = wcs_utils.drop_axis(self._wcs, specslice)
+            header = self._nowcs_header
+
+            # Slice objects know how to parse Beam objects stored in the
+            # metadata
+            meta['beam'] = self.beams[specslice]
+            return Slice(value=self.filled_data[view],
+                         wcs=newwcs,
+                         copy=False,
+                         unit=self.unit,
+                         header=header,
+                         meta=meta)
+
+        newmask = self._mask[view] if self._mask is not None else None
+
+        return self._new_cube_with(data=self._data[view],
+                                   wcs=wcs_utils.slice_wcs(self._wcs, view),
+                                   mask=newmask,
+                                   beams=self.beams[specslice],
+                                   meta=meta)
+
+    def spectral_slab(self, lo, hi):
+        """
+        Extract a new cube between two spectral coordinates
+
+        Parameters
+        ----------
+        lo, hi : :class:`~astropy.units.Quantity`
+            The lower and upper spectral coordinate for the slab range. The
+            units should be compatible with the units of the spectral axis.
+            If the spectral axis is in frequency-equivalent units and you
+            want to select a range in velocity, or vice-versa, you should
+            first use :meth:`~spectral_cube.SpectralCube.with_spectral_unit`
+            to convert the units of the spectral axis.
+        """
+
+        # Find range of values for spectral axis
+        ilo = self.closest_spectral_channel(lo)
+        ihi = self.closest_spectral_channel(hi)
+
+        if ilo > ihi:
+            ilo, ihi = ihi, ilo
+        ihi += 1
+
+        # Create WCS slab
+        wcs_slab = self._wcs.deepcopy()
+        wcs_slab.wcs.crpix[2] -= ilo
+
+        # Create mask slab
+        if self._mask is None:
+            mask_slab = None
+        else:
+            try:
+                mask_slab = self._mask[ilo:ihi, :, :]
+            except NotImplementedError:
+                warnings.warn("Mask slicing not implemented for "
+                              "{0} - dropping mask".
+                              format(self._mask.__class__.__name__))
+                mask_slab = None
+
+        # Create new spectral cube
+        slab = self._new_cube_with(data=self._data[ilo:ihi], wcs=wcs_slab,
+                                   beams=self.beams[ilo:ihi],
+                                   mask=mask_slab)
+
+        return slab
+
+    def _new_cube_with(self, **kwargs):
+        newcube = super(VaryingResolutionSpectralCube, self)._new_cube_with(self,
+                                                                            beams=self.beams,
+                                                                            **kwargs)
+        return newcube
+
+    _new_cube_with.__doc__ = SpectralCube._new_cube_with.__doc__
+
 
 
 def determine_format_from_filename(filename):
