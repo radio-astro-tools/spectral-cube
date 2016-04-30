@@ -1059,9 +1059,13 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         meta = {}
         meta.update(self._meta)
-        meta['slice'] = [(s.start, s.stop, s.step)
-                         if hasattr(s,'start') else s
-                         for s in view]
+        slice_data = [(s.start, s.stop, s.step)
+                      if hasattr(s,'start') else s
+                      for s in view]
+        if 'slice' in meta:
+            meta['slice'].append(slice_data)
+        else:
+            meta['slice'] = [slice_data]
 
         intslices = [2-ii for ii,s in enumerate(view) if not hasattr(s,'start')]
 
@@ -2411,9 +2415,13 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
         meta = {}
         meta.update(self._meta)
-        meta['slice'] = [(s.start, s.stop, s.step)
-                         if hasattr(s,'start') else s
-                         for s in view]
+        slice_data = [(s.start, s.stop, s.step)
+                      if hasattr(s,'start') else s
+                      for s in view]
+        if 'slice' in meta:
+            meta['slice'].append(slice_data)
+        else:
+            meta['slice'] = [slice_data]
 
         # intslices identifies the slices that are given by integers, i.e.
         # indices.  Other slices are slice objects, e.g. obj[5:10], and have

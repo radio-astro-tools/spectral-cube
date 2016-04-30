@@ -15,6 +15,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
 from astropy.wcs import _wcs
+from astropy.testing.helper import assert_quantity_allclose
 import numpy as np
 
 from .. import (SpectralCube, VaryingResolutionSpectralCube, BooleanArrayMask,
@@ -1033,7 +1034,7 @@ def test_varyres_moment():
         m0 = cube.moment0()
 
     assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
-    np.testing.assert_almost_equal(m0.meta['beam'].major, 0.25*u.arcsec)
+    assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_append_beam_to_hdr():
