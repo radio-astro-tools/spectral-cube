@@ -2386,7 +2386,8 @@ class VaryingResolutionSpectralCube(SpectralCube):
         beams = kwargs.pop('beams', None)
         beam_threshold = kwargs.pop('beam_threshold', 0.01)
 
-        assert((beam_table is not None or beams is not None),
+        if (beam_table is None and beams is None):
+            raise ValueError(
                "Must give either a beam table or a list of beams to "
                "initialize a VaryingResolutionSpectralCube")
 
@@ -2407,8 +2408,9 @@ class VaryingResolutionSpectralCube(SpectralCube):
                          )
                      for row in beam_data_table]
 
-        assert(len(beams) == self.shape[0],
-               "Beam list must have same size as spectral dimension")
+        if (len(beams) != self.shape[0]):
+            raise ValueError("Beam list must have same size as spectral "
+                             "dimension")
 
         self.beams = beams
         self.beam_threshold = beam_threshold
