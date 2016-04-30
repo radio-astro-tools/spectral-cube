@@ -2513,12 +2513,33 @@ class VaryingResolutionSpectralCube(SpectralCube):
                                  " than the threshold {1}".format(maxdiff,
                                                                   threshold))
 
+    def _average_beams(self, threshold):
+        """
+        Average the beams.  Note that this operation only makes sense in
+        limited contexts!  Generally one would want to convolve all the beams
+        to a common shape, but this method is meant to handle the "simple" case
+        when all your beams are the same to within some small factor and can
+        therefore be arithmetically averaged.  
+        """
+        log.warning("Arithmetic beam averaging is being performed.  This is "
+                    "not a mathematically robust operation, but is being "
+                    "permitted because the beams differ by "
+                    "<{0}".format(threshold))
+        major = u.Quantity([bm.major for bm in self.beams], u.deg)
+        minor = u.Quantity([bm.minor for bm in self.beams], u.deg)
+        pa = u.Quantity([bm.pa for bm in self.beams], u.deg)
+        new_beam = Beam(major=major.mean(), minor=minor.mean(), pa=pa.mean())
+        return new_beam
 
-    def _check_beam_areas_wrapper(self, function, beam_threshold=None):
+
+    def _handle_beam_areas_wrapper(self, function, beam_threshold=None):
         """
         Wrapper: if the function takes "axis" and is operating over axis 0 (the
         spectral axis), check that the beam threshold is not exceeded before
-        performing the oepration
+        performing the operation
+
+        Also, if the operation *is* valid, average the beam appropriately to
+        get the output
         """
 
         if beam_threshold is None:
@@ -2529,7 +2550,10 @@ class VaryingResolutionSpectralCube(SpectralCube):
             if ('axis' in kwargs and kwargs['axis']==0 or
                 (hasattr(kwargs['axis'], '__len__') and 0 in kwargs['axis'])):
                 self._check_beam_areas(beam_threshold)
-            return function(*args, **kwargs)
+            result = function(*args, **kwargs)
+            avg_beam = self._average_beams(beam_threshold)
+            result.meta['beam'] = avg_beam
+            return result
 
         return newfunc
 
