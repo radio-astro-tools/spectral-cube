@@ -2349,6 +2349,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
         beam_table = kwargs.pop('beam_table', None)
         beams = kwargs.pop('beams', None)
+        beam_threshold = kwargs.pop('beam_threshold', 0.01)
 
         assert((beam_table is not None or beams is not None),
                "Must give either a beam table or a list of beams to "
@@ -2372,6 +2373,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
                "Beam list must have same size as spectral dimension")
 
         self.beams = beams
+        self.beam_threshold = beam_threshold
 
 
     def __getitem__(self, view):
@@ -2489,6 +2491,78 @@ class VaryingResolutionSpectralCube(SpectralCube):
         return newcube
 
     _new_cube_with.__doc__ = SpectralCube._new_cube_with.__doc__
+
+    def _check_beam_areas(self, threshold):
+        """
+        Check that the beam areas are the same to within some threshold
+        """
+
+        beam_areas = u.Quantity(self.beams, u.sr)
+        major = u.Quantity([bm.major for bm in self.beams], u.deg)
+        minor = u.Quantity([bm.minor for bm in self.beams], u.deg)
+        pa = u.Quantity([bm.pa for bm in self.beams], u.deg)
+
+        for qty in (major, minor, beam_areas, pa):
+            minv = qty.min()
+            maxv = qty.max()
+            mn = qty.mean() # not appropriate for PA?
+            maxdiff = np.max(np.abs((maxv-mn, minv-mn)))/mn
+
+            if maxdiff > threshold:
+                raise ValueError("Beams differ by up to {0}x, which is greater"
+                                 " than the threshold {1}".format(maxdiff,
+                                                                  threshold))
+
+
+    def _check_beam_areas_wrapper(self, function, beam_threshold=None):
+        """
+        Wrapper: if the function takes "axis" and is operating over axis 0 (the
+        spectral axis), check that the beam threshold is not exceeded before
+        performing the oepration
+        """
+
+        if beam_threshold is None:
+            beam_threshold = self.beam_threshold
+
+        def newfunc(*args, **kwargs):
+            # check that the spectral axis is being operated over
+            if ('axis' in kwargs and kwargs['axis']==0 or
+                (hasattr(kwargs['axis'], '__len__') and 0 in kwargs['axis'])):
+                self._check_beam_areas(beam_threshold)
+            return function(*args, **kwargs)
+
+        return newfunc
+
+    def __getattr__(self, attrname):
+        """
+        For any functions that operate over the spectral axis, perform beam
+        sameness checks before performing the operation to avoid unexpected
+        results
+        """
+
+        # short name to avoid long lines below
+        VRSC = VaryingResolutionSpectralCube
+
+        # what about apply_numpy_function, apply_function?  since they're
+        # called by some of these, maybe *only* those should be wrapped to
+        # avoid redundant calls
+        if attrname in ('sum', 'mean', 'moment', 'moment0', 'moment1',
+                        'moment2', 'median', 'min', 'max', 'percentile',
+                        'std',):
+            origfunc = super(VRSC, self).__getattr__(attrname)
+            return _check_beam_areas_wrapper(origfunc)
+        else:
+            return super(VRSC, self).__getattr__(attrname)
+
+
+    @property
+    def hdu(self):
+        """
+        HDU version of self
+        """
+        hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
+        bmhdu = BinTableHDU(self.beams)
+        return HDUList([hdu, bmhdu])
 
 
 
