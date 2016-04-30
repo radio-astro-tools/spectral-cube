@@ -2578,17 +2578,11 @@ class VaryingResolutionSpectralCube(SpectralCube):
         when all your beams are the same to within some small factor and can
         therefore be arithmetically averaged.  
         """
-        from radio_beam import Beam
-        from astropy.stats import circmean
         warnings.warn("Arithmetic beam averaging is being performed.  This is "
                       "not a mathematically robust operation, but is being "
                       "permitted because the beams differ by "
                       "<{0}".format(threshold))
-        major = u.Quantity([bm.major for bm in self.beams], u.deg)
-        minor = u.Quantity([bm.minor for bm in self.beams], u.deg)
-        pa = u.Quantity([bm.pa for bm in self.beams], u.deg)
-        new_beam = Beam(major=major.mean(), minor=minor.mean(),
-                        pa=circmean(pa, weights=major/minor))
+        new_beam = cube_utils.average_beams(self.beams)
         return new_beam
 
 
