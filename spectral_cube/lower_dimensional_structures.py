@@ -1,14 +1,16 @@
 from __future__ import print_function, absolute_import, division
 
+import warnings
 from astropy import units as u
 from astropy import wcs
-from astropy.io.fits import Header, Card
+from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
 
 import numpy as np
 
 from .base_class import BaseNDClass, SpectralAxisMixinClass
+from .cube_utils import beams_to_bintable
 
 
 class LowerDimensionalObject(u.Quantity, BaseNDClass):
@@ -36,11 +38,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
     @property
     def hdu(self):
-        from astropy.io import fits
         if self.wcs is None:
-            hdu = fits.PrimaryHDU(self.value)
+            hdu = PrimaryHDU(self.value)
         else:
-            hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
+            hdu = PrimaryHDU(self.value, header=self.wcs.to_header())
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
 
         if 'beam' in self.meta:
@@ -308,3 +309,20 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
             beams = None
 
         return super(OneDSpectrum, self).__getitem__(key, beams=beams)
+
+    @property
+    def hdu(self):
+        if hasattr(self, 'beams'):
+            warnings.warn("There are multiple beams for this spectrum that "
+                          "are being ignored when creating the HDU.")
+        return super(OneDSpectrum, self).hdu
+
+    @property
+    def hdulist(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            hdu = self.hdu
+
+        beamhdu = beams_to_bintable(self.beams)
+
+        return HDUList([hdu, beamhdu])

@@ -4,6 +4,8 @@ import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
 from astropy import log
+from astropy.io.fits import BinTableHDU
+from astropy import units as u
 
 def _fix_spectral(wcs):
     """
@@ -230,3 +232,24 @@ def iterator_strategy(cube, axis=None):
     if cube.size < 1e8:  # smallish
         return 'cube'
     return 'slice'
+
+
+def beams_to_bintable(beams):
+    """
+    Convert a list of beams to a CASA-style BinTableHDU
+    """
+    metakeys = beams[0].meta.keys()
+    dtypes = ([('BMAJ','float'),
+               ('BMIN','float'),
+               ('BPA','float'),] +
+              [(key, type(val)) for key,val in beams[0].meta.items()]
+             )
+    beam_table = np.recarray(len(beams), dtype=dtypes)
+    beam_table['BMAJ'] = [bm.major.to(u.arcsec).value for bm in beams]
+    beam_table['BMIN'] = [bm.minor.to(u.arcsec).value for bm in beams]
+    beam_table['BPA'] = [bm.pa.to(u.deg).value for bm in beams]
+    for key in metakeys:
+        beam_table[key] = [bm.meta[key] for bm in beams]
+
+    bmhdu = BinTableHDU(beam_table)
+    return bmhdu

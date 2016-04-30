@@ -2651,27 +2651,14 @@ class VaryingResolutionSpectralCube(SpectralCube):
     @property
     def hdulist(self):
         """
-        HDU version of self
+        HDUList version of self
         """
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
-        metakeys = self.beams[0].meta.keys()
-        colnames = ['BMAJ','BMIN','BPA'] + list(metakeys)
-        dtypes = ([('BMAJ','float'),
-                   ('BMIN','float'),
-                   ('BPA','float'),] +
-                  [(key, type(val)) for key,val in self.beams[0].meta.items()]
-                 )
-        beam_table = np.recarray(len(self.beams), dtype=dtypes)
-        beam_table['BMAJ'] = [bm.major.to(u.arcsec).value for bm in self.beams]
-        beam_table['BMIN'] = [bm.minor.to(u.arcsec).value for bm in self.beams]
-        beam_table['BPA'] = [bm.pa.to(u.deg).value for bm in self.beams]
-        for key in metakeys:
-            beam_table[key] = [bm.meta[key] for bm in self.beams]
 
-        bmhdu = BinTableHDU(beam_table)
+        from .cube_utils import beams_to_bintable
+        bmhdu = beams_to_bintable(self.beams)
 
         return HDUList([hdu, bmhdu])
-
 
 
 def determine_format_from_filename(filename):
