@@ -15,7 +15,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
 from astropy.wcs import _wcs
-from astropy.testing.helper import assert_quantity_allclose
+from astropy.tests.helper import assert_quantity_allclose
 import numpy as np
 
 from .. import (SpectralCube, VaryingResolutionSpectralCube, BooleanArrayMask,

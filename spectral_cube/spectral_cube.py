@@ -2190,7 +2190,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if newframe:
             dd.set('frame new')
 
-        dd.set_pyfits(HDUList(self.hdu))
+        dd.set_pyfits(self.hdulist)
 
         return dd
 
@@ -2230,6 +2230,10 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         """
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
+
+    @property
+    def hdulist(self):
+        return HDUList(self.hdu)
 
     def to(self, unit, equivalencies=()):
         """
@@ -2393,6 +2397,8 @@ class VaryingResolutionSpectralCube(SpectralCube):
             beams = [Beam(major=u.Quantity(row['BMAJ'], u.arcsec),
                           minor=u.Quantity(row['BMIN'], u.arcsec),
                           pa=u.Quantity(row['BPA'], u.deg),
+                          meta={key: row[key] for key in beam_table.names
+                                if key not in ('BMAJ','BPA', 'BMIN')},
                          )
                      for row in beam_data_table]
 
@@ -2568,6 +2574,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
         therefore be arithmetically averaged.  
         """
         from radio_beam import Beam
+        from astropy.stats import circmean
         warnings.warn("Arithmetic beam averaging is being performed.  This is "
                       "not a mathematically robust operation, but is being "
                       "permitted because the beams differ by "
@@ -2575,7 +2582,8 @@ class VaryingResolutionSpectralCube(SpectralCube):
         major = u.Quantity([bm.major for bm in self.beams], u.deg)
         minor = u.Quantity([bm.minor for bm in self.beams], u.deg)
         pa = u.Quantity([bm.pa for bm in self.beams], u.deg)
-        new_beam = Beam(major=major.mean(), minor=minor.mean(), pa=pa.mean())
+        new_beam = Beam(major=major.mean(), minor=minor.mean(),
+                        pa=circmean(pa, weights=major/minor))
         return new_beam
 
 
@@ -2635,14 +2643,33 @@ class VaryingResolutionSpectralCube(SpectralCube):
         else:
             return super(VRSC, self).__getattribute__(attrname)
 
-
     @property
     def hdu(self):
+        raise ValueError("For VaryingResolutionSpectralCube's, use hdulist "
+                         "instead of hdu.")
+
+    @property
+    def hdulist(self):
         """
         HDU version of self
         """
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
-        bmhdu = BinTableHDU(self.beams)
+        metakeys = self.beams[0].meta.keys()
+        colnames = ['BMAJ','BMIN','BPA'] + list(metakeys)
+        dtypes = ([('BMAJ','float'),
+                   ('BMIN','float'),
+                   ('BPA','float'),] +
+                  [(key, type(val)) for key,val in self.beams[0].meta.items()]
+                 )
+        beam_table = np.recarray(len(self.beams), dtype=dtypes)
+        beam_table['BMAJ'] = [bm.major.to(u.arcsec).value for bm in self.beams]
+        beam_table['BMIN'] = [bm.minor.to(u.arcsec).value for bm in self.beams]
+        beam_table['BPA'] = [bm.pa.to(u.deg).value for bm in self.beams]
+        for key in metakeys:
+            beam_table[key] = [bm.meta[key] for bm in self.beams]
+
+        bmhdu = BinTableHDU(beam_table)
+
         return HDUList([hdu, bmhdu])
 
 
