@@ -463,7 +463,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                         copy=False,
                                         unit=unit,
                                         header=header,
-                                        meta=meta)
+                                        meta=meta,
+                                        beams=(self.beams
+                                               if hasattr(self,'beams')
+                                               else None),
+                                       )
                 else:
                     return out
 
@@ -1081,7 +1085,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
-                                    meta=meta)
+                                    meta=meta,
+                                   )
 
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
