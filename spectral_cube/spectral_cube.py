@@ -2546,13 +2546,24 @@ class VaryingResolutionSpectralCube(SpectralCube):
             beam_threshold = self.beam_threshold
 
         def newfunc(*args, **kwargs):
-            # check that the spectral axis is being operated over
-            if ('axis' in kwargs and kwargs['axis']==0 or
-                (hasattr(kwargs['axis'], '__len__') and 0 in kwargs['axis'])):
-                self._check_beam_areas(beam_threshold)
+            """ Wrapper function around the standard operations to handle beams
+            when creating projections """
+
             result = function(*args, **kwargs)
-            avg_beam = self._average_beams(beam_threshold)
-            result.meta['beam'] = avg_beam
+
+            # check that the spectral axis is being operated over
+            # moments are a special case b/c they default to axis=0
+            need_to_handle_beams = ('axis' in kwargs and kwargs['axis']==0
+                                    or (hasattr(kwargs['axis'], '__len__') and
+                                        0 in kwargs['axis'])
+                                    or ('axis' not in kwargs and 'moment' in
+                                        function.__name__))
+
+            if need_to_handle_beams:
+                self._check_beam_areas(beam_threshold)
+                avg_beam = self._average_beams(beam_threshold)
+                result.meta['beam'] = avg_beam
+
             return result
 
         return newfunc
@@ -2570,11 +2581,9 @@ class VaryingResolutionSpectralCube(SpectralCube):
         # what about apply_numpy_function, apply_function?  since they're
         # called by some of these, maybe *only* those should be wrapped to
         # avoid redundant calls
-        if attrname in ('sum', 'mean', 'moment', 'moment0', 'moment1',
-                        'moment2', 'median', 'min', 'max', 'percentile',
-                        'std',):
+        if attrname in ('moment', 'apply_numpy_function', 'apply_function'):
             origfunc = super(VRSC, self).__getattr__(attrname)
-            return _check_beam_areas_wrapper(origfunc)
+            return _handle_beam_areas_wrapper(origfunc)
         else:
             return super(VRSC, self).__getattr__(attrname)
 
