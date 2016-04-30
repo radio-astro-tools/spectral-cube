@@ -22,6 +22,16 @@ def transpose(d, h, axes):
 if __name__ == "__main__":
     np.random.seed(42)
 
+    beams = np.recarray(4, dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'),
+                                  ('BPA', '>f4'), ('CHAN', '>i4'),
+                                  ('POL', '>i4')])
+    beams['BMAJ'] = [0.1,0.2,0.3,0.4]
+    beams['BMIN'] = [0.4,0.3,0.2,0.1]
+    beams['BPA'] = [0,45,60,30]
+    beams['CHAN'] = [0,0,0,0]
+    beams['POL'] = [0,0,0,0]
+    beams = fits.BinTableHDU(beams)
+
     # Single Stokes
     h = fits.header.Header.fromtextfile(HEADER_FILENAME)
     h['BUNIT'] = 'K' # Kelvins are a valid unit, JY/BEAM are not: they should be tested separately
@@ -44,6 +54,12 @@ if __name__ == "__main__":
 
     d, h = transpose(d, h, [0, 2, 1, 3])
     fits.writeto('sdav.fits', d, h, clobber=True)
+
+    del h['BMAJ'], h['BMIN'], h['BPA']
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto('sdav_beams.fits', clobber=True)
+
 
     # 3D files
     h = fits.header.Header.fromtextfile(HEADER_FILENAME)
@@ -71,15 +87,6 @@ if __name__ == "__main__":
     fits.writeto('vda_Jybeam_lower.fits', d, h, clobber=True)
     h['BUNIT'] = ' Jy / beam '
     fits.writeto('vda_Jybeam_whitespace.fits', d, h, clobber=True)
-
-    beams = np.recarray(d.shape[0],
-                        dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'), ('BPA', '>f4'), ('CHAN', '>i4'), ('POL', '>i4')])
-    beams['BMAJ'] = [0.1,0.2,0.3,0.4]
-    beams['BMIN'] = [0.4,0.3,0.2,0.1]
-    beams['BPA'] = [0,45,60,30]
-    beams['CHAN'] = [0,0,0,0]
-    beams['POL'] = [0,0,0,0]
-    beams = fits.BinTableHDU(beams)
 
     del h['BMAJ'], h['BMIN'], h['BPA']
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),

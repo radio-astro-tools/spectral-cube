@@ -161,11 +161,11 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
                                                       mask=comp_mask, meta=meta,
                                                       header=header)
             else:
-                stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs,
-                                                      mask=comp_mask, meta=meta,
-                                                      header=header,
-                                                      beam_table=beam_table
-                                                     )
+                VRSC = VaryingResolutionSpectralCube
+                stokes_data[component] = VRSC(comp_data, wcs=comp_wcs,
+                                              mask=comp_mask, meta=meta,
+                                              header=header,
+                                              beam_table=beam_table)
 
         cube = StokesSpectralCube(stokes_data)
 

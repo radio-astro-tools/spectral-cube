@@ -47,3 +47,8 @@ def test_4d_stokes():
 def test_3d_beams():
     c = SpectralCube.read(path('vda_beams.fits'))
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.1)
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_4d_beams():
+    c = SpectralCube.read(path('sdav_beams.fits'))
+    np.testing.assert_almost_equal(c.beams[0].major.value, 0.1)
