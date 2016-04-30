@@ -2342,7 +2342,29 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
     def __init__(self, *args, **kwargs):
         """
-        Create a SpectralCube with an associated beam table
+        Create a SpectralCube with an associated beam table.  The new
+        VaryingResolutionSpectralCube will have a ``beams`` attribute and a
+        ``beam_threshold`` attribute as described below.  It will perform some
+        additional checks when trying to perform analysis across image frames.
+
+        Three new keyword arguments are accepted:
+
+        Other Parameters
+        ----------------
+        beam_table : `numpy.recordarray`
+            A table of beam major and minor axes in arcseconds and position
+            angles, with labels BMAJ, BMIN, BPA
+        beams : list
+            A list of `radio_beam.Beam` objects
+        beam_threshold : float or dict
+            The fractional threshold above which beams are considered
+            different.  A dictionary may be used with entries 'area', 'major',
+            'minor', 'pa' so that you can specify a different fractional
+            threshold for each of these.  For example, if you want to check
+            only that the areas are the same, and not worry about the shape
+            (which might be a bad idea...), you could set
+            ``beam_threshold={'area':0.01, 'major':1.5, 'minor':1.5,
+            'pa':5.0}``
         """
         # these types of cube are undefined without the radio_beam package
         from radio_beam import Beam
@@ -2363,8 +2385,9 @@ class VaryingResolutionSpectralCube(SpectralCube):
             beam_data_table = beam_table
 
         if beam_table is not None:
-            beams = [Beam(major=u.Quantity(row['BMAJ'], u.deg),
-                          minor=u.Quantity(row['BMIN'], u.deg),
+            # CASA beam tables are in arcsec, and that's what we support
+            beams = [Beam(major=u.Quantity(row['BMAJ'], u.arcsec),
+                          minor=u.Quantity(row['BMIN'], u.arcsec),
                           pa=u.Quantity(row['BPA'], u.deg),
                          )
                      for row in beam_data_table]
@@ -2486,8 +2509,11 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
     def _new_cube_with(self, **kwargs):
         beams = kwargs.pop('beams', self.beams)
-        newcube = super(VaryingResolutionSpectralCube, self)._new_cube_with(beams=beams,
-                                                                            **kwargs)
+        beam_threshold = kwargs.pop('beam_threshold', self.beam_threshold)
+        VRSC = VaryingResolutionSpectralCube
+        newcube = super(VRSC, self)._new_cube_with(beams=beams,
+                                                   beam_threshold=beam_threshold,
+                                                   **kwargs)
         return newcube
 
     _new_cube_with.__doc__ = SpectralCube._new_cube_with.__doc__
@@ -2497,21 +2523,33 @@ class VaryingResolutionSpectralCube(SpectralCube):
         Check that the beam areas are the same to within some threshold
         """
 
-        beam_areas = u.Quantity(self.beams, u.sr)
-        major = u.Quantity([bm.major for bm in self.beams], u.deg)
-        minor = u.Quantity([bm.minor for bm in self.beams], u.deg)
-        pa = u.Quantity([bm.pa for bm in self.beams], u.deg)
+        qtys = dict(area = u.Quantity(self.beams, u.sr),
+                    major = u.Quantity([bm.major for bm in self.beams], u.deg),
+                    minor = u.Quantity([bm.minor for bm in self.beams], u.deg),
+                    pa = u.Quantity([bm.pa for bm in self.beams], u.deg),
+                   )
 
-        for qty in (major, minor, beam_areas, pa):
-            minv = qty.min()
-            maxv = qty.max()
-            mn = qty.mean() # not appropriate for PA?
+        errormessage = ""
+
+        for qtyname, qty in qtys.items():
+            minv = qty.min().value
+            maxv = qty.max().value
+            mn = qty.mean().value # not appropriate for PA?
             maxdiff = np.max(np.abs((maxv-mn, minv-mn)))/mn
 
-            if maxdiff > threshold:
-                raise ValueError("Beams differ by up to {0}x, which is greater"
+            if isinstance(threshold, dict):
+                th = threshold[qtyname]
+            else:
+                th = threshold
+
+            if maxdiff > th:
+                errormessage += ("Beam {2}s differ by up to {0}x, which is greater"
                                  " than the threshold {1}".format(maxdiff,
-                                                                  threshold))
+                                                                  threshold,
+                                                                  qtyname
+                                                                 ))
+        if errormessage != "":
+            raise ValueError(errormessage)
 
     def _average_beams(self, threshold):
         """
@@ -2521,10 +2559,11 @@ class VaryingResolutionSpectralCube(SpectralCube):
         when all your beams are the same to within some small factor and can
         therefore be arithmetically averaged.  
         """
-        log.warning("Arithmetic beam averaging is being performed.  This is "
-                    "not a mathematically robust operation, but is being "
-                    "permitted because the beams differ by "
-                    "<{0}".format(threshold))
+        from radio_beam import Beam
+        warnings.warn("Arithmetic beam averaging is being performed.  This is "
+                      "not a mathematically robust operation, but is being "
+                      "permitted because the beams differ by "
+                      "<{0}".format(threshold))
         major = u.Quantity([bm.major for bm in self.beams], u.deg)
         minor = u.Quantity([bm.minor for bm in self.beams], u.deg)
         pa = u.Quantity([bm.pa for bm in self.beams], u.deg)
@@ -2568,7 +2607,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
         return newfunc
 
-    def __getattr__(self, attrname):
+    def __getattribute__(self, attrname):
         """
         For any functions that operate over the spectral axis, perform beam
         sameness checks before performing the operation to avoid unexpected
@@ -2582,10 +2621,11 @@ class VaryingResolutionSpectralCube(SpectralCube):
         # called by some of these, maybe *only* those should be wrapped to
         # avoid redundant calls
         if attrname in ('moment', 'apply_numpy_function', 'apply_function'):
-            origfunc = super(VRSC, self).__getattr__(attrname)
-            return _handle_beam_areas_wrapper(origfunc)
+            log.info("Function is in the three specials.")
+            origfunc = super(VRSC, self).__getattribute__(attrname)
+            return self._handle_beam_areas_wrapper(origfunc)
         else:
-            return super(VRSC, self).__getattr__(attrname)
+            return super(VRSC, self).__getattribute__(attrname)
 
 
     @property

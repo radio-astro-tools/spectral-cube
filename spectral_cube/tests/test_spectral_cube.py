@@ -1017,8 +1017,23 @@ def test_multibeam_slice():
     flatslice = cube[0,:,:]
 
     np.testing.assert_almost_equal(flatslice.header['BMAJ'],
-                                   (0.1))
+                                   (0.1/3600.))
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_varyres_moment():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    assert isinstance(cube, VaryingResolutionSpectralCube)
+
+    # the beams are very different, but for this test we don't care
+    cube.beam_threshold = 1.0
+
+    with warnings.catch_warnings(record=True) as wrn:
+        warnings.simplefilter('default')
+        m0 = cube.moment0()
+
+    assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
+    np.testing.assert_almost_equal(m0.meta['beam'].major, 0.25*u.arcsec)
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_append_beam_to_hdr():
