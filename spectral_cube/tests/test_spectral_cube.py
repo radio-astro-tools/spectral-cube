@@ -983,19 +983,19 @@ def test_oned_slice():
 def test_oned_slice_beams():
     # Check that a slice returns an appropriate spectrum
 
-    cube, data = cube_and_raw('vda_beams.fits')
+    cube, data = cube_and_raw('sdav_beams.fits')
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     spec = cube[:,0,0]
     assert isinstance(spec, OneDSpectrum)
     # data has a redundant 1st axis
-    np.testing.assert_equal(spec.value, data[0,:,0,0])
+    np.testing.assert_equal(spec.value, data[:,0,0,0])
     assert cube.unit == spec.unit
     assert spec.header['BUNIT'] == cube.header['BUNIT']
 
     assert hasattr(spec, 'beams')
-    assert 'BMAJ' in spec.hdulist[1].names
+    assert 'BMAJ' in spec.hdulist[1].data.names
 
 def test_oned_collapse():
     # Check that an operation along the spatial dims returns an appropriate
@@ -1017,19 +1017,19 @@ def test_oned_collapse_beams():
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
 
-    cube, data = cube_and_raw('vda_beams.fits')
+    cube, data = cube_and_raw('sdav_beams.fits')
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     spec = cube.mean(axis=(1,2))
     assert isinstance(spec, OneDSpectrum)
     # data has a redundant 1st axis
-    np.testing.assert_equal(spec.value, data.mean(axis=(0,2,3)))
+    np.testing.assert_equal(spec.value, data.mean(axis=(1,2,3)))
     assert cube.unit == spec.unit
     assert spec.header['BUNIT'] == cube.header['BUNIT']
 
     assert hasattr(spec, 'beams')
-    assert 'BMAJ' in spec.hdulist[1].names
+    assert 'BMAJ' in spec.hdulist[1].data.names
 
 def test_preserve_bunit():
 

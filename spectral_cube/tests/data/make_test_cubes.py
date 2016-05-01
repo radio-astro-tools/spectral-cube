@@ -56,6 +56,8 @@ if __name__ == "__main__":
     fits.writeto('sdav.fits', d, h, clobber=True)
 
     del h['BMAJ'], h['BMIN'], h['BPA']
+    # want 4 spectral channels
+    d = np.random.random((4, 3, 2, 1))
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
     hdul.writeto('sdav_beams.fits', clobber=True)
