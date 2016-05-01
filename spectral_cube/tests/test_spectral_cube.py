@@ -723,6 +723,14 @@ def test_with_mask_with_boolean_array():
     assert cube2._mask._mask is mask
 
 
+def test_with_mask_with_good_array_shape():
+    cube = _dummy_cube()
+    mask = np.zeros((1, 5), dtype=np.bool)
+    cube2 = cube.with_mask(mask, inherit_mask=False)
+    assert isinstance(cube2._mask, BooleanArrayMask)
+    np.testing.assert_equal(cube2._mask._mask, mask.reshape((1, 1, 5)))
+
+
 def test_with_mask_with_bad_array_shape():
     cube = _dummy_cube()
     mask = np.zeros((5, 5), dtype=np.bool)
