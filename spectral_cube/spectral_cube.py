@@ -2561,10 +2561,10 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
             if maxdiff > th:
                 errormessage += ("Beam {2}s differ by up to {0}x, which is greater"
-                                 " than the threshold {1}".format(maxdiff,
-                                                                  threshold,
-                                                                  qtyname
-                                                                 ))
+                                 " than the threshold {1}\n".format(maxdiff,
+                                                                    threshold,
+                                                                    qtyname
+                                                                   ))
         if errormessage != "":
             raise ValueError(errormessage)
 
