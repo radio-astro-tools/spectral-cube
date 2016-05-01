@@ -42,9 +42,12 @@ matrix:
     include:
 
         # Do a coverage test in Python 2.
+        # make sure *everything* is run for coverage tests
         - python: 2.7
           env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib aplpy yt'
+               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck'
+               ASTROPY_VERSION='development'
+               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -60,7 +63,7 @@ matrix:
         # Test with bottleneck
         - python: 2.7
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
-        - python: 3.5
+        - python: 3.4
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
         
         # Test with radio-beam
