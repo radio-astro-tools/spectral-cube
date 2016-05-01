@@ -29,7 +29,7 @@ env:
         - NUMPY_VERSION=1.10
         - ASTROPY_VERSION=stable
         - CONDA_DEPENDENCIES='matplotlib aplpy'
-        - PIP_DEPENDENCIES='pytest-xdist pvextractor https://github.com/radio-astro-tools/radio_beam/archive/master.zip'
+        - PIP_DEPENDENCIES='pytest-xdist pvextractor'
         - SETUP_XVFB=True
 
     matrix:
@@ -60,8 +60,14 @@ matrix:
         # Test with bottleneck
         - python: 2.7
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
-        - python: 3.4
+        - python: 3.5
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
+        
+        # Test with radio-beam
+        - python: 2.7
+          env: PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
+        - python: 3.5
+          env: PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
 
 install:
     - git clone git://github.com/astropy/ci-helpers.git
