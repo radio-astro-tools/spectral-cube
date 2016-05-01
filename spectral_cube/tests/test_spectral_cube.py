@@ -466,9 +466,13 @@ class TestNumpyMethods(BaseTest):
         # regular median.
 
         scmed = self.c.apply_numpy_function(np.median, axis=0)
+        # this checks whether numpy <=1.9.3 has a bug?
         if StrictVersion(np.__version__) <= StrictVersion('1.9.3'):
+            # print statements added so we get more info in the travis builds
+            print("Numpy version is: {0}".format(StrictVersion(np.__version__)))
             assert np.count_nonzero(np.isnan(scmed)) == 5
         else:
+            print("Numpy version is: {0}".format(StrictVersion(np.__version__)))
             assert np.count_nonzero(np.isnan(scmed)) == 6
 
         scmed = self.c.apply_numpy_function(np.nanmedian, axis=0)

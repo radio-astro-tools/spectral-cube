@@ -12,6 +12,7 @@ import re
 
 from astropy import units as u
 from astropy.extern import six
+from astropy.extern.six.moves import range as xrange
 from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
 from astropy.utils.console import ProgressBar
 from astropy import log
@@ -35,11 +36,6 @@ __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
 __doctest_skip__ = ['SpectralCube.world', 'SpectralCube._apply_everywhere']
-
-try:  # TODO replace with six.py
-    xrange
-except NameError:
-    xrange = range
 
 try:
     from scipy import ndimage
