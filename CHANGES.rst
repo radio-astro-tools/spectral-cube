@@ -1,5 +1,8 @@
 0.4.0 (unreleased)
 ------------------
+ - Added a new cube type, VaryingResolutionSpectralCube, meant to handle
+   CASA-produced cubes that have different beams in each channel
+   (https://github.com/radio-astro-tools/spectral-cube/pull/292)
  - Added tests for new functionality in OneDSpectrum (https://github.com/radio-astro-tools/spectral-cube/pull/277)
  - Split out common functionality between SpectralCube and LowerDimensionalObject
    into BaseNDClass and SpectralAxisMixinClass *Manually merged by @keflavich* (https://github.com/radio-astro-tools/spectral-cube/pull/274)
