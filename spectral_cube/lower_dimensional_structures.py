@@ -1,14 +1,16 @@
 from __future__ import print_function, absolute_import, division
 
+import warnings
 from astropy import units as u
 from astropy import wcs
-from astropy.io.fits import Header, Card
+from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
 
 import numpy as np
 
 from .base_class import BaseNDClass, SpectralAxisMixinClass
+from .cube_utils import beams_to_bintable
 
 
 class LowerDimensionalObject(u.Quantity, BaseNDClass):
@@ -29,15 +31,17 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                       value=sh))
 
+        if 'beam' in self.meta:
+            header.update(self.meta['beam'].to_header_keywords())
+
         return header
 
     @property
     def hdu(self):
-        from astropy.io import fits
         if self.wcs is None:
-            hdu = fits.PrimaryHDU(self.value)
+            hdu = PrimaryHDU(self.value)
         else:
-            hdu = fits.PrimaryHDU(self.value, header=self.wcs.to_header())
+            hdu = PrimaryHDU(self.value, header=self.wcs.to_header())
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
 
         if 'beam' in self.meta:
@@ -84,7 +88,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
         return new
 
-    def __getitem__(self, key):
+    def __getitem__(self, key, **kwargs):
         """
         Return a new ``LowerDimensionalObject'' of the same class while keeping
         other properties fixed.
@@ -106,7 +110,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
                              wcs=newwcs,
                              meta=self._meta,
                              mask=self._mask,
-                             header=self._header)
+                             header=self._header,
+                             **kwargs)
 
         return new
 
@@ -188,7 +193,8 @@ class Slice(Projection):
 class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None, header=None, spectral_unit=None):
+                meta=None, mask=None, header=None, spectral_unit=None,
+                beams=None):
 
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
@@ -213,6 +219,9 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
                 self._spectral_unit = u.Unit(self._header['CUNIT1'])
             elif self._wcs is not None:
                 self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
+
+        if beams is not None:
+            self.beams = beams
 
         return self
 
@@ -292,3 +301,28 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
                             header=newheader, meta=newmeta, copy=False,
                             spectral_unit=unit)
+
+    def __getitem__(self, key, **kwargs):
+        try:
+            beams = self.beams[key]
+        except (AttributeError,TypeError):
+            beams = None
+
+        return super(OneDSpectrum, self).__getitem__(key, beams=beams)
+
+    @property
+    def hdu(self):
+        if hasattr(self, 'beams'):
+            warnings.warn("There are multiple beams for this spectrum that "
+                          "are being ignored when creating the HDU.")
+        return super(OneDSpectrum, self).hdu
+
+    @property
+    def hdulist(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            hdu = self.hdu
+
+        beamhdu = beams_to_bintable(self.beams)
+
+        return HDUList([hdu, beamhdu])

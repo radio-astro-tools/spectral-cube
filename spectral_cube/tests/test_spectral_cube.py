@@ -15,10 +15,11 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
 from astropy.wcs import _wcs
+from astropy.tests.helper import assert_quantity_allclose
 import numpy as np
 
-from .. import (SpectralCube, BooleanArrayMask, FunctionMask, LazyMask,
-                CompositeMask)
+from .. import (SpectralCube, VaryingResolutionSpectralCube, BooleanArrayMask,
+                FunctionMask, LazyMask, CompositeMask)
 from ..spectral_cube import OneDSpectrum, Projection
 from ..np_compat import allbadtonan
 from .. import spectral_axis
@@ -114,18 +115,21 @@ class BaseTest(object):
         self.d = d
 
 
+translist = [('advs', [0, 1, 2, 3]),
+             ('dvsa', [2, 3, 0, 1]),
+             ('sdav', [0, 2, 1, 3]),
+             ('sadv', [0, 1, 2, 3]),
+             ('vsad', [3, 0, 1, 2]),
+             ('vad', [2, 0, 1]),
+             ('vda', [0, 2, 1]),
+             ('adv', [0, 1, 2]),
+             ]
+if RADIO_BEAM_INSTALLED:
+    translist.append(('vda_beams', [0, 2, 1]))
+
 class TestSpectralCube(object):
 
-    @pytest.mark.parametrize(('name', 'trans'), (
-                             ('advs', [0, 1, 2, 3]),
-                             ('dvsa', [2, 3, 0, 1]),
-                             ('sdav', [0, 2, 1, 3]),
-                             ('sadv', [0, 1, 2, 3]),
-                             ('vsad', [3, 0, 1, 2]),
-                             ('vad', [2, 0, 1]),
-                             ('vda', [0, 2, 1]),
-                             ('adv', [0, 1, 2]),
-                             ))
+    @pytest.mark.parametrize(('name', 'trans'), translist)
     def test_consistent_transposition(self, name, trans):
         """data() should return velocity axis first, then world 1, then world 0"""
         c, d = cube_and_raw(name + '.fits')
@@ -240,16 +244,7 @@ class TestSpectralCube(object):
         # allclose fails on identical data?
         #assert_allclose(d1o, c1o.filled_data[:])
 
-    @pytest.mark.parametrize(('name', 'trans'), (
-                             ('advs', [0, 1, 2, 3]),
-                             ('dvsa', [2, 3, 0, 1]),
-                             ('sdav', [0, 2, 1, 3]),
-                             ('sadv', [0, 1, 2, 3]),
-                             ('vsad', [3, 0, 1, 2]),
-                             ('vad', [2, 0, 1]),
-                             ('vda', [0, 2, 1]),
-                             ('adv', [0, 1, 2]),
-                             ))
+    @pytest.mark.parametrize(('name', 'trans'), translist)
     def test_getitem(self, name, trans):
         c, d = cube_and_raw(name + '.fits')
 
@@ -471,10 +466,15 @@ class TestNumpyMethods(BaseTest):
         # regular median.
 
         scmed = self.c.apply_numpy_function(np.median, axis=0)
-        if StrictVersion(np.__version__) <= StrictVersion('1.9.3'):
-            assert np.count_nonzero(np.isnan(scmed)) == 5
-        else:
-            assert np.count_nonzero(np.isnan(scmed)) == 6
+        # this checks whether numpy <=1.9.3 has a bug?
+        # as far as I can tell, np==1.9.3 no longer has this bug/feature
+        #if StrictVersion(np.__version__) <= StrictVersion('1.9.3'):
+        #    # print statements added so we get more info in the travis builds
+        #    print("Numpy version is: {0}".format(StrictVersion(np.__version__)))
+        #    assert np.count_nonzero(np.isnan(scmed)) == 5
+        #else:
+        #    print("Numpy version is: {0}".format(StrictVersion(np.__version__)))
+        assert np.count_nonzero(np.isnan(scmed)) == 6
 
         scmed = self.c.apply_numpy_function(np.nanmedian, axis=0)
         assert np.count_nonzero(np.isnan(scmed)) == 0
@@ -833,6 +833,9 @@ def test_slicing():
     v = cube[1:2,:,:]
     assert v.shape == (1,3,4)
 
+    # make sure this works.  Not sure what keys to test for...
+    v.header
+
     assert cube[:,:,:].shape == (2,3,4)
     assert cube[:,:].shape == (2,3,4)
     assert cube[:].shape == (2,3,4)
@@ -987,6 +990,59 @@ def test_oned_slice():
     # data has a redundant 1st axis
     np.testing.assert_equal(spec.value, data[0,:,0,0])
     assert cube.unit == spec.unit
+    assert spec.header['BUNIT'] == cube.header['BUNIT']
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_oned_slice_beams():
+    # Check that a slice returns an appropriate spectrum
+
+    cube, data = cube_and_raw('sdav_beams.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+
+    spec = cube[:,0,0]
+    assert isinstance(spec, OneDSpectrum)
+    # data has a redundant 1st axis
+    np.testing.assert_equal(spec.value, data[:,0,0,0])
+    assert cube.unit == spec.unit
+    assert spec.header['BUNIT'] == cube.header['BUNIT']
+
+    assert hasattr(spec, 'beams')
+    assert 'BMAJ' in spec.hdulist[1].data.names
+
+def test_oned_collapse():
+    # Check that an operation along the spatial dims returns an appropriate
+    # spectrum
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+
+    spec = cube.mean(axis=(1,2))
+    assert isinstance(spec, OneDSpectrum)
+    # data has a redundant 1st axis
+    np.testing.assert_equal(spec.value, data.mean(axis=(0,2,3)))
+    assert cube.unit == spec.unit
+    assert spec.header['BUNIT'] == cube.header['BUNIT']
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_oned_collapse_beams():
+    # Check that an operation along the spatial dims returns an appropriate
+    # spectrum
+
+    cube, data = cube_and_raw('sdav_beams.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+
+    spec = cube.mean(axis=(1,2))
+    assert isinstance(spec, OneDSpectrum)
+    # data has a redundant 1st axis
+    np.testing.assert_equal(spec.value, data.mean(axis=(1,2,3)))
+    assert cube.unit == spec.unit
+    assert spec.header['BUNIT'] == cube.header['BUNIT']
+
+    assert hasattr(spec, 'beams')
+    assert 'BMAJ' in spec.hdulist[1].data.names
 
 def test_preserve_bunit():
 
@@ -1009,6 +1065,41 @@ def test_preserve_beam():
     beam = Beam.from_fits_header(path("advs.fits"))
 
     assert cube.beam == beam
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_multibeam_slice():
+
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    assert isinstance(cube, VaryingResolutionSpectralCube)
+    np.testing.assert_almost_equal(cube.beams[0].major.value, 0.1)
+    np.testing.assert_almost_equal(cube.beams[3].major.value, 0.4)
+
+    scube = cube[:2,:,:]
+
+    np.testing.assert_almost_equal(scube.beams[0].major.value, 0.1)
+    np.testing.assert_almost_equal(scube.beams[1].major.value, 0.2)
+
+    flatslice = cube[0,:,:]
+
+    np.testing.assert_almost_equal(flatslice.header['BMAJ'],
+                                   (0.1/3600.))
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_varyres_moment():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    assert isinstance(cube, VaryingResolutionSpectralCube)
+
+    # the beams are very different, but for this test we don't care
+    cube.beam_threshold = 1.0
+
+    with warnings.catch_warnings(record=True) as wrn:
+        warnings.simplefilter('default')
+        m0 = cube.moment0()
+
+    assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
+    assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_append_beam_to_hdr():

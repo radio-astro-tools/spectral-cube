@@ -12,7 +12,8 @@ import re
 
 from astropy import units as u
 from astropy.extern import six
-from astropy.io.fits import PrimaryHDU, ImageHDU, Header, Card, HDUList
+from astropy.extern.six.moves import range as xrange
+from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
 from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
@@ -31,15 +32,10 @@ from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS
 
 from distutils.version import StrictVersion
 
-__all__ = ['SpectralCube']
+__all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
 __doctest_skip__ = ['SpectralCube.world', 'SpectralCube._apply_everywhere']
-
-try:  # TODO replace with six.py
-    xrange
-except NameError:
-    xrange = range
 
 try:
     from scipy import ndimage
@@ -116,6 +112,8 @@ def aggregation_docstring(func):
 np2wcs = {2: 0, 1: 1, 0: 2}
 
 class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
+
+    __name__ = "SpectralCube"
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, read_beam=True,
@@ -206,7 +204,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None, unit=None,
-                       wcs_tolerance=None):
+                       wcs_tolerance=None, **kwargs):
 
         data = self._data if data is None else data
         if unit is None and hasattr(data, 'unit'):
@@ -241,10 +239,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
 
-        cube = SpectralCube(data=data, wcs=wcs, mask=mask, meta=meta,
-                            fill_value=fill_value, header=self._header,
-                            allow_huge_operations=self.allow_huge_operations,
-                            wcs_tolerance=wcs_tolerance or self._wcs_tolerance)
+        cube = self.__class__(data=data, wcs=wcs, mask=mask, meta=meta,
+                              fill_value=fill_value, header=self._header,
+                              allow_huge_operations=self.allow_huge_operations,
+                              wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                              **kwargs)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
 
@@ -300,7 +299,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         return self._data.ndim
 
     def __repr__(self):
-        s = "SpectralCube with shape={0}".format(self.shape)
+        s = "{1} with shape={0}".format(self.shape, self.__class__.__name__)
         if self.unit is u.dimensionless_unscaled:
             s += ":\n"
         else:
@@ -460,7 +459,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                         copy=False,
                                         unit=unit,
                                         header=header,
-                                        meta=meta)
+                                        meta=meta,
+                                        beams=(self.beams
+                                               if hasattr(self,'beams')
+                                               else None),
+                                       )
                 else:
                     return out
 
@@ -1056,9 +1059,13 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         meta = {}
         meta.update(self._meta)
-        meta['slice'] = [(s.start, s.stop, s.step)
-                         if hasattr(s,'start') else s
-                         for s in view]
+        slice_data = [(s.start, s.stop, s.step)
+                      if hasattr(s,'start') else s
+                      for s in view]
+        if 'slice' in meta:
+            meta['slice'].append(slice_data)
+        else:
+            meta['slice'] = [slice_data]
 
         intslices = [2-ii for ii,s in enumerate(view) if not hasattr(s,'start')]
 
@@ -1074,7 +1081,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
-                                    meta=meta)
+                                    meta=meta,
+                                   )
 
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
@@ -2183,7 +2191,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if newframe:
             dd.set('frame new')
 
-        dd.set_pyfits(HDUList(self.hdu))
+        dd.set_pyfits(self.hdulist)
 
         return dd
 
@@ -2223,6 +2231,10 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         """
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
+
+    @property
+    def hdulist(self):
+        return HDUList(self.hdu)
 
     def to(self, unit, equivalencies=()):
         """
@@ -2271,11 +2283,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
         if velocity_offset is not None:
-            spectral_axis = (self.with_spectral_unit(u.km/u.s,
-                                                    velocity_convention=velocity_convention,
-                                                    rest_value=rest_value).spectral_axis
-                             + velocity_offset).to(u.GHz,
-                                                   velocity_convention(rest_value))
+            newspecaxis = self.with_spectral_unit(u.km/u.s,
+                                                  velocity_convention=velocity_convention,
+                                                  rest_value=rest_value).spectral_axis
+            spectral_axis = (newspecaxis + velocity_offset).to(u.GHz,
+                                                               velocity_convention(rest_value))
         else:
             spectral_axis = self.spectral_axis.to(u.GHz)
 
@@ -2286,6 +2298,363 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         result = Splatalogue.query_lines(numin, numax, **kwargs)
 
         return result
+
+    def reproject(self, header, order='bilinear'):
+        """
+        Reproject the cube into a new header.  Fills the data with the cube's
+        ``fill_value`` to replace bad values before reprojection.
+
+        Parameters
+        ----------
+        header : `astropy.io.fits.Header`
+            A header specifying a cube in valid WCS
+        order : int or str, optional
+            The order of the interpolation (if ``mode`` is set to
+            ``'interpolation'``). This can be either one of the following
+            strings:
+
+                * 'nearest-neighbor'
+                * 'bilinear'
+                * 'biquadratic'
+                * 'bicubic'
+
+            or an integer. A value of ``0`` indicates nearest neighbor
+            interpolation.
+        """
+        from reproject import reproject_interp
+
+        # TODO: Find the minimal subcube that contains the header and only reproject that
+        # (see FITS_tools.regrid_cube for a guide on how to do this)
+
+        newwcs = wcs.WCS(header)
+        shape_out = [header['NAXIS{0}'.format(i + 1)] for i in range(header['NAXIS'])][::-1]
+
+        newcube, newcube_valid = reproject_interp((self.filled_data[:],
+                                                   self.header),
+                                                  (newwcs, shape_out),
+                                                  order=order,
+                                                  independent_celestial_slices=True)
+
+        return self._new_cube_with(data=newcube,
+                                   wcs=newwcs,
+                                   mask=BooleanArrayMask(newcube_valid.astype('bool')),
+                                   meta=self.meta,
+                                  )
+
+class VaryingResolutionSpectralCube(SpectralCube):
+    """
+    A variant of the SpectralCube class that has PSF (beam) information on a
+    per-channel basis.
+    """
+
+    __name__ = "VaryingResolutionSpectralCube"
+
+    def __init__(self, *args, **kwargs):
+        """
+        Create a SpectralCube with an associated beam table.  The new
+        VaryingResolutionSpectralCube will have a ``beams`` attribute and a
+        ``beam_threshold`` attribute as described below.  It will perform some
+        additional checks when trying to perform analysis across image frames.
+
+        Three new keyword arguments are accepted:
+
+        Other Parameters
+        ----------------
+        beam_table : `numpy.recordarray`
+            A table of beam major and minor axes in arcseconds and position
+            angles, with labels BMAJ, BMIN, BPA
+        beams : list
+            A list of `radio_beam.Beam` objects
+        beam_threshold : float or dict
+            The fractional threshold above which beams are considered
+            different.  A dictionary may be used with entries 'area', 'major',
+            'minor', 'pa' so that you can specify a different fractional
+            threshold for each of these.  For example, if you want to check
+            only that the areas are the same, and not worry about the shape
+            (which might be a bad idea...), you could set
+            ``beam_threshold={'area':0.01, 'major':1.5, 'minor':1.5,
+            'pa':5.0}``
+        """
+        # these types of cube are undefined without the radio_beam package
+        from radio_beam import Beam
+
+        beam_table = kwargs.pop('beam_table', None)
+        beams = kwargs.pop('beams', None)
+        beam_threshold = kwargs.pop('beam_threshold', 0.01)
+
+        if (beam_table is None and beams is None):
+            raise ValueError(
+               "Must give either a beam table or a list of beams to "
+               "initialize a VaryingResolutionSpectralCube")
+
+        super(VaryingResolutionSpectralCube, self).__init__(*args, **kwargs)
+
+        if isinstance(beam_table, BinTableHDU):
+            beam_data_table = beam_table.data
+        else:
+            beam_data_table = beam_table
+
+        if beam_table is not None:
+            # CASA beam tables are in arcsec, and that's what we support
+            beams = [Beam(major=u.Quantity(row['BMAJ'], u.arcsec),
+                          minor=u.Quantity(row['BMIN'], u.arcsec),
+                          pa=u.Quantity(row['BPA'], u.deg),
+                          meta={key: row[key] for key in beam_table.names
+                                if key not in ('BMAJ','BPA', 'BMIN')},
+                         )
+                     for row in beam_data_table]
+
+        if (len(beams) != self.shape[0]):
+            raise ValueError("Beam list must have same size as spectral "
+                             "dimension")
+
+        self.beams = beams
+        self.beam_threshold = beam_threshold
+
+
+    def __getitem__(self, view):
+
+        # Need to allow self[:], self[:,:]
+        if isinstance(view, (slice,int)):
+            view = (view, slice(None), slice(None))
+        elif len(view) == 2:
+            view = view + (slice(None),)
+        elif len(view) > 3:
+            raise IndexError("Too many indices")
+
+        meta = {}
+        meta.update(self._meta)
+        slice_data = [(s.start, s.stop, s.step)
+                      if hasattr(s,'start') else s
+                      for s in view]
+        if 'slice' in meta:
+            meta['slice'].append(slice_data)
+        else:
+            meta['slice'] = [slice_data]
+
+        # intslices identifies the slices that are given by integers, i.e.
+        # indices.  Other slices are slice objects, e.g. obj[5:10], and have
+        # 'start' attributes.
+        intslices = [2-ii for ii,s in enumerate(view) if not hasattr(s,'start')]
+
+        # for beams, we care only about the first slice, independent of its
+        # type
+        specslice = view[0]
+
+        if intslices:
+            if len(intslices) > 1:
+                if 2 in intslices:
+                    raise NotImplementedError("1D slices along non-spectral "
+                                              "axes are not yet implemented.")
+                newwcs = self._wcs.sub([a
+                                        for a in (1,2,3)
+                                        if a not in [x+1 for x in intslices]])
+                return OneDSpectrum(value=self._data[view],
+                                    wcs=newwcs,
+                                    copy=False,
+                                    unit=self.unit,
+                                    beams=self.beams[specslice],
+                                    meta=meta)
+
+            # only one element, so drop an axis
+            newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
+            header = self._nowcs_header
+
+            # Slice objects know how to parse Beam objects stored in the
+            # metadata
+            meta['beam'] = self.beams[specslice]
+            return Slice(value=self.filled_data[view],
+                         wcs=newwcs,
+                         copy=False,
+                         unit=self.unit,
+                         header=header,
+                         meta=meta)
+
+        newmask = self._mask[view] if self._mask is not None else None
+
+        return self._new_cube_with(data=self._data[view],
+                                   wcs=wcs_utils.slice_wcs(self._wcs, view),
+                                   mask=newmask,
+                                   beams=self.beams[specslice],
+                                   meta=meta)
+
+    def spectral_slab(self, lo, hi):
+        """
+        Extract a new cube between two spectral coordinates
+
+        Parameters
+        ----------
+        lo, hi : :class:`~astropy.units.Quantity`
+            The lower and upper spectral coordinate for the slab range. The
+            units should be compatible with the units of the spectral axis.
+            If the spectral axis is in frequency-equivalent units and you
+            want to select a range in velocity, or vice-versa, you should
+            first use :meth:`~spectral_cube.SpectralCube.with_spectral_unit`
+            to convert the units of the spectral axis.
+        """
+
+        # Find range of values for spectral axis
+        ilo = self.closest_spectral_channel(lo)
+        ihi = self.closest_spectral_channel(hi)
+
+        if ilo > ihi:
+            ilo, ihi = ihi, ilo
+        ihi += 1
+
+        # Create WCS slab
+        wcs_slab = self._wcs.deepcopy()
+        wcs_slab.wcs.crpix[2] -= ilo
+
+        # Create mask slab
+        if self._mask is None:
+            mask_slab = None
+        else:
+            try:
+                mask_slab = self._mask[ilo:ihi, :, :]
+            except NotImplementedError:
+                warnings.warn("Mask slicing not implemented for "
+                              "{0} - dropping mask".
+                              format(self._mask.__class__.__name__))
+                mask_slab = None
+
+        # Create new spectral cube
+        slab = self._new_cube_with(data=self._data[ilo:ihi], wcs=wcs_slab,
+                                   beams=self.beams[ilo:ihi],
+                                   mask=mask_slab)
+
+        return slab
+
+    def _new_cube_with(self, **kwargs):
+        beams = kwargs.pop('beams', self.beams)
+        beam_threshold = kwargs.pop('beam_threshold', self.beam_threshold)
+        VRSC = VaryingResolutionSpectralCube
+        newcube = super(VRSC, self)._new_cube_with(beams=beams,
+                                                   beam_threshold=beam_threshold,
+                                                   **kwargs)
+        return newcube
+
+    _new_cube_with.__doc__ = SpectralCube._new_cube_with.__doc__
+
+    def _check_beam_areas(self, threshold, mean_beam):
+        """
+        Check that the beam areas are the same to within some threshold
+        """
+
+        qtys = dict(sr = u.Quantity(self.beams, u.sr),
+                    major = u.Quantity([bm.major for bm in self.beams], u.deg),
+                    minor = u.Quantity([bm.minor for bm in self.beams], u.deg),
+                    pa = u.Quantity([bm.pa for bm in self.beams], u.deg),
+                   )
+
+        errormessage = ""
+
+        for qtyname, qty in qtys.items():
+            minv = qty.min().value
+            maxv = qty.max().value
+            mn = getattr(mean_beam, qtyname).value
+            maxdiff = np.max(np.abs((maxv-mn, minv-mn)))/mn
+
+            if isinstance(threshold, dict):
+                th = threshold[qtyname]
+            else:
+                th = threshold
+
+            if maxdiff > th:
+                errormessage += ("Beam {2}s differ by up to {0}x, which is greater"
+                                 " than the threshold {1}\n".format(maxdiff,
+                                                                    threshold,
+                                                                    qtyname
+                                                                   ))
+        if errormessage != "":
+            raise ValueError(errormessage)
+
+    def _average_beams(self, threshold):
+        """
+        Average the beams.  Note that this operation only makes sense in
+        limited contexts!  Generally one would want to convolve all the beams
+        to a common shape, but this method is meant to handle the "simple" case
+        when all your beams are the same to within some small factor and can
+        therefore be arithmetically averaged.  
+        """
+        new_beam = cube_utils.average_beams(self.beams)
+        self._check_beam_areas(threshold, mean_beam=new_beam)
+        warnings.warn("Arithmetic beam averaging is being performed.  This is "
+                      "not a mathematically robust operation, but is being "
+                      "permitted because the beams differ by "
+                      "<{0}".format(threshold))
+        return new_beam
+
+
+    def _handle_beam_areas_wrapper(self, function, beam_threshold=None):
+        """
+        Wrapper: if the function takes "axis" and is operating over axis 0 (the
+        spectral axis), check that the beam threshold is not exceeded before
+        performing the operation
+
+        Also, if the operation *is* valid, average the beam appropriately to
+        get the output
+        """
+
+        if beam_threshold is None:
+            beam_threshold = self.beam_threshold
+
+        def newfunc(*args, **kwargs):
+            """ Wrapper function around the standard operations to handle beams
+            when creating projections """
+
+            result = function(*args, **kwargs)
+
+            # check that the spectral axis is being operated over
+            # moments are a special case b/c they default to axis=0
+            need_to_handle_beams = ('axis' in kwargs and kwargs['axis']==0
+                                    or (hasattr(kwargs['axis'], '__len__') and
+                                        0 in kwargs['axis'])
+                                    or ('axis' not in kwargs and 'moment' in
+                                        function.__name__))
+
+            if need_to_handle_beams:
+                avg_beam = self._average_beams(beam_threshold)
+                result.meta['beam'] = avg_beam
+
+            return result
+
+        return newfunc
+
+    def __getattribute__(self, attrname):
+        """
+        For any functions that operate over the spectral axis, perform beam
+        sameness checks before performing the operation to avoid unexpected
+        results
+        """
+
+        # short name to avoid long lines below
+        VRSC = VaryingResolutionSpectralCube
+
+        # what about apply_numpy_function, apply_function?  since they're
+        # called by some of these, maybe *only* those should be wrapped to
+        # avoid redundant calls
+        if attrname in ('moment', 'apply_numpy_function', 'apply_function'):
+            origfunc = super(VRSC, self).__getattribute__(attrname)
+            return self._handle_beam_areas_wrapper(origfunc)
+        else:
+            return super(VRSC, self).__getattribute__(attrname)
+
+    @property
+    def hdu(self):
+        raise ValueError("For VaryingResolutionSpectralCube's, use hdulist "
+                         "instead of hdu.")
+
+    @property
+    def hdulist(self):
+        """
+        HDUList version of self
+        """
+        hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
+
+        from .cube_utils import beams_to_bintable
+        bmhdu = beams_to_bintable(self.beams)
+
+        return HDUList([hdu, bmhdu])
 
 
 def determine_format_from_filename(filename):
