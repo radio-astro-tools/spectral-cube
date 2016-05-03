@@ -2535,7 +2535,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
     _new_cube_with.__doc__ = SpectralCube._new_cube_with.__doc__
 
-    def _check_beam_areas(self, threshold):
+    def _check_beam_areas(self, threshold, mean_beam):
         """
         Check that the beam areas are the same to within some threshold
         """
@@ -2551,7 +2551,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
         for qtyname, qty in qtys.items():
             minv = qty.min().value
             maxv = qty.max().value
-            mn = qty.mean().value # not appropriate for PA?
+            mn = getattr(mean_beam, qtyname)
             maxdiff = np.max(np.abs((maxv-mn, minv-mn)))/mn
 
             if isinstance(threshold, dict):
@@ -2576,11 +2576,12 @@ class VaryingResolutionSpectralCube(SpectralCube):
         when all your beams are the same to within some small factor and can
         therefore be arithmetically averaged.  
         """
+        new_beam = cube_utils.average_beams(self.beams)
+        self._check_beam_areas(threshold, mean_beam=new_beam)
         warnings.warn("Arithmetic beam averaging is being performed.  This is "
                       "not a mathematically robust operation, but is being "
                       "permitted because the beams differ by "
                       "<{0}".format(threshold))
-        new_beam = cube_utils.average_beams(self.beams)
         return new_beam
 
 
@@ -2612,7 +2613,6 @@ class VaryingResolutionSpectralCube(SpectralCube):
                                         function.__name__))
 
             if need_to_handle_beams:
-                self._check_beam_areas(beam_threshold)
                 avg_beam = self._average_beams(beam_threshold)
                 result.meta['beam'] = avg_beam
 
