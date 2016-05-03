@@ -2540,7 +2540,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
         Check that the beam areas are the same to within some threshold
         """
 
-        qtys = dict(area = u.Quantity(self.beams, u.sr),
+        qtys = dict(sr = u.Quantity(self.beams, u.sr),
                     major = u.Quantity([bm.major for bm in self.beams], u.deg),
                     minor = u.Quantity([bm.minor for bm in self.beams], u.deg),
                     pa = u.Quantity([bm.pa for bm in self.beams], u.deg),
@@ -2551,7 +2551,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
         for qtyname, qty in qtys.items():
             minv = qty.min().value
             maxv = qty.max().value
-            mn = getattr(mean_beam, qtyname)
+            mn = getattr(mean_beam, qtyname).value
             maxdiff = np.max(np.abs((maxv-mn, minv-mn)))/mn
 
             if isinstance(threshold, dict):
