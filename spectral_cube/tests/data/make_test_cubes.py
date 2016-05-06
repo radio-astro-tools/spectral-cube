@@ -94,3 +94,12 @@ if __name__ == "__main__":
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
     hdul.writeto('vda_beams.fits', clobber=True)
+
+    # make a version with spatial pixels
+    h = fits.header.Header.fromtextfile(HEADER_FILENAME)
+    for k in list(h.keys()):
+        if k.endswith('4'):
+            del h[k]
+    h['BUNIT'] = 'K' # Kelvins are a valid unit, JY/BEAM are not: they should be tested separately
+    d = np.arange(2*5*5).reshape((2,5,5))
+    fits.writeto('255.fits', d, h, clobber=True)

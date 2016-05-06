@@ -1,25 +1,14 @@
 from __future__ import print_function, absolute_import, division
 
 import pytest
-import operator
-import itertools
 
-from astropy.io import fits
 from astropy import units as u
-from astropy.wcs import WCS
+from astropy import wcs
 import numpy as np
-
-from .. import (SpectralCube, BooleanArrayMask, FunctionMask, LazyMask,
-                CompositeMask)
-from ..spectral_cube import OneDSpectrum, Projection
-from ..np_compat import allbadtonan
-from .. import spectral_axis
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
 from .test_spectral_cube import cube_and_raw
-
-from distutils.version import StrictVersion
 
 try:
     import pyregion
@@ -44,28 +33,50 @@ def test_subcube():
     assert sc3.wcs.wcs.compare(cube.wcs.wcs)
     assert np.all(sc3._data == cube._data)
 
-#@pytest.mark.skipif(not pyregionOK, reason='Could not import pyregion')
-#@pytest.mark.parametrize(('regfile','result'),
-#                         (('fk5.reg', [slice(None),1,slice(None)]),
-#                          ('image.reg', NotImplementedError),
-#                          ('partial_overlap_image.reg', NotImplementedError),
-#                          ('no_overlap_image.reg', NotImplementedError),
-#                          ('partial_overlap_fk5.reg', [slice(None),1,1]),
-#                          ('no_overlap_fk5.reg', ValueError),
-#                         ))
-#def test_ds9region(regfile, result):
-#    cube, data = cube_and_raw('adv.fits')
-#
-#    regions = pyregion.open(regfile)
-#
-#    if issubclass(result, Exception):
-#        with pytest.raises(result) as exc:
-#            sc = cube.subcube_from_ds9region(regions)
-#    else:
-#        sc = cube.subcube_from_ds9region(regions)
-#        scsum = sc.sum()
-#        dsum = data[result].sum()
-#        assert scsum == dsum
+@pytest.mark.skipif('not pyregionOK', reason='Could not import pyregion')
+@pytest.mark.parametrize(('regfile','result'),
+                         (('fk5.reg', [slice(None),1,slice(None)]),
+                          ('image.reg', [slice(None),1,slice(None)]),
+                          ('partial_overlap_image.reg', [slice(None),1,1]),
+                          ('no_overlap_image.reg', ValueError),
+                          ('partial_overlap_fk5.reg', [slice(None),1,1]),
+                          ('no_overlap_fk5.reg', ValueError),
+                         ))
+def test_ds9region(regfile, result):
+    cube, data = cube_and_raw('adv.fits')
+
+    regions = pyregion.open(path(regfile))
+
+    if isinstance(result, type) and issubclass(result, Exception):
+        with pytest.raises(result) as exc:
+            sc = cube.subcube_from_ds9region(regions)
+        # this assertion is redundant, I think...
+        assert exc.errisinstance(result)
+    else:
+        sc = cube.subcube_from_ds9region(regions)
+        scsum = sc.sum()
+        dsum = data[result].sum()
+        assert_allclose(scsum, dsum)
+
+@pytest.mark.skipif('not pyregionOK', reason='Could not import pyregion')
+@pytest.mark.parametrize('regfile',
+                         ('255-fk5.reg', '255-pixel.reg'),
+                        )
+def test_ds9region_255(regfile):
+    # specific test for correctness
+    cube, data = cube_and_raw('255.fits')
+
+    regions = pyregion.open(path(regfile))
+
+    subhdr = cube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
+
+    mask = regions.get_mask(header=subhdr,
+                            shape=cube.shape[1:])
+
+    assert_array_equal(cube[0,:,:][mask].value, [11,12,16,17])
+
+    subcube = cube.subcube_from_ds9region(regions)
+    assert_array_equal(subcube[0,:,:].value, np.array([11,12,16,17]).reshape((2,2)))
 
 
 

@@ -1630,11 +1630,17 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         return slab
 
-    def minimal_subcube(self):
+    def minimal_subcube(self, spatial_only=False):
         """
         Return the minimum enclosing subcube where the mask is valid
+
+        Parameters
+        ----------
+        spatial_only: bool
+            Only compute the minimal subcube in the spatial dimensions
         """
-        return self[self.subcube_slices_from_mask(self._mask)]
+        return self[self.subcube_slices_from_mask(self._mask,
+                                                  spatial_only=spatial_only)]
 
     def subcube_from_mask(self, region_mask):
         """
@@ -1649,7 +1655,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         return self[self.subcube_slices_from_mask(region_mask)]
 
 
-    def subcube_slices_from_mask(self, region_mask):
+    def subcube_slices_from_mask(self, region_mask, spatial_only=False):
         """
         Given a mask, return the slices corresponding to the minimum subcube
         that encloses the mask
@@ -1659,6 +1665,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         region_mask: `masks.MaskBase` or boolean `numpy.ndarray`
             The mask with appropraite WCS or an ndarray with matched
             coordinates
+        spatial_only: bool
+            Return only slices that affect the spatial dimensions; the spectral
+            dimension will be left unchanged
         """
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
@@ -1674,6 +1683,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         slices = ndimage.find_objects(np.broadcast_arrays(include,
                                                           self._data)[0])[0]
+
+        if spatial_only:
+            slices = (slice(None), slices[1], slices[2])
 
         return slices
 
@@ -1738,7 +1750,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         return self[slices]
 
-    def subcube_from_ds9region(self, ds9region):
+    def subcube_from_ds9region(self, ds9region, allow_empty=False):
         """
         Extract a masked subcube from a ds9 region or a pyregion Region object
         (only functions on celestial dimensions)
@@ -1747,6 +1759,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         ----------
         ds9region: str or `pyregion.Shape`
             The region to extract
+        allow_empty: bool
+            If this is False, an exception will be raised if the region
+            contains no overlap with the cube
         """
         import pyregion
 
@@ -1761,16 +1776,16 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             # convert the regions to image (pixel) coordinates
             celhdr = self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
             pixel_regions = shapelist.as_imagecoord(celhdr)
+            recompute_shifted_mask = False
         else:
-            # For this to work, we'd need to change the reference pixel after cropping.
-            # Alternatively, we can just make the full-sized mask... todo....
-            raise NotImplementedError("Can't use non-celestial coordinates with regions.")
             pixel_regions = shapelist
+            # we need to change the reference pixel after cropping
+            recompute_shifted_mask = True
 
         # This is a hack to use mpl to determine the outer bounds of the regions
         # (but it's a legit hack - pyregion needs a major internal refactor
         # before we can approach this any other way, I think -AG)
-        mpl_objs = pixel_regions.get_mpl_patches_texts()[0]
+        mpl_objs = pixel_regions.get_mpl_patches_texts(origin=0)[0]
 
         # Find the minimal enclosing box containing all of the regions
         # (this will speed up the mask creation below)
@@ -1779,10 +1794,10 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         xhi, yhi = extent.max
         all_extents = [obj.get_extents() for obj in mpl_objs]
         for ext in all_extents:
-            xlo = xlo if xlo < ext.min[0] else ext.min[0]
-            ylo = ylo if ylo < ext.min[1] else ext.min[1]
-            xhi = xhi if xhi > ext.max[0] else ext.max[0]
-            yhi = yhi if yhi > ext.max[1] else ext.max[1]
+            xlo = np.floor(xlo if xlo < ext.min[0] else ext.min[0])
+            ylo = np.floor(ylo if ylo < ext.min[1] else ext.min[1])
+            xhi = np.ceil(xhi if xhi > ext.max[0] else ext.max[0])
+            yhi = np.ceil(yhi if yhi > ext.max[1] else ext.max[1])
 
         # Negative indices will do bad things, like wrap around the cube
         # If xhi/yhi are negative, there is not overlap
@@ -1804,17 +1819,39 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
 
         if any(dim == 0 for dim in subcube.shape):
-            raise ValueError("The derived subset is empty: the region does not"
-                             " overlap with the cube.")
+            if allow_empty:
+                warnings.warn("The derived subset is empty: the region does not"
+                              " overlap with the cube (but allow_empty=True).")
+            else:
+                raise ValueError("The derived subset is empty: the region does not"
+                                 " overlap with the cube.")
 
-        subhdr = subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
+        if recompute_shifted_mask:
+            # for pixel-based regions (which we use in tests), we need to shift
+            # the coordinates for mask computation because we're cropping the
+            # cube
+            for reg in shapelist:
+                reg.params[0].v -= xlo
+                reg.params[1].v -= ylo
+                reg.params[0].text = str(reg.params[0].v)
+                reg.params[1].text = str(reg.params[1].v)
+                reg.coord_list[0] -= xlo
+                reg.coord_list[1] -= ylo
 
-        mask = shapelist.get_mask(header=subhdr,
+        mask = shapelist.get_mask(header=subcube.wcs.celestial.to_header(),
                                   shape=subcube.shape[1:])
 
-        return subcube.with_mask(BooleanArrayMask(mask, subcube.wcs,
-                                                  shape=subcube.shape))
+        if not allow_empty and mask.sum() == 0:
+            raise ValueError("The derived subset is empty: the region does not"
+                             " overlap with the cube.  However, this is likely "
+                             "to be a bug, since at an earlier stage there was "
+                             "overlap.")
 
+        masked_subcube = subcube.with_mask(BooleanArrayMask(mask, subcube.wcs,
+                                                            shape=subcube.shape))
+        # by using ceil / floor above, we potentially introduced a NaN buffer
+        # that we can now crop out
+        return masked_subcube.minimal_subcube(spatial_only=True)
 
 
     def world_spines(self):
