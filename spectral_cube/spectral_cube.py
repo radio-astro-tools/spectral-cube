@@ -1821,7 +1821,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if any(dim == 0 for dim in subcube.shape):
             if allow_empty:
                 warnings.warn("The derived subset is empty: the region does not"
-                             " overlap with the cube (but allow_empty=True).")
+                              " overlap with the cube (but allow_empty=True).")
             else:
                 raise ValueError("The derived subset is empty: the region does not"
                                  " overlap with the cube.")
@@ -1829,7 +1829,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if recompute_shifted_mask:
             # for pixel-based regions (which we use in tests), we need to shift
             # the coordinates for mask computation because we're cropping the
-            # cube....
+            # cube
             for reg in shapelist:
                 reg.params[0].v -= xlo
                 reg.params[1].v -= ylo
@@ -1838,16 +1838,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                 reg.coord_list[0] -= xlo
                 reg.coord_list[1] -= ylo
 
-        #alternate implementation if recompute_shifted_mask:
-        #alternate implementation     # make the full mask, then crop it to appropriate size
-        #alternate implementation     mask = shapelist.get_mask(header=self.wcs.celestial.to_header(),
-        #alternate implementation                               shape=self.shape[1:])
-        #alternate implementation     mask = mask[xlo:xhi, ylo:yhi]
-
-        #alternate implementation else:
-        # this is a very dangerous operation and I really want to replace it
-        # with a more sane version from astropy.regions: the way pyregion defines
-        # masks is not necessarily correct. -AG
         mask = shapelist.get_mask(header=subcube.wcs.celestial.to_header(),
                                   shape=subcube.shape[1:])
 
