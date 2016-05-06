@@ -7,7 +7,7 @@ from astropy import wcs
 import numpy as np
 
 from . import path
-#from .helpers import assert_allclose, assert_array_equal
+from .helpers import assert_allclose, assert_array_equal
 from .test_spectral_cube import cube_and_raw
 
 try:
@@ -36,9 +36,9 @@ def test_subcube():
 @pytest.mark.skipif('not pyregionOK', reason='Could not import pyregion')
 @pytest.mark.parametrize(('regfile','result'),
                          (('fk5.reg', [slice(None),1,slice(None)]),
-                          ('image.reg', NotImplementedError),
-                          ('partial_overlap_image.reg', NotImplementedError),
-                          ('no_overlap_image.reg', NotImplementedError),
+                          ('image.reg', [slice(None),1,slice(None)]),
+                          ('partial_overlap_image.reg', [slice(None),1,1]),
+                          ('no_overlap_image.reg', ValueError),
                           ('partial_overlap_fk5.reg', [slice(None),1,1]),
                           ('no_overlap_fk5.reg', ValueError),
                          ))
@@ -47,15 +47,16 @@ def test_ds9region(regfile, result):
 
     regions = pyregion.open(path(regfile))
 
-    if issubclass(result, Exception):
+    if isinstance(result, type) and issubclass(result, Exception):
         with pytest.raises(result) as exc:
             sc = cube.subcube_from_ds9region(regions)
-        assert isinstance(exc, result)
+        # this assertion is redundant, I think...
+        assert exc.errisinstance(result)
     else:
         sc = cube.subcube_from_ds9region(regions)
         scsum = sc.sum()
         dsum = data[result].sum()
-        assert scsum == dsum
+        assert_allclose(scsum, dsum)
 
 @pytest.mark.parametrize('regfile',
                          ('255-fk5.reg', '255-pixel.reg'),
@@ -71,7 +72,10 @@ def test_ds9region_255(regfile):
     mask = regions.get_mask(header=subhdr,
                             shape=cube.shape[1:])
 
-    assert all(cube[0,:,:][mask].value == [11,12,16,17])
+    assert_array_equal(cube[0,:,:][mask].value, [11,12,16,17])
+
+    subcube = cube.subcube_from_ds9region(regions)
+    assert_array_equal(subcube[0,:,:].value, np.array([11,12,16,17]).reshape((2,2)))
 
 
 
