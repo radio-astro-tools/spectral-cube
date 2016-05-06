@@ -1779,10 +1779,10 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         xhi, yhi = extent.max
         all_extents = [obj.get_extents() for obj in mpl_objs]
         for ext in all_extents:
-            xlo = xlo if xlo < ext.min[0] else ext.min[0]
-            ylo = ylo if ylo < ext.min[1] else ext.min[1]
-            xhi = xhi if xhi > ext.max[0] else ext.max[0]
-            yhi = yhi if yhi > ext.max[1] else ext.max[1]
+            xlo = np.floor(xlo if xlo < ext.min[0] else ext.min[0])
+            ylo = np.floor(ylo if ylo < ext.min[1] else ext.min[1])
+            xhi = np.ceil(xhi if xhi > ext.max[0] else ext.max[0])
+            yhi = np.ceil(yhi if yhi > ext.max[1] else ext.max[1])
 
         # Negative indices will do bad things, like wrap around the cube
         # If xhi/yhi are negative, there is not overlap
@@ -1809,6 +1809,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         subhdr = subcube.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
 
+        # this is a very dangerous operation and I really want to replace it
+        # with a more sane version from astropy.regions: the way pyregion defines
+        # masks is not necessarily correct. -AG
         mask = shapelist.get_mask(header=subhdr,
                                   shape=subcube.shape[1:])
 
