@@ -1770,7 +1770,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         # This is a hack to use mpl to determine the outer bounds of the regions
         # (but it's a legit hack - pyregion needs a major internal refactor
         # before we can approach this any other way, I think -AG)
-        mpl_objs = pixel_regions.get_mpl_patches_texts()[0]
+        mpl_objs = pixel_regions.get_mpl_patches_texts(origin=0)[0]
 
         # Find the minimal enclosing box containing all of the regions
         # (this will speed up the mask creation below)
