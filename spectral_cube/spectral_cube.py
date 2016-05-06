@@ -1050,7 +1050,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
     def __getitem__(self, view):
 
         # Need to allow self[:], self[:,:]
-        if isinstance(view, (slice,int)):
+        if isinstance(view, (slice,int,np.int64)):
             view = (view, slice(None), slice(None))
         elif len(view) == 2:
             view = view + (slice(None),)
