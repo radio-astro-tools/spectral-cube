@@ -58,6 +58,7 @@ def test_ds9region(regfile, result):
         dsum = data[result].sum()
         assert_allclose(scsum, dsum)
 
+@pytest.mark.skipif('not pyregionOK', reason='Could not import pyregion')
 @pytest.mark.parametrize('regfile',
                          ('255-fk5.reg', '255-pixel.reg'),
                         )
