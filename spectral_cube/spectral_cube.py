@@ -27,7 +27,8 @@ from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
                     is_broadcastable_and_smaller)
 from .io.core import determine_format
 from .ytcube import ytCube
-from .lower_dimensional_structures import Projection, Slice, OneDSpectrum
+from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
+                                           LowerDimensionalObject)
 from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS
 
 from distutils.version import StrictVersion
@@ -2664,6 +2665,10 @@ class VaryingResolutionSpectralCube(SpectralCube):
             when creating projections """
 
             result = function(*args, **kwargs)
+
+            if not isinstance(result, LowerDimensionalObject):
+                # numpy arrays are sometimes returned; these have no metadata
+                return result
 
             # check that the spectral axis is being operated over
             # moments are a special case b/c they default to axis=0
