@@ -2440,6 +2440,27 @@ class VaryingResolutionSpectralCube(SpectralCube):
                                 if key not in ('BMAJ','BPA', 'BMIN')},
                          )
                      for row in beam_data_table]
+            goodbeams = np.array([bm.isfinite for bm in beams], dtype='bool')
+            if not all(goodbeams):
+                warnings.warn("There were {0} non-finite beams; layers with "
+                              "non-finite beams will be masked out.".format(
+                                  np.count_nonzero(~goodbeams)))
+
+            beam_mask = BooleanArrayMask(goodbeams[:,None,None],
+                                         wcs=self._wcs,
+                                         shape=(len(beams),1,1),
+                                        )
+            if not is_broadcastable_and_smaller(beam_mask.shape,
+                                                self._data.shape):
+                # this should never be allowed to happen
+                raise ValueError("Beam mask shape is not broadcastable to data shape: "
+                                 "%s vs %s" % (beam_mask.shape, self._data.shape))
+
+            new_mask = self._mask & beam_mask
+
+            new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs)
+
+            self._mask = new_mask
 
         if (len(beams) != self.shape[0]):
             raise ValueError("Beam list must have same size as spectral "
@@ -2577,10 +2598,10 @@ class VaryingResolutionSpectralCube(SpectralCube):
         Check that the beam areas are the same to within some threshold
         """
 
-        qtys = dict(sr = u.Quantity(self.beams, u.sr),
-                    major = u.Quantity([bm.major for bm in self.beams], u.deg),
-                    minor = u.Quantity([bm.minor for bm in self.beams], u.deg),
-                    pa = u.Quantity([bm.pa for bm in self.beams], u.deg),
+        qtys = dict(sr=u.Quantity(self.beams, u.sr),
+                    major=u.Quantity([bm.major for bm in self.beams], u.deg),
+                    minor=u.Quantity([bm.minor for bm in self.beams], u.deg),
+                    pa=u.Quantity([bm.pa for bm in self.beams], u.deg),
                    )
 
         errormessage = ""
@@ -2611,9 +2632,12 @@ class VaryingResolutionSpectralCube(SpectralCube):
         limited contexts!  Generally one would want to convolve all the beams
         to a common shape, but this method is meant to handle the "simple" case
         when all your beams are the same to within some small factor and can
-        therefore be arithmetically averaged.  
+        therefore be arithmetically averaged.
         """
-        new_beam = cube_utils.average_beams(self.beams)
+        beam_mask = np.any(self.mask.include(), axis=(1,2))
+
+        new_beam = cube_utils.average_beams(self.beams, includemask=beam_mask)
+        assert not np.isnan(new_beam)
         self._check_beam_areas(threshold, mean_beam=new_beam)
         warnings.warn("Arithmetic beam averaging is being performed.  This is "
                       "not a mathematically robust operation, but is being "

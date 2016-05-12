@@ -6,6 +6,7 @@ from . import wcs_utils
 from astropy import log
 from astropy.io.fits import BinTableHDU
 from astropy import units as u
+import itertools
 
 def _fix_spectral(wcs):
     """
@@ -254,7 +255,7 @@ def beams_to_bintable(beams):
     bmhdu = BinTableHDU(beam_table)
     return bmhdu
 
-def average_beams(beams):
+def average_beams(beams, includemask=None):
     """
     Average the beam major, minor, and PA attributes.
 
@@ -264,9 +265,12 @@ def average_beams(beams):
     from radio_beam import Beam
     from astropy.stats import circmean
 
-    major = u.Quantity([bm.major for bm in beams], u.deg)
-    minor = u.Quantity([bm.minor for bm in beams], u.deg)
-    pa = u.Quantity([bm.pa for bm in beams], u.deg)
+    if includemask is None:
+        includemask = itertools.cycle([True])
+
+    major = u.Quantity([bm.major for bm,incl in zip(beams,includemask) if incl], u.deg)
+    minor = u.Quantity([bm.minor for bm,incl in zip(beams,includemask) if incl], u.deg)
+    pa = u.Quantity([bm.pa for bm,incl in zip(beams,includemask) if incl], u.deg)
     new_beam = Beam(major=major.mean(), minor=minor.mean(),
                     pa=circmean(pa, weights=major/minor))
 
