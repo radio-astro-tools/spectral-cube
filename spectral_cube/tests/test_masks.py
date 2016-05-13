@@ -408,3 +408,15 @@ def test_1d_mask():
 
     np.testing.assert_almost_equal(sum0.value, sum0d)
 
+def test_1d_mask_amp():
+    cube, data = cube_and_raw('adv.fits')
+    mask = np.array([True, False, True, False])
+
+    Mask = BooleanArrayMask(mask[:,None,None],
+                            wcs=cube._wcs,
+                            shape=cube.shape,
+                           )
+
+    ampd = cube.mask & Mask
+
+    ampd.include()
