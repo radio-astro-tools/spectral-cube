@@ -2449,13 +2449,14 @@ class VaryingResolutionSpectralCube(SpectralCube):
 
             beam_mask = BooleanArrayMask(goodbeams[:,None,None],
                                          wcs=self._wcs,
-                                         shape=(len(beams),1,1),
+                                         shape=self.shape,
                                         )
             if not is_broadcastable_and_smaller(beam_mask.shape,
                                                 self._data.shape):
                 # this should never be allowed to happen
                 raise ValueError("Beam mask shape is not broadcastable to data shape: "
                                  "%s vs %s" % (beam_mask.shape, self._data.shape))
+            assert beam_mask.shape == self.shape
 
             new_mask = self._mask & beam_mask
 
@@ -2474,7 +2475,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
     def __getitem__(self, view):
 
         # Need to allow self[:], self[:,:]
-        if isinstance(view, (slice,int)):
+        if isinstance(view, (slice,int,np.int64)):
             view = (view, slice(None), slice(None))
         elif len(view) == 2:
             view = view + (slice(None),)
