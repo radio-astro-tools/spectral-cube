@@ -355,8 +355,8 @@ def strip_wcs_from_header(header):
         if kw not in keys_to_keep:
             del newheader[kw]
 
-    for kw in ('CRPIX{ii}', 'CRVAL{ii}', 'CDELT{ii}', 'CUNIT{ii}',
-               'CTYPE{ii}', 'PC0{ii}_0{jj}', 'CD{ii}_{jj}',):
+    for kw in ('CRPIX{ii}', 'CRVAL{ii}', 'CDELT{ii}', 'CUNIT{ii}', 'CTYPE{ii}',
+               'PC0{ii}_0{jj}', 'CD{ii}_{jj}', 'CROTA{ii}'):
         for ii in range(5):
             for jj in range(5):
                 k = kw.format(ii=ii,jj=jj)
