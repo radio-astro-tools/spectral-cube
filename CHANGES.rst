@@ -1,5 +1,7 @@
 0.4.0 (unreleased)
 ------------------
+ - Cube planes with bad beams will be masked out
+   (https://github.com/radio-astro-tools/spectral-cube/pull/298)
  - Added a new cube type, VaryingResolutionSpectralCube, meant to handle
    CASA-produced cubes that have different beams in each channel
    (https://github.com/radio-astro-tools/spectral-cube/pull/292)
