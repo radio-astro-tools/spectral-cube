@@ -146,7 +146,12 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
             cube = VaryingResolutionSpectralCube(data, wcs, mask, meta=meta,
                                                  header=header,
                                                  beam_table=beam_table)
-        assert cube._data.shape == cube._mask._data.shape
+        
+        if hasattr(cube._mask, '_data'):
+            # check that the shape matches if there is a shape
+            # it is possible that VaryingResolution cubes will have a composite
+            # mask instead
+            assert cube._data.shape == cube._mask._data.shape
 
     elif wcs.wcs.naxis == 4:
 

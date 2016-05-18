@@ -397,6 +397,8 @@ def test_include():
 
 def test_1d_mask():
     # regression test for issue revealed in #183
+    # In principle, this is also a regression test for #298, except this always
+    # passed where #298 failed, which I don't understand.
 
     cube, data = cube_and_raw('adv.fits')
     mask = np.array([True, False, True, False])
@@ -406,3 +408,15 @@ def test_1d_mask():
 
     np.testing.assert_almost_equal(sum0.value, sum0d)
 
+def test_1d_mask_amp():
+    cube, data = cube_and_raw('adv.fits')
+    mask = np.array([True, False, True, False])
+
+    Mask = BooleanArrayMask(mask[:,None,None],
+                            wcs=cube._wcs,
+                            shape=cube.shape,
+                           )
+
+    ampd = cube.mask & Mask
+
+    ampd.include()
