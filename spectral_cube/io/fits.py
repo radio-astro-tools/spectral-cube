@@ -5,7 +5,7 @@ import warnings
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.extern import six
-from astropy.utils import OrderedDict
+from collections import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
 
 import numpy as np
