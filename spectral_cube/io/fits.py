@@ -44,7 +44,7 @@ def is_fits(input, **kwargs):
         return False
 
 
-def read_data_fits(input, hdu=None, **kwargs):
+def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
     """
     Read an array and header from an FITS file.
 
@@ -58,6 +58,11 @@ def read_data_fits(input, hdu=None, **kwargs):
         - :class:`~astropy.io.fits.hdu.hdulist.HDUList`
     hdu : int or str, optional
         The HDU to read the table from.
+    mode : str
+        One of the FITS file reading modes; see `~astropy.io.fits.open`.
+        ``denywrite`` is used by default since this prevents the system from
+        checking that the entire cube will fit into swap, which can prevent the
+        file from being opened at all.
     """
 
     beam_table = None
@@ -100,7 +105,7 @@ def read_data_fits(input, hdu=None, **kwargs):
 
     else:
 
-        hdulist = fits_open(input, **kwargs)
+        hdulist = fits_open(input, mode=mode, **kwargs)
 
         try:
             return read_data_fits(hdulist, hdu=hdu)
