@@ -57,7 +57,7 @@ def cube_and_raw(filename):
 
     d = fits.getdata(p)
 
-    c = SpectralCube.read(p, format='fits')
+    c = SpectralCube.read(p, format='fits', mode='readonly')
     return c, d
 
 
