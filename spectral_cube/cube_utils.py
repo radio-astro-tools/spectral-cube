@@ -4,7 +4,7 @@ import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
 from astropy import log
-from astropy.io.fits import BinTableHDU
+from astropy.io.fits import BinTableHDU, Column
 from astropy import units as u
 import itertools
 
@@ -239,20 +239,17 @@ def beams_to_bintable(beams):
     """
     Convert a list of beams to a CASA-style BinTableHDU
     """
-    metakeys = beams[0].meta.keys()
-    dtypes = ([('BMAJ','float'),
-               ('BMIN','float'),
-               ('BPA','float'),] +
-              [(key, type(val)) for key,val in beams[0].meta.items()]
-             )
-    beam_table = np.recarray(len(beams), dtype=dtypes)
-    beam_table['BMAJ'] = [bm.major.to(u.arcsec).value for bm in beams]
-    beam_table['BMIN'] = [bm.minor.to(u.arcsec).value for bm in beams]
-    beam_table['BPA'] = [bm.pa.to(u.deg).value for bm in beams]
-    for key in metakeys:
-        beam_table[key] = [bm.meta[key] for bm in beams]
 
-    bmhdu = BinTableHDU(beam_table)
+    c1 = Column(name='BMAJ', format='1E', array=[bm.major.to(u.arcsec).value for bm in beams], unit=u.arcsec.to_string('FITS'))
+    c2 = Column(name='BMIN', format='1E', array=[bm.minor.to(u.arcsec).value for bm in beams], unit=u.arcsec.to_string('FITS'))
+    c3 = Column(name='BPA', format='1E', array=[bm.pa.to(u.deg).value for bm in beams], unit=u.deg.to_string('FITS'))
+    c4 = Column(name='CHAN', format='1J', array=[bm.meta['CHAN'] if 'CHAN' in bm.meta else 0 for bm in beams])
+    c5 = Column(name='POL', format='1J', array=[bm.meta['POL'] if 'POL' in bm.meta else 0 for bm in beams])
+
+    bmhdu = BinTableHDU.from_columns([c1, c2, c3, c4, c5])
+    bmhdu.header['EXTNAME'] = 'BEAMS'
+    bmhdu.header['EXTVER'] = 1
+    bmhdu.header['XTENSION'] = 'BINTABLE'
     return bmhdu
 
 def average_beams(beams, includemask=None):
