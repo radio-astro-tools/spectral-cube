@@ -78,16 +78,19 @@ matrix:
               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
               ASTROPY_VERSION='development'
 
-        - casa: 4.6.0
+        - python: 2.7
+          casa: 4.6.0
           env: 
               CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/release/el6/casa-release-4.6.0-el6.tar.gz'
 
-        - casa: monthlies
+        - python: 2.7
+          casa: monthlies
           env:
               # TODO: write script to retrieve latest
               CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/monthly/el6/casa-monthly-4.7.16.tar.gz'
 
-        - casa: stable
+        - python: 2.7
+          casa: stable
           env:
               # TODO: write script to retrieve latest
               CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/stable/el6/casa-stable-4.7.59.tar.gz'
