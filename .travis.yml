@@ -98,7 +98,7 @@ matrix:
 install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
-    - if $CASA_URL; then curl $CASA_URL | tar -xzv; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; fi
+    - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xzv; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
