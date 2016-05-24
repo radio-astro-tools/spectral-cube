@@ -3,3 +3,5 @@ easy_install.main(['--user', 'pip'])
 
 import pip
 pip.main(['install', 'astropy', '--user'])
+
+import astropy
