@@ -77,6 +77,18 @@ def test_wcs_slice():
     wcs_new = slice_wcs(wcs, (slice(10,20), slice(None), slice(20,30)))
     np.testing.assert_allclose(wcs_new.wcs.crpix, [30., 45., 20.])
 
+def test_wcs_slice_reversal():
+    wcs = WCS(naxis=3)
+    wcs.wcs.crpix = [50., 45., 30.]
+    wcs.wcs.crval = [0., 0., 0.]
+    wcs.wcs.cdelt = [1., 1., 1.]
+    wcs_new = slice_wcs(wcs, (slice(None, None, -1), slice(None), slice(None)),
+                        shape=[100., 150., 200.])
+    spaxis = wcs.sub([0]).wcs_pix2world(np.arange(100), 0)
+    new_spaxis = wcs_new.sub([0]).wcs_pix2world(np.arange(100), 0)
+
+    np.testing.assert_allclose(spaxis, new_spaxis[::-1])
+
 
 def test_wcs_comparison():
     wcs1 = WCS(naxis=3)
