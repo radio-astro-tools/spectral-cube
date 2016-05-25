@@ -234,7 +234,8 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True):
                 refpix = shape[i]
             # this will raise an inconsistent axis type error if slicing over
             # celestial axes is attempted
-            crval = mywcs.sub([wcs_index]).wcs_pix2world(refpix, 0)
+            # wcs_index+1 is required because sub([0]) = sub([all])
+            crval = mywcs.sub([wcs_index+1]).wcs_pix2world([refpix], 0)[0]
             crpix = 1
             wcs_new.wcs.crpix[wcs_index] = crpix
             wcs_new.wcs.crval[wcs_index] = crval
@@ -253,6 +254,10 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True):
                 wcs_new.wcs.cdelt[wcs_index] = cdelt * iview.step
             else:
                 wcs_new.wcs.crpix[wcs_index] -= iview.start
+
+    # Without this, may cause a regression of #234
+    wcs_new.wcs.set()
+
     return wcs_new
 
 def check_equality(wcs1, wcs2, warn_missing=False,

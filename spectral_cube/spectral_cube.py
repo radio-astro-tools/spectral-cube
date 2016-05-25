@@ -1091,8 +1091,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
             if intslices[0] == 0:
                 # celestial: can report the wavelength/frequency of the axis
-                header['CRVAL3'] = self.spectral_axis[intslices[0]]
+                header['CRVAL3'] = self.spectral_axis[intslices[0]].value
                 header['CDELT3'] = self.wcs.sub([wcs.WCSSUB_SPECTRAL]).wcs.cdelt[0]
+                header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
             return Slice(value=self.filled_data[view],
                          wcs=newwcs,
