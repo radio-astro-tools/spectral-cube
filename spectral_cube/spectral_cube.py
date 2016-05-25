@@ -1088,6 +1088,12 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
             header = self._nowcs_header
+
+            if intslices[0] == 0:
+                # celestial: can report the wavelength/frequency of the axis
+                header['CRVAL3'] = self.spectral_axis[intslices[0]]
+                header['CDELT3'] = self.wcs.sub([wcs.WCSSUB_SPECTRAL]).wcs.cdelt[0]
+
             return Slice(value=self.filled_data[view],
                          wcs=newwcs,
                          copy=False,
@@ -1098,7 +1104,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         newmask = self._mask[view] if self._mask is not None else None
 
         return self._new_cube_with(data=self._data[view],
-                                   wcs=wcs_utils.slice_wcs(self._wcs, view),
+                                   wcs=wcs_utils.slice_wcs(self._wcs, view,
+                                                           shape=self.shape),
                                    mask=newmask,
                                    meta=meta)
 
