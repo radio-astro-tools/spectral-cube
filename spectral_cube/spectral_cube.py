@@ -2376,7 +2376,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         return self._new_cube_with(data=newcube,
                                    wcs=newwcs,
-                                   mask=BooleanArrayMask(newcube_valid.astype('bool')),
+                                   mask=BooleanArrayMask(newcube_valid.astype('bool'),
+                                                         wcs=newwcs,
+                                                         shape=newcube.shape),
                                    meta=self.meta,
                                   )
 
