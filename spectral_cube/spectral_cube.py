@@ -2359,6 +2359,19 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             or an integer. A value of ``0`` indicates nearest neighbor
             interpolation.
         """
+
+        try:
+            from reproject.version import version
+        except ImportError:
+            raise ImportError("Requires the reproject package to be"
+                              " installed.")
+
+        # Need version > 0.2 to work with cubes
+        from distutils.version import LooseVersion
+        if LooseVersion(version) < "0.3":
+            raise Warning("Requires version >0.3 of reproject. The current "
+                          "version is: {}".format(version))
+
         from reproject import reproject_interp
 
         # TODO: Find the minimal subcube that contains the header and only reproject that
