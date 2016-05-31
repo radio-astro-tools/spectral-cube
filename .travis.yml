@@ -101,6 +101,7 @@ install:
     - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; fi
     - if [[ $CASA_BIN ]]; then $CASA_BIN --nogui --nologger -c ./.install_pip.py; fi
     - if [[ $CASA_BIN ]]; then $CASA_BIN --nogui --nologger -c ./.install_astropy.py; fi
+    - if [[ $CASA_BIN ]]; then $CASA_BIN --nogui --nologger -c ./.import_astropy.py; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
