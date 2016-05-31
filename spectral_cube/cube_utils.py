@@ -250,6 +250,8 @@ def beams_to_bintable(beams):
     bmhdu.header['EXTNAME'] = 'BEAMS'
     bmhdu.header['EXTVER'] = 1
     bmhdu.header['XTENSION'] = 'BINTABLE'
+    bmhdu.header['NCHAN'] = len(beams)
+    bmhdu.header['NPOL'] = len(set([bm.meta['POL'] for bm in beams]))
     return bmhdu
 
 def average_beams(beams, includemask=None):
