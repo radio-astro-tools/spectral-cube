@@ -78,10 +78,11 @@ matrix:
               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
               ASTROPY_VERSION='development'
 
-        - python: 2.7
-          casa: 4.6.0
-          env: 
-              CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/release/el6/casa-release-4.6.0-el6.tar.gz'
+        # known not to be able to install astropy
+        #- python: 2.7
+        #  casa: 4.6.0
+        #  env: 
+        #      CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/release/el6/casa-release-4.6.0-el6.tar.gz'
 
         - python: 2.7
           casa: monthlies
@@ -99,9 +100,9 @@ install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
     - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --nogui --nologger -c ./.install_pip.py; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --nogui --nologger -c ./.install_astropy.py; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --nogui --nologger -c ./.import_astropy.py; fi
+    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --no-logger -c 'execfile(".install_pip.py")'; fi
+    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --no-logger -c 'execfile(".install_astropy.py")'; fi
+    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --no-logger -c 'execfile(".import_astropy.py")'; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi

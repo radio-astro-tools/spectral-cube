@@ -1685,7 +1685,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                 val = np.argmin(np.abs(limval-spine))
                 if limval > spine.max() or limval < spine.min():
                     log.warning("The limit {0} is out of bounds."
-                             "  Using min/max instead.".format(lim))
+                                "  Using min/max instead.".format(lim))
                 if lim[1:] == 'hi':
                     # End-inclusive indexing: need to add one for the high
                     # slice
@@ -1748,6 +1748,12 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             ylo = int(np.floor(ylo if ylo < ext.min[1] else ext.min[1]))
             xhi = int(np.ceil(xhi if xhi > ext.max[0] else ext.max[0]))
             yhi = int(np.ceil(yhi if yhi > ext.max[1] else ext.max[1]))
+
+        # matplotlib's extents can return infinities, which we need to handle
+        if xhi >= np.inf:
+            xhi = self.shape[2]
+        if yhi >= np.inf:
+            yhi = self.shape[1]
 
         # Negative indices will do bad things, like wrap around the cube
         # If xhi/yhi are negative, there is not overlap
