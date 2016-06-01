@@ -100,9 +100,9 @@ install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
     - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --no-logger -c 'execfile(".install_pip.py")'; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --no-logger -c 'execfile(".install_astropy.py")'; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --no-logger -c 'execfile(".import_astropy.py")'; fi
+    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --nologger -c 'execfile(".install_pip.py")'; fi
+    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --nologger -c 'execfile(".install_astropy.py")'; fi
+    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --nologger -c 'execfile(".import_astropy.py")'; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
