@@ -1213,3 +1213,23 @@ def test_pix_sign():
     assert s>0
     assert y>0
     assert x>0
+
+def test_reproject():
+
+    cube, data = cube_and_raw('adv.fits')
+
+    wcs_in = WCS(cube.header)
+    wcs_out = wcs_in.deepcopy()
+    wcs_out.wcs.ctype = ['GLON-SIN', 'GLAT-SIN', wcs_in.wcs.ctype[2]]
+    wcs_out.wcs.crval = [134.37608, -31.939241, wcs_in.wcs.crval[2]]
+    wcs_out.wcs.crpix = [2., 2., wcs_in.wcs.crpix[2]]
+
+    header_out = cube.header
+    header_out['NAXIS1'] = 4
+    header_out['NAXIS2'] = 5
+    header_out['NAXIS3'] = cube.shape[0]
+    header_out.update(wcs_out.to_header())
+
+    result = cube.reproject(header_out)
+
+    assert result.shape == (cube.shape[0], 5, 4)
