@@ -95,6 +95,7 @@ matrix:
           env:
               # TODO: write script to retrieve latest
               CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/stable/el6/casa-stable-4.7.59.tar.gz'
+              PYPATH=~/.casa/lib/python2.7/site-packages
 
 install:
     - git clone git://github.com/astropy/ci-helpers.git
@@ -107,7 +108,7 @@ install:
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
     - python setup.py $SETUP_CMD
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --exec ./setup.py $SETUP_CMD; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH $CASA_BIN --exec ./setup.py $SETUP_CMD --user; fi
 
 after_success:
     - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='spectral_cube/tests/coveragerc'; fi
