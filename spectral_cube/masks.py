@@ -423,7 +423,8 @@ class BooleanArrayMask(MaskBase):
 
     def __getitem__(self, view):
         return BooleanArrayMask(self._mask[view],
-                                wcs_utils.slice_wcs(self._wcs, view),
+                                wcs_utils.slice_wcs(self._wcs, view,
+                                                    shape=self.shape),
                                 shape=self._mask[view].shape)
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
@@ -503,7 +504,8 @@ class LazyMask(MaskBase):
 
     def __getitem__(self, view):
         return LazyMask(self._function, data=self._data[view],
-                        wcs=wcs_utils.slice_wcs(self._wcs, view))
+                        wcs=wcs_utils.slice_wcs(self._wcs, view,
+                                                shape=self._data.shape))
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """

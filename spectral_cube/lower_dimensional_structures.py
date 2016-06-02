@@ -26,6 +26,9 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         if self.wcs is not None:
             header.update(self.wcs.to_header())
         header['BUNIT'] = self.unit.to_string(format='fits')
+        for keyword in header:
+            if 'NAXIS' in keyword:
+                del header[keyword]
         header.insert(2, Card(keyword='NAXIS', value=self.ndim))
         for ind,sh in enumerate(self.shape[::-1]):
             header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),

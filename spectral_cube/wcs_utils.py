@@ -175,7 +175,7 @@ def axis_names(wcs):
     return names
 
 
-def slice_wcs(mywcs, view, numpy_order=True):
+def slice_wcs(mywcs, view, shape=None, numpy_order=True):
     """
     Slice a WCS instance using a Numpy slice. The order of the slice should
     be reversed (as for the data) compared to the natural WCS order.
@@ -216,11 +216,31 @@ def slice_wcs(mywcs, view, numpy_order=True):
             # None,None,step or None,stop,step)
             iview = slice(0, iview.stop, iview.step)
 
-        if iview.start is not None:
-            if numpy_order:
-                wcs_index = mywcs.wcs.naxis - 1 - i
+        if numpy_order:
+            wcs_index = mywcs.wcs.naxis - 1 - i
+        else:
+            wcs_index = i
+
+        if iview.step is not None and iview.step < 0:
+            if iview.step != -1:
+                raise NotImplementedError("Haven't dealt with resampling & reversing.")
+            # reverse indexing requires the use of shape
+            if shape is None:
+                raise ValueError("Cannot reverse-index a WCS without "
+                                 "specifying a shape.")
+            if iview.stop is not None:
+                refpix = iview.stop
             else:
-                wcs_index = i
+                refpix = shape[i]
+            # this will raise an inconsistent axis type error if slicing over
+            # celestial axes is attempted
+            # wcs_index+1 is required because sub([0]) = sub([all])
+            crval = mywcs.sub([wcs_index+1]).wcs_pix2world([refpix], 0)[0]
+            crpix = 1
+            wcs_new.wcs.crpix[wcs_index] = crpix
+            wcs_new.wcs.crval[wcs_index] = crval
+
+        elif iview.start is not None:
 
             if iview.step not in (None, 1):
                 crpix = mywcs.wcs.crpix[wcs_index]
@@ -228,12 +248,16 @@ def slice_wcs(mywcs, view, numpy_order=True):
                 # equivalently (keep this comment so you can compare eqns):
                 # wcs_new.wcs.crpix[wcs_index] =
                 # (crpix - iview.start)*iview.step + 0.5 - iview.step/2.
-                crp = ((crpix - iview.start - 1.)/iview.step
-                       + 0.5 + 1./iview.step/2.)
+                crp = ((crpix - iview.start - 1.)/iview.step +
+                       0.5 + 1./iview.step/2.)
                 wcs_new.wcs.crpix[wcs_index] = crp
                 wcs_new.wcs.cdelt[wcs_index] = cdelt * iview.step
             else:
                 wcs_new.wcs.crpix[wcs_index] -= iview.start
+
+    # Without this, may cause a regression of #234
+    wcs_new.wcs.set()
+
     return wcs_new
 
 def check_equality(wcs1, wcs2, warn_missing=False,
