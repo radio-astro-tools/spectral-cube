@@ -37,6 +37,12 @@ except ImportError:
     YT_LT_301 = False
 
 try:
+    import reproject
+    REPROJECT_INSTALLED = True
+except ImportError:
+    REPROJECT_INSTALLED = False
+
+try:
     import bottleneck
     BOTTLENECK_INSTALLED = True
 except ImportError:
@@ -1214,6 +1220,7 @@ def test_pix_sign():
     assert y>0
     assert x>0
 
+@pytest.mark.skipif('not REPROJECT_INSTALLED')
 def test_reproject():
 
     cube, data = cube_and_raw('adv.fits')
