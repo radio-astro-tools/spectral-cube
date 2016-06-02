@@ -1208,7 +1208,7 @@ def test_jybeam_upper():
 
     cube, data = cube_and_raw('vda_JYBEAM_upper.fits')
 
-    assert cube.unit == u.Jy
+    assert cube.unit == u.Jy/u.beam
     if RADIO_BEAM_INSTALLED:
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
@@ -1218,7 +1218,7 @@ def test_jybeam_lower():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 
-    assert cube.unit == u.Jy
+    assert cube.unit == u.Jy/u.beam
     if RADIO_BEAM_INSTALLED:
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
@@ -1229,7 +1229,7 @@ def test_jybeam_whitespace():
 
     cube, data = cube_and_raw('vda_Jybeam_whitespace.fits')
 
-    assert cube.unit == u.Jy
+    assert cube.unit == u.Jy/u.beam
     if RADIO_BEAM_INSTALLED:
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
