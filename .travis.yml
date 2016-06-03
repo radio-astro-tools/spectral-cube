@@ -81,7 +81,8 @@ matrix:
         - python: 2.7
           casa: stable
           env:
-              SETUP_CMD='test'
+              SETUP_CMD='test' # No boxed, since casa can't handle it
+              # TODO: write script to retrieve latest
               CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/stable/el6/casa-stable-4.7.59.tar.gz'
               PYPATH=~/.casa/lib/python2.7/site-packages
 
