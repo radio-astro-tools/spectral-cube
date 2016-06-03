@@ -84,11 +84,12 @@ matrix:
         #  env: 
         #      CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/release/el6/casa-release-4.6.0-el6.tar.gz'
 
-        - python: 2.7
-          casa: monthlies
-          env:
-              # TODO: write script to retrieve latest
-              CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/monthly/el6/casa-monthly-4.7.16.tar.gz'
+        # also can't install astropy
+        #- python: 2.7
+        #  casa: monthlies
+        #  env:
+        #      # TODO: write script to retrieve latest
+        #      CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/monthly/el6/casa-monthly-4.7.16.tar.gz'
 
         - python: 2.7
           casa: stable
