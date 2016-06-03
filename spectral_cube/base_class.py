@@ -1,4 +1,5 @@
 from astropy import units as u
+from astropy import log
 
 from . import wcs_utils
 
@@ -15,6 +16,7 @@ class BaseNDClass(object):
         """
         Return a copy of the header with no WCS information attached
         """
+        log.debug("Stripping WCS from header")
         return wcs_utils.strip_wcs_from_header(self._header)
 
     @property

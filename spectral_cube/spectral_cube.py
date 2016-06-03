@@ -2244,6 +2244,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     @property
     def header(self):
+        log.debug("Creating header")
         # Preserve non-WCS information from previous header iteration
         header = self._nowcs_header
         header.update(self.wcs.to_header())
@@ -2275,6 +2276,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         """
         HDU version of self
         """
+        log.debug("Creating HDU")
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
         return hdu
 
