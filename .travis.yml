@@ -100,15 +100,15 @@ matrix:
 install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
-    - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --nologger -c 'execfile(".install_pip.py")'; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --nologger -c 'execfile(".install_astropy.py")'; fi
-    - if [[ $CASA_BIN ]]; then $CASA_BIN --no-gui --nologger -c 'execfile(".import_astropy.py")'; fi
+    - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; CASA_CONFIG=${CASA_BIN}-config fi
+    - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} python .install_pip.py; fi
+    - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} python .install_astropy.py; fi
+    - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} python .import_astropy.py; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
     - python setup.py $SETUP_CMD
-    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH $CASA_BIN --exec ./setup.py $SETUP_CMD --user; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH $CASA_CONFIG --exec python setup.py $SETUP_CMD --user; fi
 
 after_success:
     - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='spectral_cube/tests/coveragerc'; fi
