@@ -78,6 +78,15 @@ matrix:
               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
               ASTROPY_VERSION='development'
 
+        - python: 2.7
+          casa: stable
+          env:
+              # No boxed, since casa can't handle it
+              SETUP_CMD='test'
+              # TODO: write script to retrieve latest
+              CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/stable/el6/casa-stable-4.7.59.tar.gz'
+              PYPATH=~/.casa/lib/python2.7/site-packages
+
         # known not to be able to install astropy
         #- python: 2.7
         #  casa: 4.6.0
@@ -91,14 +100,6 @@ matrix:
         #      # TODO: write script to retrieve latest
         #      CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/monthly/el6/casa-monthly-4.7.16.tar.gz'
 
-        - python: 2.7
-          casa: stable
-          env:
-              # No boxed, since casa can't handle it
-              SETUP_CMD='test'
-              # TODO: write script to retrieve latest
-              CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/stable/el6/casa-stable-4.7.59.tar.gz'
-              PYPATH=~/.casa/lib/python2.7/site-packages
 
 install:
     - git clone git://github.com/astropy/ci-helpers.git
