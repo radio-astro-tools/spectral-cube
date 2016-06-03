@@ -97,6 +97,8 @@ matrix:
               # TODO: write script to retrieve latest
               CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/stable/el6/casa-stable-4.7.59.tar.gz'
               PYPATH=~/.casa/lib/python2.7/site-packages
+              # No boxed, since casa can't handle it
+              SETUP_CMD='test'
 
 install:
     - git clone git://github.com/astropy/ci-helpers.git
