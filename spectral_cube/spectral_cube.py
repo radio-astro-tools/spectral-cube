@@ -17,6 +17,7 @@ from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
 from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
+from astropy import convolution
 
 import numpy as np
 
@@ -2747,6 +2748,62 @@ class VaryingResolutionSpectralCube(SpectralCube):
         bmhdu = beams_to_bintable(self.beams)
 
         return HDUList([hdu, bmhdu])
+
+    def convolve_to(self, beam, allow_smaller=False,
+                    convolve=convolution.convolve_fft):
+        """
+        Convolve each channel in the cube to a specified beam
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        allow_smaller : bool
+            If the specified target beam is smaller than the beam in a channel
+            in any dimension and this is ``False``, it will raise an exception.
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A SpectralCube with a single ``beam``
+        """
+
+        pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
+
+        convolution_kernels = []
+        for bm in self.beams:
+            try:
+                cb = beam.deconvolve(bm)
+                ck = cb.as_kernel(pixscale)
+                convolution_kernels.append(ck)
+            except ValueError:
+                if allow_smaller:
+                    convolution_kernels.append(None)
+                else:
+                    raise
+
+        pb = ProgressBar(self.shape[0])
+
+        newdata = np.empty(self.shape)
+        for ii,(img,kernel) in enumerate(zip(self.filled_data,
+                                             convolution_kernels)):
+            newdata[ii,:,:] = convolve(img, kernel)
+            pb.update()
+
+        newcube = SpectralCube(data=newdata, wcs=self.wcs, mask=self.mask,
+                               meta=self.meta, fill_value=self.fill_value,
+                               header=self.header,
+                               allow_huge_operations=self.allow_huge_operations,
+                               read_beam=False,
+                               wcs_tolerance=self._wcs_tolerance)
+        newcube.beam = beam
+
+        return newcube
+            
 
 
 def determine_format_from_filename(filename):
