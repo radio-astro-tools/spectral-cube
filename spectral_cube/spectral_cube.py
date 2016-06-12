@@ -2435,11 +2435,14 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                     for jj in xrange(self.shape[1])
                     for ii in xrange(self.shape[2]))
 
+        pb = ProgressBar(shape[1]*shape[2])
+
         def _gsmooth_spectrum(args):
             """
             Helper function to smooth a spectrum
             """
             (spec, include),kernel,use_fft,kwargs = args
+            pb.update()
 
             if include:
                 return convolve(spec, kernel, normalize_kernel=True, **kwargs)
