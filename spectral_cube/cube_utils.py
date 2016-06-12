@@ -2,7 +2,11 @@ from __future__ import print_function, absolute_import, division
 
 import contextlib
 import warnings
-import __builtin__
+try:
+    import builtins
+except ImportError:
+    # python2
+    import __builtin__ as builtins
 
 import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
@@ -292,13 +296,13 @@ def _map_context(numcores):
             map = p.map
             parallel = True
         except ImportError:
-            map = __builtin__.map
+            map = builtins.map
             warnings.warn("Could not import multiprocessing.  "
                           "map will be non-parallel.")
             parallel = False
     else:
         parallel = False
-        map = __builtin__.map
+        map = builtins.map
 
     try:
         yield map
