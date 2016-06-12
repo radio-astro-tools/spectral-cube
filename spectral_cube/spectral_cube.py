@@ -2959,6 +2959,18 @@ class VaryingResolutionSpectralCube(SpectralCube):
         newcube.beam = beam
 
         return newcube
+
+    def spectral_interpolate(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally interpolated.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral interpolation.")
+    
+    def spectral_smooth(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally smoothed.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral smoothed.")
             
 
 
