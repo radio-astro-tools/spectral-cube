@@ -2403,7 +2403,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                   )
 
     def spectral_smooth(self, kernel=convolution.Gaussian1DKernel(1),
-                        parallel=True, numcores=None,
+                        #numcores=None,
                         convolve=convolution.convolve_fft,
                         **kwargs):
         """
@@ -2430,8 +2430,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         # "cubelist" is a generator
         # the boolean check will skip smoothing for bad spectra
         # TODO: should spatial good/bad be cached?
-        cubelist = ((self[:,jj,ii],
-                     any(self.mask.include(view=(slice(None), jj, ii))))
+        cubelist = ((self.filled_data[:,jj,ii],
+                     self.mask.include(view=(slice(None), jj, ii)))
                     for jj in xrange(self.shape[1])
                     for ii in xrange(self.shape[2]))
 
@@ -2441,21 +2441,24 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             """
             Helper function to smooth a spectrum
             """
-            (spec, include),kernel,use_fft,kwargs = args
+            (spec, includemask),kernel,kwargs = args
             pb.update()
 
-            if include:
+            if any(includemask):
                 return convolve(spec, kernel, normalize_kernel=True, **kwargs)
             else:
                 return spec
 
-        with cube_utils._map_context(numcores) as map:
-            smoothcube_ = np.array(map(_gsmooth_spectrum,
-                                       zip(cubelist,
-                                           itertools.cycle([kernel]),
-                                           itertools.cycle([kwargs]))
+        # could be numcores, except _gsmooth_spectrum is unpicklable
+        with cube_utils._map_context(1) as map:
+            smoothcube_ = np.array([x for x in
+                                    map(_gsmooth_spectrum, zip(cubelist,
+                                                               itertools.cycle([kernel]),
+                                                               itertools.cycle([kwargs]),
+                                                              )
                                        )
-                                   )
+                                   ]
+                                  )
 
         # empirical: need to swapaxes to get shape right
         # cube = np.arange(6*5*4).reshape([4,5,6]).swapaxes(0,2)
@@ -2531,7 +2534,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
     
         pb = ProgressBar(xx.size)
         for ix, iy in (zip(xx.flat, yy.flat)):
-            mask = self.include(view=(slice(None), iy, ix))
+            mask = self.mask.include(view=(slice(None), iy, ix))
             if any(mask):
                 newcube[:,iy,ix] = np.interp(spectral_grid.value, inaxis.value,
                                              cubedata[:,iy,ix].value)
@@ -2548,10 +2551,10 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         newheader['CDELT3'] = outdiff.value
         newheader['CUNIT3'] = spectral_grid.unit.to_string('FITS')
         newwcs = self.wcs.copy()
-        newwcs.wcs.crpix[0] = 1
-        newwcs.wcs.crval[0] = spectral_grid[0].value
-        newwcs.wcs.cunit[0] = spectral_grid.unit.to_string('FITS')
-        newwcs.wcs.cdelt[0] = outdiff.value
+        newwcs.wcs.crpix[2] = 1
+        newwcs.wcs.crval[2] = spectral_grid[0].value
+        newwcs.wcs.cunit[2] = spectral_grid.unit.to_string('FITS')
+        newwcs.wcs.cdelt[2] = outdiff.value
 
         newbmask = BooleanArrayMask(newmask, wcs=newwcs)
     
