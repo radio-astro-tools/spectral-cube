@@ -2483,7 +2483,8 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             An array of the spectral positions to regrid onto
         suppress_smooth_warning : bool
             If disabled, a warning will be raised when interpolating onto a
-            grid that does not nyquist sample the existing grid
+            grid that does not nyquist sample the existing grid.  Disable this
+            if you have already appropriately smoothed the data.
 
         Returns
         -------
@@ -2947,7 +2948,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
         pb = ProgressBar(self.shape[0])
 
         newdata = np.empty(self.shape)
-        for ii,(img,kernel) in enumerate(zip(self.filled_data,
+        for ii,(img,kernel) in enumerate(zip(self.filled_data[:],
                                              convolution_kernels)):
             newdata[ii,:,:] = convolve(img, kernel)
             pb.update()
