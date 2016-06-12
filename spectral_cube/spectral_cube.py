@@ -9,6 +9,7 @@ from functools import wraps
 import operator
 import sys
 import re
+import itertools
 
 from astropy import units as u
 from astropy.extern import six
@@ -308,25 +309,24 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             s += " and unit={0}:\n".format(self.unit)
         s += (" n_x: {0:6d}  type_x: {1:8s}  unit_x: {2:5s}"
               "  range: {3:12.6f}:{4:12.6f}\n".format(self.shape[2],
-                                                self.wcs.wcs.ctype[0],
-                                                self.wcs.wcs.cunit[0],
-                                                self.longitude_extrema[0],
-                                                self.longitude_extrema[1],
-                                               ))
+                                                      self.wcs.wcs.ctype[0],
+                                                      self.wcs.wcs.cunit[0],
+                                                      self.longitude_extrema[0],
+                                                      self.longitude_extrema[1],))
         s += (" n_y: {0:6d}  type_y: {1:8s}  unit_y: {2:5s}"
               "  range: {3:12.6f}:{4:12.6f}\n".format(self.shape[1],
-                                                self.wcs.wcs.ctype[1],
-                                                self.wcs.wcs.cunit[1],
-                                                self.latitude_extrema[0],
-                                                self.latitude_extrema[1],
-                                               ))
+                                                      self.wcs.wcs.ctype[1],
+                                                      self.wcs.wcs.cunit[1],
+                                                      self.latitude_extrema[0],
+                                                      self.latitude_extrema[1],
+                                                     ))
         s += (" n_s: {0:6d}  type_s: {1:8s}  unit_s: {2:5s}"
               "  range: {3:12.3f}:{4:12.3f}".format(self.shape[0],
-                                              self.wcs.wcs.ctype[2],
-                                              self.wcs.wcs.cunit[2],
-                                              self.spectral_extrema[0],
-                                              self.spectral_extrema[1],
-                                             ))
+                                                    self.wcs.wcs.ctype[2],
+                                                    self.wcs.wcs.cunit[2],
+                                                    self.spectral_extrema[0],
+                                                    self.spectral_extrema[1],
+                                                   ))
         return s
 
     @property
@@ -925,12 +925,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         version of the cube
         """
         lon,lat,spec = self.world[view]
-        spec = self._mask._flattened(data=spec, wcs=self._wcs,
-                                     view=slice)
-        lon = self._mask._flattened(data=lon, wcs=self._wcs,
-                                     view=slice)
-        lat = self._mask._flattened(data=lat, wcs=self._wcs,
-                                     view=slice)
+        spec = self._mask._flattened(data=spec, wcs=self._wcs, view=slice)
+        lon = self._mask._flattened(data=lon, wcs=self._wcs, view=slice)
+        lat = self._mask._flattened(data=lat, wcs=self._wcs, view=slice)
         return lat,lon,spec
 
     def median(self, axis=None, iterate_rays=False, **kwargs):
@@ -1673,7 +1670,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         Parameters
         ----------
         region_mask: `masks.MaskBase` or boolean `numpy.ndarray`
-            The mask with appropraite WCS or an ndarray with matched
+            The mask with appropriate WCS or an ndarray with matched
             coordinates
         spatial_only: bool
             Return only slices that affect the spatial dimensions; the spectral
@@ -2404,6 +2401,72 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                                          newwcs),
                                    meta=self.meta,
                                   )
+
+    def spectral_smooth(self, kernel=convolution.Gaussian1DKernel(1),
+                        parallel=True, numcores=None,
+                        convolve=convolution.convolve_fft,
+                        **kwargs):
+        """
+        Smooth the cube along the spectral dimension
+
+        Parameters
+        ----------
+        cube : `~numpy.ndarray`
+            A data cube, with ndim=3
+        kernel : `~astropy.convolution.Kernel1D`
+            A 1D kernel from astropy
+        numcores : int
+            Number of cores to use in parallel-processing.
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        kwargs : dict
+            Passed to the convolve function
+        """
+
+        shape = self.shape
+
+        # "cubelist" is a generator
+        # the boolean check will skip smoothing for bad spectra
+        # TODO: should spatial good/bad be cached?
+        cubelist = ((self[:,jj,ii],
+                     any(self.mask.include(view=(slice(None), jj, ii))))
+                    for jj in xrange(self.shape[1])
+                    for ii in xrange(self.shape[2]))
+
+        def _gsmooth_spectrum(args):
+            """
+            Helper function to smooth a spectrum
+            """
+            (spec, include),kernel,use_fft,kwargs = args
+
+            if include:
+                return convolve(spec, kernel, normalize_kernel=True, **kwargs)
+            else:
+                return spec
+
+        with cube_utils._map_context(numcores) as map:
+            smoothcube_ = np.array(map(_gsmooth_spectrum,
+                                       zip(cubelist,
+                                           itertools.cycle([kernel]),
+                                           itertools.cycle([kwargs]))
+                                       )
+                                   )
+
+        # empirical: need to swapaxes to get shape right
+        # cube = np.arange(6*5*4).reshape([4,5,6]).swapaxes(0,2)
+        # cubelist.T.reshape(cube.shape) == cube
+        smoothcube = smoothcube_.T.reshape(shape)
+
+        newcube = SpectralCube(data=smoothcube, wcs=self.wcs, mask=self.mask,
+                               meta=self.meta, fill_value=self.fill_value,
+                               header=self.header,
+                               allow_huge_operations=self.allow_huge_operations,
+                               read_beam=False,
+                               wcs_tolerance=self._wcs_tolerance)
+
+        return newcube
 
 class VaryingResolutionSpectralCube(SpectralCube):
     """

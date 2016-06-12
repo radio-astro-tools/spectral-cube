@@ -1,5 +1,9 @@
 from __future__ import print_function, absolute_import, division
 
+import contextlib
+import warnings
+import __builtin__
+
 import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
@@ -274,3 +278,30 @@ def average_beams(beams, includemask=None):
                     pa=circmean(pa, weights=major/minor))
 
     return new_beam
+
+@contextlib.contextmanager
+def _map_context(numcores):
+    """
+    Mapping context manager to allow parallel mapping or regular mapping
+    depending on the number of cores specified.
+    """
+    if numcores is not None and numcores > 1:
+        try:
+            import multiprocessing
+            p = multiprocessing.Pool(processes=numcores)
+            map = p.map
+            parallel = True
+        except ImportError:
+            map = __builtin__.map
+            warnings.warn("Could not import multiprocessing.  "
+                          "map will be non-parallel.")
+            parallel = False
+    else:
+        parallel = False
+        map = __builtin__.map
+
+    try:
+        yield map
+    finally:
+        if parallel:
+            p.close()
