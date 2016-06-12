@@ -2466,12 +2466,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         smoothcube = smoothcube_.T.reshape(shape)
 
         # TODO: do something about the mask?
-        newcube = SpectralCube(data=smoothcube, wcs=self.wcs, mask=self.mask,
-                               meta=self.meta, fill_value=self.fill_value,
-                               header=self.header,
-                               allow_huge_operations=self.allow_huge_operations,
-                               read_beam=False,
-                               wcs_tolerance=self._wcs_tolerance)
+        newcube = self._new_cube_with(data=smoothcube, wcs=self.wcs,
+                                      mask=self.mask, meta=self.meta,
+                                      fill_value=self.fill_value)
 
         return newcube
 
@@ -2558,12 +2555,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         newbmask = BooleanArrayMask(newmask, wcs=newwcs)
     
-        newcube = SpectralCube(data=cubedata, wcs=newwcs, mask=newbmask,
-                               meta=self.meta, fill_value=self.fill_value,
-                               header=self.header,
-                               allow_huge_operations=self.allow_huge_operations,
-                               read_beam=False,
-                               wcs_tolerance=self._wcs_tolerance)
+        newcube = self._new_cube_with(data=newcube, wcs=newwcs, mask=newbmask,
+                                      meta=self.meta,
+                                      fill_value=self.fill_value)
 
         return newcube
 
