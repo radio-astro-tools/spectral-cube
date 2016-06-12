@@ -162,7 +162,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
                     self._try_load_beam(header)
 
-                    if hasattr(self, 'beam'):
+                    if hasattr(self, 'beam') or hasattr(self, 'beams'):
                         warnings.warn("Units were Jy/beam.  The 'beam' is now "
                                       "stored in the .beam attribute, and the "
                                       "units are set to Jy")
