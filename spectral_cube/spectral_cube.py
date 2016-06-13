@@ -2412,7 +2412,7 @@ class SpectralCube(BaseSpectralCube):
 
     def spectral_smooth(self, kernel=convolution.Gaussian1DKernel(1),
                         #numcores=None,
-                        convolve=convolution.convolve_fft,
+                        convolve=convolution.convolve,
                         **kwargs):
         """
         Smooth the cube along the spectral dimension
