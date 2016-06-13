@@ -114,9 +114,7 @@ def aggregation_docstring(func):
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
 
-class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
-
-    __name__ = "SpectralCube"
+class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, read_beam=True,
@@ -262,7 +260,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         try:
             self.beam = Beam.from_fits_header(header)
-            self._meta['beam'] = self.beam
             self.pixels_per_beam = (self.beam.sr /
                                     (wcs.utils.proj_plane_pixel_area(self.wcs) *
                                      u.deg**2)).to(u.dimensionless_unscaled).value
@@ -717,7 +714,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         Examples
         --------
-        >>> cube = SpectralCube.read('xyv.fits')
         >>> newcube = cube.apply_everywhere(np.add, 0.5*u.Jy)
         """
 
@@ -1883,13 +1879,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         Returns
         -------
-        [v, y, x] : list of NumPy arryas
+        [v, y, x] : list of NumPy arrays
             The 3 world coordinates at each pixel in the view.
 
         Examples
         --------
-        >>> c = SpectralCube.read('xyv.fits')
-
         Extract the first 3 velocity channels of the cube:
         >>> v, y, x = c.world[0:3]
 
@@ -2402,6 +2396,19 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                    meta=self.meta,
                                   )
 
+
+class SpectralCube(BaseSpectralCube):
+
+    __name__ = "SpectralCube"
+
+    @property
+    def beam(self):
+        return self._meta['beam']
+
+    @beam.setter
+    def beam(self, value):
+        self._meta['beam'] = value
+
     def spectral_smooth(self, kernel=convolution.Gaussian1DKernel(1),
                         #numcores=None,
                         convolve=convolution.convolve_fft,
@@ -2562,7 +2569,44 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         return newcube
 
-class VaryingResolutionSpectralCube(SpectralCube):
+    def convolve_to(self, beam,
+                    convolve=convolution.convolve_fft):
+        """
+        Convolve each channel in the cube to a specified beam
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A SpectralCube with a single ``beam``
+        """
+
+        pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
+
+        convolution_kernel = beam.deconvolve(self.beam)
+
+        pb = ProgressBar(self.shape[0])
+
+        newdata = np.empty(self.shape)
+        for ii,img in enumerate(self.filled_data[:]):
+            newdata[ii,:,:] = convolve(img, convolution_kernel)
+            pb.update()
+
+        newcube = self._new_cube_with(data=newdata, read_beam=False)
+        newcube.beam = beam
+
+        return newcube
+
+
+class VaryingResolutionSpectralCube(BaseSpectralCube):
     """
     A variant of the SpectralCube class that has PSF (beam) information on a
     per-channel basis.

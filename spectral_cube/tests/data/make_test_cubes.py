@@ -103,3 +103,8 @@ if __name__ == "__main__":
     h['BUNIT'] = 'K' # Kelvins are a valid unit, JY/BEAM are not: they should be tested separately
     d = np.arange(2*5*5).reshape((2,5,5))
     fits.writeto('255.fits', d, h, clobber=True)
+
+    # test cube for convolution, regridding
+    d = np.zeros([2,5,5], dtype='float')
+    d[0,2,2] = 1.0
+    fits.writeto('255_delta.fits', d, h, clobber=True)

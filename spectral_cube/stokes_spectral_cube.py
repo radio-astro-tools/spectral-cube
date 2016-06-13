@@ -3,7 +3,7 @@ from __future__ import print_function, absolute_import, division
 import numpy as np
 
 from astropy.extern import six
-from .spectral_cube import SpectralCube
+from .spectral_cube import SpectralCube, BaseSpectralCube
 from . import wcs_utils
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 
@@ -30,7 +30,7 @@ class StokesSpectralCube(object):
 
         for component in stokes_data:
 
-            if not isinstance(stokes_data[component], SpectralCube):
+            if not isinstance(stokes_data[component], BaseSpectralCube):
                 raise TypeError("stokes_data should be a dictionary of "
                                 "SpectralCube objects")
 
@@ -177,7 +177,7 @@ class StokesSpectralCube(object):
         """
         from .io.core import read
         cube = read(filename, format=format, hdu=hdu)
-        if isinstance(cube, SpectralCube):
+        if isinstance(cube, BaseSpectralCube):
             cube = StokesSpectralCube({'I': cube})
         return cube
 
