@@ -38,7 +38,8 @@ from distutils.version import StrictVersion
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
-__doctest_skip__ = ['SpectralCube.world', 'SpectralCube._apply_everywhere']
+__doctest_skip__ = ['BaseSpectralCube.world',
+                    'BaseSpectralCube._apply_everywhere']
 
 try:
     from scipy import ndimage
