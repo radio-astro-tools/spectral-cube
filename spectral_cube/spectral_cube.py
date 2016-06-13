@@ -2552,6 +2552,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         newwcs.wcs.crval[2] = spectral_grid[0].value
         newwcs.wcs.cunit[2] = spectral_grid.unit.to_string('FITS')
         newwcs.wcs.cdelt[2] = outdiff.value
+        newwcs.wcs.set()
 
         newbmask = BooleanArrayMask(newmask, wcs=newwcs)
     
