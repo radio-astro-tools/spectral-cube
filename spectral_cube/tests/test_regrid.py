@@ -2,6 +2,8 @@ import pytest
 import numpy as np
 from astropy import units as u
 from astropy import convolution
+from astropy.wcs import WCS
+from astropy import wcs
 
 from .test_spectral_cube import cube_and_raw
 
@@ -31,8 +33,7 @@ def test_convolution():
     expected = convolution.Gaussian2DKernel((1.5*u.arcsec /
                                              beam.SIGMA_TO_FWHM /
                                              (5.555555555555e-4*u.deg)).decompose().value,
-                                           x_size=5,
-                                           y_size=5,
+                                            x_size=5, y_size=5,
                                            )
 
     np.testing.assert_almost_equal(expected.array,
@@ -41,6 +42,24 @@ def test_convolution():
     # 2nd layer is all zeros
     assert np.all(conv_cube.filled_data[1,:,:] == 0.0)
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_beams_convolution():
+    cube, data = cube_and_raw('255_delta_beams.fits')
+
+    # 1" convolved with 1.5" -> 1.8027....
+    target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
+                       0*u.deg)
+
+    conv_cube = cube.convolve_to(target_beam)
+
+    pixscale = wcs.utils.proj_plane_pixel_area(cube.wcs.celestial)**0.5*u.deg
+
+    for ii,bm in enumerate(cube.beams):
+        expected = target_beam.deconvolve(bm).as_kernel(pixscale, x_size=5,
+                                                        y_size=5)
+
+        np.testing.assert_almost_equal(expected.array,
+                                       conv_cube.filled_data[ii,:,:].value)
 
 @pytest.mark.skipif('not REPROJECT_INSTALLED')
 def test_reproject():
