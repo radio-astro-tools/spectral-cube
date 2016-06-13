@@ -154,7 +154,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             if bunit == 'jy/beam':
                 self._unit = u.Jy
 
-                if not read_beam:
+                if read_beam:
 
                     warnings.warn("Units are in Jy/beam. Attempting to parse "
                                   "header for beam information.")
