@@ -2570,8 +2570,7 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def convolve_to(self, beam,
-                    convolve=convolution.convolve_fft):
+    def convolve_to(self, beam, convolve=convolution.convolve_fft):
         """
         Convolve each channel in the cube to a specified beam
 
@@ -2592,7 +2591,7 @@ class SpectralCube(BaseSpectralCube):
 
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
-        convolution_kernel = beam.deconvolve(self.beam)
+        convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
 
         pb = ProgressBar(self.shape[0])
 
