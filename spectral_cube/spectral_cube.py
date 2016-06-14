@@ -118,8 +118,7 @@ np2wcs = {2: 0, 1: 1, 0: 2}
 class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, read_beam=True,
-                 wcs_tolerance=0.0):
+                 header=None, allow_huge_operations=False, wcs_tolerance=0.0):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
@@ -143,10 +142,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if not isinstance(self._header, Header):
             raise TypeError("If a header is given, it must be a fits.Header")
 
-        # Beam loading must happen *after* WCS is read
-        if read_beam:
-            self._try_load_beam(header)
-
         if 'BUNIT' in self._meta:
 
             # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
@@ -154,23 +149,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             if bunit == 'jy/beam':
                 self._unit = u.Jy
 
-                if read_beam:
-
-                    warnings.warn("Units are in Jy/beam. Attempting to parse "
-                                  "header for beam information.")
-
-                    self._try_load_beam(header)
-
-                    if hasattr(self, 'beam') or hasattr(self, 'beams'):
-                        warnings.warn("Units were Jy/beam.  The 'beam' is now "
-                                      "stored in the .beam attribute, and the "
-                                      "units are set to Jy")
-                    else:
-                        warnings.warn("Could not parse Jy/beam unit.  Either "
-                                      "you should install the radio_beam "
-                                      "package or manually replace the units."
-                                      " For now, the units are being interpreted "
-                                      "as Jy.")
 
             else:
                 try:
@@ -261,9 +239,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         try:
             self.beam = Beam.from_fits_header(header)
-            self.pixels_per_beam = (self.beam.sr /
-                                    (wcs.utils.proj_plane_pixel_area(self.wcs) *
-                                     u.deg**2)).to(u.dimensionless_unscaled).value
         except Exception as ex:
             warnings.warn("Could not parse beam information from header."
                           "  Exception was: {0}".format(ex.__repr__()))
@@ -2401,6 +2376,49 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 class SpectralCube(BaseSpectralCube):
 
     __name__ = "SpectralCube"
+
+    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
+                 header=None, allow_huge_operations=False, beam=None,
+                 read_beam=True, wcs_tolerance=0.0, **kwargs):
+
+        super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
+                                           meta=meta, fill_value=fill_value,
+                                           header=header,
+                                           allow_huge_operations=allow_huge_operations,
+                                           wcs_tolerance=wcs_tolerance,
+                                           **kwargs)
+
+        # Beam loading must happen *after* WCS is read
+        if beam is None and read_beam:
+            self._try_load_beam(header)
+
+        if beam is None and not read_beam and 'BUNIT' in self._meta:
+            bunit = re.sub("\s", "", self._meta['BUNIT'].lower())
+            if bunit == 'jy/beam':
+                warnings.warn("Units are in Jy/beam. Attempting to parse "
+                              "header for beam information.")
+
+                self._try_load_beam(header)
+
+                if hasattr(self, 'beam') or hasattr(self, 'beams'):
+                    warnings.warn("Units were Jy/beam.  The 'beam' is now "
+                                  "stored in the .beam attribute, and the "
+                                  "units are set to Jy")
+                else:
+                    warnings.warn("Could not parse Jy/beam unit.  Either "
+                                  "you should install the radio_beam "
+                                  "package or manually replace the units."
+                                  " For now, the units are being interpreted "
+                                  "as Jy.")
+
+        if beam is not None:
+            self.beam = beam
+
+        if 'beam' in self._meta:
+            self.pixels_per_beam = (self.beam.sr /
+                                    (wcs.utils.proj_plane_pixel_area(self.wcs) *
+                                     u.deg**2)).to(u.dimensionless_unscaled).value
+
 
     @property
     def beam(self):
