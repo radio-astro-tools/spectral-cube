@@ -113,4 +113,11 @@ if __name__ == "__main__":
     d[:,2,2] = 1.0
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
-    hdul.writeto('255_delta_beams.fits', clobber=True)
+    hdul.writeto('455_delta_beams.fits', clobber=True)
+
+    d = np.zeros([5,2,2], dtype='float')
+    d[2,:,:] = 1.0
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    fits.writeto('522_delta.fits', d, h, clobber=True)
+    hdul.writeto('522_delta_beams.fits', clobber=True)

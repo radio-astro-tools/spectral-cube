@@ -44,7 +44,7 @@ def test_convolution():
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_beams_convolution():
-    cube, data = cube_and_raw('255_delta_beams.fits')
+    cube, data = cube_and_raw('455_delta_beams.fits')
 
     # 1" convolved with 1.5" -> 1.8027....
     target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
@@ -81,3 +81,50 @@ def test_reproject():
     result = cube.reproject(header_out)
 
     assert result.shape == (cube.shape[0], 5, 4)
+
+def test_spectral_smooth():
+
+    cube, data = cube_and_raw('522_delta.fits')
+
+    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0))
+
+    np.testing.assert_almost_equal(result[:,0,0].value,
+                                   convolution.Gaussian1DKernel(1.0,
+                                                                x_size=5).array,
+                                   4)
+
+def test_spectral_smooth_fail():
+
+    cube, data = cube_and_raw('522_delta_beams.fits')
+
+    with pytest.raises(AttributeError) as exc:
+        cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0))
+    
+    assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
+                                 "spectrally smoothed.  Convolve to a "
+                                 "common resolution with `convolve_to` before "
+                                 "attempting spectral smoothed.")
+
+def test_spectral_interpolate():
+
+    cube, data = cube_and_raw('522_delta.fits')
+
+    # midpoint between each position
+    sg = (cube.spectral_axis[1:] + cube.spectral_axes[:-1])/2.
+
+    result = cube.spectral_interpolate(spectral_grid=sg)
+
+    np.testing.assert_almost_equal(result[:,0,0].value,
+                                   [0.0, 0.5, 0.5, 0.0])
+
+def test_spectral_interpolate_fail():
+
+    cube, data = cube_and_raw('522_delta_beams.fits')
+
+    with pytest.raises(AttributeError) as exc:
+        cube.spectral_interpolate(5)
+    
+    assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
+                                 "spectrally interpolated.  Convolve to a "
+                                 "common resolution with `convolve_to` before "
+                                 "attempting spectral interpolation.")

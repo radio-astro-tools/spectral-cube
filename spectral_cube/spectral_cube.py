@@ -2428,7 +2428,7 @@ class SpectralCube(BaseSpectralCube):
     def beam(self, value):
         self._meta['beam'] = value
 
-    def spectral_smooth(self, kernel=convolution.Gaussian1DKernel(1),
+    def spectral_smooth(self, kernel,
                         #numcores=None,
                         convolve=convolution.convolve,
                         **kwargs):
@@ -2437,8 +2437,6 @@ class SpectralCube(BaseSpectralCube):
 
         Parameters
         ----------
-        cube : `~numpy.ndarray`
-            A data cube, with ndim=3
         kernel : `~astropy.convolution.Kernel1D`
             A 1D kernel from astropy
         numcores : int
