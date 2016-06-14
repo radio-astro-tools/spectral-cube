@@ -117,7 +117,18 @@ if __name__ == "__main__":
 
     d = np.zeros([5,2,2], dtype='float')
     d[2,:,:] = 1.0
+    fits.writeto('522_delta.fits', d, h, clobber=True)
+
+    beams = np.recarray(5, dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'),
+                                  ('BPA', '>f4'), ('CHAN', '>i4'),
+                                  ('POL', '>i4')])
+    beams['BMAJ'] = [0.1,0.2,0.3,0.4,0.5] # arcseconds
+    beams['BMIN'] = [0.5,0.4,0.3,0.2,0.1]
+    beams['BPA'] = [0,45,60,30,0] # degrees
+    beams['CHAN'] = [0,0,0,0,0]
+    beams['POL'] = [0,0,0,0,0]
+    beams = fits.BinTableHDU(beams)
+
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
-    fits.writeto('522_delta.fits', d, h, clobber=True)
     hdul.writeto('522_delta_beams.fits', clobber=True)
