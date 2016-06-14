@@ -7,10 +7,10 @@ from __future__ import print_function, absolute_import, division
 import warnings
 from functools import wraps
 import operator
-import sys
 import re
 import itertools
 
+import astropy.wcs
 from astropy import units as u
 from astropy.extern import six
 from astropy.extern.six.moves import range as xrange
@@ -2416,7 +2416,7 @@ class SpectralCube(BaseSpectralCube):
 
         if 'beam' in self._meta:
             self.pixels_per_beam = (self.beam.sr /
-                                    (wcs.utils.proj_plane_pixel_area(self.wcs) *
+                                    (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
                                      u.deg**2)).to(u.dimensionless_unscaled).value
 
 
