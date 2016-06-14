@@ -110,7 +110,7 @@ def test_spectral_interpolate():
     cube, data = cube_and_raw('522_delta.fits')
 
     # midpoint between each position
-    sg = (cube.spectral_axis[1:] + cube.spectral_axes[:-1])/2.
+    sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
 
     result = cube.spectral_interpolate(spectral_grid=sg)
 
