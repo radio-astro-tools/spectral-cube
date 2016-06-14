@@ -93,6 +93,7 @@ def test_spectral_smooth():
                                                                 x_size=5).array,
                                    4)
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_spectral_smooth_fail():
 
     cube, data = cube_and_raw('522_delta_beams.fits')
@@ -117,6 +118,7 @@ def test_spectral_interpolate():
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    [0.0, 0.5, 0.5, 0.0])
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_spectral_interpolate_fail():
 
     cube, data = cube_and_raw('522_delta_beams.fits')
