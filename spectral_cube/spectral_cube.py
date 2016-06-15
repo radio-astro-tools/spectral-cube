@@ -1660,7 +1660,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         include = region_mask.include(self._data, self._wcs,
                                       wcs_tolerance=self._wcs_tolerance)
 
-        if not any(include):
+        if not include.any():
             # should this return an empty slice instead?
             raise ValueError("There are no valid pixels included.")
 
