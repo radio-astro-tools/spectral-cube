@@ -1661,8 +1661,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                       wcs_tolerance=self._wcs_tolerance)
 
         if not include.any():
-            # should this return an empty slice instead?
-            raise ValueError("There are no valid pixels included.")
+            return (slice(0),)*3
 
         slices = ndimage.find_objects(np.broadcast_arrays(include,
                                                           self._data)[0])[0]
