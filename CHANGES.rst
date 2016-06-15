@@ -1,5 +1,8 @@
 0.4.0 (unreleased)
 ------------------
+ - Whole cube convolution & reprojection has been added, including tools to
+   smooth spectrally and spatially to force two cubes onto an identical grid.
+   (https://github.com/radio-astro-tools/spectral-cube/pull/313)
  - Cube planes with bad beams will be masked out
    (https://github.com/radio-astro-tools/spectral-cube/pull/298)
  - Added a new cube type, VaryingResolutionSpectralCube, meant to handle
