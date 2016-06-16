@@ -2625,8 +2625,8 @@ class SpectralCube(BaseSpectralCube):
             newdata[ii,:,:] = convolve(img, convolution_kernel)
             pb.update()
 
-        newcube = self._new_cube_with(data=newdata, read_beam=False)
-        newcube.beam = beam
+        newcube = self._new_cube_with(data=newdata, read_beam=False,
+                                      beam=beam)
 
         return newcube
 
