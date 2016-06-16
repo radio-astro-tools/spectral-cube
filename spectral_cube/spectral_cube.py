@@ -2422,6 +2422,12 @@ class SpectralCube(BaseSpectralCube):
                                     (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
                                      u.deg**2)).to(u.dimensionless_unscaled).value
 
+    def _new_cube_with(self, **kwargs):
+        beam = kwargs.pop('beam', self.beam)
+        newcube = super(SpectralCube, self)._new_cube_with(beam=beam, **kwargs)
+        return newcube
+
+    _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
     @property
     def beam(self):
@@ -2839,7 +2845,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                                    **kwargs)
         return newcube
 
-    _new_cube_with.__doc__ = SpectralCube._new_cube_with.__doc__
+    _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
     def _check_beam_areas(self, threshold, mean_beam):
         """
@@ -3019,8 +3025,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                header=self.header,
                                allow_huge_operations=self.allow_huge_operations,
                                read_beam=False,
+                               beam=beam,
                                wcs_tolerance=self._wcs_tolerance)
-        newcube.beam = beam
 
         return newcube
 
