@@ -239,6 +239,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         try:
             self.beam = Beam.from_fits_header(header)
+            self._meta['beam'] = self.beam
         except Exception as ex:
             warnings.warn("Could not parse beam information from header."
                           "  Exception was: {0}".format(ex.__repr__()))
@@ -2416,6 +2417,7 @@ class SpectralCube(BaseSpectralCube):
 
         if beam is not None:
             self.beam = beam
+            self._meta['beam'] = beam
 
         if 'beam' in self._meta:
             self.pixels_per_beam = (self.beam.sr /
@@ -2430,14 +2432,6 @@ class SpectralCube(BaseSpectralCube):
         return newcube
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
-
-    @property
-    def beam(self):
-        return self._meta['beam']
-
-    @beam.setter
-    def beam(self, value):
-        self._meta['beam'] = value
 
     def spectral_smooth(self, kernel,
                         #numcores=None,
