@@ -2423,7 +2423,9 @@ class SpectralCube(BaseSpectralCube):
                                      u.deg**2)).to(u.dimensionless_unscaled).value
 
     def _new_cube_with(self, **kwargs):
-        beam = kwargs.pop('beam', self.beam)
+        beam = kwargs.pop('beam', None)
+        if 'beam' in self._meta and beam is None:
+            beam = self.beam
         newcube = super(SpectralCube, self)._new_cube_with(beam=beam, **kwargs)
         return newcube
 
