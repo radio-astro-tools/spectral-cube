@@ -2256,6 +2256,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
     def hdulist(self):
         return HDUList(self.hdu)
 
+    @warn_slow
     def to(self, unit, equivalencies=()):
         """
         Return the cube converted to the given unit (assuming it is equivalent).
@@ -2272,8 +2273,15 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         # scaling factor
         factor = self.unit.to(unit, equivalencies=equivalencies)
 
-        return self._new_cube_with(data=self._data*factor,
-                                   unit=unit)
+        # special case: array in equivalencies
+        # (I don't think this should have to be special cased, but I don't know
+        # how to manipulate broadcasting rules any other way)
+        if len(factor) == len(self):
+            return self._new_cube_with(data=self._data*factor[:,None,None],
+                                       unit=unit)
+        else:
+            return self._new_cube_with(data=self._data*factor,
+                                       unit=unit)
 
 
     def find_lines(self, velocity_offset=None, velocity_convention=None,
