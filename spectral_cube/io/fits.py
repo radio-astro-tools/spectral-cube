@@ -18,6 +18,7 @@ except ImportError:
     SPECTRAL_CUBE_VERSION = 'dev'
 
 from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpectralCube
+from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
 
 
@@ -192,7 +193,7 @@ def write_fits_cube(filename, cube, overwrite=False,
     Write a FITS cube with a WCS to a filename
     """
 
-    if isinstance(cube, SpectralCube):
+    if isinstance(cube, BaseSpectralCube):
         hdulist = cube.hdulist
         now = datetime.datetime.strftime(datetime.datetime.now(),
                                          "%Y/%m/%d-%H:%M:%S")

@@ -59,7 +59,11 @@ def test_3d_beams_roundtrip():
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.1)
     c.write(path('vda_beams_out.fits'))
     c2 = SpectralCube.read(path('vda_beams_out.fits'))
-    assert c==c2 # this is not implemented?
+
+    # assert c==c2 # this is not implemented?
+    assert np.all(c.filled_data[:] == c2.filled_data[:])
+    #assert c.wcs == c2.wcs # not implemented correctly?
+
     np.testing.assert_almost_equal(c2.beams[0].major.value, 0.1)
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
@@ -69,6 +73,9 @@ def test_4d_beams_roundtrip():
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.1)
     c.write(path('sdav_beams_out.fits'))
     c2 = SpectralCube.read(path('sdav_beams_out.fits'))
-    assert c==c2 # this is not implemented?
-    np.testing.assert_almost_equal(c2.beams[0].major.value, 0.1)
 
+    # assert c==c2 # this is not implemented?
+    assert np.all(c.filled_data[:] == c2.filled_data[:])
+    #assert c.wcs == c2.wcs # not implemented correctly?
+
+    np.testing.assert_almost_equal(c2.beams[0].major.value, 0.1)

@@ -7,9 +7,10 @@ from __future__ import print_function, absolute_import, division
 import warnings
 from functools import wraps
 import operator
-import sys
 import re
+import itertools
 
+import astropy.wcs
 from astropy import units as u
 from astropy.extern import six
 from astropy.extern.six.moves import range as xrange
@@ -17,6 +18,7 @@ from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
 from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
+from astropy import convolution
 
 import numpy as np
 
@@ -36,7 +38,8 @@ from distutils.version import StrictVersion
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
-__doctest_skip__ = ['SpectralCube.world', 'SpectralCube._apply_everywhere']
+__doctest_skip__ = ['BaseSpectralCube.world',
+                    'BaseSpectralCube._apply_everywhere']
 
 try:
     from scipy import ndimage
@@ -112,13 +115,10 @@ def aggregation_docstring(func):
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
 
-class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
-
-    __name__ = "SpectralCube"
+class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, read_beam=True,
-                 wcs_tolerance=0.0):
+                 header=None, allow_huge_operations=False, wcs_tolerance=0.0):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
@@ -142,10 +142,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if not isinstance(self._header, Header):
             raise TypeError("If a header is given, it must be a fits.Header")
 
-        # Beam loading must happen *after* WCS is read
-        if read_beam:
-            self._try_load_beam(header)
-
         if 'BUNIT' in self._meta:
 
             # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
@@ -153,23 +149,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             if bunit == 'jy/beam':
                 self._unit = u.Jy
 
-                if not read_beam:
-
-                    warnings.warn("Units are in Jy/beam. Attempting to parse "
-                                  "header for beam information.")
-
-                    self._try_load_beam(header)
-
-                    if hasattr(self, 'beam'):
-                        warnings.warn("Units were Jy/beam.  The 'beam' is now "
-                                      "stored in the .beam attribute, and the "
-                                      "units are set to Jy")
-                    else:
-                        warnings.warn("Could not parse Jy/beam unit.  Either "
-                                      "you should install the radio_beam "
-                                      "package or manually replace the units."
-                                      " For now, the units are being interpreted "
-                                      "as Jy.")
 
             else:
                 try:
@@ -261,9 +240,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         try:
             self.beam = Beam.from_fits_header(header)
             self._meta['beam'] = self.beam
-            self.pixels_per_beam = (self.beam.sr /
-                                    (wcs.utils.proj_plane_pixel_area(self.wcs) *
-                                     u.deg**2)).to(u.dimensionless_unscaled).value
         except Exception as ex:
             warnings.warn("Could not parse beam information from header."
                           "  Exception was: {0}".format(ex.__repr__()))
@@ -307,25 +283,24 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
             s += " and unit={0}:\n".format(self.unit)
         s += (" n_x: {0:6d}  type_x: {1:8s}  unit_x: {2:5s}"
               "  range: {3:12.6f}:{4:12.6f}\n".format(self.shape[2],
-                                                self.wcs.wcs.ctype[0],
-                                                self.wcs.wcs.cunit[0],
-                                                self.longitude_extrema[0],
-                                                self.longitude_extrema[1],
-                                               ))
+                                                      self.wcs.wcs.ctype[0],
+                                                      self.wcs.wcs.cunit[0],
+                                                      self.longitude_extrema[0],
+                                                      self.longitude_extrema[1],))
         s += (" n_y: {0:6d}  type_y: {1:8s}  unit_y: {2:5s}"
               "  range: {3:12.6f}:{4:12.6f}\n".format(self.shape[1],
-                                                self.wcs.wcs.ctype[1],
-                                                self.wcs.wcs.cunit[1],
-                                                self.latitude_extrema[0],
-                                                self.latitude_extrema[1],
-                                               ))
+                                                      self.wcs.wcs.ctype[1],
+                                                      self.wcs.wcs.cunit[1],
+                                                      self.latitude_extrema[0],
+                                                      self.latitude_extrema[1],
+                                                     ))
         s += (" n_s: {0:6d}  type_s: {1:8s}  unit_s: {2:5s}"
               "  range: {3:12.3f}:{4:12.3f}".format(self.shape[0],
-                                              self.wcs.wcs.ctype[2],
-                                              self.wcs.wcs.cunit[2],
-                                              self.spectral_extrema[0],
-                                              self.spectral_extrema[1],
-                                             ))
+                                                    self.wcs.wcs.ctype[2],
+                                                    self.wcs.wcs.cunit[2],
+                                                    self.spectral_extrema[0],
+                                                    self.spectral_extrema[1],
+                                                   ))
         return s
 
     @property
@@ -716,7 +691,6 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         Examples
         --------
-        >>> cube = SpectralCube.read('xyv.fits')
         >>> newcube = cube.apply_everywhere(np.add, 0.5*u.Jy)
         """
 
@@ -924,12 +898,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         version of the cube
         """
         lon,lat,spec = self.world[view]
-        spec = self._mask._flattened(data=spec, wcs=self._wcs,
-                                     view=slice)
-        lon = self._mask._flattened(data=lon, wcs=self._wcs,
-                                     view=slice)
-        lat = self._mask._flattened(data=lat, wcs=self._wcs,
-                                     view=slice)
+        spec = self._mask._flattened(data=spec, wcs=self._wcs, view=slice)
+        lon = self._mask._flattened(data=lon, wcs=self._wcs, view=slice)
+        lat = self._mask._flattened(data=lat, wcs=self._wcs, view=slice)
         return lat,lon,spec
 
     def median(self, axis=None, iterate_rays=False, **kwargs):
@@ -1672,7 +1643,7 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
         Parameters
         ----------
         region_mask: `masks.MaskBase` or boolean `numpy.ndarray`
-            The mask with appropraite WCS or an ndarray with matched
+            The mask with appropriate WCS or an ndarray with matched
             coordinates
         spatial_only: bool
             Return only slices that affect the spatial dimensions; the spectral
@@ -1689,6 +1660,9 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         include = region_mask.include(self._data, self._wcs,
                                       wcs_tolerance=self._wcs_tolerance)
+
+        if not include.any():
+            return (slice(0),)*3
 
         slices = ndimage.find_objects(np.broadcast_arrays(include,
                                                           self._data)[0])[0]
@@ -1885,13 +1859,11 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         Returns
         -------
-        [v, y, x] : list of NumPy arryas
+        [v, y, x] : list of NumPy arrays
             The 3 world coordinates at each pixel in the view.
 
         Examples
         --------
-        >>> c = SpectralCube.read('xyv.fits')
-
         Extract the first 3 velocity channels of the cube:
         >>> v, y, x = c.world[0:3]
 
@@ -2404,7 +2376,258 @@ class SpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                    meta=self.meta,
                                   )
 
-class VaryingResolutionSpectralCube(SpectralCube):
+
+class SpectralCube(BaseSpectralCube):
+
+    __name__ = "SpectralCube"
+
+    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
+                 header=None, allow_huge_operations=False, beam=None,
+                 read_beam=True, wcs_tolerance=0.0, **kwargs):
+
+        super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
+                                           meta=meta, fill_value=fill_value,
+                                           header=header,
+                                           allow_huge_operations=allow_huge_operations,
+                                           wcs_tolerance=wcs_tolerance,
+                                           **kwargs)
+
+        # Beam loading must happen *after* WCS is read
+        if beam is None and read_beam:
+            self._try_load_beam(header)
+
+        if beam is None and not read_beam and 'BUNIT' in self._meta:
+            bunit = re.sub("\s", "", self._meta['BUNIT'].lower())
+            if bunit == 'jy/beam':
+                warnings.warn("Units are in Jy/beam. Attempting to parse "
+                              "header for beam information.")
+
+                self._try_load_beam(header)
+
+                if hasattr(self, 'beam') or hasattr(self, 'beams'):
+                    warnings.warn("Units were Jy/beam.  The 'beam' is now "
+                                  "stored in the .beam attribute, and the "
+                                  "units are set to Jy")
+                else:
+                    warnings.warn("Could not parse Jy/beam unit.  Either "
+                                  "you should install the radio_beam "
+                                  "package or manually replace the units."
+                                  " For now, the units are being interpreted "
+                                  "as Jy.")
+
+        if beam is not None:
+            self.beam = beam
+            self._meta['beam'] = beam
+
+        if 'beam' in self._meta:
+            self.pixels_per_beam = (self.beam.sr /
+                                    (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
+                                     u.deg**2)).to(u.dimensionless_unscaled).value
+
+    def _new_cube_with(self, **kwargs):
+        beam = kwargs.pop('beam', None)
+        if 'beam' in self._meta and beam is None:
+            beam = self.beam
+        newcube = super(SpectralCube, self)._new_cube_with(beam=beam, **kwargs)
+        return newcube
+
+    _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
+
+    def spectral_smooth(self, kernel,
+                        #numcores=None,
+                        convolve=convolution.convolve,
+                        **kwargs):
+        """
+        Smooth the cube along the spectral dimension
+
+        Parameters
+        ----------
+        kernel : `~astropy.convolution.Kernel1D`
+            A 1D kernel from astropy
+        numcores : int
+            Number of cores to use in parallel-processing.
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        kwargs : dict
+            Passed to the convolve function
+        """
+
+        shape = self.shape
+
+        # "cubelist" is a generator
+        # the boolean check will skip smoothing for bad spectra
+        # TODO: should spatial good/bad be cached?
+        cubelist = ((self.filled_data[:,jj,ii],
+                     self.mask.include(view=(slice(None), jj, ii)))
+                    for jj in xrange(self.shape[1])
+                    for ii in xrange(self.shape[2]))
+
+        pb = ProgressBar(shape[1]*shape[2])
+
+        def _gsmooth_spectrum(args):
+            """
+            Helper function to smooth a spectrum
+            """
+            (spec, includemask),kernel,kwargs = args
+            pb.update()
+
+            if any(includemask):
+                return convolve(spec, kernel, normalize_kernel=True, **kwargs)
+            else:
+                return spec
+
+        # could be numcores, except _gsmooth_spectrum is unpicklable
+        with cube_utils._map_context(1) as map:
+            smoothcube_ = np.array([x for x in
+                                    map(_gsmooth_spectrum, zip(cubelist,
+                                                               itertools.cycle([kernel]),
+                                                               itertools.cycle([kwargs]),
+                                                              )
+                                       )
+                                   ]
+                                  )
+
+        # empirical: need to swapaxes to get shape right
+        # cube = np.arange(6*5*4).reshape([4,5,6]).swapaxes(0,2)
+        # cubelist.T.reshape(cube.shape) == cube
+        smoothcube = smoothcube_.T.reshape(shape)
+
+        # TODO: do something about the mask?
+        newcube = self._new_cube_with(data=smoothcube, wcs=self.wcs,
+                                      mask=self.mask, meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
+
+    def spectral_interpolate(self, spectral_grid,
+                             suppress_smooth_warning=False):
+        """
+        Resample the cube spectrally onto a specific grid
+
+        Parameters
+        ----------
+        spectral_grid : array
+            An array of the spectral positions to regrid onto
+        suppress_smooth_warning : bool
+            If disabled, a warning will be raised when interpolating onto a
+            grid that does not nyquist sample the existing grid.  Disable this
+            if you have already appropriately smoothed the data.
+
+        Returns
+        -------
+        cube : SpectralCube
+        """
+
+        inaxis = self.spectral_axis.to(spectral_grid.unit)
+ 
+        indiff = np.mean(np.diff(inaxis))
+        outdiff = np.mean(np.diff(spectral_grid))
+
+        # account for reversed axes
+        if outdiff < 0:
+            spectral_grid=spectral_grid[::-1]
+            outdiff = np.mean(np.diff(spectral_grid))
+
+        if indiff < 0:
+            cubedata = self.filled_data[::-1]
+            inaxis = inaxis[::-1]
+            indiff *= -1
+        else:
+            cubedata = self.filled_data[:]
+
+        # insanity checks
+        if indiff < 0 or outdiff < 0:
+            raise ValueError("impossible.")
+    
+        assert np.all(np.diff(spectral_grid) > 0)
+        assert np.all(np.diff(inaxis) > 0)
+    
+        np.testing.assert_allclose(np.diff(spectral_grid), outdiff,
+                                   err_msg="Output grid must be linear")
+    
+        if outdiff > 2 * indiff and not suppress_smooth_warning:
+            warnings.warn("Input grid has too small a spacing.  The data should "
+                          "be smoothed prior to resampling.")
+    
+        newcube = np.empty([spectral_grid.size, self.shape[1], self.shape[2]],
+                           dtype=cubedata.dtype)
+        newmask = np.empty([spectral_grid.size, self.shape[1], self.shape[2]],
+                           dtype='bool')
+    
+        yy,xx = np.indices(self.shape[1:])
+    
+        pb = ProgressBar(xx.size)
+        for ix, iy in (zip(xx.flat, yy.flat)):
+            mask = self.mask.include(view=(slice(None), iy, ix))
+            if any(mask):
+                newcube[:,iy,ix] = np.interp(spectral_grid.value, inaxis.value,
+                                             cubedata[:,iy,ix].value)
+                if all(mask):
+                    newmask[:,iy,ix] = True
+                else:
+                    newmask[:,iy,ix] = np.interp(spectral_grid.value,
+                                                 inaxis.value, mask) > 0
+            pb.update()
+    
+        newheader = self.header
+        newheader['CRPIX3'] = 1
+        newheader['CRVAL3'] = spectral_grid[0].value
+        newheader['CDELT3'] = outdiff.value
+        newheader['CUNIT3'] = spectral_grid.unit.to_string('FITS')
+        newwcs = self.wcs.copy()
+        newwcs.wcs.crpix[2] = 1
+        newwcs.wcs.crval[2] = spectral_grid[0].value
+        newwcs.wcs.cunit[2] = spectral_grid.unit.to_string('FITS')
+        newwcs.wcs.cdelt[2] = outdiff.value
+        newwcs.wcs.set()
+
+        newbmask = BooleanArrayMask(newmask, wcs=newwcs)
+    
+        newcube = self._new_cube_with(data=newcube, wcs=newwcs, mask=newbmask,
+                                      meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
+
+    def convolve_to(self, beam, convolve=convolution.convolve_fft):
+        """
+        Convolve each channel in the cube to a specified beam
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A SpectralCube with a single ``beam``
+        """
+
+        pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
+
+        convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
+
+        pb = ProgressBar(self.shape[0])
+
+        newdata = np.empty(self.shape)
+        for ii,img in enumerate(self.filled_data[:]):
+            newdata[ii,:,:] = convolve(img, convolution_kernel)
+            pb.update()
+
+        newcube = self._new_cube_with(data=newdata, read_beam=False,
+                                      beam=beam)
+
+        return newcube
+
+
+class VaryingResolutionSpectralCube(BaseSpectralCube):
     """
     A variant of the SpectralCube class that has PSF (beam) information on a
     per-channel basis.
@@ -2618,7 +2841,7 @@ class VaryingResolutionSpectralCube(SpectralCube):
                                                    **kwargs)
         return newcube
 
-    _new_cube_with.__doc__ = SpectralCube._new_cube_with.__doc__
+    _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
     def _check_beam_areas(self, threshold, mean_beam):
         """
@@ -2747,6 +2970,74 @@ class VaryingResolutionSpectralCube(SpectralCube):
         bmhdu = beams_to_bintable(self.beams)
 
         return HDUList([hdu, bmhdu])
+
+    def convolve_to(self, beam, allow_smaller=False,
+                    convolve=convolution.convolve_fft):
+        """
+        Convolve each channel in the cube to a specified beam
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        allow_smaller : bool
+            If the specified target beam is smaller than the beam in a channel
+            in any dimension and this is ``False``, it will raise an exception.
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A SpectralCube with a single ``beam``
+        """
+
+        pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
+
+        convolution_kernels = []
+        for bm in self.beams:
+            try:
+                cb = beam.deconvolve(bm)
+                ck = cb.as_kernel(pixscale)
+                convolution_kernels.append(ck)
+            except ValueError:
+                if allow_smaller:
+                    convolution_kernels.append(None)
+                else:
+                    raise
+
+        pb = ProgressBar(self.shape[0])
+
+        newdata = np.empty(self.shape)
+        for ii,(img,kernel) in enumerate(zip(self.filled_data[:],
+                                             convolution_kernels)):
+            newdata[ii,:,:] = convolve(img, kernel)
+            pb.update()
+
+        newcube = SpectralCube(data=newdata, wcs=self.wcs, mask=self.mask,
+                               meta=self.meta, fill_value=self.fill_value,
+                               header=self.header,
+                               allow_huge_operations=self.allow_huge_operations,
+                               read_beam=False,
+                               beam=beam,
+                               wcs_tolerance=self._wcs_tolerance)
+
+        return newcube
+
+    def spectral_interpolate(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally interpolated.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral interpolation.")
+    
+    def spectral_smooth(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally smoothed.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral smoothed.")
+            
 
 
 def determine_format_from_filename(filename):
