@@ -1085,6 +1085,24 @@ def test_multibeam_slice():
     np.testing.assert_almost_equal(flatslice.header['BMAJ'],
                                    (0.1/3600.))
 
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_beam_jtok_array():
+
+    cube, data = cube_and_raw('advs.fits')
+    # technically this should be jy/beam, but astropy's equivalency doesn't
+    # handle this yet
+    cube._meta['BUNIT'] = 'Jy'
+    cube._unit = u.Jy
+
+    equiv = cube.beam.jtok_equiv(cube.with_spectral_unit(u.GHz).spectral_axis)
+    jtok = cube.beam.jtok(cube.with_spectral_unit(u.GHz).spectral_axis)
+
+    Kcube = cube.to(u.K, equivalencies=equiv)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    jtok[:,None,None]).value)
+
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_varyres_moment():
     cube, data = cube_and_raw('vda_beams.fits')
