@@ -1099,8 +1099,9 @@ def test_beam_jtok_array():
     jtok = cube.beam.jtok(cube.with_spectral_unit(u.GHz).spectral_axis)
 
     Kcube = cube.to(u.K, equivalencies=equiv)
-    np.testing.assert_almost_equal(Kcube.filled_data[:],
-                                   cube.filled_data[:] * jtok)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    jtok[:,None,None]).value)
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_varyres_moment():
