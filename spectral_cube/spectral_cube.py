@@ -1075,9 +1075,10 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         newmask = self._mask[view] if self._mask is not None else None
 
+        newwcs = wcs_utils.slice_wcs(self._wcs, view, shape=self.shape)
+
         return self._new_cube_with(data=self._data[view],
-                                   wcs=wcs_utils.slice_wcs(self._wcs, view,
-                                                           shape=self.shape),
+                                   wcs=newwcs,
                                    mask=newmask,
                                    meta=meta)
 
@@ -2276,7 +2277,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         # special case: array in equivalencies
         # (I don't think this should have to be special cased, but I don't know
         # how to manipulate broadcasting rules any other way)
-        if len(factor) == len(self):
+        if hasattr(factor, '__len__') and len(factor) == len(self):
             return self._new_cube_with(data=self._data*factor[:,None,None],
                                        unit=unit)
         else:
@@ -2788,8 +2789,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         newmask = self._mask[view] if self._mask is not None else None
 
+        newwcs = wcs_utils.slice_wcs(self._wcs, view, shape=self.shape)
+
         return self._new_cube_with(data=self._data[view],
-                                   wcs=wcs_utils.slice_wcs(self._wcs, view),
+                                   wcs=newwcs,
                                    mask=newmask,
                                    beams=self.beams[specslice],
                                    meta=meta)
