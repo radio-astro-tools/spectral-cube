@@ -119,11 +119,11 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         return new
 
     def __array_finalize__(self, obj):
-        self._unit = getattr(obj, '_unit', None)
         self._wcs = getattr(obj, '_wcs', None)
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
         self._header = getattr(obj, '_header', None)
+        super(LowerDimensionalObject, self).__array_finalize__(obj)
 
     @property
     def __array_priority__(self):
