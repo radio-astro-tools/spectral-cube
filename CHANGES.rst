@@ -19,6 +19,11 @@
    error resulted in incorrect spectral coordinate conversions
    (https://github.com/radio-astro-tools/spectral-cube/pull/276)
 
+0.3.2 (2016-07-11)
+------------------
+
+ - Bugfix in configuration
+
 0.3.1 (2016-02-04)
 ------------------
 
