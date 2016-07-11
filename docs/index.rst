@@ -61,6 +61,7 @@ Getting started
    masking.rst
    arithmetic.rst
    manipulating.rst
+   smoothing.rst
    writing.rst
    moments.rst
    quick_looks.rst
