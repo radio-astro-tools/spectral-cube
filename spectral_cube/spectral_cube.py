@@ -1763,7 +1763,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             pixel_regions = shapelist.as_imagecoord(celhdr)
             recompute_shifted_mask = False
         else:
-            pixel_regions = copy.copy(shapelist)
+            pixel_regions = copy.deepcopy(shapelist)
             # we need to change the reference pixel after cropping
             recompute_shifted_mask = True
 
@@ -1815,7 +1815,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             # for pixel-based regions (which we use in tests), we need to shift
             # the coordinates for mask computation because we're cropping the
             # cube
-            for reg in shapelist:
+            for reg in pixel_regions:
                 reg.params[0].v -= xlo
                 reg.params[1].v -= ylo
                 reg.params[0].text = str(reg.params[0].v)
@@ -1823,8 +1823,14 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                 reg.coord_list[0] -= xlo
                 reg.coord_list[1] -= ylo
 
-        mask = shapelist.get_mask(header=subcube.wcs.celestial.to_header(),
-                                  shape=subcube.shape[1:])
+            # use the pixel-based, shifted mask
+            mask = pixel_regions.get_mask(header=subcube.wcs.celestial.to_header(),
+                                          shape=subcube.shape[1:])
+        else:
+            # use the original, coordinate-based mask since the pixel mask has
+            # *not* been shfited to match the original coordinate system
+            mask = shapelist.get_mask(header=subcube.wcs.celestial.to_header(),
+                                      shape=subcube.shape[1:])
 
         if not allow_empty and mask.sum() == 0:
             raise ValueError("The derived subset is empty: the region does not"
