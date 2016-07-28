@@ -9,6 +9,7 @@ from functools import wraps
 import operator
 import re
 import itertools
+import copy
 
 import astropy.wcs
 from astropy import units as u
@@ -1762,7 +1763,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             pixel_regions = shapelist.as_imagecoord(celhdr)
             recompute_shifted_mask = False
         else:
-            pixel_regions = shapelist
+            pixel_regions = copy.copy(shapelist)
             # we need to change the reference pixel after cropping
             recompute_shifted_mask = True
 
