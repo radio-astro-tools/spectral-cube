@@ -29,6 +29,7 @@ env:
         - NUMPY_VERSION=1.10
         - ASTROPY_VERSION=stable
         - CONDA_DEPENDENCIES='matplotlib aplpy'
+        - CONDA_CHANNELS='astropy-ci-extras astropy'
         - PIP_DEPENDENCIES='pytest-xdist pvextractor'
         - SETUP_XVFB=True
 
