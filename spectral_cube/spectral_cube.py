@@ -2210,9 +2210,9 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             import pyds9 as ds9
 
         if ds9id is None:
-            dd = ds9.ds9(start=True)
+            dd = ds9.DS9(start=True)
         else:
-            dd = ds9.ds9(target=ds9id, start=False)
+            dd = ds9.DS9(target=ds9id, start=False)
 
         if newframe:
             dd.set('frame new')
