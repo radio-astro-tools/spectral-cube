@@ -8,8 +8,8 @@ In addition to supporting the representation of data and associated WCS, it
 is also possible to attach a boolean mask to the
 :class:`~spectral_cube.SpectralCube` class. Masks can take
 various forms, but one of the more common ones is a cube with the same
-dimensions as the data, and that contains e.g. the boolean value ``True`` where
-data should be used, and the value ``False`` when the data should be ignored
+dimensions as the data, and that contains e.g. the boolean value `True` where
+data should be used, and the value `False` when the data should be ignored
 (though it is also possible to flip the convention around). To create a
 boolean mask from a boolean array ``mask_array``, you can for example use::
 
@@ -99,10 +99,10 @@ Inclusion and Exclusion
 The term "mask" is often used to refer both to the act of exluding
 and including pixels from analysis. To be explicit about how they behave,
 all mask objects have an
-:meth:`~spectral_cube.masks.MaskBase.include` method that returns a boolean
-array. True values in this array indicate that the pixel is included/valid,
-and not filtered/replaced in any way. Conversely, True values in the output
-from :meth:`~spectral_cube.masks.MaskBase.exclude`
+:meth:`~spectral_cube.MaskBase.include` method that returns a boolean
+array. `True` values in this array indicate that the pixel is included/valid,
+and not filtered/replaced in any way. Conversely, `True` values in the output
+from :meth:`~spectral_cube.MaskBase.exclude`
 indicate the pixel is excluded/invalid, and will be filled/filtered.
 The inclusion/exclusion behavior of any mask can be inverted via
 ``mask_inverse = ~mask``.
@@ -143,7 +143,7 @@ Outputting masks
 ----------------
 
 The attached mask to the given :class:`~spectral_cube.SpectralCube` class can
-be converted into a CASA image using :func:`~spectral_cube.io.make_casa_mask`:
+be converted into a CASA image using :func:`~spectral_cube.io.casa_masks.make_casa_mask`:
 
   >>> from spectral_cube.io.casa_masks import make_casa_mask
   >>> make_casa_mask(cube, 'casa_mask.image', add_stokes=False)  # doctest: +SKIP

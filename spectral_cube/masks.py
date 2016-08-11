@@ -9,7 +9,7 @@ from . import wcs_utils
 from .lower_dimensional_structures import Projection
 
 
-__all__ = ['InvertedMask', 'CompositeMask', 'BooleanArrayMask',
+__all__ = ['MaskBase', 'InvertedMask', 'CompositeMask', 'BooleanArrayMask',
            'LazyMask', 'LazyComparisonMask', 'FunctionMask']
 
 # Global version of the with_spectral_unit docs to avoid duplicating them
@@ -453,7 +453,7 @@ class LazyMask(MaskBase):
     function : callable
         The function to apply to ``data``. This method should accept
         a numpy array, which will be a subset of the data array passed
-        to __init__. It should return a boolean array, where True values
+        to __init__. It should return a boolean array, where `True` values
         indicate that which pixels are valid/unaffected by masking.
     data : array-like
         The array to evaluate ``function`` on. This should support Numpy-like
@@ -533,7 +533,7 @@ class LazyComparisonMask(LazyMask):
         The function to apply to ``data``. This method should accept
         a numpy array, which will be the data array passed to __init__,  and a
         second argument also passed to __init__. It should return a boolean
-        array, where True values indicate that which pixels are
+        array, where `True` values indicate that which pixels are
         valid/unaffected by masking.
     comparison_value : float or array
         The comparison value for the array

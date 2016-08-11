@@ -7,6 +7,8 @@ import warnings
 
 from ..wcs_utils import add_stokes_axis_to_wcs
 
+__all__ = ['make_casa_mask']
+
 
 def make_casa_mask(SpecCube, outname, append_to_image=True,
                    img=None, add_stokes=True, stokes_posn=None):

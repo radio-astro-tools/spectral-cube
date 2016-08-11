@@ -1,12 +1,9 @@
 Spectral Cube documentation
 ===========================
 
-The ``spectral-cube`` package provides an easy way to read, manipulate,
-analyze, and write data cubes with two positional dimensions and one
-spectral dimension, optionally with Stokes parameters.
-
-``spectral-cube`` aims to be a versatile data container for building
-custom analysis routines. It provides the following main features:
+The spectral-cube package provides an easy way to read, manipulate, analyze,
+and write data cubes with two positional dimensions and one spectral dimension,
+optionally with Stokes parameters. It provides the following main features:
 
 - A uniform interface to spectral cubes, robust to the
   wide range of conventions of axis order, spatial projections,
@@ -19,7 +16,7 @@ custom analysis routines. It provides the following main features:
 Quick start
 -----------
 
-Here's a simple script demonstrating ``spectral-cube``::
+Here's a simple script demonstrating the spectral-cube package::
 
     >>> import astropy.units as u
     >>> from spectral_cube import SpectralCube
@@ -40,8 +37,8 @@ Here's a simple script demonstrating ``spectral-cube``::
     >>> m1 = masked_slab.moment(order=1)  # doctest: +SKIP
     >>> m1.write('moment_1.fits')  # doctest: +SKIP
 
-Using ``spectral-cube``
------------------------
+Using spectral-cube
+-------------------
 
 The package centers around the
 :class:`~spectral_cube.SpectralCube` class. In the following
