@@ -44,7 +44,7 @@ plotting packages such as APLpy::
 Linewidth maps
 --------------
 
-Making linewidth maps (sometimes referered to as second moment maps in radio
+Making linewidth maps (sometimes refered to as second moment maps in radio
 astronomy), you can use:
 
     >>> sigma_map = cube.linewidth_sigma()  # doctest: +SKIP
