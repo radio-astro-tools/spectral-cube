@@ -59,7 +59,7 @@ def test(package=None, test_path=None, args=None, plugins=None,
 
     verbose : bool, optional
         Convenience option to turn on verbose output from py.test_. Passing
-        True is the same as specifying ``'-v'`` in ``args``.
+        `True` is the same as specifying ``'-v'`` in ``args``.
 
     pastebin : {'failed','all',None}, optional
         Convenience option for turning on py.test_ pastebin output. Set to
@@ -68,7 +68,7 @@ def test(package=None, test_path=None, args=None, plugins=None,
 
     remote_data : bool, optional
         Controls whether to run tests marked with @remote_data. These
-        tests use online data and are not run by default. Set to True to
+        tests use online data and are not run by default. Set to `True` to
         run these tests.
 
     pep8 : bool, optional

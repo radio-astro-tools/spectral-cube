@@ -2,7 +2,7 @@ Quick Looks
 ===========
 
 Once you've loaded a cube, you inevitably will want to look at it in various
-ways.  Slices in any direction have `quicklook` methods:
+ways.  Slices in any direction have ``quicklook`` methods:
 
     >>> cube[50,:,:].quicklook() # show an image  # doctest: +SKIP
     >>> cube[:, 50, 50].quicklook() # plot a spectrum  # doctest: +SKIP

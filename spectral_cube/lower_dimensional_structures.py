@@ -12,10 +12,12 @@ import numpy as np
 from .base_class import BaseNDClass, SpectralAxisMixinClass
 from .cube_utils import beams_to_bintable
 
+__all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
+
 
 class LowerDimensionalObject(u.Quantity, BaseNDClass):
     """
-    Generic class for 1D and 2D objects
+    Generic class for 1D and 2D objects.
     """
 
     @property
@@ -63,7 +65,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         format : str
             The kind of file to write. (Currently limited to 'fits')
         overwrite : bool
-            If True, overwrite `filename` if it exists
+            If True, overwrite ``filename`` if it exists
         """
         if format is None:
             format = determine_format(filename)
@@ -75,8 +77,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
     def to(self, unit, equivalencies=[]):
         """
-        Return a new ``LowerDimensionalObject'' of the same class with the
-        specified unit.  See `astropy.units.Quantity.to` for further details.
+        Return a new `LowerDimensionalObject` of the same class with the
+        specified unit.
+
+        See `astropy.units.Quantity.to` for further details.
         """
         converted_array = u.Quantity.to(self, unit,
                                         equivalencies=equivalencies).value
@@ -156,8 +160,9 @@ class Projection(LowerDimensionalObject):
 
     def quicklook(self, filename=None, use_aplpy=True):
         """
-        Use aplpy to make a quick-look image of the projection.  This will make
-        the `FITSFigure` attribute available.
+        Use `APLpy <https://pypi.python.org/pypi/APLpy>`_ to make a quick-look
+        image of the projection. This will make the ``FITSFigure`` attribute
+        available.
 
         If there are unmatched celestial axes, this will instead show an image
         without axis labels.
