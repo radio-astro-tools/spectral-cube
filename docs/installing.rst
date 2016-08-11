@@ -38,4 +38,4 @@ You may need to add the ``--user`` option to the last line `if you do not
 have root access <https://docs.python.org/2/install/#alternate-installation-the-user-scheme>`_.
 You can also install the latest developer version in a single line with pip::
 
-    pip install https://github.com/radio-astro-tools/spectral-cube/archive/master.zip
+    pip install git+https://github.com/radio-astro-tools/spectral-cube.git
