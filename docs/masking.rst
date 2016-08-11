@@ -107,8 +107,9 @@ array. `True` values in this array indicate that the pixel is included/valid,
 and not filtered/replaced in any way. Conversely, `True` values in the output
 from :meth:`~spectral_cube.MaskBase.exclude`
 indicate the pixel is excluded/invalid, and will be filled/filtered.
-The inclusion/exclusion behavior of any mask can be inverted via
-``mask_inverse = ~mask``.
+The inclusion/exclusion behavior of any mask can be inverted via::
+
+    >>> mask_inverse = ~mask
 
 Advanced masking
 ----------------
@@ -137,7 +138,7 @@ can also be defined directly by specifying conditions on
 :class:`~spectral_cube.SpectralCube` objects:
 
    >>> cube > 5*u.K  # doctest: +SKIP
-       LazyComparisonMask(...)
+   LazyComparisonMask(...)
 
 .. TODO: add example for FunctionalMask
 
@@ -151,9 +152,11 @@ be converted into a CASA image using :func:`~spectral_cube.io.casa_masks.make_ca
   >>> from spectral_cube.io.casa_masks import make_casa_mask
   >>> make_casa_mask(cube, 'casa_mask.image', add_stokes=False)  # doctest: +SKIP
 
-Optionally, a redundant Stokes axis can be added to match the original CASA image.
-.. Masks may also be appended to an existing CASA image:
-..  >>> make_casa_mask(cube, 'casa_mask.image', append_to_img=True, img='casa.image')
+Optionally, a redundant Stokes axis can be added to match the original CASA
+image. Masks may also be appended to an existing CASA image::
+
+  >>> make_casa_mask(cube, 'casa_mask.image', append_to_img=True,
+  ...                img='casa.image')
 
 .. note::
     Outputting to CASA masks requires that `spectral_cube` be run from a CASA python session.
