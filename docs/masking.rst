@@ -18,6 +18,11 @@ boolean mask from a boolean array ``mask_array``, you can for example use::
     >>> from spectral_cube import BooleanArrayMask
     >>> mask = BooleanArrayMask(mask=mask_array, wcs=cube.wcs)  # doctest: +SKIP
 
+.. note::
+
+   Currently, the mask convention is opposite of what is defined for
+   Numpy masked array and Astropy ``Table``.
+
 Using a pure boolean array may not always be the most efficient solution,
 because it may require a large amount of memory.
 
