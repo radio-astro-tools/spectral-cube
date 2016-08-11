@@ -35,7 +35,7 @@ memory-mapped array, because an operation like ``(x * 3)`` will require
 more RAM than exists on your system. A better way to compute y is
 by working with a single slice of ``x`` at a time::
 
-    y = x[0] * 0
+    y = np.zeros_like(x[0])
     for plane in x:
         y += np.abs(plane * 3 + 10)
 
