@@ -17,3 +17,6 @@ Examples::
 
 Each of these cubes is a new cube in memory.  Note that for addition and
 subtraction, the units must be equivalent to those of the cube.
+
+Please see :ref:`doc_handling_large_datasets` for details on how to perform
+arithmetic operations on a small subset of data at a time.

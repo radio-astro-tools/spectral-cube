@@ -1,3 +1,5 @@
+.. _doc_handling_large_datasets:
+
 Handling large datasets
 =======================
 .. currentmodule:: spectral_cube
