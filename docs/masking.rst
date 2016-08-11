@@ -10,7 +10,8 @@ is also possible to attach a boolean mask to the
 various forms, but one of the more common ones is a cube with the same
 dimensions as the data, and that contains e.g. the boolean value `True` where
 data should be used, and the value `False` when the data should be ignored
-(though it is also possible to flip the convention around). To create a
+(though it is also possible to flip the convention around; see
+:ref:`mask_inclusion_exclusion`). To create a
 boolean mask from a boolean array ``mask_array``, you can for example use::
 
     >>> from astropy import units as u
@@ -93,6 +94,8 @@ change the fill value on a cube, you can make use of the
 This returns a new :class:`~spectral_cube.SpectralCube` instance that
 contains a view to the same data in ``cube`` (so no data are copied).
 
+.. _mask_inclusion_exclusion:
+
 Inclusion and Exclusion
 -----------------------
 
@@ -170,28 +173,28 @@ If you see errors such as ``WCS does not match mask WCS``, but you're confident
 that your two cube are on the same grid, you should have a look at the
 ``cube.wcs`` attribute and see if there are subtle differences in the world
 coordinate parameters.  These frequently occur when converting from frequency
-to velocity as there is inadequate precision in the rest frequency. 
+to velocity as there is inadequate precision in the rest frequency.
 
 For example, these two axes are *nearly* identical, but not perfectly so::
 
     Number of WCS axes: 3
-    CTYPE : 'RA---SIN'  'DEC--SIN'  'VRAD'  
-    CRVAL : 269.08866286689999  -21.956244813729999  -3000.000559989533  
-    CRPIX : 161.0  161.0  1.0  
-    PC1_1 PC1_2 PC1_3  : 1.0  0.0  0.0  
-    PC2_1 PC2_2 PC2_3  : 0.0  1.0  0.0  
-    PC3_1 PC3_2 PC3_3  : 0.0  0.0  1.0  
-    CDELT : -1.3888888888889999e-05  1.3888888888889999e-05  299.99999994273281  
+    CTYPE : 'RA---SIN'  'DEC--SIN'  'VRAD'
+    CRVAL : 269.08866286689999  -21.956244813729999  -3000.000559989533
+    CRPIX : 161.0  161.0  1.0
+    PC1_1 PC1_2 PC1_3  : 1.0  0.0  0.0
+    PC2_1 PC2_2 PC2_3  : 0.0  1.0  0.0
+    PC3_1 PC3_2 PC3_3  : 0.0  0.0  1.0
+    CDELT : -1.3888888888889999e-05  1.3888888888889999e-05  299.99999994273281
     NAXIS    : 0 0
 
     Number of WCS axes: 3
-    CTYPE : 'RA---SIN'  'DEC--SIN'  'VRAD'  
-    CRVAL : 269.08866286689999  -21.956244813729999  -3000.0000242346514  
-    CRPIX : 161.0  161.0  1.0  
-    PC1_1 PC1_2 PC1_3  : 1.0  0.0  0.0  
-    PC2_1 PC2_2 PC2_3  : 0.0  1.0  0.0  
-    PC3_1 PC3_2 PC3_3  : 0.0  0.0  1.0  
-    CDELT : -1.3888888888889999e-05  1.3888888888889999e-05  300.00000001056611  
+    CTYPE : 'RA---SIN'  'DEC--SIN'  'VRAD'
+    CRVAL : 269.08866286689999  -21.956244813729999  -3000.0000242346514
+    CRPIX : 161.0  161.0  1.0
+    PC1_1 PC1_2 PC1_3  : 1.0  0.0  0.0
+    PC2_1 PC2_2 PC2_3  : 0.0  1.0  0.0
+    PC3_1 PC3_2 PC3_3  : 0.0  0.0  1.0
+    CDELT : -1.3888888888889999e-05  1.3888888888889999e-05  300.00000001056611
     NAXIS    : 0 0
 
 In order to compose masks from these, we need to set the ``wcs_tolerance`` parameter::
