@@ -158,10 +158,11 @@ be converted into a CASA image using :func:`~spectral_cube.io.casa_masks.make_ca
   >>> make_casa_mask(cube, 'casa_mask.image', add_stokes=False)  # doctest: +SKIP
 
 Optionally, a redundant Stokes axis can be added to match the original CASA
-image. Masks may also be appended to an existing CASA image::
+image.
 
-  >>> make_casa_mask(cube, 'casa_mask.image', append_to_img=True,
-  ...                img='casa.image')
+.. Masks may also be appended to an existing CASA image::
+..   >>> make_casa_mask(cube, 'casa_mask.image', append_to_img=True,
+..                      img='casa.image')
 
 .. note::
     Outputting to CASA masks requires that `spectral_cube` be run from a CASA python session.
