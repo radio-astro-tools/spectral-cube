@@ -114,7 +114,7 @@ from :meth:`~spectral_cube.MaskBase.exclude`
 indicate the pixel is excluded/invalid, and will be filled/filtered.
 The inclusion/exclusion behavior of any mask can be inverted via::
 
-    >>> mask_inverse = ~mask
+    >>> mask_inverse = ~mask  # doctest: +SKIP
 
 Advanced masking
 ----------------
