@@ -25,7 +25,7 @@ Note that the :meth:`~spectral_cube.SpectralCube.convolve_to` method will work
 for both :class:`~spectral_cube.VaryingResolutionSpectralCube` instances and
 single-resolution :class:`~spectral_cube.SpectralCube` instances, but for a
 :class:`~spectral_cube.VaryingResolutionSpectralCube`, the convolution kernel
-will be different for each slice
+will be different for each slice.
 
 Spectral Smoothing
 ==================
