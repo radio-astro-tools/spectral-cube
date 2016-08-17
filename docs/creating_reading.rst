@@ -49,4 +49,21 @@ arrays (as mentioned in `Reading from a file`_, memory-mapping is a technique
 that avoids reading the whole file into memory and instead accessing it from
 the disk as needed).
 
+Hacks for simulated data
+------------------------
 
+If you're working on synthetic images or simulated data, where a location on
+the sky is not relevant (but the frequency/wavelength axis still is!), a hack
+is required to set up the `world coordinate system
+<http://docs.astropy.org/en/stable/wcs/>`_.  The header should be set up
+such that the projection is cartesian, i.e.::
+
+    CRVAL1 = 0
+    CTYPE1 = 'RA---CAR'
+    CRVAL2 = 0
+    CTYPE2 = 'DEC--CAR'
+
+If the frequency axis is irrelevant, ``spectral-cube`` is probably not the
+right tool to use; instead you should use `astropy.io.fits
+<http://docs.astropy.org/en/stable/io/fits/>`_ or some other file reader
+directly.
