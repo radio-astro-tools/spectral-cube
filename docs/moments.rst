@@ -22,7 +22,7 @@ axis::
           moment is computed as the variance. For linewidth maps, see the
           `Linewidth maps`_ section.
 
-The moment maps returned are :class:`~spectral_cube.Projection` instances,
+The moment maps returned are :class:`~spectral_cube.lower_dimensional_structures.Projection` instances,
 which act like :class:`~astropy.units.Quantity` objects, and also have
 convenience methods for writing to a file::
 
@@ -44,11 +44,11 @@ plotting packages such as APLpy::
 Linewidth maps
 --------------
 
-Making linewidth maps (sometimes referered to as second moment maps in radio
+Making linewidth maps (sometimes refered to as second moment maps in radio
 astronomy), you can use:
 
     >>> sigma_map = cube.linewidth_sigma()  # doctest: +SKIP
     >>> fwhm_map = cube.linewidth_fwhm()  # doctest: +SKIP
 
-These also return :class:`~spectral_cube.Projection` instances as for the
+These also return :class:`~spectral_cube.lower_dimensional_structures.Projection` instances as for the
 `Moment maps`_.

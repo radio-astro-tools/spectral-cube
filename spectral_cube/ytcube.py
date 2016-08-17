@@ -16,6 +16,8 @@ try:
 except ImportError:
     ytOK = False
 
+__all__ = ['ytCube']
+
 class ytCube(object):
     """ Light wrapper of a yt object with ability to translate yt<->wcs
     coordinates """
@@ -163,7 +165,7 @@ class ytCube(object):
 
         pipe = _make_movie(outdir, prefix=image_prefix,
                            filename=output_filename)
-        
+
         return images
 
     def auto_transfer_function(self, cmap_range, log=False, colormap='doom',
@@ -206,8 +208,8 @@ class ytCube(object):
             file), or a .ply file.  The latter two require ``filename``
             specification
         filename: None or str
-            Optional - prefix for output filenames if `export_to` is 'obj', 
-            or the full filename when `export_to` is 'ply'.  Ignored for
+            Optional - prefix for output filenames if ``export_to`` is 'obj',
+            or the full filename when ``export_to`` is 'ply'.  Ignored for
             'sketchfab'
         kwargs: dict
             Keyword arguments are passed to the appropriate yt function
@@ -256,10 +258,10 @@ def _rescale_images(images, prefix):
     Save a sequence of images, at a common scaling
     Reduces flickering
     """
- 
+
     cmax = max(np.percentile(i[:, :, :3].sum(axis=2), 99.5) for i in images)
     amax = max(np.percentile(i[:, :, 3], 95) for i in images)
- 
+
     for i, image in enumerate(images):
         image = image.rescale(cmax=cmax, amax=amax).swapaxes(0,1)
         image.write_png("%s%04i.png" % (prefix, i), rescale=False)

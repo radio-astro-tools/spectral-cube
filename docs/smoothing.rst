@@ -1,8 +1,6 @@
 Smoothing
 ---------
 
-
-
 There are two types of smoothing routine available in ``spectral_cube``:
 spectral and spatial.
 
@@ -23,21 +21,22 @@ A simple example::
     beam = radio_beam.Beam(major=1*u.arcsec, minor=1*u.arcsec, pa=0*u.deg)
     new_cube = cube.convolve_to(beam)
 
-Note that the `~spectral_cube.SpectralCube.convolve_to` method will work for
-both `~spectral_cube.VaryingResolutionSpectralCube`s and single-resolution
-`~spectral_cube.SpectralCube`s, but for a
-`~spectral_cube.VaryingResolutionSpectralCube`, the convolution kernel will be
-different for each slice
+Note that the :meth:`~spectral_cube.SpectralCube.convolve_to` method will work
+for both :class:`~spectral_cube.VaryingResolutionSpectralCube` instances and
+single-resolution :class:`~spectral_cube.SpectralCube` instances, but for a
+:class:`~spectral_cube.VaryingResolutionSpectralCube`, the convolution kernel
+will be different for each slice.
 
 Spectral Smoothing
 ==================
 
-Only `~spectral_cube.SpectralCube`s with a consistent beam can be spectrally
-smoothed, so if you have a `~spectral_cube.VaryingResolutionSpectralCube`,
-you must convolve each slice in it to a common resolution before spectrally
-smoothing.  `~spectral_cube.SpectralCube.spectral_smooth` will apply a convolution
-kernel to each spectrum in turn.  As of July 2016, a parallelized version
-is partly written but incomplete.
+Only :class:`~spectral_cube.SpectralCube` instances with a consistent beam can
+be spectrally smoothed, so if you have a
+:class:`~spectral_cube.VaryingResolutionSpectralCube`, you must convolve each
+slice in it to a common resolution before spectrally smoothing.
+:meth:`~spectral_cube.SpectralCube.spectral_smooth` will apply a convolution
+kernel to each spectrum in turn. As of July 2016, a parallelized version is
+partly written but incomplete.
 
 Example::
 

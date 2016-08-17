@@ -103,7 +103,7 @@ class StokesSpectralCube(object):
         mask : :class:`MaskBase` instance, or boolean numpy array
             The mask to apply. If a boolean array is supplied,
             it will be converted into a mask, assuming that
-            True values indicate included elements.
+            `True` values indicate included elements.
 
         inherit_mask : bool (optional, default=True)
             If True, combines the provided mask with the
@@ -192,6 +192,6 @@ class StokesSpectralCube(object):
         format : str
             The format of the file to write. (Currently limited to 'fits')
         overwrite : bool
-            If True, overwrite `filename` if it exists
+            If True, overwrite ``filename`` if it exists
         """
         raise NotImplementedError("")

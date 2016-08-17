@@ -346,7 +346,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         Parameters
         ----------
-        function : `numpy.ufunc`
+        function : Numpy ufunc
             A numpy ufunc to apply to the cube
         fill : float
             The fill value to use on the data
@@ -361,19 +361,18 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
            decreasing subsets of the data, to conserve memory.
            Default='auto'
         projection : bool
-            Return a `Projection` if the resulting array is 2D or a
+            Return a :class:`~spectral_cube.lower_dimensional_structures.Projection` if the resulting array is 2D or a
             OneDProjection if the resulting array is 1D and the sum is over both
             spatial axes?
         unit : None or `astropy.units.Unit`
             The unit to include for the output array.  For example,
-            `SpectralCube.max` calls `SpectralCube.apply_numpy_function(np.max,
-            unit=self.unit)`, inheriting the unit from the original cube.
+            `SpectralCube.max` calls ``SpectralCube.apply_numpy_function(np.max, unit=self.unit)``, inheriting the unit from the original cube.
             However, for other numpy functions, e.g. `numpy.argmax`, the return
             is an index and therefore unitless.
         check_endian : bool
             A flag to check the endianness of the data before applying the
             function.  This is only needed for optimized functions, e.g. those
-            in the `bottleneck` package.
+            in the `bottleneck <https://pypi.python.org/pypi/Bottleneck>`_ package.
         progressbar : bool
             Show a progressbar while iterating over the slices through the
             cube?
@@ -382,11 +381,11 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         Returns
         -------
-        result : `Projection` or `~astropy.units.Quantity` or float
+        result : :class:`~spectral_cube.lower_dimensional_structures.Projection` or `~astropy.units.Quantity` or float
             The result depends on the value of ``axis``, ``projection``, and
             ``unit``.  If ``axis`` is None, the return will be a scalar with or
             without units.  If axis is an integer, the return will be a
-            `Projection` if ``projection`` is set
+            :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
         """
 
 
@@ -783,11 +782,11 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         Returns
         -------
-        result : `Projection` or `~astropy.units.Quantity` or float
+        result : :class:`~spectral_cube.lower_dimensional_structures.Projection` or `~astropy.units.Quantity` or float
             The result depends on the value of ``axis``, ``projection``, and
             ``unit``.  If ``axis`` is None, the return will be a scalar with or
             without units.  If axis is an integer, the return will be a
-            `Projection` if ``projection`` is set
+            :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
         """
         if axis is None:
             out = function(self.flattened(), **kwargs)
@@ -984,7 +983,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         mask : :class:`MaskBase` instance, or boolean numpy array
             The mask to apply. If a boolean array is supplied,
             it will be converted into a mask, assuming that
-            True values indicate included elements.
+            `True` values indicate included elements.
 
         inherit_mask : bool (optional, default=True)
             If True, combines the provided mask with the
@@ -1681,7 +1680,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         Parameters
         ----------
-        [xyz]lo/[xyz]hi : int or `Quantity` or `min`/`max`
+        [xyz]lo/[xyz]hi : int or :class:`~astropy.units.Quantity` or ``min``/``max``
             The endpoints to extract.  If given as a quantity, will be
             interpreted as World coordinates.  If given as a string or
             int, will be interpreted as pixel coordinates.
@@ -2047,7 +2046,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         format : str
             The format of the file to write. (Currently limited to 'fits')
         overwrite : bool
-            If True, overwrite `filename` if it exists
+            If True, overwrite ``filename`` if it exists
         """
         from .io.core import write
         write(filename, self, overwrite=overwrite, format=format)
@@ -2137,7 +2136,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             An existing Data object to add the cube to.  This is a good way
             to compare cubes with the same dimensions.  Supercedes ``glue_app``
         start_gui : bool
-            Start the GUI when this is run.  Set to False for testing.
+            Start the GUI when this is run.  Set to `False` for testing.
         """
         if name is None:
             name = 'SpectralCube'
@@ -2662,7 +2661,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         Other Parameters
         ----------------
-        beam_table : `numpy.recordarray`
+        beam_table : `numpy.recarray`
             A table of beam major and minor axes in arcseconds and position
             angles, with labels BMAJ, BMIN, BPA
         beams : list

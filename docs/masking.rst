@@ -8,14 +8,20 @@ In addition to supporting the representation of data and associated WCS, it
 is also possible to attach a boolean mask to the
 :class:`~spectral_cube.SpectralCube` class. Masks can take
 various forms, but one of the more common ones is a cube with the same
-dimensions as the data, and that contains e.g. the boolean value ``True`` where
-data should be used, and the value ``False`` when the data should be ignored
-(though it is also possible to flip the convention around). To create a
+dimensions as the data, and that contains e.g. the boolean value `True` where
+data should be used, and the value `False` when the data should be ignored
+(though it is also possible to flip the convention around; see
+:ref:`mask_inclusion_exclusion`). To create a
 boolean mask from a boolean array ``mask_array``, you can for example use::
 
     >>> from astropy import units as u
     >>> from spectral_cube import BooleanArrayMask
     >>> mask = BooleanArrayMask(mask=mask_array, wcs=cube.wcs)  # doctest: +SKIP
+
+.. note::
+
+   Currently, the mask convention is opposite of what is defined for
+   Numpy masked array and Astropy ``Table``.
 
 Using a pure boolean array may not always be the most efficient solution,
 because it may require a large amount of memory.
@@ -93,19 +99,22 @@ change the fill value on a cube, you can make use of the
 This returns a new :class:`~spectral_cube.SpectralCube` instance that
 contains a view to the same data in ``cube`` (so no data are copied).
 
+.. _mask_inclusion_exclusion:
+
 Inclusion and Exclusion
 -----------------------
 
 The term "mask" is often used to refer both to the act of exluding
 and including pixels from analysis. To be explicit about how they behave,
 all mask objects have an
-:meth:`~spectral_cube.masks.MaskBase.include` method that returns a boolean
-array. True values in this array indicate that the pixel is included/valid,
-and not filtered/replaced in any way. Conversely, True values in the output
-from :meth:`~spectral_cube.masks.MaskBase.exclude`
+:meth:`~spectral_cube.MaskBase.include` method that returns a boolean
+array. `True` values in this array indicate that the pixel is included/valid,
+and not filtered/replaced in any way. Conversely, `True` values in the output
+from :meth:`~spectral_cube.MaskBase.exclude`
 indicate the pixel is excluded/invalid, and will be filled/filtered.
-The inclusion/exclusion behavior of any mask can be inverted via
-``mask_inverse = ~mask``.
+The inclusion/exclusion behavior of any mask can be inverted via::
+
+    >>> mask_inverse = ~mask  # doctest: +SKIP
 
 Advanced masking
 ----------------
@@ -134,7 +143,7 @@ can also be defined directly by specifying conditions on
 :class:`~spectral_cube.SpectralCube` objects:
 
    >>> cube > 5*u.K  # doctest: +SKIP
-       LazyComparisonMask(...)
+   LazyComparisonMask(...)
 
 .. TODO: add example for FunctionalMask
 
@@ -143,14 +152,17 @@ Outputting masks
 ----------------
 
 The attached mask to the given :class:`~spectral_cube.SpectralCube` class can
-be converted into a CASA image using :func:`~spectral_cube.io.make_casa_mask`:
+be converted into a CASA image using :func:`~spectral_cube.io.casa_masks.make_casa_mask`:
 
   >>> from spectral_cube.io.casa_masks import make_casa_mask
   >>> make_casa_mask(cube, 'casa_mask.image', add_stokes=False)  # doctest: +SKIP
 
-Optionally, a redundant Stokes axis can be added to match the original CASA image.
-.. Masks may also be appended to an existing CASA image:
-..  >>> make_casa_mask(cube, 'casa_mask.image', append_to_img=True, img='casa.image')
+Optionally, a redundant Stokes axis can be added to match the original CASA
+image.
+
+.. Masks may also be appended to an existing CASA image::
+..   >>> make_casa_mask(cube, 'casa_mask.image', append_to_img=True,
+..                      img='casa.image')
 
 .. note::
     Outputting to CASA masks requires that `spectral_cube` be run from a CASA python session.
@@ -170,28 +182,28 @@ If you see errors such as ``WCS does not match mask WCS``, but you're confident
 that your two cube are on the same grid, you should have a look at the
 ``cube.wcs`` attribute and see if there are subtle differences in the world
 coordinate parameters.  These frequently occur when converting from frequency
-to velocity as there is inadequate precision in the rest frequency. 
+to velocity as there is inadequate precision in the rest frequency.
 
 For example, these two axes are *nearly* identical, but not perfectly so::
 
     Number of WCS axes: 3
-    CTYPE : 'RA---SIN'  'DEC--SIN'  'VRAD'  
-    CRVAL : 269.08866286689999  -21.956244813729999  -3000.000559989533  
-    CRPIX : 161.0  161.0  1.0  
-    PC1_1 PC1_2 PC1_3  : 1.0  0.0  0.0  
-    PC2_1 PC2_2 PC2_3  : 0.0  1.0  0.0  
-    PC3_1 PC3_2 PC3_3  : 0.0  0.0  1.0  
-    CDELT : -1.3888888888889999e-05  1.3888888888889999e-05  299.99999994273281  
+    CTYPE : 'RA---SIN'  'DEC--SIN'  'VRAD'
+    CRVAL : 269.08866286689999  -21.956244813729999  -3000.000559989533
+    CRPIX : 161.0  161.0  1.0
+    PC1_1 PC1_2 PC1_3  : 1.0  0.0  0.0
+    PC2_1 PC2_2 PC2_3  : 0.0  1.0  0.0
+    PC3_1 PC3_2 PC3_3  : 0.0  0.0  1.0
+    CDELT : -1.3888888888889999e-05  1.3888888888889999e-05  299.99999994273281
     NAXIS    : 0 0
 
     Number of WCS axes: 3
-    CTYPE : 'RA---SIN'  'DEC--SIN'  'VRAD'  
-    CRVAL : 269.08866286689999  -21.956244813729999  -3000.0000242346514  
-    CRPIX : 161.0  161.0  1.0  
-    PC1_1 PC1_2 PC1_3  : 1.0  0.0  0.0  
-    PC2_1 PC2_2 PC2_3  : 0.0  1.0  0.0  
-    PC3_1 PC3_2 PC3_3  : 0.0  0.0  1.0  
-    CDELT : -1.3888888888889999e-05  1.3888888888889999e-05  300.00000001056611  
+    CTYPE : 'RA---SIN'  'DEC--SIN'  'VRAD'
+    CRVAL : 269.08866286689999  -21.956244813729999  -3000.0000242346514
+    CRPIX : 161.0  161.0  1.0
+    PC1_1 PC1_2 PC1_3  : 1.0  0.0  0.0
+    PC2_1 PC2_2 PC2_3  : 0.0  1.0  0.0
+    PC3_1 PC3_2 PC3_3  : 0.0  0.0  1.0
+    CDELT : -1.3888888888889999e-05  1.3888888888889999e-05  300.00000001056611
     NAXIS    : 0 0
 
 In order to compose masks from these, we need to set the ``wcs_tolerance`` parameter::

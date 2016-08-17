@@ -40,6 +40,7 @@ except ImportError:
 
 # Load all of the global Astropy configuration
 from astropy_helpers.sphinx.conf import *
+from astropy.extern import six
 
 # Get configuration information from setup.cfg
 try:
@@ -67,6 +68,8 @@ exclude_patterns.append('_templates')
 # be used globally.
 rst_epilog += """
 """
+
+intersphinx_mapping['astroquery'] = ('http://astroquery.readthedocs.org/en/latest/', None)
 
 # -- Project information ------------------------------------------------------
 
@@ -163,3 +166,13 @@ if eval(setup_cfg.get('edit_on_github')):
 
     edit_on_github_source_root = ""
     edit_on_github_doc_root = "docs"
+
+nitpicky = True
+nitpick_ignore = []
+
+for line in open('nitpick-exceptions'):
+    if line.strip() == "" or line.startswith("#"):
+        continue
+    dtype, target = line.split(None, 1)
+    target = target.strip()
+    nitpick_ignore.append((dtype, six.u(target)))
