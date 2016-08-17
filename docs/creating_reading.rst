@@ -62,8 +62,18 @@ such that the projection is cartesian, i.e.::
     CTYPE1 = 'RA---CAR'
     CRVAL2 = 0
     CTYPE2 = 'DEC--CAR'
+    CDELT1 = 1.0e-4 //degrees
+    CDELT2 = 1.0e-4 //degrees
+    CUNIT1 = 'deg'
+    CUNIT2 = 'deg'
+
+Note that the x/y axes must always have angular units (i.e., degrees).  If your
+data are really in physical units, you should note that in the header in other
+comments, but ``spectral-cube`` doesn't care about this.
+
 
 If the frequency axis is irrelevant, ``spectral-cube`` is probably not the
 right tool to use; instead you should use `astropy.io.fits
 <http://docs.astropy.org/en/stable/io/fits/>`_ or some other file reader
 directly.
+
