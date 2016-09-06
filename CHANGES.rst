@@ -1,16 +1,21 @@
-0.4.0 (unreleased)
+0.4.0 (2016-09-06)
 ------------------
  - Whole cube convolution & reprojection has been added, including tools to
    smooth spectrally and spatially to force two cubes onto an identical grid.
    (https://github.com/radio-astro-tools/spectral-cube/pull/313)
+ - Bugfix: files larger than the available memory are now readable again
+   because ``spectral-cube`` does not encourage you to modify cubes inplace
+   (https://github.com/radio-astro-tools/spectral-cube/pull/299)
  - Cube planes with bad beams will be masked out
    (https://github.com/radio-astro-tools/spectral-cube/pull/298)
  - Added a new cube type, VaryingResolutionSpectralCube, meant to handle
    CASA-produced cubes that have different beams in each channel
    (https://github.com/radio-astro-tools/spectral-cube/pull/292)
- - Added tests for new functionality in OneDSpectrum (https://github.com/radio-astro-tools/spectral-cube/pull/277)
+ - Added tests for new functionality in OneDSpectrum
+   (https://github.com/radio-astro-tools/spectral-cube/pull/277)
  - Split out common functionality between SpectralCube and LowerDimensionalObject
-   into BaseNDClass and SpectralAxisMixinClass *Manually merged by @keflavich* (https://github.com/radio-astro-tools/spectral-cube/pull/274)
+   into BaseNDClass and SpectralAxisMixinClass
+   (https://github.com/radio-astro-tools/spectral-cube/pull/274)
  - added new linewidth_sigma and linewidth_fwhm methods to SpectralCube for
    computing linewidth maps, and make sure the documentation is clear that
    moment(order=2) is a variance map.
