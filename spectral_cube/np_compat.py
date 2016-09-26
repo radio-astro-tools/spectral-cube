@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import numpy as np
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 def allbadtonan(function):
     """
@@ -11,7 +11,7 @@ def allbadtonan(function):
     """
     def f(data, axis=None):
         result = function(data, axis=axis)
-        if StrictVersion(np.__version__) >= StrictVersion('1.9.0'):
+        if LooseVersion(np.__version__) >= LooseVersion('1.9.0'):
             if axis is None:
                 if np.all(np.isnan(data)):
                     return np.nan
