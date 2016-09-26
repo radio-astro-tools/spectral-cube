@@ -4,7 +4,7 @@ import operator
 import itertools
 import warnings
 import mmap
-from distutils.version import StrictVersion, LooseVersion
+from distutils.version import LooseVersion
 
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
@@ -468,12 +468,12 @@ class TestNumpyMethods(BaseTest):
         scmed = self.c.apply_numpy_function(np.median, axis=0)
         # this checks whether numpy <=1.9.3 has a bug?
         # as far as I can tell, np==1.9.3 no longer has this bug/feature
-        #if StrictVersion(np.__version__) <= StrictVersion('1.9.3'):
+        #if LooseVersion(np.__version__) <= LooseVersion('1.9.3'):
         #    # print statements added so we get more info in the travis builds
-        #    print("Numpy version is: {0}".format(StrictVersion(np.__version__)))
+        #    print("Numpy version is: {0}".format(LooseVersion(np.__version__)))
         #    assert np.count_nonzero(np.isnan(scmed)) == 5
         #else:
-        #    print("Numpy version is: {0}".format(StrictVersion(np.__version__)))
+        #    print("Numpy version is: {0}".format(LooseVersion(np.__version__)))
         assert np.count_nonzero(np.isnan(scmed)) == 6
 
         scmed = self.c.apply_numpy_function(np.nanmedian, axis=0)
@@ -667,7 +667,7 @@ def test_read_write_rountrip(tmpdir):
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
     if (((hasattr(_wcs, '__version__')
-          and StrictVersion(_wcs.__version__) < StrictVersion('5.9'))
+          and LooseVersion(_wcs.__version__) < LooseVersion('5.9'))
          or not hasattr(_wcs, '__version__'))):
         # see https://github.com/astropy/astropy/pull/3992 for reasons:
         # we should upgrade this for 5.10 when the absolute accuracy is

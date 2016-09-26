@@ -34,7 +34,7 @@ from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                            LowerDimensionalObject)
 from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS
 
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
@@ -2071,8 +2071,8 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         import yt
 
-        if ('dev' in yt.__version__ or
-            StrictVersion(yt.__version__) >= StrictVersion('3.0')):
+        if (('dev' in yt.__version__) or
+            (LooseVersion(yt.__version__) >= LooseVersion('3.0'))):
 
             from yt.frontends.fits.api import FITSDataset
             from yt.units.unit_object import UnitParseError
