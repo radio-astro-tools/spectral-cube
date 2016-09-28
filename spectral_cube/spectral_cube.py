@@ -2868,7 +2868,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         qtys = dict(sr=u.Quantity(self.beams, u.sr),
                     major=u.Quantity([bm.major for bm in self.beams], u.deg),
                     minor=u.Quantity([bm.minor for bm in self.beams], u.deg),
-                    pa=u.Quantity([bm.pa for bm in self.beams], u.deg),
+                    # position angles are not really comparable
+                    #pa=u.Quantity([bm.pa for bm in self.beams], u.deg),
                    )
 
         errormessage = ""
