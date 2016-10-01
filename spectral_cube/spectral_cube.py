@@ -2586,11 +2586,6 @@ class SpectralCube(BaseSpectralCube):
                                                  inaxis.value, mask) > 0
             pb.update()
 
-        newheader = self.header
-        newheader['CRPIX3'] = 1
-        newheader['CRVAL3'] = spectral_grid[0].value
-        newheader['CDELT3'] = outdiff.value
-        newheader['CUNIT3'] = spectral_grid.unit.to_string('FITS')
         newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[2] = 1
         newwcs.wcs.crval[2] = spectral_grid[0].value
