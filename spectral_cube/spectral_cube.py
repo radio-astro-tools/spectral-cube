@@ -2536,13 +2536,13 @@ class SpectralCube(BaseSpectralCube):
         """
 
         inaxis = self.spectral_axis.to(spectral_grid.unit)
- 
+
         indiff = np.mean(np.diff(inaxis))
         outdiff = np.mean(np.diff(spectral_grid))
 
         # account for reversed axes
         if outdiff < 0:
-            spectral_grid=spectral_grid[::-1]
+            spectral_grid = spectral_grid[::-1]
             outdiff = np.mean(np.diff(spectral_grid))
 
         if indiff < 0:
@@ -2555,24 +2555,24 @@ class SpectralCube(BaseSpectralCube):
         # insanity checks
         if indiff < 0 or outdiff < 0:
             raise ValueError("impossible.")
-    
+
         assert np.all(np.diff(spectral_grid) > 0)
         assert np.all(np.diff(inaxis) > 0)
-    
+
         np.testing.assert_allclose(np.diff(spectral_grid), outdiff,
                                    err_msg="Output grid must be linear")
-    
+
         if outdiff > 2 * indiff and not suppress_smooth_warning:
-            warnings.warn("Input grid has too small a spacing.  The data should "
+            warnings.warn("Input grid has too small a spacing. The data should "
                           "be smoothed prior to resampling.")
-    
+
         newcube = np.empty([spectral_grid.size, self.shape[1], self.shape[2]],
                            dtype=cubedata.dtype)
         newmask = np.empty([spectral_grid.size, self.shape[1], self.shape[2]],
                            dtype='bool')
-    
+
         yy,xx = np.indices(self.shape[1:])
-    
+
         pb = ProgressBar(xx.size)
         for ix, iy in (zip(xx.flat, yy.flat)):
             mask = self.mask.include(view=(slice(None), iy, ix))
@@ -2585,13 +2585,8 @@ class SpectralCube(BaseSpectralCube):
                     newmask[:,iy,ix] = np.interp(spectral_grid.value,
                                                  inaxis.value, mask) > 0
             pb.update()
-    
-        newheader = self.header
-        newheader['CRPIX3'] = 1
-        newheader['CRVAL3'] = spectral_grid[0].value
-        newheader['CDELT3'] = outdiff.value
-        newheader['CUNIT3'] = spectral_grid.unit.to_string('FITS')
-        newwcs = self.wcs.copy()
+
+        newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[2] = 1
         newwcs.wcs.crval[2] = spectral_grid[0].value
         newwcs.wcs.cunit[2] = spectral_grid.unit.to_string('FITS')
@@ -2599,7 +2594,7 @@ class SpectralCube(BaseSpectralCube):
         newwcs.wcs.set()
 
         newbmask = BooleanArrayMask(newmask, wcs=newwcs)
-    
+
         newcube = self._new_cube_with(data=newcube, wcs=newwcs, mask=newbmask,
                                       meta=self.meta,
                                       fill_value=self.fill_value)
@@ -3048,13 +3043,13 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                              "spectrally interpolated.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral interpolation.")
-    
+
     def spectral_smooth(self, *args, **kwargs):
         raise AttributeError("VaryingResolutionSpectralCubes can't be "
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
-            
+
 
 
 def determine_format_from_filename(filename):
