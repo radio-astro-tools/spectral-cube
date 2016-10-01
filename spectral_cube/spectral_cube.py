@@ -2591,7 +2591,7 @@ class SpectralCube(BaseSpectralCube):
         newheader['CRVAL3'] = spectral_grid[0].value
         newheader['CDELT3'] = outdiff.value
         newheader['CUNIT3'] = spectral_grid.unit.to_string('FITS')
-        newwcs = self.wcs.copy()
+        newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[2] = 1
         newwcs.wcs.crval[2] = spectral_grid[0].value
         newwcs.wcs.cunit[2] = spectral_grid.unit.to_string('FITS')

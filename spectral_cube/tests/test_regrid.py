@@ -100,7 +100,7 @@ def test_spectral_smooth_fail():
 
     with pytest.raises(AttributeError) as exc:
         cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0))
-    
+
     assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
                                  "spectrally smoothed.  Convolve to a "
                                  "common resolution with `convolve_to` before "
@@ -110,6 +110,8 @@ def test_spectral_interpolate():
 
     cube, data = cube_and_raw('522_delta.fits')
 
+    orig_wcs = cube.wcs.deepcopy()
+
     # midpoint between each position
     sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
 
@@ -118,6 +120,8 @@ def test_spectral_interpolate():
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    [0.0, 0.5, 0.5, 0.0])
 
+    assert cube.wcs.wcs.compare(orig_wcs.wcs)
+
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_spectral_interpolate_fail():
 
@@ -125,7 +129,7 @@ def test_spectral_interpolate_fail():
 
     with pytest.raises(AttributeError) as exc:
         cube.spectral_interpolate(5)
-    
+
     assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
                                  "spectrally interpolated.  Convolve to a "
                                  "common resolution with `convolve_to` before "
