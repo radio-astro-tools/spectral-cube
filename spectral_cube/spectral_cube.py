@@ -2172,7 +2172,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                                            data=result)
 
                     if start_gui:
-                        self._glue_app.stringart()
+                        self._glue_app.start()
 
                     return self._glue_app
 
