@@ -5,7 +5,7 @@ from numpy.testing import assert_allclose, assert_equal
 
 from astropy.wcs import WCS
 from astropy.tests.helper import pytest
-from astropy.utils import OrderedDict, NumpyRNGContext
+from astropy.utils import NumpyRNGContext
 
 from ..spectral_cube import SpectralCube
 from ..stokes_spectral_cube import StokesSpectralCube
