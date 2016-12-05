@@ -2141,7 +2141,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         if name is None:
             name = 'SpectralCube'
 
-        from glue.app.qt.application import GlueApplication
+        from glue.app.qt import GlueApplication
         from glue.core import DataCollection, Data
         from glue.core.coordinates import coordinates_from_header
         from glue.viewers.image.qt.viewer_widget import ImageWidget
