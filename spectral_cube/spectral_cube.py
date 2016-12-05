@@ -1778,10 +1778,10 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         xhi, yhi = extent.max
         all_extents = [obj.get_extents() for obj in mpl_objs]
         for ext in all_extents:
-            xlo = np.floor(xlo if xlo < ext.min[0] else ext.min[0])
-            ylo = np.floor(ylo if ylo < ext.min[1] else ext.min[1])
-            xhi = np.ceil(xhi if xhi > ext.max[0] else ext.max[0])
-            yhi = np.ceil(yhi if yhi > ext.max[1] else ext.max[1])
+            xlo = int(np.floor(xlo if xlo < ext.min[0] else ext.min[0]))
+            ylo = int(np.floor(ylo if ylo < ext.min[1] else ext.min[1]))
+            xhi = int(np.ceil(xhi if xhi > ext.max[0] else ext.max[0]))
+            yhi = int(np.ceil(yhi if yhi > ext.max[1] else ext.max[1]))
 
         # Negative indices will do bad things, like wrap around the cube
         # If xhi/yhi are negative, there is not overlap
