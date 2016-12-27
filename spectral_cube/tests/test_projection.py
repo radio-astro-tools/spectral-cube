@@ -1,5 +1,6 @@
 from __future__ import print_function, absolute_import, division
 
+import warnings
 import pytest
 import numpy as np
 from astropy import units as u
@@ -7,6 +8,7 @@ from astropy.wcs import WCS
 
 from .helpers import assert_allclose
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
+from ..utils import SliceWarning
 
 # set up for parametrization
 LDOs = (Projection, Slice, OneDSpectrum)
@@ -145,3 +147,49 @@ def test_onedspectrum_with_spectral_unit():
     assert p_new.spectral_axis.unit == u.Unit("km/s")
     np.testing.assert_equal(p_new.spectral_axis.value,
                             1e-3*p.spectral_axis.value)
+
+def test_slice_tricks():
+    test_wcs_1 = WCS(naxis=1)
+    test_wcs_2 = WCS(naxis=2)
+
+    spec = OneDSpectrum(twelve_qty_1d, wcs=test_wcs_1)
+    im = Slice(twelve_qty_2d, wcs=test_wcs_2)
+
+    with warnings.catch_warnings(record=True) as w:
+        new = spec[:,None,None] * im[None,:,:]
+
+    assert new.ndim == 3
+
+    # two warnings because we're doing BOTH slices!
+    assert len(w) == 2
+    assert w[0].category == SliceWarning
+
+    with warnings.catch_warnings(record=True) as w:
+        new = spec.array[:,None,None] * im.array[None,:,:]
+
+    assert new.ndim == 3
+    assert len(w) == 0
+
+def test_array_property():
+    test_wcs_1 = WCS(naxis=1)
+    spec = OneDSpectrum(twelve_qty_1d, wcs=test_wcs_1)
+
+    arr = spec.array
+
+    # these are supposed to be the same object, but the 'is' tests fails!
+    assert spec.array.data == spec.data
+
+    assert isinstance(arr, np.ndarray)
+    assert not isinstance(arr, u.Quantity)
+
+def test_quantity_property():
+    test_wcs_1 = WCS(naxis=1)
+    spec = OneDSpectrum(twelve_qty_1d, wcs=test_wcs_1)
+
+    arr = spec.quantity
+
+    # these are supposed to be the same object, but the 'is' tests fails!
+    assert spec.array.data == spec.data
+
+    assert isinstance(arr, u.Quantity)
+    assert not isinstance(arr, OneDSpectrum)
