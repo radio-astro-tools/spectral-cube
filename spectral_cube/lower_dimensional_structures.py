@@ -6,6 +6,7 @@ from astropy import wcs
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
+from .utils import SliceWarning
 
 import numpy as np
 
@@ -107,7 +108,20 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             return u.Quantity(new_qty)
 
         if self._wcs is not None:
-            newwcs = self._wcs[key]
+            if ((isinstance(key, tuple) and
+                 any(isinstance(k, slice) for k in key) and
+                 len(key) > self.ndim)):
+                # Example cases include: indexing tricks like [:,:,None]
+                warnings.warn("Slice {0} cannot be used on this {1}-dimensional"
+                              " array's WCS.  If this is intentional, you "
+                              " should use this {2}'s ``array``  or ``quantity``"
+                              " attribute."
+                              .format(key, self.ndim, type(self)),
+                              SliceWarning
+                             )
+                return self.quantity[key]
+            else:
+                newwcs = self._wcs[key]
         else:
             newwcs = None
 
@@ -133,6 +147,20 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
     def __array_priority__(self):
         return super(LowerDimensionalObject, self).__array_priority__*2
 
+    @property
+    def array(self):
+        """
+        Get a pure array representation of the LDO.  Useful when multiplying
+        and using numpy indexing tricks.
+        """
+        return np.asarray(self)
+
+    @property
+    def quantity(self):
+        """
+        Get a pure `astropy.units.Quantity` representation of the LDO.
+        """
+        return u.Quantity(self)
 
 class Projection(LowerDimensionalObject):
 

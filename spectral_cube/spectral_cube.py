@@ -28,13 +28,14 @@ from . import wcs_utils
 from . import spectral_axis
 from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
                     is_broadcastable_and_smaller)
-from .io.core import determine_format
 from .ytcube import ytCube
 from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                            LowerDimensionalObject)
 from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS
+from .utils import cached, warn_slow, VarianceWarning
 
 from distutils.version import LooseVersion
+
 
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
@@ -49,44 +50,8 @@ except ImportError:
     scipyOK = False
 
 
-class VarianceWarning(UserWarning):
-    pass
-
-
 SIGMA2FWHM = 2. * np.sqrt(2. * np.log(2.))
 
-
-def cached(func):
-    """
-    Decorator to cache function calls
-    """
-
-    @wraps(func)
-    def wrapper(self, *args):
-        # The cache lives in the instance so that it gets garbage collected
-        if func not in self._cache:
-            self._cache[func, args] = func(self, *args)
-        return self._cache[func, args]
-
-    return wrapper
-
-def warn_slow(function):
-
-    @wraps(function)
-    def wrapper(self, *args, **kwargs):
-        if self._is_huge and not self.allow_huge_operations:
-            raise ValueError("This function ({0}) requires loading the entire "
-                             "cube into memory, and the cube is large ({1} "
-                             "pixels), so by default we disable this operation. "
-                             "To enable the operation, set "
-                             "`cube.allow_huge_operations=True` and try again."
-                             .format(str(function), self.size))
-        elif not self._is_huge:
-            # TODO: add check for whether cube has been loaded into memory
-            warnings.warn("This function ({0}) requires loading the entire cube into "
-                          "memory and may therefore be slow.".format(str(function)))
-        return function(self, *args, **kwargs)
-    return wrapper
 
 _NP_DOC = """
 Ignores excluded mask elements.
@@ -3050,13 +3015,3 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
-
-
-
-def determine_format_from_filename(filename):
-    if filename[-4:] == 'fits':
-        return 'fits'
-    elif filename[-5:] == 'image':
-        return 'casa_image'
-    elif filename[-3:] == 'lmv':
-        return 'class_lmv'
