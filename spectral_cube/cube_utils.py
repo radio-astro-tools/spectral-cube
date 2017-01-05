@@ -312,6 +312,21 @@ def largest_beam(beams, includemask=None):
 
     return new_beam
 
+
+def smallest_beam(beams, includemask=None):
+    """
+    Returns the smallest beam (by area) in a list of beams.
+    """
+
+    from radio_beam import Beam
+
+    major, minor, pa = beam_props(beams, includemask)
+    smallest_idx = (major * minor).argmin()
+    new_beam = Beam(major=major[smallest_idx], minor=minor[smallest_idx],
+                    pa=pa[smallest_idx])
+
+    return new_beam
+
 @contextlib.contextmanager
 def _map_context(numcores):
     """
