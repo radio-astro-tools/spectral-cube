@@ -61,6 +61,21 @@ def test_beams_convolution():
         np.testing.assert_almost_equal(expected.array,
                                        conv_cube.filled_data[ii,:,:].value)
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_beams_convolution_equal():
+    cube, data = cube_and_raw('522_delta_beams.fits')
+
+    # Only checking that the equal beam case is handled correctly.
+    # Fake the beam in the first channel. Then ensure that the first channel
+    # has NOT been convolved.
+    target_beam = Beam(1.0 * u.arcsec, 1.0 * u.arcsec, 0.0 * u.deg)
+    cube.beams[0] = target_beam
+
+    conv_cube = cube.convolve_to(target_beam)
+
+    np.testing.assert_almost_equal(cube.filled_data[0].value,
+                                   conv_cube.filled_data[0].value)
+
 @pytest.mark.skipif('not REPROJECT_INSTALLED')
 def test_reproject():
 
