@@ -2976,6 +2976,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         convolution_kernels = []
         for bm in self.beams:
+            # Point response when beams are equal, don't convolve.
+            if beam == bm:
+                convolution_kernels.append(None)
+                continue
             try:
                 cb = beam.deconvolve(bm)
                 ck = cb.as_kernel(pixscale)
@@ -2991,7 +2995,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         newdata = np.empty(self.shape)
         for ii,(img,kernel) in enumerate(zip(self.filled_data[:],
                                              convolution_kernels)):
-            newdata[ii,:,:] = convolve(img, kernel)
+            # Kernel can only be None when `allow_smaller` is True,
+            # or if the beams are equal. Only the latter is really valid.
+            if kernel is None:
+                newdata[ii, :, :] = img
+            else:
+                newdata[ii, :, :] = convolve(img, kernel)
             pb.update()
 
         newcube = SpectralCube(data=newdata, wcs=self.wcs, mask=self.mask,
