@@ -1,5 +1,7 @@
 0.4.0 (2016-09-06)
 ------------------
+ - Handle equal beams when convolving cubes spatially.
+   (https://github.com/radio-astro-tools/spectral-cube/pull/356)
  - Whole cube convolution & reprojection has been added, including tools to
    smooth spectrally and spatially to force two cubes onto an identical grid.
    (https://github.com/radio-astro-tools/spectral-cube/pull/313)

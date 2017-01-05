@@ -262,6 +262,25 @@ def beams_to_bintable(beams):
     bmhdu.header['NPOL'] = len(set([bm.meta['POL'] for bm in beams]))
     return bmhdu
 
+
+def beam_props(beams, includemask=None):
+    '''
+    Returns separate quantities for the major, minor, and PA of a list of
+    beams.
+    '''
+    if includemask is None:
+        includemask = itertools.cycle([True])
+
+    major = u.Quantity([bm.major for bm, incl in zip(beams, includemask)
+                        if incl], u.deg)
+    minor = u.Quantity([bm.minor for bm, incl in zip(beams, includemask)
+                        if incl], u.deg)
+    pa = u.Quantity([bm.pa for bm, incl in zip(beams, includemask)
+                     if incl], u.deg)
+
+    return major, minor, pa
+
+
 def average_beams(beams, includemask=None):
     """
     Average the beam major, minor, and PA attributes.
@@ -272,14 +291,39 @@ def average_beams(beams, includemask=None):
     from radio_beam import Beam
     from astropy.stats import circmean
 
-    if includemask is None:
-        includemask = itertools.cycle([True])
-
-    major = u.Quantity([bm.major for bm,incl in zip(beams,includemask) if incl], u.deg)
-    minor = u.Quantity([bm.minor for bm,incl in zip(beams,includemask) if incl], u.deg)
-    pa = u.Quantity([bm.pa for bm,incl in zip(beams,includemask) if incl], u.deg)
+    major, minor, pa = beam_props(beams, includemask)
     new_beam = Beam(major=major.mean(), minor=minor.mean(),
                     pa=circmean(pa, weights=major/minor))
+
+    return new_beam
+
+
+def largest_beam(beams, includemask=None):
+    """
+    Returns the largest beam (by area) in a list of beams.
+    """
+
+    from radio_beam import Beam
+
+    major, minor, pa = beam_props(beams, includemask)
+    largest_idx = (major * minor).argmax()
+    new_beam = Beam(major=major[largest_idx], minor=minor[largest_idx],
+                    pa=pa[largest_idx])
+
+    return new_beam
+
+
+def smallest_beam(beams, includemask=None):
+    """
+    Returns the smallest beam (by area) in a list of beams.
+    """
+
+    from radio_beam import Beam
+
+    major, minor, pa = beam_props(beams, includemask)
+    smallest_idx = (major * minor).argmin()
+    new_beam = Beam(major=major[smallest_idx], minor=minor[smallest_idx],
+                    pa=pa[smallest_idx])
 
     return new_beam
 
