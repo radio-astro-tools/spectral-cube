@@ -375,7 +375,13 @@ def strip_wcs_from_header(header):
                     if (k and k not in wcsh and 'NAXIS' not in k)]
 
     newheader = header.copy()
-    for kw in newheader.keys():
+
+    # Strip blanks first.  They appear to cause serious problems, like not
+    # deleting things they should!
+    if '' in newheader:
+        del newheader['']
+
+    for kw in list(newheader.keys()):
         if kw not in keys_to_keep:
             del newheader[kw]
 
