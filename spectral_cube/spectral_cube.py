@@ -1724,6 +1724,8 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             # pixel_regions = shapelist.as_imagecoord(self.wcs.celestial.to_header())
             # convert the regions to image (pixel) coordinates
             celhdr = self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
+            celhdr['NAXIS1'] = self.shape[2]
+            celhdr['NAXIS2'] = self.shape[1]
             pixel_regions = shapelist.as_imagecoord(celhdr)
             recompute_shifted_mask = False
         else:
@@ -1793,7 +1795,10 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         else:
             # use the original, coordinate-based mask since the pixel mask has
             # *not* been shfited to match the original coordinate system
-            mask = shapelist.get_mask(header=subcube.wcs.celestial.to_header(),
+            celhdr = subcube.wcs.celestial.to_header()
+            celhdr['NAXIS1'] = self.shape[2]
+            celhdr['NAXIS2'] = self.shape[1]
+            mask = shapelist.get_mask(header=celhdr,
                                       shape=subcube.shape[1:])
 
         if not allow_empty and mask.sum() == 0:
