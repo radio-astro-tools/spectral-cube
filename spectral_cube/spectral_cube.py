@@ -2859,15 +2859,27 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         if errormessage != "":
             raise ValueError(errormessage)
 
-    def _average_beams(self, threshold):
+    def _average_beams(self, threshold, mask='compute'):
         """
         Average the beams.  Note that this operation only makes sense in
         limited contexts!  Generally one would want to convolve all the beams
         to a common shape, but this method is meant to handle the "simple" case
         when all your beams are the same to within some small factor and can
         therefore be arithmetically averaged.
+
+        Parameters
+        ----------
+        threshold : float
+            The fractional difference between beam major, minor, and pa to
+            permit
+        mask : 'compute', None, or boolean array
+            The mask to apply to the beams.  Useful for excluding bad channels
+            and edge beams.
         """
-        beam_mask = np.any(self.mask.include(), axis=(1,2))
+        if mask == 'compute':
+            beam_mask = np.any(self.mask.include(), axis=(1,2))
+        else:
+            beam_mask = mask
 
         new_beam = cube_utils.average_beams(self.beams, includemask=beam_mask)
         assert not np.isnan(new_beam)
