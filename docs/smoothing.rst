@@ -70,3 +70,18 @@ We include the ``suppress_smooth_warning`` override because there is no way for
 sure that your new grid nyquist samples the data) prior to the interpolation
 step.  If you don't specify this, it will still work, but you'll be warned that
 you should preserve Nyquist sampling.
+
+If you have a cube with 0.1 km/s resolution, and you want to smooth it to 0.25 km/s
+resolution, you can smooth the cube with a Gaussian Kernel that has a width of 
+(0.25^2 - 0.1^2)^0.5 = 0.229 km/s. For simplicity, it can be done in the unit of pixel.
+In our example, 0.229 km/s is 2.29 pixels (channels)::
+
+    import numpy as np
+    from spectral_cube import SpectralCube
+    from astropy.convolution import Gaussian1DKernel
+
+    cube = SpectralCube.read('file.fits')
+    fwhm_factor = np.sqrt(8*np.log(2))
+    kernel = Gaussian1DKernel(2.29/fwhm_factor)
+    new_cube = cube.spectral_smooth(kernel)
+    new_cube.write('newfile.fits')
