@@ -1167,6 +1167,14 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         """
         return u.Quantity(self._data[view], self.unit, copy=False)
 
+    def unmasked_copy(self):
+        """
+        Return a copy of the cube with no mask (i.e., all data included)
+        """
+        newcube = self._new_cube_with()
+        newcube._mask = None
+        return newcube
+
     @cached
     def _pix_cen(self):
         """

@@ -186,7 +186,7 @@ class Projection(LowerDimensionalObject):
         return self
 
 
-    def quicklook(self, filename=None, use_aplpy=True):
+    def quicklook(self, filename=None, use_aplpy=True, aplpy_kwargs={}):
         """
         Use `APLpy <https://pypi.python.org/pypi/APLpy>`_ to make a quick-look
         image of the projection. This will make the ``FITSFigure`` attribute
@@ -204,7 +204,8 @@ class Projection(LowerDimensionalObject):
             try:
                 if not hasattr(self, 'FITSFigure'):
                     import aplpy
-                    self.FITSFigure = aplpy.FITSFigure(self.hdu)
+                    self.FITSFigure = aplpy.FITSFigure(self.hdu,
+                                                       **aplpy_kwargs)
 
                 self.FITSFigure.show_grayscale()
                 self.FITSFigure.add_colorbar()
