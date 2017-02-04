@@ -71,10 +71,11 @@ sure that your new grid nyquist samples the data) prior to the interpolation
 step.  If you don't specify this, it will still work, but you'll be warned that
 you should preserve Nyquist sampling.
 
-If you have a cube with 0.1 km/s resolution, and you want to smooth it to 0.25 km/s
+If you have a cube with 0.1 km/s resolution (where we assume resolution corresponds
+to the fwhm of a gaussian), and you want to smooth it to 0.25 km/s
 resolution, you can smooth the cube with a Gaussian Kernel that has a width of 
 (0.25^2 - 0.1^2)^0.5 = 0.229 km/s. For simplicity, it can be done in the unit of pixel.
-In our example, 0.229 km/s is 2.29 pixels (channels)::
+In our example, each channel is 0.1 km/s wide::
 
     import numpy as np
     from spectral_cube import SpectralCube
@@ -82,6 +83,10 @@ In our example, 0.229 km/s is 2.29 pixels (channels)::
 
     cube = SpectralCube.read('file.fits')
     fwhm_factor = np.sqrt(8*np.log(2))
-    kernel = Gaussian1DKernel(2.29/fwhm_factor)
+    current_resolution = 0.1
+    target_resolution = 0.25
+    pixel_scale = 0.1
+    gaussian_width = (target_resolution**2 - current_resolution**2)**0.5 / pixel_scale / fwhm_factor
+    kernel = Gaussian1DKernel(gaussian_width)
     new_cube = cube.spectral_smooth(kernel)
     new_cube.write('newfile.fits')
