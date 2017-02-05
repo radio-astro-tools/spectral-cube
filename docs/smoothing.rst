@@ -75,7 +75,7 @@ you should preserve Nyquist sampling.
 If you have a cube with 0.1 km/s resolution (where we assume resolution
 corresponds to the fwhm of a gaussian), and you want to smooth it to 0.25 km/s
 resolution, you can smooth the cube with a Gaussian Kernel that has a width of
-(0.25:sup:`2` - 0.1:sup:`2`):sup:`0.5` = 0.229 km/s. For simplicity, it can be
+(0.25^2 - 0.1^2)^0.5 = 0.229 km/s. For simplicity, it can be
 done in the unit of pixel.  In our example, each channel is 0.1 km/s wide::
 
     import numpy as np
