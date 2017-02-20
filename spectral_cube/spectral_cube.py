@@ -2914,13 +2914,15 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                 # numpy arrays are sometimes returned; these have no metadata
                 return result
 
-            # check that the spectral axis is being operated over
+            # check that the spectral axis is being operated over.  If it is,
+            # we need to average beams
             # moments are a special case b/c they default to axis=0
-            need_to_handle_beams = (('axis' in kwargs and (kwargs['axis']==0
-                                    or (hasattr(kwargs['axis'], '__len__') and
-                                        0 in kwargs['axis'])))
-                                    or ('axis' not in kwargs and 'moment' in
-                                        function.__name__))
+            need_to_handle_beams = (('axis' in kwargs and
+                                     ((kwargs['axis']==0) or
+                                      (hasattr(kwargs['axis'], '__len__') and
+                                       0 in kwargs['axis']))) or
+                                    ('axis' not in kwargs and 'moment' in
+                                     function.__name__))
 
             if need_to_handle_beams:
                 avg_beam = self._average_beams(beam_threshold)
