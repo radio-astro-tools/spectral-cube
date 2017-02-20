@@ -1251,3 +1251,23 @@ def test_pix_sign():
     assert s>0
     assert y>0
     assert x>0
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_varyres_moment_logic_issue364():
+    """ regression test for issue364 """
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    assert isinstance(cube, VaryingResolutionSpectralCube)
+
+    # the beams are very different, but for this test we don't care
+    cube.beam_threshold = 1.0
+
+    with warnings.catch_warnings(record=True) as wrn:
+        warnings.simplefilter('default')
+        # note that cube.moment(order=0) is different from cube.moment0()
+        # because cube.moment0() calls cube.moment(order=0, axis=(whatever)),
+        # but cube.moment doesn't necessarily have to receive the axis kwarg
+        m0 = cube.moment(order=0)
+
+    assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
+    assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
