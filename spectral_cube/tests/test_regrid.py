@@ -4,8 +4,11 @@ from astropy import units as u
 from astropy import convolution
 from astropy.wcs import WCS
 from astropy import wcs
+from astropy.io import fits
 
+from .. import SpectralCube
 from .test_spectral_cube import cube_and_raw
+from . import path
 
 try:
     from radio_beam import beam,Beam
@@ -149,3 +152,32 @@ def test_spectral_interpolate_fail():
                                  "spectrally interpolated.  Convolve to a "
                                  "common resolution with `convolve_to` before "
                                  "attempting spectral interpolation.")
+
+
+def test_spectral_interpolate_with_mask():
+
+    hdu = fits.open(path("522_delta.fits"))[0]
+
+    # Swap the velocity axis so indiff < 0 in spectral_interpolate
+    hdu.header["CDELT3"] = - hdu.header["CDELT3"]
+
+    cube = SpectralCube.read(hdu)
+
+    mask = np.ones(cube.shape, dtype=bool)
+    mask[:2] = False
+
+    masked_cube = cube.with_mask(mask)
+
+    orig_wcs = cube.wcs.deepcopy()
+
+    # midpoint between each position
+    sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
+
+    result = masked_cube.spectral_interpolate(spectral_grid=sg[::-1])
+
+    # The output makes CDELT3 > 0 (reversed spectral axis) so the masked
+    # portion are the final 2 channels.
+    np.testing.assert_almost_equal(result[:,0, 0].value,
+                                   [0.0, 0.5, np.NaN, np.NaN])
+
+    assert cube.wcs.wcs.compare(orig_wcs.wcs)
