@@ -2519,8 +2519,10 @@ class SpectralCube(BaseSpectralCube):
             cubedata = self.filled_data[::-1]
             inaxis = inaxis[::-1]
             indiff *= -1
+            swap_mask = True
         else:
             cubedata = self.filled_data[:]
+            swap_mask = False
 
         # insanity checks
         if indiff < 0 or outdiff < 0:
@@ -2552,8 +2554,12 @@ class SpectralCube(BaseSpectralCube):
                 if all(mask):
                     newmask[:,iy,ix] = True
                 else:
-                    newmask[:,iy,ix] = np.interp(spectral_grid.value,
+                    if swap_mask:
+                        mask = mask[::-1]
+
+                    interped = np.interp(spectral_grid.value,
                                                  inaxis.value, mask) > 0
+                    newmask[:,iy,ix] = interped
             pb.update()
 
         newwcs = self.wcs.deepcopy()
@@ -2688,7 +2694,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
             new_mask = self._mask & beam_mask
 
-            new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs)
+            # new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs)
 
             self._mask = new_mask
 
