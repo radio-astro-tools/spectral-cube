@@ -2687,7 +2687,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
             new_mask = self._mask & beam_mask
 
-            # new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs)
+            new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs)
 
             self._mask = new_mask
 
