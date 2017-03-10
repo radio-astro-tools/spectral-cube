@@ -2553,6 +2553,10 @@ class SpectralCube(BaseSpectralCube):
                     interped = np.interp(spectral_grid.value,
                                          inaxis.value, mask) > 0
                     newmask[:,iy,ix] = interped
+            else:
+                newmask[:, iy, ix] = False
+                newcube[:, iy, ix] = np.NaN
+
             pb.update()
 
         newwcs = self.wcs.deepcopy()
