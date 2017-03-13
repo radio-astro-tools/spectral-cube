@@ -2515,12 +2515,10 @@ class SpectralCube(BaseSpectralCube):
             spectral_grid = spectral_grid[::-1]
             outdiff = np.mean(np.diff(spectral_grid))
 
-        if indiff < 0:
-            cubedata = self.filled_data[::-1]
-            inaxis = inaxis[::-1]
-            indiff *= -1
-        else:
-            cubedata = self.filled_data[:]
+        cubedata = self.filled_data
+        specslice = slice(None) if indiff >= 0 else slice(None, None, -1)
+        inaxis = inaxis[specslice]
+        indiff = np.mean(np.diff(inaxis))
 
         # insanity checks
         if indiff < 0 or outdiff < 0:
@@ -2537,7 +2535,7 @@ class SpectralCube(BaseSpectralCube):
                           "be smoothed prior to resampling.")
 
         newcube = np.empty([spectral_grid.size, self.shape[1], self.shape[2]],
-                           dtype=cubedata.dtype)
+                           dtype=cubedata[:1, 0, 0].dtype)
         newmask = np.empty([spectral_grid.size, self.shape[1], self.shape[2]],
                            dtype='bool')
 
@@ -2545,15 +2543,20 @@ class SpectralCube(BaseSpectralCube):
 
         pb = ProgressBar(xx.size)
         for ix, iy in (zip(xx.flat, yy.flat)):
-            mask = self.mask.include(view=(slice(None), iy, ix))
+            mask = self.mask.include(view=(specslice, iy, ix))
             if any(mask):
                 newcube[:,iy,ix] = np.interp(spectral_grid.value, inaxis.value,
-                                             cubedata[:,iy,ix].value)
+                                             cubedata[specslice,iy,ix].value)
                 if all(mask):
                     newmask[:,iy,ix] = True
                 else:
-                    newmask[:,iy,ix] = np.interp(spectral_grid.value,
-                                                 inaxis.value, mask) > 0
+                    interped = np.interp(spectral_grid.value,
+                                         inaxis.value, mask) > 0
+                    newmask[:,iy,ix] = interped
+            else:
+                newmask[:, iy, ix] = False
+                newcube[:, iy, ix] = np.NaN
+
             pb.update()
 
         newwcs = self.wcs.deepcopy()
