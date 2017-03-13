@@ -32,7 +32,7 @@ from .ytcube import ytCube
 from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                            LowerDimensionalObject)
 from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS
-from .utils import cached, warn_slow, VarianceWarning
+from .utils import cached, warn_slow, VarianceWarning, BeamAverageWarning
 
 from distutils.version import LooseVersion
 
@@ -2890,7 +2890,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         warnings.warn("Arithmetic beam averaging is being performed.  This is "
                       "not a mathematically robust operation, but is being "
                       "permitted because the beams differ by "
-                      "<{0}".format(threshold))
+                      "<{0}".format(threshold),
+                      BeamAverageWarning
+                     )
         return new_beam
 
 
