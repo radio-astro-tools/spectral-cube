@@ -41,3 +41,6 @@ class VarianceWarning(AstropyUserWarning):
 
 class SliceWarning(AstropyUserWarning):
     pass
+
+class BeamAverageWarning(AstropyUserWarning):
+    pass
