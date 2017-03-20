@@ -1,3 +1,10 @@
+0.4.1 (unreleased)
+------------------
+ - Deprecate numpy <=1.8 because nanmedian is needed
+   (https://github.com/radio-astro-tools/spectral-cube/pull/373)
+ - Add tools for masking bad beams in VaryingResolutionSpectralCubes
+   (https://github.com/radio-astro-tools/spectral-cube/pull/373)
+
 0.4.0 (2016-09-06)
 ------------------
  - Handle equal beams when convolving cubes spatially.
