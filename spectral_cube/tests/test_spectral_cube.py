@@ -1276,3 +1276,15 @@ def test_varyres_moment_logic_issue364():
     else:
         assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
     assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_mask_bad_beams():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    # middle two beams have same area
+    masked_cube = cube.mask_out_bad_beams(0.01,
+                                          reference_beam=Beam(0.3*u.arcsec,
+                                                              0.2*u.arcsec,
+                                                              60*u.deg))
+
+    assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])

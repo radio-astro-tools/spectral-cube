@@ -2870,6 +2870,76 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         if errormessage != "":
             raise ValueError(errormessage)
 
+    def identify_bad_beams(self, threshold, reference_beam=None,
+                           criteria=['sr','major','minor'],
+                           mid_value=np.nanmedian):
+        """
+        Mask out any layers in the cube that have beams that differ from the
+        central value of the beam by more than the specified threshold.
+        An acceptable beam area can also be specified directly.
+
+        Parameters
+        ----------
+        threshold : float
+            Fractional threshold
+        reference_beam : Beam
+            A beam to use as the reference.  If unspecified, ``mid_value`` will
+            be used to select a middle beam
+        criteria : list
+            A list of criteria to compare.  Can include 'sr','major','minor' or
+            any subset of those.
+        mid_value : function
+            The function used to determine the 'mid' value to compare to.  This
+            will identify the middle-valued beam area.
+
+        Returns
+        -------
+        includemask : np.array
+            A boolean array where ``True`` indicates the good beams
+        """
+
+        includemask = np.ones(len(self.beams), dtype='bool')
+
+        sr = u.Quantity([getattr(beam, 'sr') for beam in self.beams])
+        if reference_beam is None:
+            reference_beam = mid_value(sr)
+
+        for prop in criteria:
+            val = u.Quantity([getattr(beam, prop) for beam in self.beams])
+            mid = getattr(reference_beam, prop)
+            
+            diff = np.abs((val-mid)/mid)
+
+            assert diff.shape == includemask.shape
+            
+            includemask[diff > threshold] = False
+        
+        return includemask
+
+    def mask_out_bad_beams(self, threshold, reference_beam=None,
+                           criteria=['sr','major','minor'],
+                           mid_value=np.nanmedian):
+        """
+        See `identify_bad_beams`.  This function returns a masked cube
+
+        Returns
+        -------
+        newcube : VaryingResolutionSpectralCube
+            The cube with bad beams masked out
+        """
+
+        includemask = self.identify_bad_beams(threshold=threshold,
+                                              reference_beam=reference_beam,
+                                              criteria=criteria,
+                                              mid_value=mid_value)
+
+        includemask = BooleanArrayMask(includemask[:,None,None],
+                                       self._wcs,
+                                       shape=self._data.shape)
+
+        return self._new_cube_with(mask=self.mask & includemask)
+
+
     def average_beams(self, threshold, mask='compute'):
         """
         Average the beams.  Note that this operation only makes sense in
