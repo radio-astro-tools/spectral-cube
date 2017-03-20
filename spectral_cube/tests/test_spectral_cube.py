@@ -1291,3 +1291,9 @@ def test_mask_bad_beams():
 
     mean = masked_cube.mean(axis=0)
     assert np.all(mean == cube[2,:,:])
+
+
+    masked_cube2 = cube.mask_out_bad_beams(0.5,)
+
+    mean2 = masked_cube2.mean(axis=0)
+    assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
