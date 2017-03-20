@@ -1288,3 +1288,6 @@ def test_mask_bad_beams():
                                                               60*u.deg))
 
     assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])
+
+    mean = masked_cube.mean(axis=0)
+    assert np.all(mean == cube[2,:,:])

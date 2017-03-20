@@ -2707,9 +2707,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             raise ValueError("Beam list must have same size as spectral "
                              "dimension")
 
-        self.beams = beams
+        self._beams = beams
         self.beam_threshold = beam_threshold
 
+    @property
+    def beams(self):
+        return self._beams
 
     def __getitem__(self, view):
 
@@ -2836,10 +2839,16 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
-    def _check_beam_areas(self, threshold, mean_beam):
+    def _check_beam_areas(self, threshold, mean_beam, mask=None):
         """
         Check that the beam areas are the same to within some threshold
         """
+
+        if mask is not None:
+            assert len(mask) == len(self.beams)
+            mask = np.array(mask, dtype='bool')
+        else:
+            mask = np.ones(len(self.beams), dtype='bool')
 
         qtys = dict(sr=u.Quantity(self.beams, u.sr),
                     major=u.Quantity([bm.major for bm in self.beams], u.deg),
@@ -2850,9 +2859,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         errormessage = ""
 
-        for qtyname, qty in qtys.items():
-            minv = qty.min().value
-            maxv = qty.max().value
+        for (qtyname, qty) in (qtys.items()):
+            minv = qty[mask].min().value
+            maxv = qty[mask].max().value
             mn = getattr(mean_beam, qtyname).value
             maxdiff = np.max(np.abs((maxv-mn, minv-mn)))/mn
 
@@ -2937,7 +2946,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                        self._wcs,
                                        shape=self._data.shape)
 
-        return self._new_cube_with(mask=self.mask & includemask)
+        return self._new_cube_with(mask=self.mask & includemask,
+                                   beam_threshold=threshold)
 
 
     def average_beams(self, threshold, mask='compute'):
@@ -2964,7 +2974,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         new_beam = cube_utils.average_beams(self.beams, includemask=beam_mask)
         assert not np.isnan(new_beam)
-        self._check_beam_areas(threshold, mean_beam=new_beam)
+        self._check_beam_areas(threshold, mean_beam=new_beam, mask=beam_mask)
         warnings.warn("Arithmetic beam averaging is being performed.  This is "
                       "not a mathematically robust operation, but is being "
                       "permitted because the beams differ by "
