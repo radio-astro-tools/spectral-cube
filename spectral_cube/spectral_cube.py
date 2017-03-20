@@ -2870,7 +2870,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         if errormessage != "":
             raise ValueError(errormessage)
 
-    def _average_beams(self, threshold, mask='compute'):
+    def average_beams(self, threshold, mask='compute'):
         """
         Average the beams.  Note that this operation only makes sense in
         limited contexts!  Generally one would want to convolve all the beams
@@ -2938,7 +2938,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                      function.__name__))
 
             if need_to_handle_beams:
-                avg_beam = self._average_beams(beam_threshold)
+                avg_beam = self.average_beams(beam_threshold)
                 result.meta['beam'] = avg_beam
 
             return result
