@@ -18,6 +18,7 @@ This package is developed by:
 * Adam Leroy ([@akleroy](http://github.com/akleroy))
 * Thomas Robitaille ([@astrofrog](http://github.com/astrofrog))
 * Erik Rosolowsky ([@low-sky](http://github.com/low-sky))
+* Eric Koch ([@e-koch](https://github.com/e-koch))
 
 Build and coverage status
 =========================
