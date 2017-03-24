@@ -20,6 +20,7 @@ from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
 from astropy import convolution
+from astropy import stats
 
 import numpy as np
 
@@ -331,7 +332,9 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             spatial axes?
         unit : None or `astropy.units.Unit`
             The unit to include for the output array.  For example,
-            `SpectralCube.max` calls ``SpectralCube.apply_numpy_function(np.max, unit=self.unit)``, inheriting the unit from the original cube.
+            `SpectralCube.max` calls
+            ``SpectralCube.apply_numpy_function(np.max, unit=self.unit)``,
+            inheriting the unit from the original cube.
             However, for other numpy functions, e.g. `numpy.argmax`, the return
             is an index and therefore unitless.
         check_endian : bool
@@ -535,6 +538,19 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
     def std(self, axis=None, how='cube', ddof=0):
         """
         Return the standard deviation of the cube, optionally over an axis.
+
+        Parameters
+        ----------
+        axis : int or None
+            The axis to average over
+        how : str
+            The method to use.  This method supports slice-wise standard
+            deviation calculation ('slice') and full-cube ('cube'), but not
+            'ray'.
+        ddof : int
+            Means Delta Degrees of Freedom.  The divisor used in calculations
+            is ``N - ddof``, where ``N`` represents the number of elements.  By
+            default `ddof` is zero.
         """
 
         projection = self._naxes_dropped(axis) in (1,2)
@@ -576,6 +592,16 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         # implement raywise reduction
         return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
+                                         projection=projection)
+
+    @aggregation_docstring
+    def mad_std(self, axis=None):
+        """
+        Use astropy's mad_std to computer the standard deviation
+        """
+        projection = self._naxes_dropped(axis) in (1,2)
+        return self.apply_numpy_function(stats.mad_std, fill=np.nan,
+                                         how='cube', axis=axis, unit=self.unit,
                                          projection=projection)
 
 
