@@ -109,19 +109,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             raise TypeError("If a header is given, it must be a fits.Header")
 
         if 'BUNIT' in self._meta:
-
-            # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
-            bunit = re.sub("\s", "", self._meta['BUNIT'].lower())
-            if bunit == 'jy/beam':
-                self._unit = u.Jy
-
-
-            else:
-                try:
-                    self._unit = u.Unit(self._meta['BUNIT'])
-                except ValueError:
-                    warnings.warn("Could not parse unit {0}".format(self._meta['BUNIT']))
-                    self._unit = None
+            self._unit = cube_utils.convert_bunit(self._meta["BUNIT"])
         elif hasattr(data, 'unit'):
             self._unit = data.unit
         else:
@@ -2927,13 +2915,13 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         for prop in criteria:
             val = props[prop]
             mid = getattr(reference_beam, prop)
-            
+
             diff = np.abs((val-mid)/mid)
 
             assert diff.shape == includemask.shape
-            
+
             includemask[diff > threshold] = False
-        
+
         return includemask
 
     def mask_out_bad_beams(self, threshold, reference_beam=None,
