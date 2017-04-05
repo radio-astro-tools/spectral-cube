@@ -7,6 +7,7 @@ from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
 from .utils import SliceWarning
+from .cube_utils import convert_bunit
 
 import numpy as np
 
@@ -185,6 +186,29 @@ class Projection(LowerDimensionalObject):
 
         return self
 
+    @staticmethod
+    def from_hdu(hdu):
+        '''
+        Return a projection from a FITS HDU.
+        '''
+
+        if not len(hdu.shape) == 2:
+            raise ValueError("HDU must contain two-dimensional data.")
+
+        meta = {}
+
+        mywcs = wcs.WCS(hdu.header)
+
+        if "BUNIT" in hdu.header:
+            unit = convert_bunit(hdu.header["BUNIT"])
+            meta["BUNIT"] = hdu.header["BUNIT"]
+        else:
+            unit = None
+
+        self = Projection(hdu.data, unit=unit, wcs=mywcs, meta=meta,
+                          header=hdu.header)
+
+        return self
 
     def quicklook(self, filename=None, use_aplpy=True, aplpy_kwargs={}):
         """
