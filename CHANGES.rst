@@ -1,5 +1,7 @@
 0.4.1 (unreleased)
 ------------------
+ - Add creating a Projection from a FITS HDU
+   (https://github.com/radio-astro-tools/spectral-cube/pull/376)
  - Deprecate numpy <=1.8 because nanmedian is needed
    (https://github.com/radio-astro-tools/spectral-cube/pull/373)
  - Add tools for masking bad beams in VaryingResolutionSpectralCubes
