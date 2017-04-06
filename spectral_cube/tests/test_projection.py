@@ -193,3 +193,16 @@ def test_quantity_property():
 
     assert isinstance(arr, u.Quantity)
     assert not isinstance(arr, OneDSpectrum)
+
+
+@pytest.mark.parametrize(('LDO', 'data'),
+                         zip(LDOs_2d, data_two_2d))
+def test_projection_from_hdu(LDO, data):
+
+    p = LDO(data, copy=False)
+
+    hdu = p.hdu
+
+    p_new = LDO.from_hdu(hdu)
+
+    assert (p == p_new).all()

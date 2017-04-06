@@ -15,6 +15,8 @@ from astropy import log
 from astropy.io.fits import BinTableHDU, Column
 from astropy import units as u
 import itertools
+import re
+
 
 def _fix_spectral(wcs):
     """
@@ -361,3 +363,32 @@ def _map_context(numcores):
     finally:
         if parallel:
             p.close()
+
+
+def convert_bunit(bunit):
+    '''
+    Convert a BUNIT string to a quantity
+
+    Parameters
+    ----------
+    bunit : str
+        String to convert to an `~astropy.units.Unit`
+
+    Returns
+    -------
+    unit : `~astropy.unit.Unit`
+        Corresponding unit.
+    '''
+
+    # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
+    bunit_lower = re.sub("\s", "", bunit.lower())
+    if bunit_lower == 'jy/beam':
+        unit = u.Jy
+    else:
+        try:
+            unit = u.Unit(bunit)
+        except ValueError:
+            warnings.warn("Could not parse unit {0}".format(bunit))
+            unit = None
+
+    return unit
