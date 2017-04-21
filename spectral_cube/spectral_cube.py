@@ -929,7 +929,10 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
     def with_mask(self, mask, inherit_mask=True, wcs_tolerance=None):
         """
         Return a new SpectralCube instance that contains a composite mask of
-        the current SpectralCube and the new ``mask``.
+        the current SpectralCube and the new ``mask``.  Values of the mask that
+        are ``True`` will be *included* (masks are analogous to numpy boolean
+        index arrays, they are the inverse of the ``.mask`` attribute of a numpy
+        masked array).
 
         Parameters
         ----------
