@@ -10,6 +10,8 @@ from .utils import SliceWarning
 from .cube_utils import convert_bunit
 
 import numpy as np
+from astropy import convolution
+from astropy.utils.console import ProgressBar
 
 from .base_class import BaseNDClass, SpectralAxisMixinClass
 from .cube_utils import beams_to_bintable
@@ -245,6 +247,96 @@ class Projection(LowerDimensionalObject):
         self.figure = pyplot.imshow(self.value)
         if filename is not None:
             self.figure.savefig(filename)
+
+    def convolve_to(self, beam, convolve=convolution.convolve_fft):
+        """
+        Convolve each channel in the cube to a specified beam
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A SpectralCube with a single ``beam``
+        """
+
+        if not "beam" in self.meta:
+            raise ValueError("No beam is contained in Projection.meta.")
+
+        pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5 * u.deg
+
+        convolution_kernel = \
+            beam.deconvolve(self.meta['beam']).as_kernel(pixscale)
+
+        newdata = convolve(self.value, convolution_kernel)
+
+        self.meta["beam"] = beam
+
+        self = Projection(newdata, unit=self.unit, wcs=self.wcs,
+                          meta=self.meta, header=self.header)
+
+        return self
+
+    def reproject(self, header, order='bilinear'):
+        """
+        Reproject the cube into a new header.  Fills the data with the cube's
+        ``fill_value`` to replace bad values before reprojection.
+
+        Parameters
+        ----------
+        header : `astropy.io.fits.Header`
+            A header specifying a cube in valid WCS
+        order : int or str, optional
+            The order of the interpolation (if ``mode`` is set to
+            ``'interpolation'``). This can be either one of the following
+            strings:
+
+                * 'nearest-neighbor'
+                * 'bilinear'
+                * 'biquadratic'
+                * 'bicubic'
+
+            or an integer. A value of ``0`` indicates nearest neighbor
+            interpolation.
+        """
+
+        try:
+            from reproject.version import version
+        except ImportError:
+            raise ImportError("Requires the reproject package to be"
+                              " installed.")
+
+        # Need version > 0.2 to work with cubes
+        from distutils.version import LooseVersion
+        if LooseVersion(version) < "0.3":
+            raise Warning("Requires version >=0.3 of reproject. The current "
+                          "version is: {}".format(version))
+
+        from reproject import reproject_interp
+
+        # TODO: Find the minimal footprint that contains the header and only reproject that
+        # (see FITS_tools.regrid_cube for a guide on how to do this)
+
+        newwcs = wcs.WCS(header)
+        shape_out = [header['NAXIS{0}'.format(i + 1)] for i in range(header['NAXIS'])][::-1]
+
+        newproj, newproj_valid = reproject_interp((self.value,
+                                                   self.header),
+                                                  newwcs,
+                                                  shape_out=shape_out,
+                                                  order=order)
+
+        self = Projection(newproj, unit=self.unit, wcs=newwcs,
+                          meta=self.meta, header=header)
+
+        return self
 
 # A slice is just like a projection in every way
 class Slice(Projection):
