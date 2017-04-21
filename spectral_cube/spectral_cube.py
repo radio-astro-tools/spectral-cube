@@ -183,20 +183,13 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         return cube
 
-    def _try_load_beam(self, header):
+    def _attach_beam(self):
 
-        try:
-            from radio_beam import Beam
-        except ImportError:
-            warnings.warn("radio_beam is not installed. No beam "
-                          "can be created.")
+            beam = cube_utils.try_load_beam(self.header)
 
-        try:
-            self.beam = Beam.from_fits_header(header)
-            self._meta['beam'] = self.beam
-        except Exception as ex:
-            warnings.warn("Could not parse beam information from header."
-                          "  Exception was: {0}".format(ex.__repr__()))
+            if beam is not None:
+                self.beam = beam
+                self._meta['beam'] = beam
 
     @property
     def unit(self):
@@ -2375,7 +2368,7 @@ class SpectralCube(BaseSpectralCube):
 
         # Beam loading must happen *after* WCS is read
         if beam is None and read_beam:
-            self._try_load_beam(header)
+            self._attach_beam()
 
         if beam is None and not read_beam and 'BUNIT' in self._meta:
             bunit = re.sub("\s", "", self._meta['BUNIT'].lower())
@@ -2383,7 +2376,7 @@ class SpectralCube(BaseSpectralCube):
                 warnings.warn("Units are in Jy/beam. Attempting to parse "
                               "header for beam information.")
 
-                self._try_load_beam(header)
+                self._attach_beam()
 
                 if hasattr(self, 'beam') or hasattr(self, 'beams'):
                     warnings.warn("Units were Jy/beam.  The 'beam' is now "
