@@ -14,7 +14,7 @@ from astropy import convolution
 from astropy.utils.console import ProgressBar
 
 from .base_class import BaseNDClass, SpectralAxisMixinClass
-from .cube_utils import beams_to_bintable
+from .cube_utils import beams_to_bintable, try_load_beam
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
 
@@ -206,6 +206,10 @@ class Projection(LowerDimensionalObject):
             meta["BUNIT"] = hdu.header["BUNIT"]
         else:
             unit = None
+
+        beam = try_load_beam(hdu.header)
+        if beam is not None:
+            meta['beam'] = beam
 
         self = Projection(hdu.data, unit=unit, wcs=mywcs, meta=meta,
                           header=hdu.header)

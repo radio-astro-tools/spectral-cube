@@ -10,6 +10,12 @@ from .helpers import assert_allclose
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
 from ..utils import SliceWarning
 
+try:
+    from radio_beam import Beam
+    RADIO_BEAM_INSTALLED = True
+except ImportError:
+    RADIO_BEAM_INSTALLED = False
+
 # set up for parametrization
 LDOs = (Projection, Slice, OneDSpectrum)
 LDOs_2d = (Projection, Slice,)
@@ -206,3 +212,21 @@ def test_projection_from_hdu(LDO, data):
     p_new = LDO.from_hdu(hdu)
 
     assert (p == p_new).all()
+
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+@pytest.mark.parametrize(('LDO', 'data'),
+                         zip(LDOs_2d, data_two_2d))
+def test_projection_from_hdu_with_beam(LDO, data):
+
+    p = LDO(data, copy=False)
+
+    hdu = p.hdu
+
+    beam = Beam(1 * u.arcsec)
+    hdu.header = beam.attach_to_header(hdu.header)
+
+    p_new = LDO.from_hdu(hdu)
+
+    assert (p == p_new).all()
+    assert beam == p_new.meta['beam']
