@@ -257,12 +257,12 @@ def test_projection_subimage():
     assert proj1.wcs.wcs.compare(proj2.wcs.wcs)
 
     proj3 = proj.subimage(ylo=1, yhi=3)
-    proj3 = proj.subimage(ylo=29.93464 * u.deg,
+    proj4 = proj.subimage(ylo=29.93464 * u.deg,
                           yhi=29.93522 * u.deg)
 
     assert proj3.shape == (2, 5)
-    assert proj3.shape == (2, 5)
-    assert proj3.wcs.wcs.compare(proj3.wcs.wcs)
+    assert proj4.shape == (2, 5)
+    assert proj3.wcs.wcs.compare(proj4.wcs.wcs)
 
     proj5 = proj.subimage()
 

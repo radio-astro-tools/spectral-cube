@@ -27,11 +27,19 @@ def test_subcube():
     assert sc2.shape == (2,3,2)
     assert sc1.wcs.wcs.compare(sc2.wcs.wcs)
 
-    sc3 = cube.subcube()
+    sc3 = cube.subcube(ylo=1, yhi=3)
+    sc4 = cube.subcube(ylo=29.93464 * u.deg,
+                       yhi=29.93522 * u.deg)
 
-    assert sc3.shape == cube.shape
-    assert sc3.wcs.wcs.compare(cube.wcs.wcs)
-    assert np.all(sc3._data == cube._data)
+    assert sc3.shape == (2, 2, 4)
+    assert sc4.shape == (2, 2, 4)
+    assert sc3.wcs.wcs.compare(sc4.wcs.wcs)
+
+    sc5 = cube.subcube()
+
+    assert sc5.shape == cube.shape
+    assert sc5.wcs.wcs.compare(cube.wcs.wcs)
+    assert np.all(sc5._data == cube._data)
 
 @pytest.mark.skipif('not pyregionOK', reason='Could not import pyregion')
 @pytest.mark.parametrize(('regfile','result'),
@@ -86,7 +94,7 @@ def test_ds9region_255(regfile):
     # THIS TEST FAILS!
     # I think the coordinate transformation in ds9 is wrong;
     # it uses kapteyn?
-    
+
     #region = 'circle(2,2,2)'
     #subcube = cube.subcube_from_ds9region(region)
 
