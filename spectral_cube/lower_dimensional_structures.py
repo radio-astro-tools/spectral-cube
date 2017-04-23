@@ -271,6 +271,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
             A SpectralCube with a single ``beam``
         """
 
+        self._raise_wcs_no_celestial()
+
         if not "beam" in self.meta:
             raise ValueError("No beam is contained in Projection.meta.")
 
@@ -310,6 +312,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
             or an integer. A value of ``0`` indicates nearest neighbor
             interpolation.
         """
+
+        self._raise_wcs_no_celestial()
 
         try:
             from reproject.version import version
@@ -353,6 +357,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
             interpreted as World coordinates.  If given as a string or
             int, will be interpreted as pixel coordinates.
         """
+
+        self._raise_wcs_no_celestial()
 
         limit_dict = {'xlo': 0 if xlo == 'min' else xlo,
                       'ylo': 0 if ylo == 'min' else ylo,

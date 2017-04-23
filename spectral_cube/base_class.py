@@ -45,6 +45,10 @@ class SpatialCoordMixinClass(object):
     def _has_wcs_celestial(self):
         return self.wcs.has_celestial
 
+    def _raise_wcs_no_celestial(self):
+        if not self._has_wcs_celestial:
+            raise WCSCelestialError("WCS does not contain two spatial axes.")
+
     @cube_utils.slice_syntax
     def world(self, view):
         """
@@ -76,8 +80,7 @@ class SpatialCoordMixinClass(object):
 
         """
 
-        if not self._has_wcs_celestial:
-            raise WCSCelestialError("WCS does not contain two spatial axes.")
+        self._raise_wcs_no_celestial()
 
         # note: view is a tuple of view
 
