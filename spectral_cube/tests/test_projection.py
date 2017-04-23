@@ -5,10 +5,12 @@ import pytest
 import numpy as np
 from astropy import units as u
 from astropy.wcs import WCS
+from astropy.io import fits
 
 from .helpers import assert_allclose
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
 from ..utils import SliceWarning
+from . import path
 
 try:
     from radio_beam import Beam
@@ -29,6 +31,15 @@ data_two = (two_qty_2d, two_qty_2d, two_qty_1d)
 data_twelve = (twelve_qty_2d, twelve_qty_2d, twelve_qty_1d)
 data_two_2d = (two_qty_2d, two_qty_2d,)
 data_twelve_2d = (twelve_qty_2d, twelve_qty_2d,)
+
+
+def load_projection(filename):
+
+    hdu = fits.open(path(filename))[0]
+    proj = Projection.from_hdu(hdu)
+
+    return proj, hdu
+
 
 @pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs_2d, data_two_2d))
