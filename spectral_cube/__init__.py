@@ -13,4 +13,5 @@ if not _ASTROPY_SETUP_:
     from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube
     from .stokes_spectral_cube import StokesSpectralCube
     from .masks import *
+    from .lower_dimensional_structures import Projection
 
