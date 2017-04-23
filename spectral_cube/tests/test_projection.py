@@ -241,3 +241,22 @@ def test_projection_from_hdu_with_beam(LDO, data):
 
     assert (p == p_new).all()
     assert beam == p_new.meta['beam']
+
+
+def test_projection_subimage():
+
+    proj, hdu = load_projection("55.fits")
+
+    proj1 = proj.subimage(xlo=1, xhi=3)
+    proj2 = proj.subimage(xlo=24.06269 * u.deg,
+                          xhi=24.06206 * u.deg)
+
+    assert proj1.shape == (5, 2)
+    assert proj2.shape == (5, 2)
+    assert proj1.wcs.wcs.compare(proj2.wcs.wcs)
+
+    proj3 = proj.subimage()
+
+    assert proj3.shape == proj.shape
+    assert proj3.wcs.wcs.compare(proj.wcs.wcs)
+    assert np.all(proj3.value == proj.value)

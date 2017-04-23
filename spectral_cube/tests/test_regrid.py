@@ -8,6 +8,7 @@ from astropy.io import fits
 
 from .. import SpectralCube
 from .test_spectral_cube import cube_and_raw
+from .test_projection import load_projection
 from . import path
 
 try:
@@ -181,3 +182,44 @@ def test_spectral_interpolate_with_mask():
                                    [0.0, 0.5, np.NaN, np.NaN])
 
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
+
+
+def test_convolution_2D():
+
+    proj, hdu = load_projection("55_delta.fits")
+
+    # 1" convolved with 1.5" -> 1.8027....
+    target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
+                       0*u.deg)
+
+    conv_proj = proj.convolve_to(target_beam)
+
+    expected = convolution.Gaussian2DKernel((1.5*u.arcsec /
+                                             beam.SIGMA_TO_FWHM /
+                                             (5.555555555555e-4*u.deg)).decompose().value,
+                                            x_size=5, y_size=5,
+                                           )
+
+    np.testing.assert_almost_equal(expected.array,
+                                   conv_proj.value)
+
+
+@pytest.mark.skipif('not REPROJECT_INSTALLED')
+def test_reproject_2D():
+
+    proj, hdu = load_projection("55.fits")
+
+    wcs_in = WCS(proj.header)
+    wcs_out = wcs_in.deepcopy()
+    wcs_out.wcs.ctype = ['GLON-SIN', 'GLAT-SIN']
+    wcs_out.wcs.crval = [134.37608, -31.939241]
+    wcs_out.wcs.crpix = [2., 2.]
+
+    header_out = proj.header
+    header_out['NAXIS1'] = 4
+    header_out['NAXIS2'] = 5
+    header_out.update(wcs_out.to_header())
+
+    result = proj.reproject(header_out)
+
+    assert result.shape == (5, 4)
