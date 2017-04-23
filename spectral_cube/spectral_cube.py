@@ -1449,10 +1449,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
         """
         return spectral_axis.determine_vconv_from_ctype(self.wcs.wcs.ctype[self.wcs.wcs.spec])
 
-    # @property
-    # def spatial_coordinate_map(self):
-    #     return self.world[0, :, :][1:]
-
     def closest_spectral_channel(self, value):
         """
         Find the index of the closest spectral channel to the specified
