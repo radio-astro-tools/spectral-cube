@@ -7,6 +7,7 @@ from astropy import wcs
 from astropy.io import fits
 
 from .. import SpectralCube
+from ..utils import WCSCelestialError
 from .test_spectral_cube import cube_and_raw
 from .test_projection import load_projection
 from . import path
@@ -204,6 +205,20 @@ def test_convolution_2D():
                                    conv_proj.value)
 
 
+def test_nocelestial_convolution_2D_fail():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    proj = cube.moment0(axis=1)
+
+    test_beam = Beam(1.0 * u.arcsec)
+
+    with pytest.raises(WCSCelestialError) as exc:
+        proj.convolve_to(test_beam)
+
+    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
+
+
 @pytest.mark.skipif('not REPROJECT_INSTALLED')
 def test_reproject_2D():
 
@@ -223,3 +238,15 @@ def test_reproject_2D():
     result = proj.reproject(header_out)
 
     assert result.shape == (5, 4)
+
+
+def test_nocelestial_reproject_2D_fail():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    proj = cube.moment0(axis=1)
+
+    with pytest.raises(WCSCelestialError) as exc:
+        proj.reproject(cube.header)
+
+    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")

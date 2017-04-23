@@ -8,8 +8,9 @@ from astropy.wcs import WCS
 from astropy.io import fits
 
 from .helpers import assert_allclose
+from .test_spectral_cube import cube_and_raw
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
-from ..utils import SliceWarning
+from ..utils import SliceWarning, WCSCelestialError
 from . import path
 
 try:
@@ -255,8 +256,29 @@ def test_projection_subimage():
     assert proj2.shape == (5, 2)
     assert proj1.wcs.wcs.compare(proj2.wcs.wcs)
 
-    proj3 = proj.subimage()
+    proj3 = proj.subimage(ylo=1, yhi=3)
+    proj3 = proj.subimage(ylo=29.93464 * u.deg,
+                          yhi=29.93522 * u.deg)
 
-    assert proj3.shape == proj.shape
-    assert proj3.wcs.wcs.compare(proj.wcs.wcs)
-    assert np.all(proj3.value == proj.value)
+    assert proj3.shape == (2, 5)
+    assert proj3.shape == (2, 5)
+    assert proj3.wcs.wcs.compare(proj3.wcs.wcs)
+
+    proj5 = proj.subimage()
+
+    assert proj5.shape == proj.shape
+    assert proj5.wcs.wcs.compare(proj.wcs.wcs)
+    assert np.all(proj5.value == proj.value)
+
+
+def test_projection_subimage_nocelestial_fail():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    proj = cube.moment0(axis=1)
+
+    with pytest.raises(WCSCelestialError) as exc:
+        proj.subimage(xlo=1, xhi=3)
+
+    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
+
