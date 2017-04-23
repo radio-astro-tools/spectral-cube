@@ -283,8 +283,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
         Returns
         -------
-        cube : `SpectralCube`
-            A SpectralCube with a single ``beam``
+        proj : `Projection`
+            A Projection convolved to the given ``beam`` object.
         """
 
         self._raise_wcs_no_celestial()
@@ -307,8 +307,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
     def reproject(self, header, order='bilinear'):
         """
-        Reproject the cube into a new header.  Fills the data with the cube's
-        ``fill_value`` to replace bad values before reprojection.
+        Reproject the image into a new header.
 
         Parameters
         ----------
