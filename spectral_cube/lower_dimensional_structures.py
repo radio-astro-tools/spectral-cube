@@ -11,7 +11,6 @@ from .cube_utils import convert_bunit
 
 import numpy as np
 from astropy import convolution
-from astropy.utils.console import ProgressBar
 
 from .base_class import BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinClass
 from . import cube_utils
