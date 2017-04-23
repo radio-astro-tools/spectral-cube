@@ -4,13 +4,14 @@ import numpy as np
 
 from . import wcs_utils
 from . import cube_utils
-from .utils import cached
+from .utils import cached, WCSCelestialError
+
+__doctest_skip__ = ['SpatialCoordMixinClass.world']
 
 DOPPLER_CONVENTIONS = {}
 DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
 DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
 DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
-
 
 
 class BaseNDClass(object):
@@ -39,6 +40,10 @@ class BaseNDClass(object):
 
 
 class SpatialCoordMixinClass(object):
+
+    @property
+    def _has_wcs_celestial(self):
+        return self.wcs.has_celestial
 
     @cube_utils.slice_syntax
     def world(self, view):
@@ -71,6 +76,9 @@ class SpatialCoordMixinClass(object):
 
         """
 
+        if not self._has_wcs_celestial:
+            raise WCSCelestialError("WCS does not contain two spatial axes.")
+
         # note: view is a tuple of view
 
         # the next 3 lines are equivalent to (but more efficient than)
@@ -91,9 +99,10 @@ class SpatialCoordMixinClass(object):
                  for i, w in enumerate(world)]
 
         # convert spectral unit if needed
-        if len(self.shape) > 2:
+        if hasattr(self, "_spectral_unit"):
             if self._spectral_unit is not None:
-                world[2] = world[2].to(self._spectral_unit)
+                specind = self.wcs.wcs.spec
+                world[specind] = world[specind].to(self._spectral_unit)
 
         return world[::-1]  # reverse WCS -> numpy order
 
@@ -111,6 +120,7 @@ class SpatialCoordMixinClass(object):
 
     @property
     def spatial_coordinate_map(self):
+
         if self.ndim > 2:
             return self.world[0, :, :][1:]
         else:
