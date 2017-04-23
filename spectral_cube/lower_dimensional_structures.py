@@ -13,8 +13,8 @@ import numpy as np
 from astropy import convolution
 from astropy.utils.console import ProgressBar
 
-from .base_class import BaseNDClass, SpectralAxisMixinClass
-from .cube_utils import beams_to_bintable, try_load_beam
+from .base_class import BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinClass
+from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
 
@@ -165,7 +165,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         """
         return u.Quantity(self)
 
-class Projection(LowerDimensionalObject):
+class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None):
@@ -207,7 +207,7 @@ class Projection(LowerDimensionalObject):
         else:
             unit = None
 
-        beam = try_load_beam(hdu.header)
+        beam = cube_utils.try_load_beam(hdu.header)
         if beam is not None:
             meta['beam'] = beam
 
@@ -341,6 +341,54 @@ class Projection(LowerDimensionalObject):
                           meta=self.meta, header=header)
 
         return self
+
+    def subimage(self, xlo='min', xhi='max', ylo='min', yhi='max'):
+        """
+        Extract a region spatially.
+
+        Parameters
+        ----------
+        [xy]lo/[xy]hi : int or `Quantity` or `min`/`max`
+            The endpoints to extract.  If given as a quantity, will be
+            interpreted as World coordinates.  If given as a string or
+            int, will be interpreted as pixel coordinates.
+        """
+
+        limit_dict = {'xlo': 0 if xlo == 'min' else xlo,
+                      'ylo': 0 if ylo == 'min' else ylo,
+                      'xhi': self.shape[1] if xhi == 'max' else xhi,
+                      'yhi': self.shape[0] if yhi == 'max' else yhi}
+        dims = {'x': 1,
+                'y': 0}
+
+        for val in (xlo, ylo, xhi, yhi):
+            if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
+                raise u.UnitsError("The X and Y slices must be specified in "
+                                   "degree-equivalent units.")
+
+        for lim in limit_dict:
+            limval = limit_dict[lim]
+            if hasattr(limval, 'unit'):
+                dim = dims[lim[0]]
+                sl = [slice(0, 1)]
+                sl.insert(dim, slice(None))
+                spine = self.world[sl][dim]
+                val = np.argmin(np.abs(limval - spine))
+                if limval > spine.max() or limval < spine.min():
+                    pass
+                    # log.warn("The limit {0} is out of bounds."
+                    #          "  Using min/max instead.".format(lim))
+                if lim[1:] == 'hi':
+                    # End-inclusive indexing: need to add one for the high
+                    # slice
+                    limit_dict[lim] = val + 1
+                else:
+                    limit_dict[lim] = val
+
+        slices = [slice(limit_dict[xx + 'lo'], limit_dict[xx + 'hi'])
+                  for xx in 'yx']
+
+        return self[slices]
 
 # A slice is just like a projection in every way
 class Slice(Projection):
@@ -480,6 +528,6 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
             warnings.simplefilter("ignore")
             hdu = self.hdu
 
-        beamhdu = beams_to_bintable(self.beams)
+        beamhdu = cube_utils.beams_to_bintable(self.beams)
 
         return HDUList([hdu, beamhdu])
