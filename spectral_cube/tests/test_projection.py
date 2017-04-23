@@ -213,6 +213,37 @@ def test_quantity_property():
     assert not isinstance(arr, OneDSpectrum)
 
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_projection_with_beam():
+
+    exp_beam = Beam(1.0 * u.arcsec)
+
+    proj, hdu = load_projection("55.fits")
+
+    # uses from_hdu, which passes beam as kwarg
+    assert proj.beam == exp_beam
+    assert proj.meta['beam'] == exp_beam
+
+    # load beam from meta
+    exp_beam = Beam(1.5 * u.arcsec)
+
+    meta = {"beam": exp_beam}
+    new_proj = Projection(hdu.data, wcs=proj.wcs, meta=meta)
+
+    assert new_proj.beam == exp_beam
+    assert new_proj.meta['beam'] == exp_beam
+
+    # load beam from given header
+    exp_beam = Beam(2.0 * u.arcsec)
+    header = hdu.header.copy()
+    header = exp_beam.attach_to_header(header)
+    new_proj = Projection(hdu.data, wcs=proj.wcs, header=header,
+                          read_beam=True)
+
+    assert new_proj.beam == exp_beam
+    assert new_proj.meta['beam'] == exp_beam
+
+
 @pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs_2d, data_two_2d))
 def test_projection_from_hdu(LDO, data):
@@ -242,6 +273,7 @@ def test_projection_from_hdu_with_beam(LDO, data):
 
     assert (p == p_new).all()
     assert beam == p_new.meta['beam']
+    assert beam == p_new.beam
 
 
 def test_projection_subimage():

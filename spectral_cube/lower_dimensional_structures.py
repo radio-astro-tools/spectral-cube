@@ -168,7 +168,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None, header=None):
+                meta=None, mask=None, header=None, beam=None,
+                read_beam=False):
 
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -186,7 +187,24 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         else:
             self._header = Header()
 
+        if beam is not None:
+            self._beam = beam
+            self.meta['beam'] = beam
+        else:
+            if "beam" in self.meta:
+                self._beam = self.meta['beam']
+            else:
+                if read_beam:
+                    beam = cube_utils.try_load_beam(header)
+                    if beam is not None:
+                        self._beam = beam
+                        self.meta['beam'] = beam
+
         return self
+
+    @property
+    def beam(self):
+        return self._beam
 
     @staticmethod
     def from_hdu(hdu):
@@ -208,11 +226,9 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
             unit = None
 
         beam = cube_utils.try_load_beam(hdu.header)
-        if beam is not None:
-            meta['beam'] = beam
 
         self = Projection(hdu.data, unit=unit, wcs=mywcs, meta=meta,
-                          header=hdu.header)
+                          header=hdu.header, beam=beam)
 
         return self
 
@@ -279,14 +295,13 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5 * u.deg
 
         convolution_kernel = \
-            beam.deconvolve(self.meta['beam']).as_kernel(pixscale)
+            beam.deconvolve(self.beam).as_kernel(pixscale)
 
         newdata = convolve(self.value, convolution_kernel)
 
-        self.meta["beam"] = beam
-
         self = Projection(newdata, unit=self.unit, wcs=self.wcs,
-                          meta=self.meta, header=self.header)
+                          meta=self.meta, header=self.header,
+                          beam=beam)
 
         return self
 
@@ -342,7 +357,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
                                                   order=order)
 
         self = Projection(newproj, unit=self.unit, wcs=newwcs,
-                          meta=self.meta, header=header)
+                          meta=self.meta, header=header,
+                          read_beam=True)
 
         return self
 
