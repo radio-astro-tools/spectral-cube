@@ -203,6 +203,7 @@ def test_convolution_2D():
 
     np.testing.assert_almost_equal(expected.array,
                                    conv_proj.value)
+    assert conv_proj.beam == target_beam
 
 
 def test_nocelestial_convolution_2D_fail():
@@ -238,6 +239,7 @@ def test_reproject_2D():
     result = proj.reproject(header_out)
 
     assert result.shape == (5, 4)
+    assert result.beam == proj.beam
 
 
 def test_nocelestial_reproject_2D_fail():
