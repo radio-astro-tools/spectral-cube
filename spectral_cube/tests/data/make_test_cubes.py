@@ -141,3 +141,8 @@ if __name__ == "__main__":
     h['BUNIT'] = 'K'
     d = np.arange(5 * 5).reshape((5, 5))
     fits.writeto('55.fits', d, h, clobber=True)
+
+    # test cube for convolution, regridding
+    d = np.zeros([5, 5], dtype='float')
+    d[2, 2] = 1.0
+    fits.writeto('55_delta.fits', d, h, clobber=True)
