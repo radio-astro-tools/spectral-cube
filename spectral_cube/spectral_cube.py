@@ -40,8 +40,7 @@ from distutils.version import LooseVersion
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
-__doctest_skip__ = ['BaseSpectralCube.world',
-                    'BaseSpectralCube._apply_everywhere']
+__doctest_skip__ = ['BaseSpectralCube._apply_everywhere']
 
 try:
     from scipy import ndimage
@@ -821,6 +820,10 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
         Retrieve the world coordinates corresponding to the extracted flattened
         version of the cube
         """
+
+        # NOTE: this should be moved to SpatialCoordMixinClass once masks
+        # are implemented for lower dim objects - EK
+
         lon,lat,spec = self.world[view]
         spec = self._mask._flattened(data=spec, wcs=self._wcs, view=slice)
         lon = self._mask._flattened(data=lon, wcs=self._wcs, view=slice)
