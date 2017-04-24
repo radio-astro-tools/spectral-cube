@@ -52,9 +52,11 @@ class SpatialCoordMixinClass(object):
     @cube_utils.slice_syntax
     def world(self, view):
         """
-        Return a list of the world coordinates in a cube (or a view of it).
+        Return a list of the world coordinates in a cube, projection, or a view
+        of it.
 
-        Cube.world is called with *bracket notation*, like a NumPy array::
+        SpatialCoordMixinClass.world is called with *bracket notation*, like
+        a NumPy array::
             c.world[0:3, :, :]
 
         Returns
@@ -123,11 +125,8 @@ class SpatialCoordMixinClass(object):
 
     @property
     def spatial_coordinate_map(self):
-
-        if self.ndim > 2:
-            return self.world[0, :, :][1:]
-        else:
-            return self.world[1:]
+        view = [0 for ii in range(self.ndim - 2)] + [slice(None)] * 2
+        return self.world[view][self.ndim - 2:]
 
     @property
     @cached

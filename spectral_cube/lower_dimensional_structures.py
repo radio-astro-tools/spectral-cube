@@ -192,12 +192,13 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         else:
             if "beam" in self.meta:
                 self._beam = self.meta['beam']
-            else:
-                if read_beam:
-                    beam = cube_utils.try_load_beam(header)
-                    if beam is not None:
-                        self._beam = beam
-                        self.meta['beam'] = beam
+            elif read_beam:
+                beam = cube_utils.try_load_beam(header)
+                if beam is not None:
+                    self._beam = beam
+                    self.meta['beam'] = beam
+                else:
+                    warnings.warn("Cannot load beam from header.")
 
         return self
 
@@ -269,7 +270,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
     def convolve_to(self, beam, convolve=convolution.convolve_fft):
         """
-        Convolve each channel in the cube to a specified beam
+        Convolve the image to a specified beam.
 
         Parameters
         ----------

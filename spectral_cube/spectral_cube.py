@@ -184,11 +184,11 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
 
     def _attach_beam(self):
 
-            beam = cube_utils.try_load_beam(self.header)
+        beam = cube_utils.try_load_beam(self.header)
 
-            if beam is not None:
-                self.beam = beam
-                self._meta['beam'] = beam
+        if beam is not None:
+            self.beam = beam
+            self._meta['beam'] = beam
 
     @property
     def unit(self):
