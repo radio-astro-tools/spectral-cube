@@ -288,9 +288,6 @@ def test_projection_subimage():
     assert proj2.shape == (5, 2)
     assert proj1.wcs.wcs.compare(proj2.wcs.wcs)
 
-    # Make sure the beam is kept
-    assert proj.beam == proj1.beam
-
     proj3 = proj.subimage(ylo=1, yhi=3)
     proj4 = proj.subimage(ylo=29.93464 * u.deg,
                           yhi=29.93522 * u.deg)
@@ -316,4 +313,3 @@ def test_projection_subimage_nocelestial_fail():
         proj.subimage(xlo=1, xhi=3)
 
     assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
-

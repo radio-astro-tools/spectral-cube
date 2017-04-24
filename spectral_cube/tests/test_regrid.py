@@ -185,6 +185,7 @@ def test_spectral_interpolate_with_mask():
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
 
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_convolution_2D():
 
     proj, hdu = load_projection("55_delta.fits")
@@ -206,6 +207,7 @@ def test_convolution_2D():
     assert conv_proj.beam == target_beam
 
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_nocelestial_convolution_2D_fail():
 
     cube, data = cube_and_raw('255_delta.fits')
@@ -242,6 +244,7 @@ def test_reproject_2D():
     assert result.beam == proj.beam
 
 
+@pytest.mark.skipif('not REPROJECT_INSTALLED')
 def test_nocelestial_reproject_2D_fail():
 
     cube, data = cube_and_raw('255_delta.fits')
