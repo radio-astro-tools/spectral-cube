@@ -1508,7 +1508,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                        "equivalent units, or search for a "
                                        "velocity instead")
                 else:
-                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectal_axis.unit))
+                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectral_axis.unit))
             elif value.unit.is_equivalent(u.m / u.s):
                 if spectral_axis.unit.is_equivalent(u.Hz, equivalencies=u.spectral()):
                     raise u.UnitsError("Spectral axis is in frequency-equivalent "
@@ -1518,7 +1518,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                        "equivalent units, or search for a "
                                        "velocity instead")
                 else:
-                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectal_axis.unit))
+                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectral_axis.unit))
             else:
                 raise u.UnitsError("'value' should be in frequency equivalent or velocity units (got {0})".format(value.unit))
 
