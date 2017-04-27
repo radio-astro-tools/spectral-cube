@@ -153,7 +153,7 @@ def test_spectral_interpolate_with_fillvalue():
     result = cube.spectral_interpolate(spectral_grid=sg, fill_value=42)
 
     np.testing.assert_almost_equal(result[0,0,0].value,
-                                   [42, 42, 42 42])
+                                   42)
 
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
