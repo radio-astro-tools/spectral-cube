@@ -2498,9 +2498,12 @@ class SpectralCube(BaseSpectralCube):
             If disabled, a warning will be raised when interpolating onto a
             grid that does not nyquist sample the existing grid.  Disable this
             if you have already appropriately smoothed the data.
-        fill_value : float
-            Value for cube interpolates outside of the original range
-            defined in the data
+
+        fill_value : float 
+            Value for extrapolated spectral values that lie outside of
+            the spectral range defined in the original data.  The
+            default is to use the nearest spectral channel in the
+            cube.
 
         Returns
         -------
