@@ -144,8 +144,8 @@ def test_spectral_interpolate():
 
 def test_spectral_interpolate_with_fillvalue():
 
-#    cube, data = cube_and_raw('522_delta.fits')
-    cube = SpectralCube.read('522_delta.fits')
+    cube, data = cube_and_raw('522_delta.fits')
+
     # Step one channel out of bounds.
     sg = ((cube.spectral_axis[0]) -
           (cube.spectral_axis[1] - cube.spectral_axis[0]) *
