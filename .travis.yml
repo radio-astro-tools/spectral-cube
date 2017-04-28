@@ -79,10 +79,8 @@ matrix:
               ASTROPY_VERSION='development'
 
         - python: 2.7
-          casa: stable
           env:
               SETUP_CMD='test'
-              #CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/stable/el6/casa-stable-4.7.59.tar.gz'
               CASA_URL='https://casa.nrao.edu/download/distro/linux/release/el7/casa-release-4.7.2-el7.tar.gz'
               PYPATH=~/.casa/lib/python2.7/site-packages
 
