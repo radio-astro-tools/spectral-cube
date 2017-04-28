@@ -2486,9 +2486,9 @@ class SpectralCube(BaseSpectralCube):
         return newcube
 
     def spectral_interpolate(self, spectral_grid,
-                             suppress_smooth_warning=False):
-        """
-        Resample the cube spectrally onto a specific grid
+                             suppress_smooth_warning=False,
+                             fill_value=None):
+        """Resample the cube spectrally onto a specific grid
 
         Parameters
         ----------
@@ -2499,9 +2499,16 @@ class SpectralCube(BaseSpectralCube):
             grid that does not nyquist sample the existing grid.  Disable this
             if you have already appropriately smoothed the data.
 
+        fill_value : float 
+            Value for extrapolated spectral values that lie outside of
+            the spectral range defined in the original data.  The
+            default is to use the nearest spectral channel in the
+            cube.
+
         Returns
         -------
         cube : SpectralCube
+
         """
 
         inaxis = self.spectral_axis.to(spectral_grid.unit)
@@ -2545,7 +2552,8 @@ class SpectralCube(BaseSpectralCube):
             mask = self.mask.include(view=(specslice, iy, ix))
             if any(mask):
                 newcube[:,iy,ix] = np.interp(spectral_grid.value, inaxis.value,
-                                             cubedata[specslice,iy,ix].value)
+                                             cubedata[specslice,iy,ix].value,
+                                             left=fill_value, right=fill_value)
                 if all(mask):
                     newmask[:,iy,ix] = True
                 else:

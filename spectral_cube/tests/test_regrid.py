@@ -124,6 +124,7 @@ def test_spectral_smooth_fail():
                                  "common resolution with `convolve_to` before "
                                  "attempting spectral smoothed.")
 
+
 def test_spectral_interpolate():
 
     cube, data = cube_and_raw('522_delta.fits')
@@ -139,6 +140,21 @@ def test_spectral_interpolate():
                                    [0.0, 0.5, 0.5, 0.0])
 
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
+
+
+def test_spectral_interpolate_with_fillvalue():
+
+    cube, data = cube_and_raw('522_delta.fits')
+
+    # Step one channel out of bounds.
+    sg = ((cube.spectral_axis[0]) -
+          (cube.spectral_axis[1] - cube.spectral_axis[0]) *
+          np.linspace(1,4,4))
+    result = cube.spectral_interpolate(spectral_grid=sg,
+                                       fill_value=42)
+    np.testing.assert_almost_equal(result[:,0,0].value,
+                                   np.ones(4)*42)
+    
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_spectral_interpolate_fail():
