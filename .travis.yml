@@ -83,6 +83,7 @@ matrix:
               SETUP_CMD='test'
               CASA_URL='https://casa.nrao.edu/download/distro/linux/release/el7/casa-release-4.7.2-el7.tar.gz'
               PYPATH=~/.casa/lib/python2.7/site-packages
+              CONDA_DEPENDENCIES='matplotlib aplpy hashlib'
 
         # known not to be able to install astropy
         #- python: 2.7
