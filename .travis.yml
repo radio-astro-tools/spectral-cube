@@ -81,7 +81,8 @@ matrix:
         - python: 2.7
           env:
               SETUP_CMD='test'
-              CASA_URL='https://casa.nrao.edu/download/distro/linux/release/el7/casa-release-4.7.2-el7.tar.gz'
+              #CASA_URL='https://casa.nrao.edu/download/distro/linux/release/el7/casa-release-4.7.2-el7.tar.gz'
+              CASA_URL='https://casa.nrao.edu/download/distro/linux/release/el6/casa-release-4.7.2-el6.tar.gz'
               PYPATH=~/.casa/lib/python2.7/site-packages
               CONDA_DEPENDENCIES='matplotlib aplpy'
 
