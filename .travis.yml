@@ -104,6 +104,7 @@ install:
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
     - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; CASA_CONFIG=${CASA_BIN}-config; fi
     - if [[ $CASA_BIN ]]; then sh .download_packages.sh; fi
+    - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python -c "from hashlib import md5, sha1, sha256"; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_pip.py; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_astropy.py; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .import_astropy.py; fi
