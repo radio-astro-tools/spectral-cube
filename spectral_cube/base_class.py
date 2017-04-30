@@ -56,8 +56,7 @@ class SpatialCoordMixinClass(object):
         of it.
 
         SpatialCoordMixinClass.world is called with *bracket notation*, like
-        a NumPy array::
-            c.world[0:3, :, :]
+        a NumPy array: ``c.world[0:3, :, :]``
 
         Returns
         -------
