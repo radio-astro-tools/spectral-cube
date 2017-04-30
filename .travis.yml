@@ -103,6 +103,7 @@ install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
     - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; CASA_CONFIG=${CASA_BIN}-config; fi
+    - if [[ $CASA_BIN ]]; then wget --no-check-certificate https://pypi.python.org/packages/11/b6/abcb525026a4be042b486df43905d6893fb04f05aac21c32c638e939e447/pip-9.0.1.tar.gz#md5=35f01da33009719497f01a4ba69d63c9; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_pip.py; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_astropy.py; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .import_astropy.py; fi
