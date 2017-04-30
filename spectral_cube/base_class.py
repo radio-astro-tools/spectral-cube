@@ -56,27 +56,33 @@ class SpatialCoordMixinClass(object):
         of it.
 
         SpatialCoordMixinClass.world is called with *bracket notation*, like
-        a NumPy array: ``c.world[0:3, :, :]``
+        a NumPy array::
+
+            c.world[0:3, :, :]
 
         Returns
         -------
         [v, y, x] : list of NumPy arrays
             The 3 world coordinates at each pixel in the view. For a 2D image,
-            the output is [y, x].
+            the output is ``[y, x]``.
 
 
         Examples
         --------
         Extract the first 3 velocity channels of the cube:
+
         >>> v, y, x = c.world[0:3]
 
-        Extract all the world coordinates
+        Extract all the world coordinates:
+
         >>> v, y, x = c.world[:, :, :]
 
-        Extract every other pixel along all axes
+        Extract every other pixel along all axes:
+
         >>> v, y, x = c.world[::2, ::2, ::2]
 
         Extract all the world coordinates for a 2D image:
+
         >>> y, x = c.world[:, :]
 
         """
