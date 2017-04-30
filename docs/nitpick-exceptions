@@ -3,6 +3,7 @@ py:obj radio_beam.Beam
 py:obj astroquery.splatalogue.Splatalogue
 py:class spectral_cube.base_class.BaseNDClass
 py:class spectral_cube.base_class.SpectralAxisMixinClass
+py:class spectral_cube.base_class.SpatialCoordMixinClass
 
 # yt references
 py:obj yt.surface.export_sketchfab
