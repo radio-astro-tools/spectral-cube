@@ -104,6 +104,8 @@ install:
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
     - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; CASA_CONFIG=${CASA_BIN}-config; fi
     - if [[ $CASA_BIN ]]; then wget --no-check-certificate https://pypi.python.org/packages/11/b6/abcb525026a4be042b486df43905d6893fb04f05aac21c32c638e939e447/pip-9.0.1.tar.gz#md5=35f01da33009719497f01a4ba69d63c9; fi
+    - if [[ $CASA_BIN ]]; then wget --no-check-certificate https://pypi.python.org/packages/e3/e4/4bd88bce765d8156091235d8747d8878d764bcd78180294bed0a2d003654/astropy-1.3.2.tar.gz#md5=c597c68e4392a82f90a9cb22c3b28628; fi
+    - if [[ $CASA_BIN ]]; then wget --no-check-certificate https://pypi.python.org/packages/a5/16/8a678404411842fe02d780b5f0a676ff4d79cd58f0f22acddab1b392e230/numpy-1.12.1.zip#md5=c75b072a984028ac746a6a332c209a91; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_pip.py; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_astropy.py; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .import_astropy.py; fi
