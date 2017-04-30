@@ -12,7 +12,8 @@ from .cube_utils import convert_bunit
 import numpy as np
 from astropy import convolution
 
-from .base_class import BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinClass
+from .base_class import (BaseNDClass, SpectralAxisMixinClass,
+                         SpatialCoordMixinClass)
 from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
