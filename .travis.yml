@@ -82,7 +82,7 @@ matrix:
           env:
               SETUP_CMD='test'
               CASA_URL='https://casa.nrao.edu/download/distro/linux/release/el6/casa-release-4.7.2-el6.tar.gz'
-              PYPATH=~/.casa/lib/python2.7/site-packages
+              PYPATH=/home/travis/.local/lib/python2.7/site-packages/numpy:/home/travis/.local/lib/python2.7/site-packages:~/.casa/lib/python2.7/site-packages
               CONDA_DEPENDENCIES='matplotlib aplpy'
 
         # known not to be able to install astropy
@@ -110,7 +110,6 @@ install:
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_astropy.py; fi
     - if [[ $CASA_BIN ]]; then ls; fi # looking for numpy; maybe it's being imported locally instead of being installed?
     - if [[ $CASA_BIN ]]; then ls /home/travis/.local/lib/python2.7/site-packages/; fi
-    - if [[ $CASA_BIN ]]; then export PYTHONPATH=/home/travis/.local/lib/python2.7/site-packages/numpy:/home/travis/.local/lib/python2.7/site-packages; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .import_astropy.py; fi
 
 script:
