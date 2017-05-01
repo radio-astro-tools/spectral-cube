@@ -108,12 +108,13 @@ install:
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python -c "from hashlib import md5, sha1, sha256"; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_pip.py; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_astropy.py; fi
+    - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python -c "import sys; print(sys.path)"; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .import_astropy.py; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH $CASA_CONFIG --exec python setup.py $SETUP_CMD; fi
-    - python setup.py $SETUP_CMD
+    - if [[ !$CASA_BIN ]]; then python setup.py $SETUP_CMD; fi
 
 after_success:
     - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='spectral_cube/tests/coveragerc'; fi
