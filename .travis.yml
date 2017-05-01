@@ -110,6 +110,7 @@ install:
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .install_astropy.py; fi
     - if [[ $CASA_BIN ]]; then ls; fi # looking for numpy; maybe it's being imported locally instead of being installed?
     - if [[ $CASA_BIN ]]; then ls /home/travis/.local/lib/python2.7/site-packages/; fi
+    - if [[ $CASA_BIN ]]; then export PYTHONPATH=/home/travis/.local/lib/python2.7/site-packages/numpy:/home/travis/.local/lib/python2.7/site-packages; fi
     - if [[ $CASA_BIN ]]; then ${CASA_CONFIG} --exec python .import_astropy.py; fi
 
 script:
