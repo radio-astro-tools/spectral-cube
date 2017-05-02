@@ -503,7 +503,9 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
             else:
                 return out
 
-        return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
+        nanmean = getattr(np, 'nanmean', np.ma.mean)
+
+        return self.apply_numpy_function(nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
 
@@ -562,7 +564,9 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         # process.  There IS a one-pass algorithm for std dev, but it is not
         # implemented, so we must force cube here.  We could and should also
         # implement raywise reduction
-        return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
+        nanstd = getattr(np, 'nanstd', np.ma.std)
+
+        return self.apply_numpy_function(nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
 
