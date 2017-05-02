@@ -286,7 +286,6 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
         return self
 
-
     @property
     def header(self):
         header = self._header

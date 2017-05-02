@@ -29,7 +29,15 @@ class BaseNDClass(object):
 
     @property
     def mask(self):
-        return self._mask
+        # since LDOs are array-like, they need to interact well with numpy
+        # arrays
+        # Numpy checks if mask is 'False' and won't accept a mask that is
+        # 'None' (even though that's what we'd prefer)
+        if not hasattr(self, '_mask') or self._mask is None:
+            return False
+        else:
+            return self._mask
+
 
 class SpectralAxisMixinClass(object):
 
