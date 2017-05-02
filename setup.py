@@ -5,6 +5,9 @@ import glob
 import os
 import sys
 
+# DEBUG
+print("sys.path: {0}".format(sys.path))
+
 import ah_bootstrap
 from setuptools import setup
 
