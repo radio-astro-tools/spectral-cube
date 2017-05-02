@@ -3,6 +3,7 @@ from __future__ import print_function, absolute_import, division
 import warnings
 from astropy import units as u
 from astropy import wcs
+from astropy import convolution
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
@@ -300,7 +301,7 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
                                       value=sh))
 
         # Preserve the spectrum's spectral units
-        if self._spectral_unit != u.Unit(header['CUNIT1']):
+        if 'CUNIT1' in header and self._spectral_unit != u.Unit(header['CUNIT1']):
             spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
             header['CDELT1'] *= spectral_scale
             header['CRVAL1'] *= spectral_scale
@@ -461,3 +462,27 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         return OneDSpectrum(value=newspec, unit=self.unit, wcs=newwcs,
                             header=newheader, meta=self.meta.copy(),
                             copy=False, spectral_unit=spectral_grid.unit)
+
+    def spectral_smooth(self, kernel,
+                        convolve=convolution.convolve,
+                        **kwargs):
+        """
+        Smooth the spectrum
+
+        Parameters
+        ----------
+        kernel : `~astropy.convolution.Kernel1D`
+            A 1D kernel from astropy
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        kwargs : dict
+            Passed to the convolve function
+        """
+
+        newspec = convolve(self.value, kernel, normalize_kernel=True, **kwargs)
+
+        return OneDSpectrum(value=newspec, unit=self.unit, wcs=self.wcs.copy(),
+                            header=self.header.copy(), meta=self.meta.copy(),
+                            copy=False, spectral_unit=self.spectral_axis.unit)
