@@ -2878,7 +2878,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
     def identify_bad_beams(self, threshold, reference_beam=None,
                            criteria=['sr','major','minor'],
-                           mid_value=np.nanmedian):
+                           mid_value=getattr(np, 'nanmedian', np.ma.median)):
         """
         Mask out any layers in the cube that have beams that differ from the
         central value of the beam by more than the specified threshold.
