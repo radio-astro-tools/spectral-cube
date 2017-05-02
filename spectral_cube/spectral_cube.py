@@ -2935,7 +2935,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
     def mask_out_bad_beams(self, threshold, reference_beam=None,
                            criteria=['sr','major','minor'],
-                           mid_value=np.nanmedian):
+                           mid_value=getattr(np, 'nanmedian', np.ma.median)):
         """
         See `identify_bad_beams`.  This function returns a masked cube
 
