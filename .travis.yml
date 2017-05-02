@@ -108,8 +108,6 @@ install:
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python -c "from hashlib import md5, sha1, sha256"; fi
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .install_pip.py; fi
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .install_astropy.py; fi
-    - if [[ $CASA_BIN ]]; then ls; fi # looking for numpy; maybe it's being imported locally instead of being installed?
-    - if [[ $CASA_BIN ]]; then ls /home/travis/.local/lib/python2.7/site-packages/; fi
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .import_astropy.py; fi
 
 script:
