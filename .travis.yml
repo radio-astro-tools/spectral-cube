@@ -109,12 +109,8 @@ install:
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .install_pip.py; fi
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .install_astropy.py; fi
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .import_astropy.py; fi
-    - if [[ $CASA_BIN ]]; then mkdir -p ~/.casa/ipython/security/security; fi
-    - if [[ $CASA_BIN ]]; then mkdir -p ~/.casa/ipython/security/log; fi
-    - if [[ $CASA_BIN ]]; then mkdir -p ~/.casa/ipython/log; fi
-    - if [[ $CASA_BIN ]]; then mkdir -p ~/.casa/ipython/db/shadowhist; fi
-    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_BIN} --nogui -c "import sys; sys.exit(0)"; fi # test that CASA quits
-    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_BIN} --nogui -c "from taskinit import ia; print(dir(ia))"; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run ${CASA_BIN} --nogui -c "import sys; sys.exit(0)"; fi # test that CASA quits
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run ${CASA_BIN} --nogui -c "from taskinit import ia; print(dir(ia))"; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
