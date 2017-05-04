@@ -120,7 +120,7 @@ install:
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
-    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH $CASA_BIN --nogui .casa_setup.py $SETUP_CMD; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run -e /dev/stdout --auto-servernum $CASA_BIN --nologger --nogui .casa_setup.py $SETUP_CMD; fi
     - if [[ ! $CASA_BIN ]]; then python setup.py $SETUP_CMD; fi
 
 after_success:
