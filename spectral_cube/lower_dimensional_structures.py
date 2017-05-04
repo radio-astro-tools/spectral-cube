@@ -290,7 +290,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
         self._raise_wcs_no_celestial()
 
-        if not "beam" in self.meta:
+        if not hasattr(self, 'beam'):
             raise ValueError("No beam is contained in Projection.meta.")
 
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5 * u.deg
