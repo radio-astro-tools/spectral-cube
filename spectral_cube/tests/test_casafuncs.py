@@ -5,6 +5,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 import os
 
+from . import path
+
 from ..io.casa_masks import make_casa_mask
 from ..io.casa_image import wcs_casa2astropy
 from .. import SpectralCube, BooleanArrayMask
@@ -31,7 +33,7 @@ class TestCasa(object):
         if self.ia is None:
             raise pytest.skip()
 
-        cube = SpectralCube.read('adv.fits')
+        cube = SpectralCube.read(path('adv.fits'))
 
         mask_array = np.array([[True, False], [False, False], [True, True]])
         bool_mask = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
@@ -81,14 +83,14 @@ class TestCasa(object):
         if self.ia is None:
             raise pytest.skip()
 
-        cube = SpectralCube.read('adv.fits')
+        cube = SpectralCube.read(path('adv.fits'))
 
         mask_array = np.array([[True, False], [False, False], [True, True]])
         bool_mask = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
                                      shape=cube.shape)
         cube = cube.with_mask(bool_mask)
 
-        self.make_casa_testimage('adv.fits', 'casa.image')
+        self.make_casa_testimage(path('adv.fits'), 'casa.image')
 
         if os.path.exists('casa.mask'):
             os.system('rm -rf casa.mask')
