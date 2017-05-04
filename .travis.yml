@@ -109,6 +109,7 @@ install:
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .install_pip.py; fi
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .install_astropy.py; fi
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .import_astropy.py; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run -e /dev/stdout --auto-servernum "echo y | ${CASA_BIN} --nologger --nogui" # try to tell it 'yes, all is well'
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run -e /dev/stdout --auto-servernum ${CASA_BIN} --nologger --nogui -c "import sys; sys.exit(0)"; fi # test that CASA quits
     - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run -e /dev/stdout --auto-servernum ${CASA_BIN} --nologger --nogui -c "from taskinit import ia; print(dir(ia))"; fi
 
