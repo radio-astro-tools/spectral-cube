@@ -23,4 +23,11 @@ print(sys.argv.pop(0)) # nogui
 print(sys.argv.pop(0)) # nologger
 print(sys.argv.pop(0)) # -c
 
+try:
+    from taskinit import ia
+    print("Successfully recognized CASA environment")
+except ImportError:
+    print("Failed to recognize CASA environment")
+    sys.exit(1)
+
 exec(open("./setup.py").read())
