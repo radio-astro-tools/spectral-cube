@@ -30,4 +30,7 @@ except ImportError:
     print("Failed to recognize CASA environment")
     sys.exit(1)
 
-exec(open("./setup.py").read())
+try:
+    exec(open("./setup.py").read())
+except:
+    sys.exit(1)

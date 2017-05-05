@@ -3,6 +3,7 @@ import pip
 import sys
 #pip.main(['install', '--user', 'numpy-1.12.1.zip'])
 pip.main(['install', '--user', 'astropy-1.3.2.tar.gz'])
+pip.main(['install', '--user', 'pytest'])
 #pip.main(['install', 'numpy', '--user'])
 #pip.main(['install', 'astropy', '--user'])
 
