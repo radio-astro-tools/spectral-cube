@@ -48,7 +48,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         if self.wcs is None:
             hdu = PrimaryHDU(self.value)
         else:
-            hdu = PrimaryHDU(self.value, header=self.wcs.to_header())
+            hdu = PrimaryHDU(self.value, header=self.header)
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
 
         if 'beam' in self.meta:
