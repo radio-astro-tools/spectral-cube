@@ -2746,6 +2746,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
+                                    spectral_unit=self._spectral_unit,
                                     beams=self.beams[specslice],
                                     meta=meta)
 

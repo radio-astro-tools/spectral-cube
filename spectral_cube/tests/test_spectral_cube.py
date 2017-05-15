@@ -858,6 +858,14 @@ def test_slice_wcs(view, naxis):
     sl = cube[view]
     assert sl.wcs.naxis == naxis
 
+def test_spectral_slice_preserve_units():
+    cube, data = cube_and_raw('advs.fits')
+    cube = cube.with_spectral_unit(u.km/u.s)
+
+    sl = cube[:,0,0]
+
+    assert sl.spectral_axis.unit == cube.spectral_axis.unit == u.km/u.s
+
 def test_header_units_consistent():
 
     cube, data = cube_and_raw('advs.fits')
