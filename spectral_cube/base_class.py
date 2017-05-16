@@ -98,3 +98,8 @@ class SpectralAxisMixinClass(object):
 
         newwcs.wcs.set()
         return newwcs, meta
+
+    @property
+    def spectral_axis(self):
+        # spectral objects should be forced to implement this
+        raise NotImplementedError

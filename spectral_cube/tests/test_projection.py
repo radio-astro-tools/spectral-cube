@@ -206,3 +206,37 @@ def test_projection_from_hdu(LDO, data):
     p_new = LDO.from_hdu(hdu)
 
     assert (p == p_new).all()
+
+@pytest.mark.xfail
+def test_mask_convolve():
+    # Numpy is fundamentally incompatible with the objects we have created.
+    # np.ma.is_masked(array) checks specifically for the array's _mask
+    # attribute.  We would have to refactor deeply to correct this, and I
+    # really don't want to do that because 'None' is a much more reasonable
+    # and less dangerous default for a mask.
+    test_wcs_1 = WCS(naxis=1)
+    spec = OneDSpectrum(twelve_qty_1d, wcs=test_wcs_1)
+
+    assert spec.mask is False
+
+    from astropy.convolution import convolve,Box1DKernel
+    convolve(spec, Box1DKernel(3))
+
+def test_convolve():
+    test_wcs_1 = WCS(naxis=1)
+    spec = OneDSpectrum(twelve_qty_1d, wcs=test_wcs_1)
+
+    from astropy.convolution import Box1DKernel
+    specsmooth = spec.spectral_smooth(Box1DKernel(1))
+
+    np.testing.assert_allclose(spec, specsmooth)
+
+def test_spectral_interpolate():
+    test_wcs_1 = WCS(naxis=1)
+    test_wcs_1.wcs.cunit[0] = 'GHz'
+    spec = OneDSpectrum(np.arange(12)*u.Jy, wcs=test_wcs_1)
+
+    new_xaxis = test_wcs_1.wcs_pix2world(np.linspace(0,11,23), 0)[0] * u.Unit(test_wcs_1.wcs.cunit[0])
+    new_spec = spec.spectral_interpolate(new_xaxis)
+
+    np.testing.assert_allclose(new_spec, np.linspace(0,11,23)*u.Jy)

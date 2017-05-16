@@ -2430,8 +2430,6 @@ class SpectralCube(BaseSpectralCube):
         ----------
         kernel : `~astropy.convolution.Kernel1D`
             A 1D kernel from astropy
-        numcores : int
-            Number of cores to use in parallel-processing.
         convolve : function
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
@@ -2447,8 +2445,8 @@ class SpectralCube(BaseSpectralCube):
         # TODO: should spatial good/bad be cached?
         cubelist = ((self.filled_data[:,jj,ii],
                      self.mask.include(view=(slice(None), jj, ii)))
-                    for jj in xrange(self.shape[1])
-                    for ii in xrange(self.shape[2]))
+                    for jj in range(self.shape[1])
+                    for ii in range(self.shape[2]))
 
         pb = ProgressBar(shape[1]*shape[2])
 
