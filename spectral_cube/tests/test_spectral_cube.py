@@ -965,6 +965,19 @@ def test_twod_numpy(func, how, axis):
     np.testing.assert_equal(proj.value, dproj)
     assert cube.unit == proj.unit
 
+def test_preserves_header_values():
+    # Check that the non-WCS header parameters are preserved during projection
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+    cube._header['OBJECT'] = 'TestName'
+
+    proj = cube.sum(axis=0, how='auto')
+    assert isinstance(proj, Projection)
+    assert proj.header['OBJECT'] == 'TestName'
+    assert proj.hdu.header['OBJECT'] == 'TestName'
+
 @pytest.mark.parametrize('func',('sum','std','max','min','mean'))
 def test_oned_numpy(func):
     # Check that a numpy function returns an appropriate spectrum
