@@ -142,6 +142,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
         self._header = getattr(obj, '_header', None)
+        self._spectral_unit = getattr(obj, '_spectral_unit', None)
         super(LowerDimensionalObject, self).__array_finalize__(obj)
 
     @property

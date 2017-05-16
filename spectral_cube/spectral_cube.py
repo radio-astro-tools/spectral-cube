@@ -389,6 +389,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                         unit=unit,
                                         header=header,
                                         meta=meta,
+                                        spectral_unit=self._spectral_unit,
                                         beams=(self.beams
                                                if hasattr(self,'beams')
                                                else None),
@@ -1009,6 +1010,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
+                                    spectral_unit=self._spectral_unit,
                                     meta=meta,
                                    )
 

@@ -864,7 +864,11 @@ def test_spectral_slice_preserve_units():
 
     sl = cube[:,0,0]
 
-    assert sl.spectral_axis.unit == cube.spectral_axis.unit == u.km/u.s
+    assert cube._spectral_unit == u.km/u.s
+    assert sl._spectral_unit == u.km/u.s
+
+    assert cube.spectral_axis.unit == u.km/u.s
+    assert sl.spectral_axis.unit == u.km/u.s
 
 def test_header_units_consistent():
 
