@@ -2485,9 +2485,8 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def spectral_interpolate(self, spectral_grid,
-                             suppress_smooth_warning=False,
-                             fill_value=None):
+    def spectral_regrid(self, spectral_grid, suppress_smooth_warning=False,
+                        fill_value=None):
         """Resample the cube spectrally onto a specific grid
 
         Parameters
@@ -3144,9 +3143,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def spectral_interpolate(self, *args, **kwargs):
+    def spectral_regrid(self, *args, **kwargs):
         raise AttributeError("VaryingResolutionSpectralCubes can't be "
-                             "spectrally interpolated.  Convolve to a "
+                             "spectrally regridded.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral interpolation.")
 

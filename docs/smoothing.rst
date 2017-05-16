@@ -49,9 +49,9 @@ Example::
     kernel = Gaussian1DKernel(2.5)
     new_cube = cube.spectral_smooth(kernel)
 
-This can be useful if you want to interpolate onto a coarser grid but maintain
+This can be useful if you want to regrid onto a coarser grid but maintain
 Nyquist sampling.  You can then use the
-`~spectral_cube.SpectralCube.spectral_interpolate` method to regrid your
+`~spectral_cube.SpectralCube.spectral_regrid` method to regrid your
 smoothed spectrum onto a new grid.
 
 Say, for example, you have a cube with 0.5 km/s resolution, but you want to
@@ -63,7 +63,7 @@ resample it onto a 2 km/s grid.  You might then choose to smooth by a factor of
     fwhm_factor = np.sqrt(8*np.log(2))
 
     smcube = cube.spectral_smooth(Gaussian1DKernel(4/fwhm_factor))
-    interp_Cube = smcube.spectral_interpolate(new_axis,
+    interp_Cube = smcube.spectral_regrid(new_axis,
                                               suppress_smooth_warning=True)
 
 We include the ``suppress_smooth_warning`` override because there is no way for

@@ -231,12 +231,12 @@ def test_convolve():
 
     np.testing.assert_allclose(spec, specsmooth)
 
-def test_spectral_interpolate():
+def test_spectral_regrid():
     test_wcs_1 = WCS(naxis=1)
     test_wcs_1.wcs.cunit[0] = 'GHz'
     spec = OneDSpectrum(np.arange(12)*u.Jy, wcs=test_wcs_1)
 
     new_xaxis = test_wcs_1.wcs_pix2world(np.linspace(0,11,23), 0)[0] * u.Unit(test_wcs_1.wcs.cunit[0])
-    new_spec = spec.spectral_interpolate(new_xaxis)
+    new_spec = spec.spectral_regrid(new_xaxis)
 
     np.testing.assert_allclose(new_spec, np.linspace(0,11,23)*u.Jy)

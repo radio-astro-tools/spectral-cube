@@ -392,8 +392,7 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         return HDUList([hdu, beamhdu])
 
 
-    def spectral_interpolate(self, spectral_grid,
-                             suppress_smooth_warning=False):
+    def spectral_regrid(self, spectral_grid, suppress_smooth_warning=False):
         """
         Resample the spectrum onto a specific grid
 
