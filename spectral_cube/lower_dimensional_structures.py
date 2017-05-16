@@ -410,6 +410,8 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         cube : SpectralCube
         """
 
+        assert spectral_grid.ndim == 1
+
         inaxis = self.spectral_axis.to(spectral_grid.unit)
 
         indiff = np.mean(np.diff(inaxis))
@@ -440,8 +442,6 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
         newspec = np.empty([spectral_grid.size], dtype=self.dtype)
         #newmask = np.empty([spectral_grid.size], dtype='bool')
-
-        yy,xx = np.indices(self.shape[1:])
 
         # TODO: handle masks
         newspec = np.interp(spectral_grid.value, inaxis.value, self.value)
