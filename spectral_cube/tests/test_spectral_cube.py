@@ -971,7 +971,7 @@ def test_preserves_header_values():
     cube, data = cube_and_raw('advs.fits')
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
-    cube.header['OBJECT'] = 'TestName'
+    cube._header['OBJECT'] = 'TestName'
 
     proj = cube.sum(axis=0, how='auto')
     assert isinstance(proj, Projection)
