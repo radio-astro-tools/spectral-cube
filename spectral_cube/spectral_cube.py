@@ -389,6 +389,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                         unit=unit,
                                         header=header,
                                         meta=meta,
+                                        spectral_unit=self._spectral_unit,
                                         beams=(self.beams
                                                if hasattr(self,'beams')
                                                else None),
@@ -965,8 +966,8 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                                  "%s vs %s" % (mask.shape, self._data.shape))
             mask = BooleanArrayMask(mask, self._wcs, shape=self._data.shape)
 
-        if self._mask is not None:
-            new_mask = self._mask & mask if inherit_mask else mask
+        if self._mask is not None and inherit_mask:
+            new_mask = self._mask & mask
         else:
             new_mask = mask
 
@@ -1005,10 +1006,11 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                return OneDSpectrum(value=self._data[view],
+                return OneDSpectrum(value=self.filled_data[view],
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
+                                    spectral_unit=self._spectral_unit,
                                     meta=meta,
                                    )
 
@@ -2754,6 +2756,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
+                                    spectral_unit=self._spectral_unit,
                                     beams=self.beams[specslice],
                                     meta=meta)
 
