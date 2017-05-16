@@ -82,7 +82,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
     def to(self, unit, equivalencies=[]):
         """
-        Return a new `LowerDimensionalObject` of the same class with the
+        Return a new `~spectral_cube.lower_dimensional_structures.LowerDimensionalObject` of the same class with the
         specified unit.
 
         See `astropy.units.Quantity.to` for further details.
@@ -102,7 +102,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
     def __getitem__(self, key, **kwargs):
         """
-        Return a new ``LowerDimensionalObject'' of the same class while keeping
+        Return a new `~spectral_cube.lower_dimensional_structures.LowerDimensionalObject` of the same class while keeping
         other properties fixed.
         """
         new_qty = super(LowerDimensionalObject, self).__getitem__(key)
@@ -163,7 +163,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
     @property
     def quantity(self):
         """
-        Get a pure `astropy.units.Quantity` representation of the LDO.
+        Get a pure `~astropy.units.Quantity` representation of the LDO.
         """
         return u.Quantity(self)
 
