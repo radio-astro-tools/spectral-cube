@@ -368,7 +368,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
         Parameters
         ----------
-        [xy]lo/[xy]hi : int or `Quantity` or `min`/`max`
+        [xy]lo/[xy]hi : int or `astropy.units.Quantity` or `min`/`max`
             The endpoints to extract.  If given as a quantity, will be
             interpreted as World coordinates.  If given as a string or
             int, will be interpreted as pixel coordinates.
