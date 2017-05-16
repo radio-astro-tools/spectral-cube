@@ -245,6 +245,24 @@ def iterator_strategy(cube, axis=None):
     return 'slice'
 
 
+def try_load_beam(header):
+    '''
+    Try loading a beam from a FITS header.
+    '''
+    try:
+        from radio_beam import Beam
+    except ImportError:
+        warnings.warn("radio_beam is not installed. No beam "
+                      "can be created.")
+
+    try:
+        beam = Beam.from_fits_header(header)
+        return beam
+    except Exception as ex:
+        warnings.warn("Could not parse beam information from header."
+                      "  Exception was: {0}".format(ex.__repr__()))
+
+
 def beams_to_bintable(beams):
     """
     Convert a list of beams to a CASA-style BinTableHDU

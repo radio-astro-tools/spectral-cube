@@ -5,10 +5,19 @@ import pytest
 import numpy as np
 from astropy import units as u
 from astropy.wcs import WCS
+from astropy.io import fits
 
 from .helpers import assert_allclose
+from .test_spectral_cube import cube_and_raw
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
-from ..utils import SliceWarning
+from ..utils import SliceWarning, WCSCelestialError
+from . import path
+
+try:
+    from radio_beam import Beam
+    RADIO_BEAM_INSTALLED = True
+except ImportError:
+    RADIO_BEAM_INSTALLED = False
 
 # set up for parametrization
 LDOs = (Projection, Slice, OneDSpectrum)
@@ -23,6 +32,15 @@ data_two = (two_qty_2d, two_qty_2d, two_qty_1d)
 data_twelve = (twelve_qty_2d, twelve_qty_2d, twelve_qty_1d)
 data_two_2d = (two_qty_2d, two_qty_2d,)
 data_twelve_2d = (twelve_qty_2d, twelve_qty_2d,)
+
+
+def load_projection(filename):
+
+    hdu = fits.open(path(filename))[0]
+    proj = Projection.from_hdu(hdu)
+
+    return proj, hdu
+
 
 @pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs_2d, data_two_2d))
@@ -195,6 +213,37 @@ def test_quantity_property():
     assert not isinstance(arr, OneDSpectrum)
 
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_projection_with_beam():
+
+    exp_beam = Beam(1.0 * u.arcsec)
+
+    proj, hdu = load_projection("55.fits")
+
+    # uses from_hdu, which passes beam as kwarg
+    assert proj.beam == exp_beam
+    assert proj.meta['beam'] == exp_beam
+
+    # load beam from meta
+    exp_beam = Beam(1.5 * u.arcsec)
+
+    meta = {"beam": exp_beam}
+    new_proj = Projection(hdu.data, wcs=proj.wcs, meta=meta)
+
+    assert new_proj.beam == exp_beam
+    assert new_proj.meta['beam'] == exp_beam
+
+    # load beam from given header
+    exp_beam = Beam(2.0 * u.arcsec)
+    header = hdu.header.copy()
+    header = exp_beam.attach_to_header(header)
+    new_proj = Projection(hdu.data, wcs=proj.wcs, header=header,
+                          read_beam=True)
+
+    assert new_proj.beam == exp_beam
+    assert new_proj.meta['beam'] == exp_beam
+
+
 @pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs_2d, data_two_2d))
 def test_projection_from_hdu(LDO, data):
@@ -206,6 +255,64 @@ def test_projection_from_hdu(LDO, data):
     p_new = LDO.from_hdu(hdu)
 
     assert (p == p_new).all()
+
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+@pytest.mark.parametrize(('LDO', 'data'),
+                         zip(LDOs_2d, data_two_2d))
+def test_projection_from_hdu_with_beam(LDO, data):
+
+    p = LDO(data, copy=False)
+
+    hdu = p.hdu
+
+    beam = Beam(1 * u.arcsec)
+    hdu.header = beam.attach_to_header(hdu.header)
+
+    p_new = LDO.from_hdu(hdu)
+
+    assert (p == p_new).all()
+    assert beam == p_new.meta['beam']
+    assert beam == p_new.beam
+
+
+def test_projection_subimage():
+
+    proj, hdu = load_projection("55.fits")
+
+    proj1 = proj.subimage(xlo=1, xhi=3)
+    proj2 = proj.subimage(xlo=24.06269 * u.deg,
+                          xhi=24.06206 * u.deg)
+
+    assert proj1.shape == (5, 2)
+    assert proj2.shape == (5, 2)
+    assert proj1.wcs.wcs.compare(proj2.wcs.wcs)
+
+    proj3 = proj.subimage(ylo=1, yhi=3)
+    proj4 = proj.subimage(ylo=29.93464 * u.deg,
+                          yhi=29.93522 * u.deg)
+
+    assert proj3.shape == (2, 5)
+    assert proj4.shape == (2, 5)
+    assert proj3.wcs.wcs.compare(proj4.wcs.wcs)
+
+    proj5 = proj.subimage()
+
+    assert proj5.shape == proj.shape
+    assert proj5.wcs.wcs.compare(proj.wcs.wcs)
+    assert np.all(proj5.value == proj.value)
+
+
+def test_projection_subimage_nocelestial_fail():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    proj = cube.moment0(axis=1)
+
+    with pytest.raises(WCSCelestialError) as exc:
+        proj.subimage(xlo=1, xhi=3)
+
+    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
 
 @pytest.mark.xfail
 def test_mask_convolve():

@@ -44,3 +44,6 @@ class SliceWarning(AstropyUserWarning):
 
 class BeamAverageWarning(AstropyUserWarning):
     pass
+
+class WCSCelestialError(Exception):
+    pass

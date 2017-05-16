@@ -11,9 +11,11 @@ from .utils import SliceWarning
 from .cube_utils import convert_bunit
 
 import numpy as np
+from astropy import convolution
 
-from .base_class import BaseNDClass, SpectralAxisMixinClass
-from .cube_utils import beams_to_bintable
+from .base_class import (BaseNDClass, SpectralAxisMixinClass,
+                         SpatialCoordMixinClass)
+from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
 
@@ -80,7 +82,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
     def to(self, unit, equivalencies=[]):
         """
-        Return a new `LowerDimensionalObject` of the same class with the
+        Return a new `~spectral_cube.lower_dimensional_structures.LowerDimensionalObject` of the same class with the
         specified unit.
 
         See `astropy.units.Quantity.to` for further details.
@@ -100,7 +102,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
     def __getitem__(self, key, **kwargs):
         """
-        Return a new ``LowerDimensionalObject'' of the same class while keeping
+        Return a new `~spectral_cube.lower_dimensional_structures.LowerDimensionalObject` of the same class while keeping
         other properties fixed.
         """
         new_qty = super(LowerDimensionalObject, self).__getitem__(key)
@@ -161,14 +163,15 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
     @property
     def quantity(self):
         """
-        Get a pure `astropy.units.Quantity` representation of the LDO.
+        Get a pure `~astropy.units.Quantity` representation of the LDO.
         """
         return u.Quantity(self)
 
-class Projection(LowerDimensionalObject):
+class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
-                meta=None, mask=None, header=None):
+                meta=None, mask=None, header=None, beam=None,
+                read_beam=False):
 
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -186,7 +189,25 @@ class Projection(LowerDimensionalObject):
         else:
             self._header = Header()
 
+        if beam is not None:
+            self._beam = beam
+            self.meta['beam'] = beam
+        else:
+            if "beam" in self.meta:
+                self._beam = self.meta['beam']
+            elif read_beam:
+                beam = cube_utils.try_load_beam(header)
+                if beam is not None:
+                    self._beam = beam
+                    self.meta['beam'] = beam
+                else:
+                    warnings.warn("Cannot load beam from header.")
+
         return self
+
+    @property
+    def beam(self):
+        return self._beam
 
     @staticmethod
     def from_hdu(hdu):
@@ -207,8 +228,10 @@ class Projection(LowerDimensionalObject):
         else:
             unit = None
 
+        beam = cube_utils.try_load_beam(hdu.header)
+
         self = Projection(hdu.data, unit=unit, wcs=mywcs, meta=meta,
-                          header=hdu.header)
+                          header=hdu.header, beam=beam)
 
         return self
 
@@ -247,6 +270,149 @@ class Projection(LowerDimensionalObject):
         self.figure = pyplot.imshow(self.value)
         if filename is not None:
             self.figure.savefig(filename)
+
+    def convolve_to(self, beam, convolve=convolution.convolve_fft):
+        """
+        Convolve the image to a specified beam.
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+
+        Returns
+        -------
+        proj : `Projection`
+            A Projection convolved to the given ``beam`` object.
+        """
+
+        self._raise_wcs_no_celestial()
+
+        if not hasattr(self, 'beam'):
+            raise ValueError("No beam is contained in Projection.meta.")
+
+        pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5 * u.deg
+
+        convolution_kernel = \
+            beam.deconvolve(self.beam).as_kernel(pixscale)
+
+        newdata = convolve(self.value, convolution_kernel)
+
+        self = Projection(newdata, unit=self.unit, wcs=self.wcs,
+                          meta=self.meta, header=self.header,
+                          beam=beam)
+
+        return self
+
+    def reproject(self, header, order='bilinear'):
+        """
+        Reproject the image into a new header.
+
+        Parameters
+        ----------
+        header : `astropy.io.fits.Header`
+            A header specifying a cube in valid WCS
+        order : int or str, optional
+            The order of the interpolation (if ``mode`` is set to
+            ``'interpolation'``). This can be either one of the following
+            strings:
+
+                * 'nearest-neighbor'
+                * 'bilinear'
+                * 'biquadratic'
+                * 'bicubic'
+
+            or an integer. A value of ``0`` indicates nearest neighbor
+            interpolation.
+        """
+
+        self._raise_wcs_no_celestial()
+
+        try:
+            from reproject.version import version
+        except ImportError:
+            raise ImportError("Requires the reproject package to be"
+                              " installed.")
+
+        # Need version > 0.2 to work with cubes
+        from distutils.version import LooseVersion
+        if LooseVersion(version) < "0.3":
+            raise Warning("Requires version >=0.3 of reproject. The current "
+                          "version is: {}".format(version))
+
+        from reproject import reproject_interp
+
+        # TODO: Find the minimal footprint that contains the header and only reproject that
+        # (see FITS_tools.regrid_cube for a guide on how to do this)
+
+        newwcs = wcs.WCS(header)
+        shape_out = [header['NAXIS{0}'.format(i + 1)] for i in range(header['NAXIS'])][::-1]
+
+        newproj, newproj_valid = reproject_interp((self.value,
+                                                   self.header),
+                                                  newwcs,
+                                                  shape_out=shape_out,
+                                                  order=order)
+
+        self = Projection(newproj, unit=self.unit, wcs=newwcs,
+                          meta=self.meta, header=header,
+                          read_beam=True)
+
+        return self
+
+    def subimage(self, xlo='min', xhi='max', ylo='min', yhi='max'):
+        """
+        Extract a region spatially.
+
+        Parameters
+        ----------
+        [xy]lo/[xy]hi : int or `astropy.units.Quantity` or `min`/`max`
+            The endpoints to extract.  If given as a quantity, will be
+            interpreted as World coordinates.  If given as a string or
+            int, will be interpreted as pixel coordinates.
+        """
+
+        self._raise_wcs_no_celestial()
+
+        limit_dict = {'xlo': 0 if xlo == 'min' else xlo,
+                      'ylo': 0 if ylo == 'min' else ylo,
+                      'xhi': self.shape[1] if xhi == 'max' else xhi,
+                      'yhi': self.shape[0] if yhi == 'max' else yhi}
+        dims = {'x': 1,
+                'y': 0}
+
+        for val in (xlo, ylo, xhi, yhi):
+            if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
+                raise u.UnitsError("The X and Y slices must be specified in "
+                                   "degree-equivalent units.")
+
+        for lim in limit_dict:
+            limval = limit_dict[lim]
+            if hasattr(limval, 'unit'):
+                dim = dims[lim[0]]
+                sl = [slice(0, 1)]
+                sl.insert(dim, slice(None))
+                spine = self.world[sl][dim]
+                val = np.argmin(np.abs(limval - spine))
+                if limval > spine.max() or limval < spine.min():
+                    pass
+                    # log.warn("The limit {0} is out of bounds."
+                    #          "  Using min/max instead.".format(lim))
+                if lim[1:] == 'hi':
+                    # End-inclusive indexing: need to add one for the high
+                    # slice
+                    limit_dict[lim] = val + 1
+                else:
+                    limit_dict[lim] = val
+
+        slices = [slice(limit_dict[xx + 'lo'], limit_dict[xx + 'hi'])
+                  for xx in 'yx']
+
+        return self[slices]
 
 # A slice is just like a projection in every way
 class Slice(Projection):
@@ -387,7 +553,7 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
             warnings.simplefilter("ignore")
             hdu = self.hdu
 
-        beamhdu = beams_to_bintable(self.beams)
+        beamhdu = cube_utils.beams_to_bintable(self.beams)
 
         return HDUList([hdu, beamhdu])
 

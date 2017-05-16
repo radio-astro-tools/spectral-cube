@@ -31,7 +31,7 @@ from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
 from .ytcube import ytCube
 from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                            LowerDimensionalObject)
-from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS
+from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS, SpatialCoordMixinClass
 from .utils import cached, warn_slow, VarianceWarning, BeamAverageWarning
 
 from distutils.version import LooseVersion
@@ -40,8 +40,7 @@ from distutils.version import LooseVersion
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
-__doctest_skip__ = ['BaseSpectralCube.world',
-                    'BaseSpectralCube._apply_everywhere']
+__doctest_skip__ = ['BaseSpectralCube._apply_everywhere']
 
 try:
     from scipy import ndimage
@@ -81,7 +80,7 @@ def aggregation_docstring(func):
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
 
-class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
+class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, wcs_tolerance=0.0):
@@ -183,20 +182,13 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
 
         return cube
 
-    def _try_load_beam(self, header):
+    def _attach_beam(self):
 
-        try:
-            from radio_beam import Beam
-        except ImportError:
-            warnings.warn("radio_beam is not installed. No beam "
-                          "can be created.")
+        beam = cube_utils.try_load_beam(self.header)
 
-        try:
-            self.beam = Beam.from_fits_header(header)
-            self._meta['beam'] = self.beam
-        except Exception as ex:
-            warnings.warn("Could not parse beam information from header."
-                          "  Exception was: {0}".format(ex.__repr__()))
+        if beam is not None:
+            self.beam = beam
+            self._meta['beam'] = beam
 
     @property
     def unit(self):
@@ -264,28 +256,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         _spectral_max = self.spectral_axis.max()
 
         return _spectral_min, _spectral_max
-
-    @property
-    @cached
-    def world_extrema(self):
-        lat,lon = self.spatial_coordinate_map
-        _lon_min = lon.min()
-        _lon_max = lon.max()
-        _lat_min = lat.min()
-        _lat_max = lat.max()
-
-        return ((_lon_min, _lon_max),
-                (_lat_min, _lat_max))
-
-    @property
-    @cached
-    def longitude_extrema(self):
-        return self.world_extrema[0]
-
-    @property
-    @cached
-    def latitude_extrema(self):
-        return self.world_extrema[1]
 
     def apply_numpy_function(self, function, fill=np.nan,
                              reduce=True, how='auto',
@@ -851,6 +821,10 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         Retrieve the world coordinates corresponding to the extracted flattened
         version of the cube
         """
+
+        # NOTE: this should be moved to SpatialCoordMixinClass once masks
+        # are implemented for lower dim objects - EK
+
         lon,lat,spec = self.world[view]
         spec = self._mask._flattened(data=spec, wcs=self._wcs, view=slice)
         lon = self._mask._flattened(data=lon, wcs=self._wcs, view=slice)
@@ -1480,10 +1454,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         """
         return spectral_axis.determine_vconv_from_ctype(self.wcs.wcs.ctype[self.wcs.wcs.spec])
 
-    @property
-    def spatial_coordinate_map(self):
-        return self.world[0, :, :][1:]
-
     def closest_spectral_channel(self, value):
         """
         Find the index of the closest spectral channel to the specified
@@ -1813,69 +1783,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         # by using ceil / floor above, we potentially introduced a NaN buffer
         # that we can now crop out
         return masked_subcube.minimal_subcube(spatial_only=True)
-
-
-    def world_spines(self):
-        """
-        Returns a list of 1D arrays, for the world coordinates
-        along each pixel axis.
-
-        Raises error if this operation is ill-posed (e.g. rotated world coordinates,
-        strong distortions)
-
-        This method is not currently implemented. Use :meth:`world` instead.
-        """
-        raise NotImplementedError()
-
-    @cube_utils.slice_syntax
-    def world(self, view):
-        """
-        Return a list of the world coordinates in a cube (or a view of it).
-
-        Cube.world is called with *bracket notation*, like a NumPy array::
-            c.world[0:3, :, :]
-
-        Returns
-        -------
-        [v, y, x] : list of NumPy arrays
-            The 3 world coordinates at each pixel in the view.
-
-        Examples
-        --------
-        Extract the first 3 velocity channels of the cube:
-        >>> v, y, x = c.world[0:3]
-
-        Extract all the world coordinates
-        >>> v, y, x = c.world[:, :, :]
-
-        Extract every other pixel along all axes
-        >>> v, y, x = c.world[::2, ::2, ::2]
-        """
-
-        # note: view is a tuple of view
-
-        # the next 3 lines are equivalent to (but more efficient than)
-        # inds = np.indices(self._data.shape)
-        # inds = [i[view] for i in inds]
-        inds = np.ogrid[[slice(0, s) for s in self._data.shape]]
-        inds = np.broadcast_arrays(*inds)
-        inds = [i[view] for i in inds[::-1]]  # numpy -> wcs order
-
-        shp = inds[0].shape
-        inds = np.column_stack([i.ravel() for i in inds])
-        world = self._wcs.all_pix2world(inds, 0).T
-
-        world = [w.reshape(shp) for w in world]  # 1D->3D
-
-        # apply units
-        world = [w * u.Unit(self._wcs.wcs.cunit[i])
-                 for i, w in enumerate(world)]
-
-        # convert spectral unit if needed
-        if self._spectral_unit is not None:
-            world[2] = world[2].to(self._spectral_unit)
-
-        return world[::-1]  # reverse WCS -> numpy order
 
     def _val_to_own_unit(self, value, operation='compare', tofrom='to',
                          keepunit=False):
@@ -2380,7 +2287,7 @@ class SpectralCube(BaseSpectralCube):
 
         # Beam loading must happen *after* WCS is read
         if beam is None and read_beam:
-            self._try_load_beam(header)
+            self._attach_beam()
 
         if beam is None and not read_beam and 'BUNIT' in self._meta:
             bunit = re.sub("\s", "", self._meta['BUNIT'].lower())
@@ -2388,7 +2295,7 @@ class SpectralCube(BaseSpectralCube):
                 warnings.warn("Units are in Jy/beam. Attempting to parse "
                               "header for beam information.")
 
-                self._try_load_beam(header)
+                self._attach_beam()
 
                 if hasattr(self, 'beam') or hasattr(self, 'beams'):
                     warnings.warn("Units were Jy/beam.  The 'beam' is now "
