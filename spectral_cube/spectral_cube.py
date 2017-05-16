@@ -359,6 +359,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
                                         unit=unit,
                                         header=header,
                                         meta=meta,
+                                        spectral_unit=self._spectral_unit,
                                         beams=(self.beams
                                                if hasattr(self,'beams')
                                                else None),
@@ -903,7 +904,10 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
     def with_mask(self, mask, inherit_mask=True, wcs_tolerance=None):
         """
         Return a new SpectralCube instance that contains a composite mask of
-        the current SpectralCube and the new ``mask``.
+        the current SpectralCube and the new ``mask``.  Values of the mask that
+        are ``True`` will be *included* (masks are analogous to numpy boolean
+        index arrays, they are the inverse of the ``.mask`` attribute of a numpy
+        masked array).
 
         Parameters
         ----------
@@ -936,8 +940,8 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
                                  "%s vs %s" % (mask.shape, self._data.shape))
             mask = BooleanArrayMask(mask, self._wcs, shape=self._data.shape)
 
-        if self._mask is not None:
-            new_mask = self._mask & mask if inherit_mask else mask
+        if self._mask is not None and inherit_mask:
+            new_mask = self._mask & mask
         else:
             new_mask = mask
 
@@ -976,10 +980,11 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                return OneDSpectrum(value=self._data[view],
+                return OneDSpectrum(value=self.filled_data[view],
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
+                                    spectral_unit=self._spectral_unit,
                                     meta=meta,
                                    )
 
@@ -1475,7 +1480,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
                                        "equivalent units, or search for a "
                                        "velocity instead")
                 else:
-                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectal_axis.unit))
+                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectral_axis.unit))
             elif value.unit.is_equivalent(u.m / u.s):
                 if spectral_axis.unit.is_equivalent(u.Hz, equivalencies=u.spectral()):
                     raise u.UnitsError("Spectral axis is in frequency-equivalent "
@@ -1485,7 +1490,7 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
                                        "equivalent units, or search for a "
                                        "velocity instead")
                 else:
-                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectal_axis.unit))
+                    raise u.UnitsError("Unexpected spectral axis units: {0}".format(spectral_axis.unit))
             else:
                 raise u.UnitsError("'value' should be in frequency equivalent or velocity units (got {0})".format(value.unit))
 
@@ -2332,8 +2337,6 @@ class SpectralCube(BaseSpectralCube):
         ----------
         kernel : `~astropy.convolution.Kernel1D`
             A 1D kernel from astropy
-        numcores : int
-            Number of cores to use in parallel-processing.
         convolve : function
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
@@ -2349,8 +2352,8 @@ class SpectralCube(BaseSpectralCube):
         # TODO: should spatial good/bad be cached?
         cubelist = ((self.filled_data[:,jj,ii],
                      self.mask.include(view=(slice(None), jj, ii)))
-                    for jj in xrange(self.shape[1])
-                    for ii in xrange(self.shape[2]))
+                    for jj in range(self.shape[1])
+                    for ii in range(self.shape[2]))
 
         pb = ProgressBar(shape[1]*shape[2])
 
@@ -2390,9 +2393,9 @@ class SpectralCube(BaseSpectralCube):
         return newcube
 
     def spectral_interpolate(self, spectral_grid,
-                             suppress_smooth_warning=False):
-        """
-        Resample the cube spectrally onto a specific grid
+                             suppress_smooth_warning=False,
+                             fill_value=None):
+        """Resample the cube spectrally onto a specific grid
 
         Parameters
         ----------
@@ -2403,9 +2406,16 @@ class SpectralCube(BaseSpectralCube):
             grid that does not nyquist sample the existing grid.  Disable this
             if you have already appropriately smoothed the data.
 
+        fill_value : float 
+            Value for extrapolated spectral values that lie outside of
+            the spectral range defined in the original data.  The
+            default is to use the nearest spectral channel in the
+            cube.
+
         Returns
         -------
         cube : SpectralCube
+
         """
 
         inaxis = self.spectral_axis.to(spectral_grid.unit)
@@ -2449,7 +2459,8 @@ class SpectralCube(BaseSpectralCube):
             mask = self.mask.include(view=(specslice, iy, ix))
             if any(mask):
                 newcube[:,iy,ix] = np.interp(spectral_grid.value, inaxis.value,
-                                             cubedata[specslice,iy,ix].value)
+                                             cubedata[specslice,iy,ix].value,
+                                             left=fill_value, right=fill_value)
                 if all(mask):
                     newmask[:,iy,ix] = True
                 else:
@@ -2650,6 +2661,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
+                                    spectral_unit=self._spectral_unit,
                                     beams=self.beams[specslice],
                                     meta=meta)
 

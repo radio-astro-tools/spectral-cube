@@ -3,6 +3,7 @@ from __future__ import print_function, absolute_import, division
 import warnings
 from astropy import units as u
 from astropy import wcs
+from astropy import convolution
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
@@ -50,7 +51,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         if self.wcs is None:
             hdu = PrimaryHDU(self.value)
         else:
-            hdu = PrimaryHDU(self.value, header=self.wcs.to_header())
+            hdu = PrimaryHDU(self.value, header=self.header)
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
 
         if 'beam' in self.meta:
@@ -144,6 +145,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
         self._header = getattr(obj, '_header', None)
+        self._spectral_unit = getattr(obj, '_spectral_unit', None)
         super(LowerDimensionalObject, self).__array_finalize__(obj)
 
     @property
@@ -452,7 +454,6 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
         return self
 
-
     @property
     def header(self):
         header = self._header
@@ -467,7 +468,7 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
                                       value=sh))
 
         # Preserve the spectrum's spectral units
-        if self._spectral_unit != u.Unit(header['CUNIT1']):
+        if 'CUNIT1' in header and self._spectral_unit != u.Unit(header['CUNIT1']):
             spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
             header['CDELT1'] *= spectral_scale
             header['CRVAL1'] *= spectral_scale
@@ -522,8 +523,10 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
                                                  rest_value=rest_value)
 
         newheader = self._nowcs_header.copy()
+        newheader.update(newwcs.to_header())
+        wcs_cunit = u.Unit(newheader['CUNIT1'])
         newheader['CUNIT1'] = unit.to_string(format='FITS')
-
+        newheader['CDELT1'] *= wcs_cunit.to(unit)
 
         return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
                             header=newheader, meta=newmeta, copy=False,
@@ -553,3 +556,100 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         beamhdu = cube_utils.beams_to_bintable(self.beams)
 
         return HDUList([hdu, beamhdu])
+
+
+    def spectral_interpolate(self, spectral_grid,
+                             suppress_smooth_warning=False):
+        """
+        Resample the spectrum onto a specific grid
+
+        Parameters
+        ----------
+        spectral_grid : array
+            An array of the spectral positions to regrid onto
+        suppress_smooth_warning : bool
+            If disabled, a warning will be raised when interpolating onto a
+            grid that does not nyquist sample the existing grid.  Disable this
+            if you have already appropriately smoothed the data.
+
+        Returns
+        -------
+        cube : SpectralCube
+        """
+
+        assert spectral_grid.ndim == 1
+
+        inaxis = self.spectral_axis.to(spectral_grid.unit)
+
+        indiff = np.mean(np.diff(inaxis))
+        outdiff = np.mean(np.diff(spectral_grid))
+
+        # account for reversed axes
+        if outdiff < 0:
+            spectral_grid = spectral_grid[::-1]
+            outdiff = np.mean(np.diff(spectral_grid))
+
+        specslice = slice(None) if indiff >= 0 else slice(None, None, -1)
+        inaxis = inaxis[specslice]
+        indiff = np.mean(np.diff(inaxis))
+
+        # insanity checks
+        if indiff < 0 or outdiff < 0:
+            raise ValueError("impossible.")
+
+        assert np.all(np.diff(spectral_grid) > 0)
+        assert np.all(np.diff(inaxis) > 0)
+
+        np.testing.assert_allclose(np.diff(spectral_grid), outdiff,
+                                   err_msg="Output grid must be linear")
+
+        if outdiff > 2 * indiff and not suppress_smooth_warning:
+            warnings.warn("Input grid has too small a spacing. The data should "
+                          "be smoothed prior to resampling.")
+
+        newspec = np.empty([spectral_grid.size], dtype=self.dtype)
+        #newmask = np.empty([spectral_grid.size], dtype='bool')
+
+        # TODO: handle masks
+        newspec = np.interp(spectral_grid.value, inaxis.value, self.value)
+
+        newwcs = self.wcs.deepcopy()
+        newwcs.wcs.crpix[0] = 1
+        newwcs.wcs.crval[0] = spectral_grid[0].value
+        newwcs.wcs.cunit[0] = spectral_grid.unit.to_string('FITS')
+        newwcs.wcs.cdelt[0] = outdiff.value
+        newwcs.wcs.set()
+
+        newheader = self._nowcs_header.copy()
+        newheader.update(newwcs.to_header())
+        wcs_cunit = u.Unit(newheader['CUNIT1'])
+        newheader['CUNIT1'] = spectral_grid.unit.to_string(format='FITS')
+        newheader['CDELT1'] *= wcs_cunit.to(spectral_grid.unit)
+
+        return OneDSpectrum(value=newspec, unit=self.unit, wcs=newwcs,
+                            header=newheader, meta=self.meta.copy(),
+                            copy=False, spectral_unit=spectral_grid.unit)
+
+    def spectral_smooth(self, kernel,
+                        convolve=convolution.convolve,
+                        **kwargs):
+        """
+        Smooth the spectrum
+
+        Parameters
+        ----------
+        kernel : `~astropy.convolution.Kernel1D`
+            A 1D kernel from astropy
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        kwargs : dict
+            Passed to the convolve function
+        """
+
+        newspec = convolve(self.value, kernel, normalize_kernel=True, **kwargs)
+
+        return OneDSpectrum(value=newspec, unit=self.unit, wcs=self.wcs.copy(),
+                            header=self.header.copy(), meta=self.meta.copy(),
+                            copy=False, spectral_unit=self.spectral_axis.unit)

@@ -858,6 +858,18 @@ def test_slice_wcs(view, naxis):
     sl = cube[view]
     assert sl.wcs.naxis == naxis
 
+def test_spectral_slice_preserve_units():
+    cube, data = cube_and_raw('advs.fits')
+    cube = cube.with_spectral_unit(u.km/u.s)
+
+    sl = cube[:,0,0]
+
+    assert cube._spectral_unit == u.km/u.s
+    assert sl._spectral_unit == u.km/u.s
+
+    assert cube.spectral_axis.unit == u.km/u.s
+    assert sl.spectral_axis.unit == u.km/u.s
+
 def test_header_units_consistent():
 
     cube, data = cube_and_raw('advs.fits')
@@ -964,6 +976,19 @@ def test_twod_numpy(func, how, axis):
     assert isinstance(proj, Projection)
     np.testing.assert_equal(proj.value, dproj)
     assert cube.unit == proj.unit
+
+def test_preserves_header_values():
+    # Check that the non-WCS header parameters are preserved during projection
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+    cube._header['OBJECT'] = 'TestName'
+
+    proj = cube.sum(axis=0, how='auto')
+    assert isinstance(proj, Projection)
+    assert proj.header['OBJECT'] == 'TestName'
+    assert proj.hdu.header['OBJECT'] == 'TestName'
 
 @pytest.mark.parametrize('func',('sum','std','max','min','mean'))
 def test_oned_numpy(func):
