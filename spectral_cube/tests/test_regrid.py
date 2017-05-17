@@ -156,7 +156,7 @@ def test_spectral_interpolate_with_fillvalue():
                                        fill_value=42)
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    np.ones(4)*42)
-    
+
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_spectral_interpolate_fail():
@@ -199,6 +199,20 @@ def test_spectral_interpolate_with_mask():
                                    [0.0, 0.5, np.NaN, np.NaN])
 
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
+
+
+def test_spectral_interpolate_reversed():
+
+    cube, data = cube_and_raw('522_delta.fits')
+
+    orig_wcs = cube.wcs.deepcopy()
+
+    # Reverse spectral axis
+    sg = cube.spectral_axis[::-1]
+
+    result = cube.spectral_interpolate(spectral_grid=sg)
+
+    np.testing.assert_almost_equal(sg.value, result.spectral_axis.value)
 
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
