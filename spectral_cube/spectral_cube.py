@@ -2406,7 +2406,7 @@ class SpectralCube(BaseSpectralCube):
             grid that does not nyquist sample the existing grid.  Disable this
             if you have already appropriately smoothed the data.
 
-        fill_value : float 
+        fill_value : float
             Value for extrapolated spectral values that lie outside of
             the spectral range defined in the original data.  The
             default is to use the nearest spectral channel in the
@@ -2427,6 +2427,9 @@ class SpectralCube(BaseSpectralCube):
         if outdiff < 0:
             spectral_grid = spectral_grid[::-1]
             outdiff = np.mean(np.diff(spectral_grid))
+            outslice = slice(None, None, -1)
+        else:
+            outslice = slice(None)
 
         cubedata = self.filled_data
         specslice = slice(None) if indiff >= 0 else slice(None, None, -1)
@@ -2458,15 +2461,16 @@ class SpectralCube(BaseSpectralCube):
         for ix, iy in (zip(xx.flat, yy.flat)):
             mask = self.mask.include(view=(specslice, iy, ix))
             if any(mask):
-                newcube[:,iy,ix] = np.interp(spectral_grid.value, inaxis.value,
-                                             cubedata[specslice,iy,ix].value,
-                                             left=fill_value, right=fill_value)
+                newcube[outslice,iy,ix] = \
+                    np.interp(spectral_grid.value, inaxis.value,
+                              cubedata[specslice,iy,ix].value,
+                              left=fill_value, right=fill_value)
                 if all(mask):
                     newmask[:,iy,ix] = True
                 else:
                     interped = np.interp(spectral_grid.value,
                                          inaxis.value, mask) > 0
-                    newmask[:,iy,ix] = interped
+                    newmask[outslice,iy,ix] = interped
             else:
                 newmask[:, iy, ix] = False
                 newcube[:, iy, ix] = np.NaN
@@ -2475,9 +2479,11 @@ class SpectralCube(BaseSpectralCube):
 
         newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[2] = 1
-        newwcs.wcs.crval[2] = spectral_grid[0].value
+        newwcs.wcs.crval[2] = spectral_grid[0].value if outslice.step > 0 \
+            else spectral_grid[-1].value
         newwcs.wcs.cunit[2] = spectral_grid.unit.to_string('FITS')
-        newwcs.wcs.cdelt[2] = outdiff.value
+        newwcs.wcs.cdelt[2] = outdiff.value if outslice.step > 0 \
+            else -outdiff.value
         newwcs.wcs.set()
 
         newbmask = BooleanArrayMask(newmask, wcs=newwcs)
