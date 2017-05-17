@@ -2429,7 +2429,7 @@ class SpectralCube(BaseSpectralCube):
             outdiff = np.mean(np.diff(spectral_grid))
             outslice = slice(None, None, -1)
         else:
-            outslice = slice(None)
+            outslice = slice(None, None, 1)
 
         cubedata = self.filled_data
         specslice = slice(None) if indiff >= 0 else slice(None, None, -1)
