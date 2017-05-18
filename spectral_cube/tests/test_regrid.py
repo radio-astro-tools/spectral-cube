@@ -234,6 +234,7 @@ def test_convolution_2D():
                                              (5.555555555555e-4*u.deg)).decompose().value,
                                             x_size=5, y_size=5,
                                            )
+    expected.normalize()
 
     np.testing.assert_almost_equal(expected.array,
                                    conv_proj.value)

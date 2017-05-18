@@ -300,7 +300,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         convolution_kernel = \
             beam.deconvolve(self.beam).as_kernel(pixscale)
 
-        newdata = convolve(self.value, convolution_kernel)
+        newdata = convolve(self.value, convolution_kernel,
+                           normalize_kernel=True)
 
         self = Projection(newdata, unit=self.unit, wcs=self.wcs,
                           meta=self.meta, header=self.header,
