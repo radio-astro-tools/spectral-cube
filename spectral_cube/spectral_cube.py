@@ -2521,7 +2521,8 @@ class SpectralCube(BaseSpectralCube):
 
         newdata = np.empty(self.shape)
         for ii,img in enumerate(self.filled_data[:]):
-            newdata[ii,:,:] = convolve(img, convolution_kernel)
+            newdata[ii,:,:] = convolve(img, convolution_kernel,
+                                       normalize_kernel=True)
             pb.update()
 
         newcube = self._new_cube_with(data=newdata, read_beam=False,
@@ -3044,7 +3045,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             if kernel is None:
                 newdata[ii, :, :] = img
             else:
-                newdata[ii, :, :] = convolve(img, kernel)
+                newdata[ii, :, :] = convolve(img, kernel,
+                                             normalize_kernel=True)
             pb.update()
 
         newcube = SpectralCube(data=newdata, wcs=self.wcs, mask=self.mask,

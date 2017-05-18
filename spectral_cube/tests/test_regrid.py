@@ -41,6 +41,8 @@ def test_convolution():
                                             x_size=5, y_size=5,
                                            )
 
+    expected.normalize()
+
     np.testing.assert_almost_equal(expected.array,
                                    conv_cube.filled_data[0,:,:].value)
 
@@ -62,6 +64,7 @@ def test_beams_convolution():
     for ii,bm in enumerate(cube.beams):
         expected = target_beam.deconvolve(bm).as_kernel(pixscale, x_size=5,
                                                         y_size=5)
+        expected.normalize()
 
         np.testing.assert_almost_equal(expected.array,
                                        conv_cube.filled_data[ii,:,:].value)
@@ -231,6 +234,7 @@ def test_convolution_2D():
                                              (5.555555555555e-4*u.deg)).decompose().value,
                                             x_size=5, y_size=5,
                                            )
+    expected.normalize()
 
     np.testing.assert_almost_equal(expected.array,
                                    conv_proj.value)
