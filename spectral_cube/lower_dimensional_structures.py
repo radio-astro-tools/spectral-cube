@@ -473,7 +473,7 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
             spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
             header['CDELT1'] *= spectral_scale
             header['CRVAL1'] *= spectral_scale
-            header['CUNIT1'] = self.unit.to_string(format='FITS')
+            header['CUNIT1'] = self.spectral_axis.unit.to_string(format='FITS')
 
         return header
 
@@ -510,7 +510,7 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         from matplotlib import pyplot
         ax = pyplot.gca()
         ax.plot(self.spectral_axis, self.value, drawstyle=drawstyle, **kwargs)
-        ax.set_xlabel(self.wcs.wcs.cunit[0])
+        ax.set_xlabel(self.spectral_axis.unit.to_string())
         ax.set_ylabel(self.unit)
         if filename is not None:
             pyplot.gcf().savefig(filename)
