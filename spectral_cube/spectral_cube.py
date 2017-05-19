@@ -48,6 +48,7 @@ try:
 except ImportError:
     scipyOK = False
 
+warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning, append=True)
 
 SIGMA2FWHM = 2. * np.sqrt(2. * np.log(2.))
 
