@@ -347,3 +347,18 @@ def test_spectral_interpolate():
     new_spec = spec.spectral_interpolate(new_xaxis)
 
     np.testing.assert_allclose(new_spec, np.linspace(0,11,23)*u.Jy)
+
+def test_spectral_units():
+    # regression test for issue 391
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    sp = cube[:,0,0]
+
+    assert sp.spectral_axis.unit == u.m/u.s
+    assert sp.header['CUNIT1'] in ('m s-1', 'm/s')
+
+    sp = cube.with_spectral_unit(u.km/u.s)[:,0,0]
+
+    assert sp.spectral_axis.unit == u.km/u.s
+    assert sp.header['CUNIT1'] == 'km s-1'
