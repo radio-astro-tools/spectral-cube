@@ -3,6 +3,7 @@ from __future__ import print_function, absolute_import, division
 import warnings
 
 from astropy.io import fits
+from astropy import wcs
 from astropy.wcs import WCS
 from astropy.extern import six
 from collections import OrderedDict
@@ -21,6 +22,7 @@ from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpec
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
 
+warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning, append=True)
 
 def first(iterable):
     return next(iter(iterable))
