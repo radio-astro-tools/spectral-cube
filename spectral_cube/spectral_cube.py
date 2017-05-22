@@ -599,9 +599,12 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass):
         """
         Use astropy's mad_std to computer the standard deviation
         """
+        if int(astropy.__version__[0]) < 2:
+            raise NotImplementedError("mad_std requires astropy >= 2")
         projection = self._naxes_dropped(axis) in (1,2)
         return self.apply_numpy_function(stats.mad_std, fill=np.nan,
                                          how='cube', axis=axis, unit=self.unit,
+                                         ignore_nan=True,
                                          projection=projection)
 
 
