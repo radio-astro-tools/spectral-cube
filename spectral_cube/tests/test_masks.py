@@ -350,9 +350,9 @@ def test_dims_to_skip(shp1, shp2, dim):
     assert dims_to_skip(shp1, shp2) == dim
 
 @pytest.mark.parametrize(('shp1','shp2', 'inview', 'outview'),
-                         (((5,5),(2,5,5),  [slice(0,1), slice(1,3), slice(2,4),], [slice(1,3), slice(2,4)]),
+                         (([5,5],[2,5,5],  (slice(0,1), slice(1,3), slice(2,4),), (slice(1,3), slice(2,4))),
                           # not a valid broadcast ([5,5],[5,5,2],  [slice(1,3), slice(2,4), slice(0,1),], [slice(1,3), slice(2,4)]),
-                          ((2,5,5),(2,5,5),[slice(0,1), slice(1,3), slice(2,4),], [slice(0,1), slice(1,3), slice(2,4),])))
+                          ([2,5,5],[2,5,5],(slice(0,1), slice(1,3), slice(2,4),), (slice(0,1), slice(1,3), slice(2,4),))))
 def test_view_of_subset(shp1, shp2, inview, outview):
     assert view_of_subset(shp1,shp2,inview) == outview
 
