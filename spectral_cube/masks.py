@@ -87,7 +87,10 @@ def view_of_subset(shp1, shp2, view):
         cv_view = [x for ii,x in enumerate([slice(None)]*3)
                    if ii not in dts]
 
-    return cv_view
+    # return type matters
+    # array[[0,0]] = [array[0], array[0]]
+    # array[(0,0)] = array[0,0]
+    return tuple(cv_view)
 
 class MaskBase(object):
 
