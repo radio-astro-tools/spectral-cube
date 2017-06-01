@@ -444,3 +444,9 @@ def test_1dcomparison_mask_1d_index():
     spec = mcube[:,1,1]
 
     assert spec.ndim == 1
+
+    assert all(spec.mask.include() == [True,False,False,True])
+
+    assert all(spec[:-1].mask.include() == [True,False,False])
+
+    assert isinstance(spec[0], u.Quantity)
