@@ -175,7 +175,8 @@ def axis_names(wcs):
     return names
 
 
-def slice_wcs(mywcs, view, shape=None, numpy_order=True):
+def slice_wcs(mywcs, view, shape=None, numpy_order=True,
+              drop_degenerate=False):
     """
     Slice a WCS instance using a Numpy slice. The order of the slice should
     be reversed (as for the data) compared to the natural WCS order.
@@ -192,6 +193,9 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True):
         way. If set to `False`, the WCS will be sliced in FITS order,
         meaning the first slice will be applied to the *last* numpy index
         but the *first* WCS axis.
+    drop_degenerate : bool
+        Drop axes that are size-1, i.e., any that have an integer index as part
+        of their view?  Otherwise, an Exception will be raised.
 
     Returns
     -------
@@ -204,9 +208,16 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True):
         view = [view]
 
     if not all([isinstance(x, slice) for x in view]):
-        raise ValueError("Cannot downsample a WCS with indexing.  Use "
-                         "wcs.sub or wcs.dropaxis if you want to remove "
-                         "axes.")
+        if drop_degenerate:
+            keeps = [mywcs.naxis-ii
+                     for ii,ind in enumerate(view)
+                     if isinstance(ind, slice)]
+            mywcs = mywcs.sub(keeps)
+            view = [x for x in view if isinstance(x, slice)]
+        else:
+            raise ValueError("Cannot downsample a WCS with indexing.  Use "
+                             "wcs.sub or wcs.dropaxis if you want to remove "
+                             "axes.")
 
     wcs_new = mywcs.deepcopy()
     for i, iview in enumerate(view):

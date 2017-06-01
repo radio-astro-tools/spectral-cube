@@ -430,3 +430,17 @@ def test_2dcomparison_mask_1d_index():
     mcube = cube.with_mask(mask)
 
     spec = mcube[:,1,1]
+
+    assert spec.ndim == 1
+
+def test_1dcomparison_mask_1d_index():
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+
+    mcube = cube.with_mask(mask)
+
+    spec = mcube[:,1,1]
+
+    assert spec.ndim == 1

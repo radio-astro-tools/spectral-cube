@@ -981,11 +981,12 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                return OneDSpectrum(value=self.filled_data[view],
+                return OneDSpectrum(value=self._data[view],
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
                                     spectral_unit=self._spectral_unit,
+                                    mask=self.mask[view],
                                     meta=meta,
                                    )
 
@@ -2670,6 +2671,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                     copy=False,
                                     unit=self.unit,
                                     spectral_unit=self._spectral_unit,
+                                    mask=self.mask[view],
                                     beams=self.beams[specslice],
                                     meta=meta)
 
