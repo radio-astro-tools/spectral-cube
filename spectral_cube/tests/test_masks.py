@@ -429,9 +429,18 @@ def test_2dcomparison_mask_1d_index():
 
     mcube = cube.with_mask(mask)
 
+    assert all(mask[:,1,1].include() ==
+               mask.include()[:,1,1])
+
     spec = mcube[:,1,1]
 
     assert spec.ndim == 1
+
+    assert all(spec.mask.include() == mask.include()[:,1,1])
+
+    assert all(spec[:-1].mask.include() == mask.include()[:-1,1,1])
+
+    assert isinstance(spec[0], u.Quantity)
 
 def test_1dcomparison_mask_1d_index():
     cube, data = cube_and_raw('adv.fits')
@@ -440,6 +449,9 @@ def test_1dcomparison_mask_1d_index():
     mask = cube > med
 
     mcube = cube.with_mask(mask)
+
+    assert all(mask[:,1,1].include() ==
+               mask.include()[:,1,1])
 
     spec = mcube[:,1,1]
 

@@ -577,7 +577,7 @@ class LazyComparisonMask(LazyMask):
     def _include(self, data=None, wcs=None, view=()):
         self._validate_wcs(data, wcs)
 
-        if hasattr(self._comparison_value, 'shape'):
+        if hasattr(self._comparison_value, 'shape') and self._comparison_value.shape:
             cv_view = view_of_subset(self._comparison_value.shape,
                                      self._data.shape, view)
 
@@ -589,7 +589,7 @@ class LazyComparisonMask(LazyMask):
                                   self._comparison_value)
 
     def __getitem__(self, view):
-        if hasattr(self._comparison_value, 'shape'):
+        if hasattr(self._comparison_value, 'shape') and self._comparison_value.shape:
             cv_view = view_of_subset(self._comparison_value.shape,
                                      self._data.shape, view)
             return LazyComparisonMask(self._function, data=self._data[view],
