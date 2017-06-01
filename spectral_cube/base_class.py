@@ -231,6 +231,9 @@ class SpectralAxisMixinClass(object):
 
 
 class MaskableArrayMixinClass(object):
+    """
+    Mixin class for maskable arrays
+    """
 
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
         """
