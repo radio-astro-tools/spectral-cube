@@ -263,7 +263,7 @@ class MaskableArrayMixinClass(object):
     def filled_data(self, view):
         """
         Return a portion of the data array, with excluded mask values
-        replaced by `fill_value`.
+        replaced by :meth:`fill_value`.
 
         Returns
         -------

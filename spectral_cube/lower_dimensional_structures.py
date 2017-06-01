@@ -701,7 +701,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     def with_fill_value(self, fill_value):
         """
-        Create a new :class:`OneDSpectrum` with a different `fill_value`.
+        Create a new :class:`OneDSpectrum` with a different :meth:`fill_value`.
         """
         return self._new_spectrum_with(fill_value=fill_value)
 
