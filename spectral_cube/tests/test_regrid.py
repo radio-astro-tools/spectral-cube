@@ -130,7 +130,7 @@ def test_spectral_smooth_fail():
                                  "attempting spectral smoothed.")
 
 
-def test_spectral_interpolate():
+def test_spectral_regrid():
 
     cube, data = cube_and_raw('522_delta.fits')
 
@@ -139,7 +139,7 @@ def test_spectral_interpolate():
     # midpoint between each position
     sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
 
-    result = cube.spectral_interpolate(spectral_grid=sg)
+    result = cube.spectral_regrid(spectral_grid=sg)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    [0.0, 0.5, 0.5, 0.0])
@@ -147,7 +147,7 @@ def test_spectral_interpolate():
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
 
 
-def test_spectral_interpolate_with_fillvalue():
+def test_spectral_regrid_with_fillvalue():
 
     cube, data = cube_and_raw('522_delta.fits')
 
@@ -155,31 +155,30 @@ def test_spectral_interpolate_with_fillvalue():
     sg = ((cube.spectral_axis[0]) -
           (cube.spectral_axis[1] - cube.spectral_axis[0]) *
           np.linspace(1,4,4))
-    result = cube.spectral_interpolate(spectral_grid=sg,
-                                       fill_value=42)
+    result = cube.spectral_regrid(spectral_grid=sg, fill_value=42)
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    np.ones(4)*42)
 
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
-def test_spectral_interpolate_fail():
+def test_spectral_regrid_fail():
 
     cube, data = cube_and_raw('522_delta_beams.fits')
 
     with pytest.raises(AttributeError) as exc:
-        cube.spectral_interpolate(5)
+        cube.spectral_regrid(5)
 
     assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
-                                 "spectrally interpolated.  Convolve to a "
+                                 "spectrally regridded.  Convolve to a "
                                  "common resolution with `convolve_to` before "
                                  "attempting spectral interpolation.")
 
 
-def test_spectral_interpolate_with_mask():
+def test_spectral_regrid_with_mask():
 
     hdu = fits.open(path("522_delta.fits"))[0]
 
-    # Swap the velocity axis so indiff < 0 in spectral_interpolate
+    # Swap the velocity axis so indiff < 0 in spectral_regrid
     hdu.header["CDELT3"] = - hdu.header["CDELT3"]
 
     cube = SpectralCube.read(hdu)
@@ -194,7 +193,7 @@ def test_spectral_interpolate_with_mask():
     # midpoint between each position
     sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
 
-    result = masked_cube.spectral_interpolate(spectral_grid=sg[::-1])
+    result = masked_cube.spectral_regrid(spectral_grid=sg[::-1])
 
     # The output makes CDELT3 > 0 (reversed spectral axis) so the masked
     # portion are the final 2 channels.
