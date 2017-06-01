@@ -438,6 +438,7 @@ def test_2dcomparison_mask_1d_index():
 
     assert all(spec.mask.include() == mask.include()[:,1,1])
 
+    assert spec[:-1].mask.include().shape == (3,)
     assert all(spec[:-1].mask.include() == mask.include()[:-1,1,1])
 
     assert isinstance(spec[0], u.Quantity)
@@ -459,6 +460,7 @@ def test_1dcomparison_mask_1d_index():
 
     assert all(spec.mask.include() == [True,False,False,True])
 
+    assert spec[:-1].mask.include().shape == (3,)
     assert all(spec[:-1].mask.include() == [True,False,False])
 
     assert isinstance(spec[0], u.Quantity)
