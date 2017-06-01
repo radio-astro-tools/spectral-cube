@@ -8,6 +8,7 @@ from distutils.version import LooseVersion
 
 import pytest
 
+import astropy
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
@@ -1322,3 +1323,26 @@ def test_mask_bad_beams():
 
     mean2 = masked_cube2.mean(axis=0)
     assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
+
+def test_mad_std():
+    cube, data = cube_and_raw('adv.fits')
+    
+    if int(astropy.__version__[0]) < 2:
+        with pytest.raises(NotImplementedError) as exc:
+            cube.mad_std()
+
+    else:
+        # mad_std run manually on data
+        result = np.array([[0.15509701,  0.45763670],
+                           [0.55907956,  0.42932451],
+                           [0.48819454,  0.25499305]])
+                 
+        np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
+
+        mcube = cube.with_mask(cube < 0.98*u.K)
+
+        result2 = np.array([[0.15509701,  0.45763670],
+                            [0.55907956,  0.23835865],
+                            [0.48819454,  0.25499305]])
+
+        np.testing.assert_almost_equal(mcube.mad_std(axis=0).value, result2)
