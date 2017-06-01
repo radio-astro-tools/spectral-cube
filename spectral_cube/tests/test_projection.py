@@ -362,3 +362,15 @@ def test_spectral_units():
 
     assert sp.spectral_axis.unit == u.km/u.s
     assert sp.header['CUNIT1'] == 'km s-1'
+
+def test_repr_1d():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    sp = cube[:,0,0]
+
+    print(sp)
+    print(sp[1:-1])
+
+    assert 'OneDSpectrum' in sp.__repr__()
+    assert 'OneDSpectrum' in sp[1:-1].__repr__()

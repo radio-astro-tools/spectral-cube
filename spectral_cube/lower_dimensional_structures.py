@@ -4,6 +4,7 @@ import warnings
 from astropy import units as u
 from astropy import wcs
 from astropy import convolution
+from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
@@ -101,11 +102,19 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
         return new
 
+    def __getslice__(self, start, end, increment=None):
+        # I don't know why this is needed, but apparently one of the inherited
+        # classes implements getslice, which forces us to overwrite it
+        # I can't find any examples where __getslice__ is actually implemented,
+        # though, so this seems like a deep and frightening bug.
+        return self.__getitem__(slice(start, end, increment))
+
     def __getitem__(self, key, **kwargs):
         """
         Return a new `~spectral_cube.lower_dimensional_structures.LowerDimensionalObject` of the same class while keeping
         other properties fixed.
         """
+        log.debug("In {1}.__getitem__ with key {0}".format(key, self.__class__))
         new_qty = super(LowerDimensionalObject, self).__getitem__(key)
 
         if new_qty.ndim < 2:
@@ -560,6 +569,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         except (AttributeError,TypeError):
             beams = None
 
+        log.debug("In OneDSpectrum.__getitem__ with key {0}".format(key))
         new_qty = super(OneDSpectrum, self).__getitem__(key, beams=beams)
 
         if isinstance(key, slice):
