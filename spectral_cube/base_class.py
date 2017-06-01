@@ -281,4 +281,3 @@ class MaskableArrayMixinClass(object):
         to create a new cube with a different fill value.
         """
         return self._fill_value
-
