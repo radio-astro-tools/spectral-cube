@@ -4,7 +4,6 @@ import warnings
 from astropy import units as u
 from astropy import wcs
 from astropy import convolution
-from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
@@ -114,7 +113,6 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         Return a new `~spectral_cube.lower_dimensional_structures.LowerDimensionalObject` of the same class while keeping
         other properties fixed.
         """
-        log.debug("In {1}.__getitem__ with key {0}".format(key, self.__class__))
         new_qty = super(LowerDimensionalObject, self).__getitem__(key)
 
         if new_qty.ndim < 2:
@@ -569,7 +567,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         except (AttributeError,TypeError):
             beams = None
 
-        log.debug("In OneDSpectrum.__getitem__ with key {0}".format(key))
         new_qty = super(OneDSpectrum, self).__getitem__(key, beams=beams)
 
         if isinstance(key, slice):
