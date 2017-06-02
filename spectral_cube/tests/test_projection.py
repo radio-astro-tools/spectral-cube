@@ -382,7 +382,9 @@ def test_1d_slices():
     sp = cube[:,0,0]
 
     assert sp.max() == cube.max(axis=0)[0,0]
+    assert not isinstance(sp.max(), OneDSpectrum)
 
     sp = cube[:-1,0,0]
 
     assert sp.max() == cube[:-1,:,:].max(axis=0)[0,0]
+    assert not isinstance(sp.max(), OneDSpectrum)
