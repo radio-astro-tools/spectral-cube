@@ -5,7 +5,6 @@ py:class spectral_cube.base_class.BaseNDClass
 py:class spectral_cube.base_class.SpectralAxisMixinClass
 py:class spectral_cube.base_class.SpatialCoordMixinClass
 py:class spectral_cube.base_class.MaskableArrayMixinClass
-py:class spectral_cube.lower_dimensional_structures.OneDSpectrum
 
 # yt references
 py:obj yt.surface.export_sketchfab
