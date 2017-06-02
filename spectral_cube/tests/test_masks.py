@@ -443,6 +443,18 @@ def test_2dcomparison_mask_1d_index():
 
     assert isinstance(spec[0], u.Quantity)
 
+    spec = mcube[:-1,1,1]
+
+    assert spec.ndim == 1
+    assert hasattr(spec, '_fill_value')
+
+    assert all(spec.mask.include() == mask.include()[:-1,1,1])
+
+    assert spec[:-1].mask.include().shape == (2,)
+    assert all(spec[:-1].mask.include() == mask.include()[:-2,1,1])
+
+    assert isinstance(spec[0], u.Quantity)
+
 def test_1dcomparison_mask_1d_index():
     cube, data = cube_and_raw('adv.fits')
 
