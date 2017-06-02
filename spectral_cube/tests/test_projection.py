@@ -374,3 +374,15 @@ def test_repr_1d():
 
     assert 'OneDSpectrum' in sp.__repr__()
     assert 'OneDSpectrum' in sp[1:-1].__repr__()
+
+def test_1d_slices():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    sp = cube[:,0,0]
+
+    assert sp.max() == cube.max(axis=0)[0,0]
+
+    sp = cube[:-1,0,0]
+
+    assert sp.max() == cube[:-1,:,:].max(axis=0)[0,0]
