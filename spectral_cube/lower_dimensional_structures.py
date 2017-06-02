@@ -752,3 +752,14 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         spectrum._spectral_unit = spectral_unit
 
         return spectrum
+
+    def __getattribute__(self, attrname):
+        # This is a hack to handle dimensionality-reducing functions
+        # We want spectrum.max() to return a Quantity, not a spectrum
+        # Long-term, we really want `OneDSpectrum` to not inherit from
+        # `Quantity`, but for now this approach works.... we just have
+        # to add more functions to this list.
+        if attrname in ('min', 'max', 'sum', 'std', 'mean'):
+            return getattr(self.quantity, attrname)
+        else:
+            return super(OneDSpectrum, self).__getattribute__(attrname)
