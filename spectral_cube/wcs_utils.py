@@ -429,18 +429,18 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
     """
     Parameters
     ----------
-        dropped_axis_slice_position : 'middle', 'start', 'end'
-            If an axis is being dropped, where should the WCS say the
-            projection is?  It can be at the start, middle, or end of the
-            axis.
-        dropped_axis_cdelt : 'same', 'full_range', or value
-            If an axis is being dropped, what should the new CDELT be?  For an
-            integral, for example, one might want the value to be the full
-            range.  For a slice, it should stay the same.  For something like
-            min or max, it might be zero.
-        convert_misaligned_to_offset : bool
-            If the axes are misaligned, it is not possible to "drop" an axis.
-            In this case, a generic "offset axis" will be returned.
+    dropped_axis_slice_position : 'middle', 'start', 'end'
+        If an axis is being dropped, where should the WCS say the
+        projection is?  It can be at the start, middle, or end of the
+        axis.
+    dropped_axis_cdelt : 'same', 'full_range', or value
+        If an axis is being dropped, what should the new CDELT be?  For an
+        integral, for example, one might want the value to be the full
+        range.  For a slice, it should stay the same.  For something like
+        min or max, it might be zero.
+    convert_misaligned_to_offset : bool
+        If the axes are misaligned, it is not possible to "drop" an axis.
+        In this case, a generic "offset axis" will be returned.
     """
     ndim = len(shape)
 
@@ -449,7 +449,7 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
     elif dropped_axis_slice_position == 'start':
         dropped_axis_slice_position = 0
     elif dropped_axis_slice_position == 'end':
-        dropped_axis_slice_position = shape[dropped_axis] - 1
+        dropped_axis_slice_position = shape[dropped_axis]
 
     dropax_slice = slice(dropped_axis_slice_position,
                          dropped_axis_slice_position+1)
@@ -474,6 +474,7 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
              for ax in range(ndim)])
         refvals = mywcs.wcs_pix2world(ref_pixels.T, 0)[:, dropped_axis]
         dropped_axis_cdelt = refvals[1]-refvals[0]
+
     result.wcs.cdelt[dropped_axis] = dropped_axis_cdelt
 
     return result

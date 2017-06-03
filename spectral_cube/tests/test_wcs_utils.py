@@ -2,6 +2,8 @@ from __future__ import print_function, absolute_import, division
 
 from astropy.io import fits
 
+import pytest
+
 from ..wcs_utils import *
 from . import path
 
@@ -129,7 +131,11 @@ def test_strip_wcs():
 
     assert header1_stripped == header2_stripped
 
-def test_drop_by_slice_middle():
+@pytest.mark.parametrize(('position', 'result'),
+                    (('start', 0.),
+                     ('middle', 5e-5),
+                     ('end', 10e-5)))
+def test_drop_by_slice(position, result):
 
     wcs = WCS(naxis=3)
     wcs.wcs.crpix = [1., 1., 1.]
@@ -137,9 +143,10 @@ def test_drop_by_slice_middle():
     wcs.wcs.cdelt = [1e-5, 1e-5, 1e-5]
     wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
 
-    newwcs = drop_axis_by_slicing(wcs, shape=[10,12,14], dropped_axis=0)
+    newwcs = drop_axis_by_slicing(wcs, shape=[10,12,14], dropped_axis=0,
+                                  dropped_axis_slice_position=position)
 
-    np.testing.assert_almost_equal(newwcs.wcs.crval[0], 5e-5)
+    np.testing.assert_almost_equal(newwcs.wcs.crval[0], result)
     assert all(newwcs.wcs.cdelt == [1e-5,1e-5,1e-5])
 
 def test_drop_by_slice_middle_fullrange():
