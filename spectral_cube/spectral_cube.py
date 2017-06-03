@@ -1373,7 +1373,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if order == 1 and axis == 0:
             out += self.world[0, :, :][0]
 
-        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+        view = [slice(None) if ax!=axis else slice(self.shape[axis]//2,
+                                                   self.shape[axis]//2+1)
+                for ax in range(self.ndim)]
+        new_wcs = wcs_utils.slice_wcs(self._wcs, view)
 
         meta = {'moment_order': order,
                 'moment_axis': axis,
