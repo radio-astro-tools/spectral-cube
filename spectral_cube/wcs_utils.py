@@ -420,3 +420,58 @@ def diagonal_wcs_to_cdelt(mywcs):
         del mywcs.wcs.cd
         mywcs.wcs.cdelt = cdelt
     return mywcs
+
+def drop_axis_by_slicing(mywcs, shape, dropped_axis,
+                         dropped_axis_slice_position='middle',
+                         dropped_axis_cdelt='same',
+                         convert_misaligned_to_offset=True,
+                        ):
+    """
+    Parameters
+    ----------
+        dropped_axis_slice_position : 'middle', 'start', 'end'
+            If an axis is being dropped, where should the WCS say the
+            projection is?  It can be at the start, middle, or end of the
+            axis.
+        dropped_axis_cdelt : 'same', 'full_range', or value
+            If an axis is being dropped, what should the new CDELT be?  For an
+            integral, for example, one might want the value to be the full
+            range.  For a slice, it should stay the same.  For something like
+            min or max, it might be zero.
+        convert_misaligned_to_offset : bool
+            If the axes are misaligned, it is not possible to "drop" an axis.
+            In this case, a generic "offset axis" will be returned.
+    """
+    ndim = len(shape)
+
+    if dropped_axis_slice_position == 'middle':
+        dropped_axis_slice_position = shape[dropped_axis]//2
+    elif dropped_axis_slice_position == 'start':
+        dropped_axis_slice_position = 0
+    elif dropped_axis_slice_position == 'end':
+        dropped_axis_slice_position = shape[dropped_axis] - 1
+
+    dropax_slice = slice(dropped_axis_slice_position,
+                         dropped_axis_slice_position+1)
+
+    view = [slice(None) if ax!=dropped_axis else dropax_slice
+            for ax in range(ndim)]
+
+    crpix_new = [0 if ax!=dropped_axis else dropped_axis_slice_position
+                 for ax in range(ndim)]
+    new_crval = mywcs.wcs_pix2world(crpix_new, 0)[dropped_axis]
+
+    result = slice_wcs(mywcs, view, shape=shape)
+
+    result.wcs.crval[dropped_axis] = new_crval
+    result.wcs.crpix[dropped_axis] = 1
+
+    if dropped_axis_cdelt == 'same':
+        dropped_axis_cdelt = mywcs.wcs.cdelt[dropped_axis]
+    elif dropped_axis_cdelt == 'full_range':
+        ref_pixels = [(0,0) if ax!=dropped_axis else (0, shape[dropped_axis]-1)
+                      for ax in range(ndim)]
+        dropped_axis_cdelt = mywcs.wcs_pix2world(ref_pixels, 0)[dropped_axis]
+    result.wcs.cdelt[dropped_axis] = dropped_axis_cdelt
+
+    return result

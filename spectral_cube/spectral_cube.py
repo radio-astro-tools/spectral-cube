@@ -268,6 +268,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                              unit=None,
                              check_endian=False,
                              progressbar=False,
+                             dropped_axis_slice_position='middle',
+                             dropped_axis_cdelt='same',
                              **kwargs):
         """
         Apply a numpy function to the cube
@@ -306,6 +308,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         progressbar : bool
             Show a progressbar while iterating over the slices through the
             cube?
+        dropped_axis_slice_position : 'middle', 'start', 'end'
+            If an axis is being dropped, where should the WCS say the
+            projection is?  It can be at the start, middle, or end of the
+            axis.
+        dropped_axis_cdelt : 'same', 'full_range', or value
+            If an axis is being dropped, what should the new CDELT be?  For an
+            integral, for example, one might want the value to be the full
+            range.  For a slice, it should stay the same.  For something like
+            min or max, it might be zero.
         kwargs : dict
             Passed to the numpy function.
 
@@ -375,7 +386,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     return out
 
             else:
-                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+                new_wcs = wcs_utils.drop_axis_by_slicing(self._wcs,
+                                                         self.shape,
+                                                         axis,
+                                                         dropped_axis_cdelt=dropped_axis_cdelt,
+                                                         dropped_axis_slice_position=dropped_axis_slice_position,
+                                                        )
+
                 header = self._nowcs_header
 
                 return Projection(out, copy=False, wcs=new_wcs, meta=meta,
@@ -1373,8 +1391,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if order == 1 and axis == 0:
             out += self.world[0, :, :][0]
 
-        view = [slice(None) if ax!=axis else slice(self.shape[axis]//2,
-                                                   self.shape[axis]//2+1)
+        view = [slice(None) if ax!=axis else slice(self.shape[ax]//2,
+                                                   self.shape[ax]//2+1)
                 for ax in range(self.ndim)]
         new_wcs = wcs_utils.slice_wcs(self._wcs, view)
 
@@ -2667,7 +2685,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                     meta=meta)
 
             # only one element, so drop an axis
-            newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
+            view = [slice(None) if ax!=intslices[0]
+                    else slice(self.shape[ax]//2, self.shape[ax]//2+1)
+                    for ax in range(self.ndim)]
+            newwcs = wcs_utils.slice_wcs(self._wcs, view)
             header = self._nowcs_header
 
             # Slice objects know how to parse Beam objects stored in the
