@@ -362,3 +362,63 @@ def test_spectral_units():
 
     assert sp.spectral_axis.unit == u.km/u.s
     assert sp.header['CUNIT1'] == 'km s-1'
+
+def test_repr_1d():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    sp = cube[:,0,0]
+
+    print(sp)
+    print(sp[1:-1])
+
+    assert 'OneDSpectrum' in sp.__repr__()
+    assert 'OneDSpectrum' in sp[1:-1].__repr__()
+
+def test_1d_slices():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    sp = cube[:,0,0]
+
+    assert sp.max() == cube.max(axis=0)[0,0]
+    assert not isinstance(sp.max(), OneDSpectrum)
+
+    sp = cube[:-1,0,0]
+
+    assert sp.max() == cube[:-1,:,:].max(axis=0)[0,0]
+    assert not isinstance(sp.max(), OneDSpectrum)
+
+@pytest.mark.parametrize('method',
+                         ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
+                          'nansum', 'ptp', 'var'),
+                        )
+def test_1d_slice_reductions(method):
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    sp = cube[:,0,0]
+
+    if hasattr(cube, method):
+        assert getattr(sp, method)() == getattr(cube, method)(axis=0)[0,0]
+    else:
+        getattr(sp, method)()
+
+    assert hasattr(sp, '_fill_value')
+
+    assert 'OneDSpectrum' in sp.__repr__()
+    assert 'OneDSpectrum' in sp[1:-1].__repr__()
+
+
+def test_1d_slice_round():
+    cube, data = cube_and_raw('255_delta.fits')
+
+    sp = cube[:,0,0]
+
+    assert all(sp.value.round() == sp.round().value)
+
+    assert hasattr(sp, '_fill_value')
+    assert hasattr(sp.round(), '_fill_value')
+
+    assert 'OneDSpectrum' in sp.round().__repr__()
+    assert 'OneDSpectrum' in sp[1:-1].round().__repr__()

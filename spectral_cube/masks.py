@@ -427,7 +427,8 @@ class BooleanArrayMask(MaskBase):
     def __getitem__(self, view):
         return BooleanArrayMask(self._mask[view],
                                 wcs_utils.slice_wcs(self._wcs, view,
-                                                    shape=self.shape),
+                                                    shape=self.shape,
+                                                    drop_degenerate=True),
                                 shape=self._mask[view].shape)
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
@@ -508,7 +509,8 @@ class LazyMask(MaskBase):
     def __getitem__(self, view):
         return LazyMask(self._function, data=self._data[view],
                         wcs=wcs_utils.slice_wcs(self._wcs, view,
-                                                shape=self._data.shape))
+                                                shape=self._data.shape,
+                                                drop_degenerate=True))
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """
@@ -575,7 +577,7 @@ class LazyComparisonMask(LazyMask):
     def _include(self, data=None, wcs=None, view=()):
         self._validate_wcs(data, wcs)
 
-        if hasattr(self._comparison_value, 'shape'):
+        if hasattr(self._comparison_value, 'shape') and self._comparison_value.shape:
             cv_view = view_of_subset(self._comparison_value.shape,
                                      self._data.shape, view)
 
@@ -587,16 +589,18 @@ class LazyComparisonMask(LazyMask):
                                   self._comparison_value)
 
     def __getitem__(self, view):
-        if hasattr(self._comparison_value, 'shape'):
+        if hasattr(self._comparison_value, 'shape') and self._comparison_value.shape:
             cv_view = view_of_subset(self._comparison_value.shape,
                                      self._data.shape, view)
             return LazyComparisonMask(self._function, data=self._data[view],
                                       comparison_value=self._comparison_value[cv_view],
-                                      wcs=wcs_utils.slice_wcs(self._wcs, view))
+                                      wcs=wcs_utils.slice_wcs(self._wcs, view,
+                                                              drop_degenerate=True))
         else:
             return LazyComparisonMask(self._function, data=self._data[view],
                                       comparison_value=self._comparison_value,
-                                      wcs=wcs_utils.slice_wcs(self._wcs, view))
+                                      wcs=wcs_utils.slice_wcs(self._wcs, view,
+                                                              drop_degenerate=True))
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """

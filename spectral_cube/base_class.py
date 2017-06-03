@@ -228,3 +228,56 @@ class SpectralAxisMixinClass(object):
     def spectral_axis(self):
         # spectral objects should be forced to implement this
         raise NotImplementedError
+
+
+class MaskableArrayMixinClass(object):
+    """
+    Mixin class for maskable arrays
+    """
+
+    def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
+        """
+        Return the underlying data as a numpy array.
+        Always returns the spectral axis as the 0th axis
+
+        Sets masked values to *fill*
+        """
+        if check_endian:
+            if not self._data.dtype.isnative:
+                kind = str(self._data.dtype.kind)
+                sz = str(self._data.dtype.itemsize)
+                dt = '=' + kind + sz
+                data = self._data.astype(dt)
+            else:
+                data = self._data
+        else:
+            data = self._data
+
+        if self._mask is None:
+            return data[view]
+
+        return self._mask._filled(data=data, wcs=self._wcs, fill=fill,
+                                  view=view, wcs_tolerance=self._wcs_tolerance)
+
+    @cube_utils.slice_syntax
+    def filled_data(self, view):
+        """
+        Return a portion of the data array, with excluded mask values
+        replaced by :meth:`fill_value`.
+
+        Returns
+        -------
+        data : Quantity
+            The masked data.
+        """
+        return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
+                          self.unit, copy=False)
+
+    @property
+    def fill_value(self):
+        """ The replacement value used by :meth:`filled_data`.
+
+        fill_value is immutable; use :meth:`with_fill_value`
+        to create a new cube with a different fill value.
+        """
+        return self._fill_value

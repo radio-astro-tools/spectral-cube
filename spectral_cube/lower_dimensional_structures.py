@@ -4,17 +4,19 @@ import warnings
 from astropy import units as u
 from astropy import wcs
 from astropy import convolution
+#from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
 from .utils import SliceWarning
 from .cube_utils import convert_bunit
+from . import wcs_utils
 
 import numpy as np
 from astropy import convolution
 
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
-                         SpatialCoordMixinClass)
+                         SpatialCoordMixinClass, MaskableArrayMixinClass)
 from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
@@ -100,6 +102,14 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
         return new
 
+    def __getslice__(self, start, end, increment=None):
+        # I don't know why this is needed, but apparently one of the inherited
+        # classes implements getslice, which forces us to overwrite it
+        # I can't find any examples where __getslice__ is actually implemented,
+        # though, so this seems like a deep and frightening bug.
+        #log.debug("Getting a slice from {0} to {1}".format(start,end))
+        return self.__getitem__(slice(start, end, increment))
+
     def __getitem__(self, key, **kwargs):
         """
         Return a new `~spectral_cube.lower_dimensional_structures.LowerDimensionalObject` of the same class while keeping
@@ -134,13 +144,21 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
                              copy=False,
                              wcs=newwcs,
                              meta=self._meta,
-                             mask=self._mask,
+                             mask=(self._mask[key] if self._mask is not None
+                                   else None),
                              header=self._header,
                              **kwargs)
+
+        new._wcs = newwcs
+        new._meta = self._meta
+        new._mask=(self._mask[key] if self._mask is not None else None)
+        new._header = self._header
 
         return new
 
     def __array_finalize__(self, obj):
+        #log.debug("Finalizing self={0}{1} obj={2}{3}"
+        #          .format(self, type(self), obj, type(obj)))
         self._wcs = getattr(obj, '_wcs', None)
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
@@ -420,11 +438,14 @@ class Slice(Projection):
     pass
 
 
-class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
+class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
+                   SpectralAxisMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, spectral_unit=None,
-                beams=None):
+                fill_value=np.nan, beams=None, wcs_tolerance=0.0):
+
+        #log.debug("Creating a OneDSpectrum with __new__")
 
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
@@ -437,6 +458,8 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         self._wcs = wcs
         self._meta = {} if meta is None else meta
         self._mask = mask
+        self._fill_value = fill_value
+        self._wcs_tolerance = wcs_tolerance
         if header is not None:
             self._header = header
         else:
@@ -453,7 +476,17 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         if beams is not None:
             self.beams = beams
 
+        # HACK: OneDSpectrum should eventually become not-a-quantity
+        # Maybe it should be a u.Quantity(np.ma)?
+        self._data = self.value
+
         return self
+
+    def __repr__(self):
+        prefixstr = '<' + self.__class__.__name__ + ' '
+        arrstr = np.array2string(self.filled_data[:].value, separator=',',
+                                 prefix=prefixstr)
+        return '{0}{1}{2:s}>'.format(prefixstr, arrstr, self._unitstr)
 
     @property
     def header(self):
@@ -509,7 +542,8 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         """
         from matplotlib import pyplot
         ax = pyplot.gca()
-        ax.plot(self.spectral_axis, self.value, drawstyle=drawstyle, **kwargs)
+        ax.plot(self.spectral_axis, self.filled_data[:].value,
+                drawstyle=drawstyle, **kwargs)
         ax.set_xlabel(self.spectral_axis.unit.to_string(format='latex'))
         ax.set_ylabel(self.unit)
         if filename is not None:
@@ -529,9 +563,8 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         newheader['CUNIT1'] = unit.to_string(format='FITS')
         newheader['CDELT1'] *= wcs_cunit.to(unit)
 
-        return OneDSpectrum(value=self.value, unit=self.unit, wcs=newwcs,
-                            header=newheader, meta=newmeta, copy=False,
-                            spectral_unit=unit)
+        return self._new_spectrum_with(wcs=newwcs, spectral_unit=unit,
+                                       meta=newmeta, header=newheader)
 
     def __getitem__(self, key, **kwargs):
         try:
@@ -539,7 +572,26 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         except (AttributeError,TypeError):
             beams = None
 
-        return super(OneDSpectrum, self).__getitem__(key, beams=beams)
+        new_qty = super(OneDSpectrum, self).__getitem__(key, beams=beams)
+
+        if isinstance(key, slice):
+        
+            new = self.__class__(value=new_qty.value,
+                                 unit=new_qty.unit,
+                                 copy=False,
+                                 wcs=wcs_utils.slice_wcs(self._wcs, key,
+                                                         shape=self.shape),
+                                 meta=self._meta,
+                                 mask=(self._mask[key] if self._mask is not
+                                       None else None),
+                                 header=self._header,
+                                 wcs_tolerance=self._wcs_tolerance,
+                                 fill_value=self.fill_value,
+                                 **kwargs)
+
+            return new
+        else:
+            return new_qty
 
     @property
     def hdu(self):
@@ -627,9 +679,9 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
         newheader['CUNIT1'] = spectral_grid.unit.to_string(format='FITS')
         newheader['CDELT1'] *= wcs_cunit.to(spectral_grid.unit)
 
-        return OneDSpectrum(value=newspec, unit=self.unit, wcs=newwcs,
-                            header=newheader, meta=self.meta.copy(),
-                            copy=False, spectral_unit=spectral_grid.unit)
+        return self._new_spectrum_with(data=newspec, wcs=newwcs,
+                                       header=newheader,
+                                       spectral_unit=spectral_grid.unit)
 
     def spectral_smooth(self, kernel,
                         convolve=convolution.convolve,
@@ -651,6 +703,78 @@ class OneDSpectrum(LowerDimensionalObject,SpectralAxisMixinClass):
 
         newspec = convolve(self.value, kernel, normalize_kernel=True, **kwargs)
 
-        return OneDSpectrum(value=newspec, unit=self.unit, wcs=self.wcs.copy(),
-                            header=self.header.copy(), meta=self.meta.copy(),
-                            copy=False, spectral_unit=self.spectral_axis.unit)
+        return self._new_spectrum_with(data=newspec)
+
+    def with_fill_value(self, fill_value):
+        """
+        Create a new :class:`OneDSpectrum` with a different ``fill_value``.
+        """
+        return self._new_spectrum_with(fill_value=fill_value)
+
+    def _new_spectrum_with(self, data=None, wcs=None, mask=None, meta=None,
+                           fill_value=None, spectral_unit=None, unit=None,
+                           header=None, wcs_tolerance=None, **kwargs):
+
+        data = self._data if data is None else data
+        if unit is None and hasattr(data, 'unit'):
+            if data.unit != self.unit:
+                raise u.UnitsError("New data unit '{0}' does not"
+                                   " match unit '{1}'.  You can"
+                                   " override this by specifying the"
+                                   " `unit` keyword."
+                                   .format(data.unit, self.unit))
+            unit = data.unit
+        elif unit is None:
+            unit = self.unit
+        elif unit is not None:
+            # convert string units to Units
+            if not isinstance(unit, u.Unit):
+                unit = u.Unit(unit)
+
+            if hasattr(data, 'unit'):
+                if u.Unit(unit) != data.unit:
+                    raise u.UnitsError("The specified new cube unit '{0}' "
+                                       "does not match the input unit '{1}'."
+                                       .format(unit, data.unit))
+            else:
+                data = u.Quantity(data, unit=unit, copy=False)
+
+        wcs = self._wcs if wcs is None else wcs
+        mask = self._mask if mask is None else mask
+        if meta is None:
+            meta = {}
+            meta.update(self._meta)
+        if unit is not None:
+            meta['BUNIT'] = unit.to_string(format='FITS')
+
+        fill_value = self._fill_value if fill_value is None else fill_value
+        spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
+
+        spectrum = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
+                                  unit=unit, fill_value=fill_value,
+                                  header=header or self._header,
+                                  wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                                  **kwargs)
+        spectrum._spectral_unit = spectral_unit
+
+        return spectrum
+
+    def __getattribute__(self, attrname):
+        # This is a hack to handle dimensionality-reducing functions
+        # We want spectrum.max() to return a Quantity, not a spectrum
+        # Long-term, we really want `OneDSpectrum` to not inherit from
+        # `Quantity`, but for now this approach works.... we just have
+        # to add more functions to this list.
+        if attrname in ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
+                        'nansum', 'ptp', 'var'):
+            return getattr(self.quantity, attrname)
+        else:
+            return super(OneDSpectrum, self).__getattribute__(attrname)
+
+    def __array_finalize__(self, obj):
+        #log.debug("in OneDSpectrum, Finalizing self={0}{1} obj={2}{3}"
+        #          .format(self, type(self), obj, type(obj)))
+        self._fill_value = getattr(obj, '_fill_value', np.nan)
+        self._data = getattr(obj, '_data', obj)
+        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
+        super(OneDSpectrum, self).__array_finalize__(obj)

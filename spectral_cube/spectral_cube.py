@@ -32,7 +32,9 @@ from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
 from .ytcube import ytCube
 from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                            LowerDimensionalObject)
-from .base_class import BaseNDClass, SpectralAxisMixinClass, DOPPLER_CONVENTIONS, SpatialCoordMixinClass
+from .base_class import (BaseNDClass, SpectralAxisMixinClass,
+                         DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
+                         MaskableArrayMixinClass)
 from .utils import cached, warn_slow, VarianceWarning, BeamAverageWarning
 
 from distutils.version import LooseVersion
@@ -82,7 +84,8 @@ def aggregation_docstring(func):
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
 
-class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinClass):
+class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
+                       SpectralAxisMixinClass, SpatialCoordMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, wcs_tolerance=0.0):
@@ -1010,11 +1013,12 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                return OneDSpectrum(value=self.filled_data[view],
+                return OneDSpectrum(value=self._data[view],
                                     wcs=newwcs,
                                     copy=False,
                                     unit=self.unit,
                                     spectral_unit=self._spectral_unit,
+                                    mask=self.mask[view],
                                     meta=meta,
                                    )
 
@@ -1050,30 +1054,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
         newcube = self._new_cube_with()
         newcube._unit = None
         return newcube
-
-
-    @property
-    def fill_value(self):
-        """ The replacement value used by :meth:`filled_data`.
-
-        fill_value is immutable; use :meth:`with_fill_value`
-        to create a new cube with a different fill value.
-        """
-        return self._fill_value
-
-    @cube_utils.slice_syntax
-    def filled_data(self, view):
-        """
-        Return a portion of the data array, with excluded mask values
-        replaced by `fill_value`.
-
-        Returns
-        -------
-        data : Quantity
-            The masked data.
-        """
-        return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
-                          self.unit, copy=False)
 
     def with_fill_value(self, fill_value):
         """
@@ -1127,29 +1107,6 @@ class BaseSpectralCube(BaseNDClass, SpectralAxisMixinClass, SpatialCoordMixinCla
 
         return cube
 
-    def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
-        """
-        Return the underlying data as a numpy array.
-        Always returns the spectral axis as the 0th axis
-
-        Sets masked values to *fill*
-        """
-        if check_endian:
-            if not self._data.dtype.isnative:
-                kind = str(self._data.dtype.kind)
-                sz = str(self._data.dtype.itemsize)
-                dt = '=' + kind + sz
-                data = self._data.astype(dt)
-            else:
-                data = self._data
-        else:
-            data = self._data
-
-        if self._mask is None:
-            return data[view]
-
-        return self._mask._filled(data=data, wcs=self._wcs, fill=fill,
-                                  view=view, wcs_tolerance=self._wcs_tolerance)
 
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
@@ -2699,6 +2656,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                     copy=False,
                                     unit=self.unit,
                                     spectral_unit=self._spectral_unit,
+                                    mask=self.mask[view],
                                     beams=self.beams[specslice],
                                     meta=meta)
 
