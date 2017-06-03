@@ -433,9 +433,43 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
         return self[slices]
 
+    def __getattribute__(self, attrname):
+        # This is a hack to handle dimensionality-reducing functions
+        # See full note on OneDSpectrum.__getattribute__.
+        if attrname in ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
+                        'nansum', 'ptp', 'var'):
+            return getattr(self.quantity, attrname)
+        else:
+            return super(Projection, self).__getattribute__(attrname)
+
+    def __array_finalize__(self, obj):
+        #log.debug("in Projection, Finalizing self={0}{1} obj={2}{3}"
+        #          .format(self, type(self), obj, type(obj)))
+        self._fill_value = getattr(obj, '_fill_value', np.nan)
+        self._data = getattr(obj, '_data', obj)
+        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
+        super(Projection, self).__array_finalize__(obj)
+
+
 # A slice is just like a projection in every way
 class Slice(Projection):
-    pass
+
+    def __getattribute__(self, attrname):
+        # This is a hack to handle dimensionality-reducing functions
+        # See full note on OneDSpectrum.__getattribute__.
+        if attrname in ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
+                        'nansum', 'ptp', 'var'):
+            return getattr(self.quantity, attrname)
+        else:
+            return super(Slice, self).__getattribute__(attrname)
+
+    def __array_finalize__(self, obj):
+        #log.debug("in Slice, Finalizing self={0}{1} obj={2}{3}"
+        #          .format(self, type(self), obj, type(obj)))
+        self._fill_value = getattr(obj, '_fill_value', np.nan)
+        self._data = getattr(obj, '_data', obj)
+        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
+        super(Slice, self).__array_finalize__(obj)
 
 
 class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
@@ -575,7 +609,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         new_qty = super(OneDSpectrum, self).__getitem__(key, beams=beams)
 
         if isinstance(key, slice):
-        
+
             new = self.__class__(value=new_qty.value,
                                  unit=new_qty.unit,
                                  copy=False,
