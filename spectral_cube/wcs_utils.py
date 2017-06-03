@@ -209,10 +209,11 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True,
 
     if not all([isinstance(x, slice) for x in view]):
         if drop_degenerate:
-            keeps = [mywcs.naxis-ii
+            drops = [mywcs.naxis-ii
                      for ii,ind in enumerate(view)
-                     if isinstance(ind, slice)]
-            mywcs = mywcs.sub(keeps)
+                     if not isinstance(ind, slice)]
+            for drop in drops:
+                mywcs = drop_axis(mywcs, drop)
             view = [x for x in view if isinstance(x, slice)]
         else:
             raise ValueError("Cannot downsample a WCS with indexing.  Use "
