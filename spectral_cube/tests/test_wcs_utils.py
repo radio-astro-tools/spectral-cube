@@ -129,14 +129,29 @@ def test_strip_wcs():
 
     assert header1_stripped == header2_stripped
 
-def test_drop_by_slice():
+def test_drop_by_slice_middle():
 
     wcs = WCS(naxis=3)
     wcs.wcs.crpix = [1., 1., 1.]
     wcs.wcs.crval = [0., 0., 0.]
-    wcs.wcs.cdelt = [1., 1., 1.]
+    wcs.wcs.cdelt = [1e-5, 1e-5, 1e-5]
     wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
 
     newwcs = drop_axis_by_slicing(wcs, shape=[10,12,14], dropped_axis=0)
 
-    assert newwcs.wcs.crval[0] == 5
+    np.testing.assert_almost_equal(newwcs.wcs.crval[0], 5e-5)
+    assert all(newwcs.wcs.cdelt == [1e-5,1e-5,1e-5])
+
+def test_drop_by_slice_middle_fullrange():
+
+    wcs = WCS(naxis=3)
+    wcs.wcs.crpix = [1., 1., 1.]
+    wcs.wcs.crval = [0., 0., 0.]
+    wcs.wcs.cdelt = [1e-5, 1e-5, 1e-5]
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
+
+    newwcs = drop_axis_by_slicing(wcs, shape=[10,12,14], dropped_axis=0,
+                                  dropped_axis_cdelt='full_range')
+
+    np.testing.assert_almost_equal(newwcs.wcs.crval[0], 5e-5)
+    np.testing.assert_almost_equal(newwcs.wcs.cdelt[0], 10e-5)

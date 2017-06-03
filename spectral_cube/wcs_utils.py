@@ -469,9 +469,11 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
     if dropped_axis_cdelt == 'same':
         dropped_axis_cdelt = mywcs.wcs.cdelt[dropped_axis]
     elif dropped_axis_cdelt == 'full_range':
-        ref_pixels = [(0,0) if ax!=dropped_axis else (0, shape[dropped_axis]-1)
-                      for ax in range(ndim)]
-        dropped_axis_cdelt = mywcs.wcs_pix2world(ref_pixels, 0)[dropped_axis]
+        ref_pixels = np.array(
+            [(0,0) if ax!=dropped_axis else (0, shape[dropped_axis])
+             for ax in range(ndim)])
+        refvals = mywcs.wcs_pix2world(ref_pixels.T, 0)[:, dropped_axis]
+        dropped_axis_cdelt = refvals[1]-refvals[0]
     result.wcs.cdelt[dropped_axis] = dropped_axis_cdelt
 
     return result
