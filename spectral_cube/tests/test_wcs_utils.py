@@ -128,3 +128,15 @@ def test_strip_wcs():
     header2_stripped = strip_wcs_from_header(header2)
 
     assert header1_stripped == header2_stripped
+
+def test_drop_by_slice():
+
+    wcs = WCS(naxis=3)
+    wcs.wcs.crpix = [1., 1., 1.]
+    wcs.wcs.crval = [0., 0., 0.]
+    wcs.wcs.cdelt = [1., 1., 1.]
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
+
+    newwcs = drop_axis_by_slicing(wcs, shape=[10,12,14], dropped_axis=0)
+
+    assert newwcs.wcs.crval[0] == 5

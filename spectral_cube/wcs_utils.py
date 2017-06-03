@@ -459,7 +459,7 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
 
     crpix_new = [0 if ax!=dropped_axis else dropped_axis_slice_position
                  for ax in range(ndim)]
-    new_crval = mywcs.wcs_pix2world(crpix_new, 0)[dropped_axis]
+    new_crval = mywcs.wcs_pix2world([crpix_new], 0)[0, dropped_axis]
 
     result = slice_wcs(mywcs, view, shape=shape)
 
