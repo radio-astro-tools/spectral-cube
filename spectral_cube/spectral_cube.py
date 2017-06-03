@@ -288,16 +288,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
            decreasing subsets of the data, to conserve memory.
            Default='auto'
         projection : bool
-            Return a :class:`~spectral_cube.lower_dimensional_structures.Projection`
-            if the resulting array is 2D or a OneDProjection if the resulting
-            array is 1D and the sum is over both spatial axes?
+            Return a :class:`~spectral_cube.lower_dimensional_structures.Projection` if the resulting array is 2D or a
+            OneDProjection if the resulting array is 1D and the sum is over both
+            spatial axes?
         unit : None or `astropy.units.Unit`
             The unit to include for the output array.  For example,
-            `SpectralCube.max` calls
-            ``SpectralCube.apply_numpy_function(np.max, unit=self.unit)``,
-            inheriting the unit from the original cube.  However, for other
-            numpy functions, e.g. `numpy.argmax`, the return is an index and
-            therefore unitless.
+            `SpectralCube.max` calls ``SpectralCube.apply_numpy_function(np.max, unit=self.unit)``, inheriting the unit from the original cube.
+            However, for other numpy functions, e.g. `numpy.argmax`, the return
+            is an index and therefore unitless.
         check_endian : bool
             A flag to check the endianness of the data before applying the
             function.  This is only needed for optimized functions, e.g. those
@@ -377,10 +375,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
                 header = self._nowcs_header
 
-                mask = BooleanArrayMask(np.isfinite(out), wcs=new_wcs)
-
                 return Projection(out, copy=False, wcs=new_wcs, meta=meta,
-                                  unit=unit, header=header, mask=mask)
+                                  unit=unit, header=header)
         else:
             return out
 
@@ -476,9 +472,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
                 meta = {'collapse_axis': axis}
                 meta.update(self._meta)
-                mask = BooleanArrayMask(np.isfinite(out), wcs=new_wcs)
                 return Projection(out, copy=False, wcs=new_wcs,
-                                  meta=meta, mask=mask,
+                                  meta=meta,
                                   unit=self.unit, header=self._nowcs_header)
             else:
                 return out
@@ -532,10 +527,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
                 meta = {'collapse_axis': axis}
                 meta.update(self._meta)
-                mask = BooleanArrayMask(np.isfinite(out), wcs=new_wcs)
                 return Projection(out, copy=False, wcs=new_wcs,
-                                  meta=meta, mask=mask, unit=self.unit,
-                                  header=self._nowcs_header)
+                                  meta=meta,
+                                  unit=self.unit, header=self._nowcs_header)
             else:
                 return out
 
@@ -760,10 +754,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             meta = {'collapse_axis': axis}
             meta.update(self._meta)
 
-            mask = BooleanArrayMask(np.isfinite(out), wcs=new_wcs)
-
             return Projection(out, copy=False, wcs=new_wcs, meta=meta,
-                              unit=unit, header=self._nowcs_header, mask=mask)
+                              unit=unit, header=self._nowcs_header)
         else:
             return out
 
@@ -1012,7 +1004,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
             return Slice(value=self.filled_data[view],
-                         mask=self.mask[view],
                          wcs=newwcs,
                          copy=False,
                          unit=self.unit,
@@ -1360,10 +1351,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 'moment_method': how}
         meta.update(self._meta)
 
-        mask = BooleanArrayMask(np.isfinite(out), wcs=new_wcs)
-
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
-                          header=self._nowcs_header, mask=mask)
+                          header=self._nowcs_header)
 
     def moment0(self, axis=0, how='auto'):
         """
@@ -2650,7 +2639,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             # metadata
             meta['beam'] = self.beams[specslice]
             return Slice(value=self.filled_data[view],
-                         mask=self.mask[view],
                          wcs=newwcs,
                          copy=False,
                          unit=self.unit,

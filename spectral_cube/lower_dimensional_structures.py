@@ -4,7 +4,7 @@ import warnings
 from astropy import units as u
 from astropy import wcs
 from astropy import convolution
-from astropy import log
+#from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 from .io.core import determine_format
 from . import spectral_axis
@@ -107,7 +107,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         # classes implements getslice, which forces us to overwrite it
         # I can't find any examples where __getslice__ is actually implemented,
         # though, so this seems like a deep and frightening bug.
-        log.debug("Getting a slice from {0} to {1}".format(start,end))
+        #log.debug("Getting a slice from {0} to {1}".format(start,end))
         return self.__getitem__(slice(start, end, increment))
 
     def __getitem__(self, key, **kwargs):
@@ -157,8 +157,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         return new
 
     def __array_finalize__(self, obj):
-        log.debug("Finalizing self={0}{1} obj={2}{3}"
-                  .format(self, type(self), obj, type(obj)))
+        #log.debug("Finalizing self={0}{1} obj={2}{3}"
+        #          .format(self, type(self), obj, type(obj)))
         self._wcs = getattr(obj, '_wcs', None)
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
@@ -433,43 +433,9 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
         return self[slices]
 
-    def __getattribute__(self, attrname):
-        # This is a hack to handle dimensionality-reducing functions
-        # See full note on OneDSpectrum.__getattribute__.
-        if attrname in ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
-                        'nansum', 'ptp', 'var'):
-            return getattr(self.quantity, attrname)
-        else:
-            return super(Projection, self).__getattribute__(attrname)
-
-    def __array_finalize__(self, obj):
-        #log.debug("in Projection, Finalizing self={0}{1} obj={2}{3}"
-        #          .format(self, type(self), obj, type(obj)))
-        self._fill_value = getattr(obj, '_fill_value', np.nan)
-        self._data = getattr(obj, '_data', obj)
-        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
-        super(Projection, self).__array_finalize__(obj)
-
-
 # A slice is just like a projection in every way
 class Slice(Projection):
-
-    def __getattribute__(self, attrname):
-        # This is a hack to handle dimensionality-reducing functions
-        # See full note on OneDSpectrum.__getattribute__.
-        if attrname in ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
-                        'nansum', 'ptp', 'var'):
-            return getattr(self.quantity, attrname)
-        else:
-            return super(Slice, self).__getattribute__(attrname)
-
-    def __array_finalize__(self, obj):
-        #log.debug("in Slice, Finalizing self={0}{1} obj={2}{3}"
-        #          .format(self, type(self), obj, type(obj)))
-        self._fill_value = getattr(obj, '_fill_value', np.nan)
-        self._data = getattr(obj, '_data', obj)
-        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
-        super(Slice, self).__array_finalize__(obj)
+    pass
 
 
 class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
@@ -479,7 +445,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                 meta=None, mask=None, header=None, spectral_unit=None,
                 fill_value=np.nan, beams=None, wcs_tolerance=0.0):
 
-        log.debug("Creating a OneDSpectrum with __new__")
+        #log.debug("Creating a OneDSpectrum with __new__")
 
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
@@ -609,7 +575,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         new_qty = super(OneDSpectrum, self).__getitem__(key, beams=beams)
 
         if isinstance(key, slice):
-
+        
             new = self.__class__(value=new_qty.value,
                                  unit=new_qty.unit,
                                  copy=False,
@@ -806,8 +772,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             return super(OneDSpectrum, self).__getattribute__(attrname)
 
     def __array_finalize__(self, obj):
-        log.debug("in OneDSpectrum, Finalizing self={0}{1} obj={2}{3}"
-                  .format(self, type(self), obj, type(obj)))
+        #log.debug("in OneDSpectrum, Finalizing self={0}{1} obj={2}{3}"
+        #          .format(self, type(self), obj, type(obj)))
         self._fill_value = getattr(obj, '_fill_value', np.nan)
         self._data = getattr(obj, '_data', obj)
         self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
