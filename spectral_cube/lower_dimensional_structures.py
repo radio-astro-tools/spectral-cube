@@ -47,7 +47,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             log.debug('Adding NAXIS{0} at position {1}'.format(ind+1,
                                                                3+ind+1))
             header.insert(3+ind+1, Card(keyword='NAXIS{0:1d}'.format(ind+1),
-                                      value=sh))
+                                        value=sh))
         if self.wcs.naxis > self.ndim:
             assert ind != 0
             for ii in range(self.wcs.naxis - self.ndim):
