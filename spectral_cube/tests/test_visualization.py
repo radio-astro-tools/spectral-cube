@@ -38,7 +38,7 @@ def test_to_pvextractor():
 
 
 @pytest.mark.skipif("not MATPLOTLIB_INSTALLED")
-def test_projvis():
+def test_projvis_noaplpy():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 

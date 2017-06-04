@@ -490,7 +490,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                             projection=False)
             out = ttl / counts
             if projection:
-                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                new_wcs = wcs_utils.drop_axis_by_slicing(self.wcs, self.shape,
+                                                         dropped_axis=axis,
+                                                         dropped_axis_slice_position='middle',
+                                                         dropped_axis_cdelt='full_range')
                 meta = {'collapse_axis': axis}
                 meta.update(self._meta)
                 return Projection(out, copy=False, wcs=new_wcs,
@@ -558,7 +561,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             out = (result/(counts-ddof))**0.5
 
             if projection:
-                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                new_wcs = wcs_utils.drop_axis_by_slicing(self.wcs, self.shape,
+                                                         dropped_axis=axis,
+                                                         dropped_axis_slice_position='middle',
+                                                         dropped_axis_cdelt='full_range')
                 meta = {'collapse_axis': axis}
                 meta.update(self._meta)
                 return Projection(out, copy=False, wcs=new_wcs,
@@ -730,7 +736,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self._new_cube_with(data=data, unit=unit)
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
-                       projection=False, progressbar=False, **kwargs):
+                       projection=False, progressbar=False,
+                       dropped_axis_slice_position='middle',
+                       dropped_axis_cdelt='same',
+                       **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
@@ -754,6 +763,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         progressbar : bool
             Show a progressbar while iterating over the slices/rays through the
             cube?
+        dropped_axis_slice_position : 'middle', 'start', 'end'
+            If an axis is being dropped, where should the WCS say the
+            projection is?  It can be at the start, middle, or end of the
+            axis.
+        dropped_axis_cdelt : 'same', 'full_range', or value
+            If an axis is being dropped, what should the new CDELT be?  For an
+            integral, for example, one might want the value to be the full
+            range.  For a slice, it should stay the same.  For something like
+            min or max, it might be zero.
 
         Returns
         -------
@@ -796,7 +814,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             pbu()
 
         if projection and axis in (0,1,2):
-            new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+            new_wcs = wcs_utils.drop_axis_by_slicing(self.wcs, self.shape,
+                                                     dropped_axis=axis,
+                                                     dropped_axis_slice_position=dropped_axis_slice_position,
+                                                     dropped_axis_cdelt=dropped_axis_cdelt)
 
             meta = {'collapse_axis': axis}
             meta.update(self._meta)
@@ -1041,7 +1062,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                    )
 
             # only one element, so drop an axis
-            newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
+            newwcs = wcs_utils.drop_axis_by_slicing(self.wcs, self.shape,
+                                                    dropped_axis=intslices[0],
+                                                    dropped_axis_slice_position=view[2-intslices[0]],
+                                                    dropped_axis_cdelt='same')
             header = self._nowcs_header
 
             if intslices[0] == 0:

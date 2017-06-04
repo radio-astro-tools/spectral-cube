@@ -183,6 +183,8 @@ def reindex_wcs(wcs, inds):
                 ps_cards.append((i, m, v))
     outwcs.wcs.set_ps(ps_cards)
 
+    assert outwcs.naxis == len(inds)
+
     return outwcs
 
 
@@ -475,6 +477,9 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
         If the axes are misaligned, it is not possible to "drop" an axis.
         In this case, a generic "offset axis" will be returned.
     """
+    log.debug("Dropping axis by slicing with args: {0}, {1}, {2}, {3}, {4}"
+              .format(mywcs, shape, dropped_axis, dropped_axis_slice_position,
+                      dropped_axis_cdelt))
     ndim = len(shape)
 
     if mywcs.get_axis_types()[dropped_axis]['coordinate_type'] == 'celestial':
@@ -525,5 +530,8 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
         new_result.has_celestial = False
         new_result.active_dimensions = list(range(ndim-1))
         result = new_result
+
+    assert result.naxis == result.wcs.naxis
+    assert result.naxis == mywcs.naxis
 
     return result
