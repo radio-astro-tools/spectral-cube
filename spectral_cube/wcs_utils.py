@@ -23,6 +23,20 @@ class WCSWrapper(WCS):
     Wrapper of WCS to deal with some of the special cases we face within
     spectral_cube
     """
+    @staticmethod
+    def from_wcs(otherwcs):
+        """
+        Create a WCSWrapper class from another WCS object
+        """
+        new_wcs = WCSWrapper()
+
+        new_wcs.wcs = otherwcs.wcs
+        new_wcs.naxis = otherwcs.naxis
+
+        assert new_wcs.wcs.naxis == otherwcs.wcs.naxis == otherwcs.naxis == new_wcs.naxis
+
+        return new_wcs
+
     @property
     def has_celestial(self):
         if hasattr(self, '_has_celestial'):
@@ -184,6 +198,7 @@ def reindex_wcs(wcs, inds):
     outwcs.wcs.set_ps(ps_cards)
 
     assert outwcs.naxis == len(inds)
+    assert outwcs.wcs.naxis == len(inds)
 
     return outwcs
 
@@ -525,10 +540,10 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
     result = reindex_wcs(result, new_inds)
 
     if dropping_celestial:
-        new_result = WCSWrapper()
-        new_result.wcs = result.wcs
+        new_result = WCSWrapper.from_wcs(result)
         new_result.has_celestial = False
         new_result.active_dimensions = list(range(ndim-1))
+        assert new_result.naxis == new_result.wcs.naxis
         result = new_result
 
     assert result.naxis == result.wcs.naxis
