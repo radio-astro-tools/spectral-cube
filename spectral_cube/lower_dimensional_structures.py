@@ -210,9 +210,6 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
 
-        if wcs is not None and wcs.wcs.naxis != 2:
-            raise ValueError("wcs should have two dimension")
-
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
         self._wcs = wcs
@@ -465,9 +462,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
-
-        if wcs is not None and wcs.wcs.naxis != 1:
-            raise ValueError("wcs should have two dimension")
 
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)

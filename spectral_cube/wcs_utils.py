@@ -477,4 +477,8 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
 
     result.wcs.cdelt[dropped_axis] = dropped_axis_cdelt
 
+    new_inds = np.array([ii for ii in range(ndim) if ii != dropped_axis] +
+                        [dropped_axis])
+    result = reindex_wcs(result, new_inds)
+
     return result
