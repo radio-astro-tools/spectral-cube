@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import numpy as np
-from astropy.wcs import WCS
+from astropy.wcs import WCS, InconsistentAxisTypesError
 import warnings
 from astropy import units as u
 from astropy import log
@@ -17,6 +17,28 @@ wcs_parameters_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
 bad_spectypes_mapping = {'VELOCITY':'VELO',
                          'WAVELENG':'WAVE',
                          }
+
+class WCSWrapper(WCS):
+    """
+    Wrapper of WCS to deal with some of the special cases we face within
+    spectral_cube
+    """
+    @property
+    def has_celestial(self):
+        if hasattr(self, '_has_celestial'):
+            return self._has_celestial
+        try:
+            return self.celestial.naxis == 2
+        except InconsistentAxisTypesError:
+            return False
+
+    @has_celestial.setter
+    def has_celestial(self, value):
+        if value is not False:
+            warnings.warn("_has_celestial is being set to {0}, "
+                          "which may not be what you want."
+                          .format(value))
+        self._has_celestial = value
 
 def drop_axis(wcs, dropax):
     """
@@ -444,6 +466,11 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
     """
     ndim = len(shape)
 
+    if mywcs.get_axis_types()[dropped_axis]['coordinate_type'] == 'celestial':
+        dropping_celestial = True
+    else:
+        dropping_celestial = False
+
     if dropped_axis_slice_position == 'middle':
         dropped_axis_slice_position = shape[dropped_axis]//2
     elif dropped_axis_slice_position == 'start':
@@ -480,5 +507,11 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
     new_inds = np.array([ii for ii in range(ndim) if ii != dropped_axis] +
                         [dropped_axis])
     result = reindex_wcs(result, new_inds)
+
+    if dropping_celestial:
+        new_result = WCSWrapper()
+        new_result.wcs = result.wcs
+        new_result.has_celestial = False
+        result = new_result
 
     return result
