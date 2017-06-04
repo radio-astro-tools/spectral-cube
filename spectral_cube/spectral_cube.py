@@ -2685,10 +2685,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                     meta=meta)
 
             # only one element, so drop an axis
-            view = [slice(None) if ax!=intslices[0]
-                    else slice(self.shape[ax]//2, self.shape[ax]//2+1)
-                    for ax in range(self.ndim)]
-            newwcs = wcs_utils.slice_wcs(self._wcs, view)
+            newwcs = wcs_utils.drop_axis_by_slicing(self.wcs, self.shape,
+                                                    dropped_axis=intslices[0],
+                                                    dropped_axis_slice_position='middle',
+                                                    dropped_axis_cdelt='full_range')
             header = self._nowcs_header
 
             # Slice objects know how to parse Beam objects stored in the

@@ -40,6 +40,17 @@ class WCSWrapper(WCS):
                           .format(value))
         self._has_celestial = value
 
+    def wcs_pix2world(self, pixels, reference):
+        if ((pixels.shape[1] < self.naxis and
+            hasattr(self, 'active_dimensions') and
+             len(self.active_dimensions) < self.naxis)):
+            pixels = np.asarray(pixels)
+            pixels = np.c_[pixels, np.zeros(pixels.shape[0])]
+            result = super(WCSWrapper, self).wcs_pix2world(pixels, reference)
+            return result[:, :len(self.active_dimensions) - self.naxis]
+        else:
+            return super(WCSWrapper, self).wcs_pix2world(pixels, reference)
+
 def drop_axis(wcs, dropax):
     """
     Drop the ax on axis dropax
@@ -512,6 +523,7 @@ def drop_axis_by_slicing(mywcs, shape, dropped_axis,
         new_result = WCSWrapper()
         new_result.wcs = result.wcs
         new_result.has_celestial = False
+        new_result.active_dimensions = list(range(ndim-1))
         result = new_result
 
     return result
