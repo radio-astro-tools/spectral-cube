@@ -42,15 +42,18 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             if 'NAXIS' in keyword:
                 del header[keyword]
 
-        header.insert(self.wcs.naxis, Card(keyword='NAXIS', value=self.ndim))
+        header.insert(3, Card(keyword='NAXIS', value=self.ndim))
         for ind,sh in enumerate(self.shape[::-1]):
-            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
+            log.debug('Adding NAXIS{0} at position {1}'.format(ind+1,
+                                                               3+ind+1))
+            header.insert(3+ind+1, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                       value=sh))
         if self.wcs.naxis > self.ndim:
             assert ind != 0
             for ii in range(self.wcs.naxis - self.ndim):
-                log.debug('Adding NAXIS{0}'.format(ind+ii+2))
-                header.insert(3+ind+ii+1,
+                log.debug('Adding NAXIS{0} at position {1}'.format(ind+ii+2,
+                                                                   3+ind+ii+2))
+                header.insert(3+ind+ii+2,
                               Card(keyword='NAXIS{0:1d}'.format(ind+ii+2),
                                    value=1))
 
