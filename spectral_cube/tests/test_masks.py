@@ -490,5 +490,6 @@ def test_1dmask_indexing():
 
     spec = mcube[:,1,1]
 
-    assert np.all(np.isnan(spec[[False,True,True,False]]))
-    assert not np.any(np.isnan(spec[[True,False,False,True]]))
+    badvals = np.array([False,True,True,False], dtype='bool')
+    assert np.all(np.isnan(spec[badvals]))
+    assert not np.any(np.isnan(spec[~badvals]))
