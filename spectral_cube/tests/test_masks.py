@@ -476,3 +476,19 @@ def test_1dcomparison_mask_1d_index():
     assert all(spec[:-1].mask.include() == [True,False,False])
 
     assert isinstance(spec[0], u.Quantity)
+
+def test_1dmask_indexing():
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+
+    mcube = cube.with_mask(mask)
+
+    assert all(mask[:,1,1].include() ==
+               mask.include()[:,1,1])
+
+    spec = mcube[:,1,1]
+
+    assert np.all(np.isnan(spec[[False,True,True,False]]))
+    assert not np.any(np.isnan(spec[[True,False,False,True]]))
