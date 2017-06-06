@@ -34,57 +34,96 @@ env:
         - SETUP_XVFB=True
 
     matrix:
-        - SETUP_CMD='egg_info'
-        - # run with default settings
-        - ASTROPY_VERSION='development'
-        - CONDA_DEPENDENCIES='' PIP_DEPENDENCIES='pytest-xdist'
+        # - SETUP_CMD='egg_info'
+        # - # run with default settings
+        # - ASTROPY_VERSION='development'
+        # - CONDA_DEPENDENCIES='' PIP_DEPENDENCIES='pytest-xdist'
 
 matrix:
     include:
 
-        # Do a coverage test in Python 2.
-        # make sure *everything* is run for coverage tests
-        - python: 2.7
-          env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck'
-               ASTROPY_VERSION='development'
-               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
-
-        # Check for sphinx doc build warnings - we do this first because it
-        # may run for a long time
-        - python: 2.7
-          env: SETUP_CMD='build_sphinx -w'
-
-        # Try older numpy versions
-        - python: 2.7
-          env: NUMPY_VERSION=1.9
-        #We need nanmedian.  <=1.8 deprecated
+        # # Do a coverage test in Python 2.
+        # # make sure *everything* is run for coverage tests
         # - python: 2.7
-        #   env: NUMPY_VERSION=1.8
+        #   env: SETUP_CMD='test --coverage'
+        #        CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck'
+        #        ASTROPY_VERSION='development'
+        #        PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
 
-        # Test with bottleneck
-        - python: 2.7
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
-        - python: 3.4
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
-        
-        # Test with radio-beam
+        # # Check for sphinx doc build warnings - we do this first because it
+        # # may run for a long time
+        # - python: 2.7
+        #   env: SETUP_CMD='build_sphinx -w'
+
+        # # Try older numpy versions
+        # - python: 2.7
+        #   env: NUMPY_VERSION=1.9
+        # #We need nanmedian.  <=1.8 deprecated
+        # # - python: 2.7
+        # #   env: NUMPY_VERSION=1.8
+
+        # # Test with bottleneck
+        # - python: 2.7
+        #   env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
+        # - python: 3.4
+        #   env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
+        # 
+        # # Test with radio-beam
+        # - python: 2.7
+        #   env:
+        #       PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
+        #       ASTROPY_VERSION='development'
+        # - python: 3.5
+        #   env:
+        #       PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
+        #       ASTROPY_VERSION='development'
+
         - python: 2.7
           env:
-              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
-              ASTROPY_VERSION='development'
-        - python: 3.5
-          env:
-              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
-              ASTROPY_VERSION='development'
+              SETUP_CMD='test'
+              CASA_URL='https://casa.nrao.edu/download/distro/linux/release/el6/casa-release-4.7.2-el6.tar.gz'
+              PYPATH=/home/travis/.local/lib/python2.7/site-packages:~/.casa/lib/python2.7/site-packages
+              CONDA_DEPENDENCIES='matplotlib aplpy'
+              ASTROPY_USE_SYSTEM_PYTEST=1
+
+        # known not to be able to install astropy
+        #- python: 2.7
+        #  casa: 4.6.0
+        #  env: 
+        #      CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/release/el6/casa-release-4.6.0-el6.tar.gz'
+
+        # also can't install astropy
+        #- python: 2.7
+        #  casa: monthlies
+        #  env:
+        #      # TODO: write script to retrieve latest
+        #      CASA_URL='https://svn.cv.nrao.edu/casa/distro/linux/monthly/el6/casa-monthly-4.7.16.tar.gz'
+
 
 install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
+    - if [[ $CASA_URL ]]; then curl $CASA_URL | tar -xz; CASA_BIN=$PWD/`basename $CASA_URL .tar.gz`/bin/casa; CASA_CONFIG=${CASA_BIN}-config; fi
+    - if [[ $CASA_BIN ]]; then sh .download_packages.sh; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python -c "import hashlib; print(hashlib.__file__)"; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python -c "from hashlib import md5, sha1, sha256"; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .install_pip.py; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .install_astropy.py; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH ${CASA_CONFIG} --exec python .import_astropy.py; fi
+    - if [[ $CASA_BIN ]]; then mkdir -p ~/.casa/ipython/security/security; fi
+    - if [[ $CASA_BIN ]]; then mkdir -p ~/.casa/ipython/security/log; fi
+    - if [[ $CASA_BIN ]]; then mkdir -p ~/.casa/ipython/log; fi
+    - if [[ $CASA_BIN ]]; then mkdir -p ~/.casa/ipython/db/shadowhist; fi
+    - if [[ $CASA_BIN ]]; then touch ~/.casa/ipython/ipythonrc; fi
+    - if [[ $CASA_BIN ]]; then touch ~/.casa/ipython/ipy_user_conf.py; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run -e /dev/stdout --auto-servernum ${CASA_BIN} --nologger --nogui -c "import sys; sys.exit(0)"; fi # test that CASA quits
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run -e /dev/stdout --auto-servernum ${CASA_BIN} --nologger --nogui -c "from taskinit import ia; print(dir(ia))"; fi
 
 script:
     - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
-    - python setup.py $SETUP_CMD
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run -e /dev/stdout --auto-servernum $CASA_BIN --nogui --nologger -c "import spectral_cube.tests.test_casafuncs; TC=spectral_cube.tests.test_casafuncs.TestCasa(); TC.setup_method(None); TC.test_casa_mask(); TC.test_casa_mask_append()"; fi
+    - if [[ $CASA_BIN ]]; then PYTHONPATH=$PYPATH xvfb-run -e /dev/stdout --auto-servernum $CASA_BIN --nologger --nogui -c .casa_setup.py $SETUP_CMD; fi
+    - if [[ ! $CASA_BIN ]]; then python setup.py $SETUP_CMD; fi
 
 after_success:
     - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='spectral_cube/tests/coveragerc'; fi

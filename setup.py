@@ -5,6 +5,9 @@ import glob
 import os
 import sys
 
+# DEBUG
+print("sys.path: {0}".format(sys.path))
+
 import ah_bootstrap
 from setuptools import setup
 
@@ -93,7 +96,7 @@ setup(name='spectral-cube',
       version=VERSION,
       description=DESCRIPTION,
       scripts=scripts,
-      install_requires=['astropy','numpy>=1.8.0'],
+      install_requires=['astropy','numpy>=1.7.0'],
       author=AUTHOR,
       author_email=AUTHOR_EMAIL,
       license=LICENSE,

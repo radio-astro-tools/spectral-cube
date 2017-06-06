@@ -481,7 +481,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             else:
                 return out
 
-        return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
+        nanmean = getattr(np, 'nanmean', np.ma.mean)
+
+        return self.apply_numpy_function(nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
 
@@ -553,7 +555,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # process.  There IS a one-pass algorithm for std dev, but it is not
         # implemented, so we must force cube here.  We could and should also
         # implement raywise reduction
-        return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
+        nanstd = getattr(np, 'nanstd', np.ma.std)
+
+        return self.apply_numpy_function(nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
                                          projection=projection)
 
@@ -1644,7 +1648,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 val = np.argmin(np.abs(limval-spine))
                 if limval > spine.max() or limval < spine.min():
                     log.warning("The limit {0} is out of bounds."
-                             "  Using min/max instead.".format(lim))
+                                "  Using min/max instead.".format(lim))
                 if lim[1:] == 'hi':
                     # End-inclusive indexing: need to add one for the high
                     # slice
@@ -1707,6 +1711,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             ylo = int(np.floor(ylo if ylo < ext.min[1] else ext.min[1]))
             xhi = int(np.ceil(xhi if xhi > ext.max[0] else ext.max[0]))
             yhi = int(np.ceil(yhi if yhi > ext.max[1] else ext.max[1]))
+
+        # matplotlib's extents can return infinities, which we need to handle
+        if xhi >= np.inf:
+            xhi = self.shape[2]
+        if yhi >= np.inf:
+            yhi = self.shape[1]
 
         # Negative indices will do bad things, like wrap around the cube
         # If xhi/yhi are negative, there is not overlap
@@ -2783,7 +2793,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
     def identify_bad_beams(self, threshold, reference_beam=None,
                            criteria=['sr','major','minor'],
-                           mid_value=np.nanmedian):
+                           mid_value=getattr(np, 'nanmedian', np.ma.median)):
         """
         Mask out any layers in the cube that have beams that differ from the
         central value of the beam by more than the specified threshold.
@@ -2840,7 +2850,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
     def mask_out_bad_beams(self, threshold, reference_beam=None,
                            criteria=['sr','major','minor'],
-                           mid_value=np.nanmedian):
+                           mid_value=getattr(np, 'nanmedian', np.ma.median)):
         """
         See `identify_bad_beams`.  This function returns a masked cube
 
