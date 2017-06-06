@@ -591,6 +591,10 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
             return new
         else:
+            if self._mask is not None:
+                # Kind of a hack; this is probably inefficient
+                bad = self._mask.exclude()[key]
+                new_qty[bad] = np.nan
             return new_qty
 
     @property
