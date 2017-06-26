@@ -2299,6 +2299,9 @@ class SpectralCube(BaseSpectralCube):
             self.beam = beam
             self._meta['beam'] = beam
 
+            # Ensure that the beam is properly defined in the header
+            self._header.update(beam.to_header_keywords())
+
         if 'beam' in self._meta:
             self.pixels_per_beam = (self.beam.sr /
                                     (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
