@@ -1095,6 +1095,24 @@ def test_preserve_beam():
     assert cube.beam == beam
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_beam_attach_to_header():
+
+    cube, data = cube_and_raw('adv.fits')
+
+    header = cube._header.copy()
+    del header["BMAJ"], header["BMIN"], header["BPA"]
+
+    newcube = SpectralCube(data=data, wcs=cube.wcs, header=header,
+                           beam=cube.beam)
+
+    assert cube.header["BMAJ"] == newcube.header["BMAJ"]
+    assert cube.header["BMIN"] == newcube.header["BMIN"]
+    assert cube.header["BPA"] == newcube.header["BPA"]
+
+    # Should be in meta too
+    assert newcube.meta['beam'] == cube.beam
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_multibeam_slice():
 
     cube, data = cube_and_raw('vda_beams.fits')
@@ -1326,7 +1344,7 @@ def test_mask_bad_beams():
 
 def test_mad_std():
     cube, data = cube_and_raw('adv.fits')
-    
+
     if int(astropy.__version__[0]) < 2:
         with pytest.raises(NotImplementedError) as exc:
             cube.mad_std()
@@ -1336,7 +1354,7 @@ def test_mad_std():
         result = np.array([[0.15509701,  0.45763670],
                            [0.55907956,  0.42932451],
                            [0.48819454,  0.25499305]])
-                 
+
         np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
 
         mcube = cube.with_mask(cube < 0.98*u.K)
