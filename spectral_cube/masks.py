@@ -5,8 +5,10 @@ import abc
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
+from astropy.wcs import InconsistentAxisTypesError
+from astropy.io import fits
+
 from . import wcs_utils
-from .lower_dimensional_structures import Projection
 
 
 __all__ = ['MaskBase', 'InvertedMask', 'CompositeMask', 'BooleanArrayMask',
@@ -206,7 +208,8 @@ class MaskBase(object):
         raise NotImplementedError("Slicing not supported by mask class {0}"
                                   .format(self.__class__.__name__))
 
-    def quicklook(self, view, wcs=None, filename=None, use_aplpy=True):
+    def quicklook(self, view, wcs=None, filename=None, use_aplpy=True,
+                  aplpy_kwargs={}):
         '''
         View a 2D slice of the mask, specified by view.
 
@@ -218,13 +221,38 @@ class MaskBase(object):
             WCS object to use in plotting the mask slice.
         filename : str, optional
             Filename of the output image. Enables saving of the plot.
+        use_aplpy : bool, optional
+            Try plotting with the aplpy package
+        aplpy_kwargs : dict, optional
+            kwargs passed to `~aplpy.FITSFigure`.
         '''
 
-        view_twod = self.include(view=view)
+        view_twod = self.include(view=view, wcs=wcs)
 
-        proj = Projection(view_twod, wcs=wcs)
+        if use_aplpy:
 
-        proj.quicklook(filename=filename, use_aplpy=use_aplpy)
+            if wcs is not None:
+                hdu = fits.PrimaryHDU(view_twod.astype(int), wcs.to_header())
+            else:
+                hdu = fits.PrimaryHDU(view_twod.astype(int))
+
+            try:
+                import aplpy
+                FITSFigure = aplpy.FITSFigure(hdu,
+                                              **aplpy_kwargs)
+
+                FITSFigure.show_grayscale()
+                FITSFigure.add_colorbar()
+                if filename is not None:
+                    FITSFigure.save(filename)
+            except (InconsistentAxisTypesError, ImportError):
+                use_aplpy = True
+
+        if not use_aplpy:
+            from matplotlib import pyplot
+            figure = pyplot.imshow(view_twod)
+            if filename is not None:
+                figure.savefig(filename)
 
     def _get_new_wcs(self, unit, velocity_convention=None, rest_value=None):
         """
