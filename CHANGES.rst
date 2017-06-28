@@ -1,5 +1,8 @@
 0.4.1 (unreleased)
 ------------------
+ - Check mask inputs to OneDSpectrum and add mask handling for
+   OneDSpectrum.spectral_interpolate
+   (https://github.com/radio-astro-tools/spectral-cube/pull/400)
  - Add creating a Projection from a FITS HDU
    (https://github.com/radio-astro-tools/spectral-cube/pull/376)
  - Deprecate numpy <=1.8 because nanmedian is needed
