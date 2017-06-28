@@ -634,7 +634,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         return HDUList([hdu, beamhdu])
 
     def spectral_interpolate(self, spectral_grid,
-                             suppress_smooth_warning=False):
+                             suppress_smooth_warning=False,
+                             fill_value=None):
         """
         Resample the spectrum onto a specific grid
 
@@ -646,10 +647,15 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             If disabled, a warning will be raised when interpolating onto a
             grid that does not nyquist sample the existing grid.  Disable this
             if you have already appropriately smoothed the data.
+        fill_value : float
+            Value for extrapolated spectral values that lie outside of
+            the spectral range defined in the original data.  The
+            default is to use the nearest spectral channel in the
+            cube.
 
         Returns
         -------
-        cube : SpectralCube
+        spectrum : OneDSpectrum
         """
 
         assert spectral_grid.ndim == 1
@@ -663,6 +669,9 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         if outdiff < 0:
             spectral_grid = spectral_grid[::-1]
             outdiff = np.mean(np.diff(spectral_grid))
+            outslice = slice(None, None, -1)
+        else:
+            outslice = slice(None, None, 1)
 
         specslice = slice(None) if indiff >= 0 else slice(None, None, -1)
         inaxis = inaxis[specslice]
@@ -683,23 +692,29 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                           "be smoothed prior to resampling.")
 
         newspec = np.empty([spectral_grid.size], dtype=self.dtype)
-        #newmask = np.empty([spectral_grid.size], dtype='bool')
+        newmask = np.empty([spectral_grid.size], dtype='bool')
 
-        newspec = np.interp(spectral_grid.value, inaxis.value, self.value)
+        newspec[outslice] = np.interp(spectral_grid.value, inaxis.value,
+                                      self.filled_data[specslice].value,
+                                      left=fill_value, right=fill_value)
         mask = self.mask.include()
 
         if all(mask):
             newmask = np.ones([spectral_grid.size], dtype='bool')
         else:
             interped = np.interp(spectral_grid.value,
-                                 inaxis.value, mask) > 0
-            newmask = interped
+                                 inaxis.value, mask[specslice]) > 0
+            newmask[outslice] = interped
 
         newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[0] = 1
-        newwcs.wcs.crval[0] = spectral_grid[0].value
+        newwcs.wcs.crval[0] = spectral_grid[0].value if outslice.step > 0 \
+            else spectral_grid[-1].value
+
         newwcs.wcs.cunit[0] = spectral_grid.unit.to_string(format='FITS')
-        newwcs.wcs.cdelt[0] = outdiff.value
+        newwcs.wcs.cdelt[0] = outdiff.value if outslice.step > 0 \
+            else -outdiff.value
+
         newwcs.wcs.set()
 
         newheader = self._nowcs_header.copy()
