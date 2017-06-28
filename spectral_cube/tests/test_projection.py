@@ -9,6 +9,7 @@ from astropy.io import fits
 
 from .helpers import assert_allclose
 from .test_spectral_cube import cube_and_raw
+from ..spectral_cube import SpectralCube
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
 from ..utils import SliceWarning, WCSCelestialError
 from . import path
@@ -347,6 +348,63 @@ def test_spectral_interpolate():
     new_spec = spec.spectral_interpolate(new_xaxis)
 
     np.testing.assert_allclose(new_spec, np.linspace(0,11,23)*u.Jy)
+
+
+def test_spectral_interpolate_with_mask():
+
+    hdu = fits.open(path("522_delta.fits"))[0]
+
+    # Swap the velocity axis so indiff < 0 in spectral_interpolate
+    hdu.header["CDELT3"] = - hdu.header["CDELT3"]
+
+    cube = SpectralCube.read(hdu)
+
+    mask = np.ones(cube.shape, dtype=bool)
+    mask[:2] = False
+
+    masked_cube = cube.with_mask(mask)
+
+    spec = masked_cube[:, 0, 0]
+
+    # midpoint between each position
+    sg = (spec.spectral_axis[1:] + spec.spectral_axis[:-1])/2.
+
+    result = spec.spectral_interpolate(spectral_grid=sg[::-1])
+
+    # The output makes CDELT3 > 0 (reversed spectral axis) so the masked
+    # portion are the final 2 channels.
+    np.testing.assert_almost_equal(result.filled_data[:].value,
+                                   [0.0, 0.5, np.NaN, np.NaN])
+
+def test_spectral_interpolate_reversed():
+
+    cube, data = cube_and_raw('522_delta.fits')
+
+    # Reverse spectral axis
+    sg = cube.spectral_axis[::-1]
+
+    spec = cube[:, 0, 0]
+
+    result = spec.spectral_interpolate(spectral_grid=sg)
+
+    np.testing.assert_almost_equal(sg.value, result.spectral_axis.value)
+
+def test_spectral_interpolate_with_fillvalue():
+
+    cube, data = cube_and_raw('522_delta.fits')
+
+    # Step one channel out of bounds.
+    sg = ((cube.spectral_axis[0]) -
+          (cube.spectral_axis[1] - cube.spectral_axis[0]) *
+          np.linspace(1,4,4))
+
+    spec = cube[:, 0, 0]
+
+    result = spec.spectral_interpolate(spectral_grid=sg,
+                                       fill_value=42)
+    np.testing.assert_almost_equal(result.value,
+                                   np.ones(4)*42)
+
 
 def test_spectral_units():
     # regression test for issue 391
