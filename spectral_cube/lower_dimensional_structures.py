@@ -11,6 +11,7 @@ from . import spectral_axis
 from .utils import SliceWarning
 from .cube_utils import convert_bunit
 from . import wcs_utils
+from .masks import BooleanArrayMask
 
 import numpy as np
 from astropy import convolution
@@ -575,7 +576,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         new_qty = super(OneDSpectrum, self).__getitem__(key, beams=beams)
 
         if isinstance(key, slice):
-        
+
             new = self.__class__(value=new_qty.value,
                                  unit=new_qty.unit,
                                  copy=False,
@@ -613,7 +614,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         beamhdu = cube_utils.beams_to_bintable(self.beams)
 
         return HDUList([hdu, beamhdu])
-
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False):
@@ -667,8 +667,15 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         newspec = np.empty([spectral_grid.size], dtype=self.dtype)
         #newmask = np.empty([spectral_grid.size], dtype='bool')
 
-        # TODO: handle masks
         newspec = np.interp(spectral_grid.value, inaxis.value, self.value)
+        mask = self.mask.include()
+
+        if all(mask):
+            newmask = np.ones([spectral_grid.size], dtype='bool')
+        else:
+            interped = np.interp(spectral_grid.value,
+                                 inaxis.value, mask) > 0
+            newmask = interped
 
         newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[0] = 1
@@ -683,7 +690,9 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         newheader['CUNIT1'] = spectral_grid.unit.to_string(format='FITS')
         newheader['CDELT1'] *= wcs_cunit.to(spectral_grid.unit)
 
-        return self._new_spectrum_with(data=newspec, wcs=newwcs,
+        newbmask = BooleanArrayMask(newmask, wcs=newwcs)
+
+        return self._new_spectrum_with(data=newspec, wcs=newwcs, mask=newbmask,
                                        header=newheader,
                                        spectral_unit=spectral_grid.unit)
 
