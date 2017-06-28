@@ -10,6 +10,7 @@ from astropy.io import fits
 from .helpers import assert_allclose
 from .test_spectral_cube import cube_and_raw
 from ..spectral_cube import SpectralCube
+from ..masks import BooleanArrayMask
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
 from ..utils import SliceWarning, WCSCelestialError
 from . import path
@@ -166,6 +167,36 @@ def test_onedspectrum_with_spectral_unit():
     assert p_new.spectral_axis.unit == u.Unit("km/s")
     np.testing.assert_equal(p_new.spectral_axis.value,
                             1e-3*p.spectral_axis.value)
+
+
+def test_onedspectrum_input_mask_type():
+
+    test_wcs = WCS(naxis=1)
+    test_wcs.wcs.cunit = ["m/s"]
+    test_wcs.wcs.ctype = ["VELO-LSR"]
+
+    np_mask = np.ones(twelve_qty_1d.shape, dtype=bool)
+    np_mask[1] = False
+    bool_mask = BooleanArrayMask(np_mask, wcs=test_wcs,
+                                 shape=np_mask.shape)
+
+    # numpy array
+    p = OneDSpectrum(twelve_qty_1d, wcs=test_wcs,
+                     mask=np_mask)
+    assert (p.mask.include() == bool_mask.include()).all()
+
+    # MaskBase
+    p = OneDSpectrum(twelve_qty_1d, wcs=test_wcs,
+                     mask=bool_mask)
+    assert (p.mask.include() == bool_mask.include()).all()
+
+    # No mask
+    ones_mask = BooleanArrayMask(np.ones(twelve_qty_1d.shape, dtype=bool),
+                                 wcs=test_wcs, shape=np_mask.shape)
+    p = OneDSpectrum(twelve_qty_1d, wcs=test_wcs,
+                     mask=None)
+    assert (p.mask.include() == ones_mask.include()).all()
+
 
 def test_slice_tricks():
     test_wcs_1 = WCS(naxis=1)
