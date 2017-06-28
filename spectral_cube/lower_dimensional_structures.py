@@ -11,7 +11,7 @@ from . import spectral_axis
 from .utils import SliceWarning
 from .cube_utils import convert_bunit
 from . import wcs_utils
-from .masks import BooleanArrayMask
+from .masks import BooleanArrayMask, MaskBase
 
 import numpy as np
 from astropy import convolution
@@ -458,9 +458,27 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                                   copy=copy).view(cls)
         self._wcs = wcs
         self._meta = {} if meta is None else meta
+        self._wcs_tolerance = wcs_tolerance
+
+        if mask is None:
+            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
+                                    self._wcs, shape=self.value.shape)
+        elif isinstance(mask, np.ndarray):
+            if mask.shape != self.value.shape:
+                raise ValueError("Mask shape must match the spectrum shape.")
+            mask = BooleanArrayMask(mask, self._wcs, shape=self.value.shape)
+        elif isinstance(mask, MaskBase):
+            pass
+        else:
+            raise TypeError("mask of type {} is not a supported mask "
+                            "type.".format(type(mask)))
+
+        # Validate the mask before setting
+        mask._validate_wcs(new_data=self.value, new_wcs=self._wcs,
+                           wcs_tolerance=self._wcs_tolerance)
+
         self._mask = mask
         self._fill_value = fill_value
-        self._wcs_tolerance = wcs_tolerance
         if header is not None:
             self._header = header
         else:
