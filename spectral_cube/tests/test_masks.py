@@ -508,7 +508,20 @@ def test_numpy_ma_tools():
 
     assert np.ma.core.is_masked(mcube)
     assert np.ma.core.getmask(mcube) is not None
-    assert np.ma.core.is_masked(mcube[0,:,:])
-    assert np.ma.core.getmask(mcube[0,:,:]) is not None
     assert np.ma.core.is_masked(mcube[:,0,0])
     assert np.ma.core.getmask(mcube[:,0,0]) is not None
+
+@pytest.mark.xfail
+def test_numpy_ma_tools_2d():
+    """ This depends on 2D objects keeping masks, which depends on #395.
+    so, TODO: un-xfail this """
+
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+
+    mcube = cube.with_mask(mask)
+
+    assert np.ma.core.is_masked(mcube[0,:,:])
+    assert np.ma.core.getmask(mcube[0,:,:]) is not None
