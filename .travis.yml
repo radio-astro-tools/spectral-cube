@@ -2,8 +2,8 @@ language: python
 
 python:
     - 2.7
-    - 3.4
     - 3.5
+    - 3.6
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -26,18 +26,18 @@ env:
         # because there are memory leaks in Astropy that currently cause the
         # memory to go up to levels that cause the tests to be slow.
         - SETUP_CMD='test -a "--boxed"'
-        - NUMPY_VERSION=1.10
+        - NUMPY_VERSION=1.11
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='matplotlib aplpy'
+        - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
-        - PIP_DEPENDENCIES='pytest-xdist pvextractor'
+        - PIP_DEPENDENCIES='pvextractor'
         - SETUP_XVFB=True
 
     matrix:
         - SETUP_CMD='egg_info'
         - # run with default settings
         - ASTROPY_VERSION='development'
-        - CONDA_DEPENDENCIES='' PIP_DEPENDENCIES='pytest-xdist'
+        - CONDA_DEPENDENCIES='pytest pytest-xdist' PIP_DEPENDENCIES=''
 
 matrix:
     include:
@@ -46,9 +46,9 @@ matrix:
         # make sure *everything* is run for coverage tests
         - python: 2.7
           env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck'
+               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist'
                ASTROPY_VERSION='development'
-               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
+               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pvextractor'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -64,18 +64,18 @@ matrix:
 
         # Test with bottleneck
         - python: 2.7
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
-        - python: 3.4
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
+          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
+        - python: 3.6
+          env: NUMPY_VERSION=1.11 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
 
         # Test with radio-beam
         - python: 2.7
           env:
-              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
+              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pvextractor'
               ASTROPY_VERSION='development'
         - python: 3.5
           env:
-              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pytest-xdist pvextractor'
+              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip pvextractor'
               ASTROPY_VERSION='development'
 
 install:
