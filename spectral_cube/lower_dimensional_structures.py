@@ -13,6 +13,8 @@ from .cube_utils import convert_bunit
 from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
 
+from np.ma.core import nomask
+
 import numpy as np
 from astropy import convolution
 
@@ -145,14 +147,14 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
                              copy=False,
                              wcs=newwcs,
                              meta=self._meta,
-                             mask=(self._mask[key] if self._mask is not None
+                             mask=(self._mask[key] if self._mask is not nomask
                                    else None),
                              header=self._header,
                              **kwargs)
 
         new._wcs = newwcs
         new._meta = self._meta
-        new._mask=(self._mask[key] if self._mask is not None else None)
+        new._mask=(self._mask[key] if self._mask is not nomask else nomask)
         new._header = self._header
 
         return new
@@ -192,7 +194,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         like using __ but I think it's necessary here)"""
         if self.__mask is None:
             # need this to be *exactly* the numpy boolean False
-            return np.ma.core.nomask
+            return nomask
         return self.__mask
 
     @_mask.setter
@@ -614,8 +616,9 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                                  wcs=wcs_utils.slice_wcs(self._wcs, key,
                                                          shape=self.shape),
                                  meta=self._meta,
-                                 mask=(self._mask[key] if self._mask is not
-                                       None else None),
+                                 mask=(self._mask[key]
+                                       if self._mask is not nomask
+                                       else nomask),
                                  header=self._header,
                                  wcs_tolerance=self._wcs_tolerance,
                                  fill_value=self.fill_value,
@@ -623,7 +626,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
             return new
         else:
-            if self._mask is not None:
+            if self._mask is not nomask:
                 # Kind of a hack; this is probably inefficient
                 bad = self._mask.exclude()[key]
                 new_qty[bad] = np.nan
