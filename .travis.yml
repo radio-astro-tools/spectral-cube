@@ -2,8 +2,8 @@ language: python
 
 python:
     - 2.7
-    - 3.4
     - 3.5
+    - 3.6
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -65,7 +65,7 @@ matrix:
         # Test with bottleneck
         - python: 2.7
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
-        - python: 3.4
+        - python: 3.6
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
         
         # Test with radio-beam
