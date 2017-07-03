@@ -191,7 +191,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         """ Annoying hack to deal with np.ma.core.is_mask failures (I don't
         like using __ but I think it's necessary here)"""
         if self.__mask is None:
-            return False
+            # need this to be *exactly* the numpy boolean False
+            return np.ma.core.nomask
         return self.__mask
 
     @_mask.setter
