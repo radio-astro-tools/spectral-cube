@@ -186,6 +186,16 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         """
         return u.Quantity(self)
 
+    @property
+    def _mask(self):
+        """ Annoying hack to deal with np.ma.core.is_mask failures (I don't
+        like using __ but I think it's necessary here)"""
+        return self.__mask
+
+    @_mask.setter
+    def __mask(self, value):
+        self.__mask = value
+
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
