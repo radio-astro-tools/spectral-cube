@@ -67,7 +67,7 @@ matrix:
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
         - python: 3.6
           env: NUMPY_VERSION=1.11 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
-        
+
         # Test with radio-beam
         - python: 2.7
           env:

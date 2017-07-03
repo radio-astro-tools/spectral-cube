@@ -10,6 +10,9 @@ py:class spectral_cube.base_class.MaskableArrayMixinClass
 py:obj yt.surface.export_sketchfab
 py:obj yt.show_colormaps
 
+# aplpy reference
+py:obj aplpy.FITSFigure
+
 # numpy inherited docstrings
 py:obj dtype
 py:obj a
