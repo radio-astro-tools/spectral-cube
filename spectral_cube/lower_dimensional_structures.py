@@ -1,11 +1,17 @@
 from __future__ import print_function, absolute_import, division
 
 import warnings
+
+import numpy as np
+from numpy.ma.core import nomask
+
+from astropy import convolution
 from astropy import units as u
 from astropy import wcs
 from astropy import convolution
 #from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
+
 from .io.core import determine_format
 from . import spectral_axis
 from .utils import SliceWarning
