@@ -493,3 +493,22 @@ def test_1dmask_indexing():
     badvals = np.array([False,True,True,False], dtype='bool')
     assert np.all(np.isnan(spec[badvals]))
     assert not np.any(np.isnan(spec[~badvals]))
+
+def test_numpy_ma_tools():
+    """
+    check that np.ma.core.is_masked works
+    """
+
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+
+    mcube = cube.with_mask(mask)
+
+    assert np.ma.core.is_masked(mcube)
+    assert np.ma.core.getmask(mcube) is not None
+    assert np.ma.core.is_masked(mcube[0,:,:])
+    assert np.ma.core.getmask(mcube[0,:,:]) is not None
+    assert np.ma.core.is_masked(mcube[:,0,0])
+    assert np.ma.core.getmask(mcube[:,0,0]) is not None
