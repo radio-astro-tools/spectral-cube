@@ -273,6 +273,12 @@ class MaskableArrayMixinClass(object):
         return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
                           self.unit, copy=False)
 
+    def filled(self, fill_value=None):
+        if fill_value is not None:
+            return u.Quantity(self._get_filled_data(fill=fill_value),
+                              self.unit, copy=False)
+        return self.filled_data[:]
+
     @property
     def fill_value(self):
         """ The replacement value used by :meth:`filled_data`.
