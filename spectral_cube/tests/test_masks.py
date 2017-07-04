@@ -525,3 +525,21 @@ def test_numpy_ma_tools_2d():
 
     assert np.ma.core.is_masked(mcube[0,:,:])
     assert np.ma.core.getmask(mcube[0,:,:]) is not None
+
+
+def test_filled():
+    """ test that 'filled' works """
+
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+
+    mcube = cube.with_mask(mask)
+    assert np.isnan(mcube._fill_value)
+
+    filled = mcube.filled(np.nan)
+    filled_ = mcube.filled()
+    assert_allclose(filled, filled_)
+
+    assert (np.isnan(filled) == mcube.mask.exclude()).all()
