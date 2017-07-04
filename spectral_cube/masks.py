@@ -139,6 +139,9 @@ class MaskBase(object):
     def _exclude(self, data=None, wcs=None, view=()):
         return ~self._include(data=data, wcs=wcs, view=view)
 
+    def any(self):
+        return np.any(self.exclude())
+
     def _flattened(self, data, wcs=None, view=()):
         """
         Return a flattened array of the included elements of cube

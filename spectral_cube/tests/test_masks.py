@@ -493,3 +493,53 @@ def test_1dmask_indexing():
     badvals = np.array([False,True,True,False], dtype='bool')
     assert np.all(np.isnan(spec[badvals]))
     assert not np.any(np.isnan(spec[~badvals]))
+
+def test_numpy_ma_tools():
+    """
+    check that np.ma.core.is_masked works
+    """
+
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+
+    mcube = cube.with_mask(mask)
+
+    assert np.ma.core.is_masked(mcube)
+    assert np.ma.core.getmask(mcube) is not None
+    assert np.ma.core.is_masked(mcube[:,0,0])
+    assert np.ma.core.getmask(mcube[:,0,0]) is not None
+
+@pytest.mark.xfail
+def test_numpy_ma_tools_2d():
+    """ This depends on 2D objects keeping masks, which depends on #395.
+    so, TODO: un-xfail this """
+
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+
+    mcube = cube.with_mask(mask)
+
+    assert np.ma.core.is_masked(mcube[0,:,:])
+    assert np.ma.core.getmask(mcube[0,:,:]) is not None
+
+
+def test_filled():
+    """ test that 'filled' works """
+
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+
+    mcube = cube.with_mask(mask)
+    assert np.isnan(mcube._fill_value)
+
+    filled = mcube.filled(np.nan)
+    filled_ = mcube.filled()
+    assert_allclose(filled, filled_)
+
+    assert (np.isnan(filled) == mcube.mask.exclude()).all()
