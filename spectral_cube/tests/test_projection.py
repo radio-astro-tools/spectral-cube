@@ -511,3 +511,12 @@ def test_1d_slice_round():
 
     assert 'OneDSpectrum' in sp.round().__repr__()
     assert 'OneDSpectrum' in sp[1:-1].round().__repr__()
+
+def test_LDO_arithmetic():
+    cube, data = cube_and_raw('vda.fits')
+
+    sp = cube[:,0,0]
+
+    spx2 = sp * 2
+    assert np.all(spx2.value == sp.value*2)
+    assert np.all(spx2.filled_data[:].value == sp.value*2)

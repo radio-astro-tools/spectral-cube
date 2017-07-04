@@ -834,9 +834,10 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             return super(OneDSpectrum, self).__getattribute__(attrname)
 
     def __array_finalize__(self, obj):
+        #from astropy import log
         #log.debug("in OneDSpectrum, Finalizing self={0}{1} obj={2}{3}"
         #          .format(self, type(self), obj, type(obj)))
         self._fill_value = getattr(obj, '_fill_value', np.nan)
-        self._data = getattr(obj, '_data', obj)
+        self._data = self.view(np.ndarray)
         self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
         super(OneDSpectrum, self).__array_finalize__(obj)
