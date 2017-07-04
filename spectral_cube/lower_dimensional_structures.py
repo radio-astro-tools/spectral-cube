@@ -8,7 +8,6 @@ from numpy.ma.core import nomask
 from astropy import convolution
 from astropy import units as u
 from astropy import wcs
-from astropy import convolution
 #from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 
@@ -18,11 +17,6 @@ from .utils import SliceWarning
 from .cube_utils import convert_bunit
 from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
-
-from np.ma.core import nomask
-
-import numpy as np
-from astropy import convolution
 
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          SpatialCoordMixinClass, MaskableArrayMixinClass)
