@@ -511,3 +511,10 @@ def test_1d_slice_round():
 
     assert 'OneDSpectrum' in sp.round().__repr__()
     assert 'OneDSpectrum' in sp[1:-1].round().__repr__()
+
+def test_slice_wcs():
+
+    cube, data = cube_and_raw('255_delta.fits')
+
+    mom0 = cube.moment0(axis=0)
+    assert mom0.header['NAXIS3'] == 1

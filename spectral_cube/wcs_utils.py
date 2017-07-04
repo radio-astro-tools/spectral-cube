@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import numpy as np
-from astropy.wcs import WCS
+from astropy.wcs import WCS, InconsistentAxisTypesError
 import warnings
 from astropy import units as u
 from astropy import log
@@ -17,6 +17,53 @@ wcs_parameters_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
 bad_spectypes_mapping = {'VELOCITY':'VELO',
                          'WAVELENG':'WAVE',
                          }
+
+class WCSWrapper(WCS):
+    """
+    Wrapper of WCS to deal with some of the special cases we face within
+    spectral_cube
+    """
+    @staticmethod
+    def from_wcs(otherwcs):
+        """
+        Create a WCSWrapper class from another WCS object
+        """
+        new_wcs = WCSWrapper()
+
+        new_wcs.wcs = otherwcs.wcs
+        new_wcs.naxis = otherwcs.naxis
+
+        assert new_wcs.wcs.naxis == otherwcs.wcs.naxis == otherwcs.naxis == new_wcs.naxis
+
+        return new_wcs
+
+    @property
+    def has_celestial(self):
+        if hasattr(self, '_has_celestial'):
+            return self._has_celestial
+        try:
+            return self.celestial.naxis == 2
+        except InconsistentAxisTypesError:
+            return False
+
+    @has_celestial.setter
+    def has_celestial(self, value):
+        if value is not False:
+            warnings.warn("_has_celestial is being set to {0}, "
+                          "which may not be what you want."
+                          .format(value))
+        self._has_celestial = value
+
+    def wcs_pix2world(self, pixels, reference):
+        if ((pixels.shape[1] < self.naxis and
+            hasattr(self, 'active_dimensions') and
+             len(self.active_dimensions) < self.naxis)):
+            pixels = np.asarray(pixels)
+            pixels = np.c_[pixels, np.zeros(pixels.shape[0])]
+            result = super(WCSWrapper, self).wcs_pix2world(pixels, reference)
+            return result[:, :len(self.active_dimensions) - self.naxis]
+        else:
+            return super(WCSWrapper, self).wcs_pix2world(pixels, reference)
 
 def drop_axis(wcs, dropax):
     """
@@ -149,6 +196,9 @@ def reindex_wcs(wcs, inds):
             if k == j:
                 ps_cards.append((i, m, v))
     outwcs.wcs.set_ps(ps_cards)
+
+    assert outwcs.naxis == len(inds)
+    assert outwcs.wcs.naxis == len(inds)
 
     return outwcs
 
@@ -420,3 +470,83 @@ def diagonal_wcs_to_cdelt(mywcs):
         del mywcs.wcs.cd
         mywcs.wcs.cdelt = cdelt
     return mywcs
+
+def drop_axis_by_slicing(mywcs, shape, dropped_axis,
+                         dropped_axis_slice_position='middle',
+                         dropped_axis_cdelt='same',
+                         convert_misaligned_to_offset=True,
+                        ):
+    """
+    Parameters
+    ----------
+    dropped_axis_slice_position : 'middle', 'start', 'end'
+        If an axis is being dropped, where should the WCS say the
+        projection is?  It can be at the start, middle, or end of the
+        axis.
+    dropped_axis_cdelt : 'same', 'full_range', or value
+        If an axis is being dropped, what should the new CDELT be?  For an
+        integral, for example, one might want the value to be the full
+        range.  For a slice, it should stay the same.  For something like
+        min or max, it might be zero.
+    convert_misaligned_to_offset : bool
+        If the axes are misaligned, it is not possible to "drop" an axis.
+        In this case, a generic "offset axis" will be returned.
+    """
+    log.debug("Dropping axis by slicing with args: {0}, {1}, {2}, {3}, {4}"
+              .format(mywcs, shape, dropped_axis, dropped_axis_slice_position,
+                      dropped_axis_cdelt))
+    ndim = len(shape)
+
+    if mywcs.get_axis_types()[dropped_axis]['coordinate_type'] == 'celestial':
+        dropping_celestial = True
+    else:
+        dropping_celestial = False
+
+    if dropped_axis_slice_position == 'middle':
+        dropped_axis_slice_position = shape[dropped_axis]//2
+    elif dropped_axis_slice_position == 'start':
+        dropped_axis_slice_position = 0
+    elif dropped_axis_slice_position == 'end':
+        dropped_axis_slice_position = shape[dropped_axis]
+
+    dropax_slice = slice(dropped_axis_slice_position,
+                         dropped_axis_slice_position+1)
+
+    view = [slice(None) if ax!=dropped_axis else dropax_slice
+            for ax in range(ndim)]
+
+    crpix_new = [0 if ax!=dropped_axis else dropped_axis_slice_position
+                 for ax in range(ndim)]
+    new_crval = mywcs.wcs_pix2world([crpix_new], 0)[0, dropped_axis]
+
+    result = slice_wcs(mywcs, view, shape=shape)
+
+    result.wcs.crval[dropped_axis] = new_crval
+    result.wcs.crpix[dropped_axis] = 1
+
+    if dropped_axis_cdelt == 'same':
+        dropped_axis_cdelt = mywcs.wcs.cdelt[dropped_axis]
+    elif dropped_axis_cdelt == 'full_range':
+        ref_pixels = np.array(
+            [(0,0) if ax!=dropped_axis else (0, shape[dropped_axis])
+             for ax in range(ndim)])
+        refvals = mywcs.wcs_pix2world(ref_pixels.T, 0)[:, dropped_axis]
+        dropped_axis_cdelt = refvals[1]-refvals[0]
+
+    result.wcs.cdelt[dropped_axis] = dropped_axis_cdelt
+
+    new_inds = np.array([ii for ii in range(ndim) if ii != dropped_axis] +
+                        [dropped_axis])
+    result = reindex_wcs(result, new_inds)
+
+    if dropping_celestial:
+        new_result = WCSWrapper.from_wcs(result)
+        new_result.has_celestial = False
+        new_result.active_dimensions = list(range(ndim-1))
+        assert new_result.naxis == new_result.wcs.naxis
+        result = new_result
+
+    assert result.naxis == result.wcs.naxis
+    assert result.naxis == mywcs.naxis
+
+    return result

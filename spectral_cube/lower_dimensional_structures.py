@@ -8,7 +8,7 @@ from numpy.ma.core import nomask
 from astropy import convolution
 from astropy import units as u
 from astropy import wcs
-#from astropy import log
+from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
 
 from .io.core import determine_format
@@ -41,10 +41,21 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         for keyword in header:
             if 'NAXIS' in keyword:
                 del header[keyword]
-        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
+
+        header.insert(3, Card(keyword='NAXIS', value=self.ndim))
         for ind,sh in enumerate(self.shape[::-1]):
-            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
-                                      value=sh))
+            log.debug('Adding NAXIS{0} at position {1}'.format(ind+1,
+                                                               3+ind+1))
+            header.insert(3+ind+1, Card(keyword='NAXIS{0:1d}'.format(ind+1),
+                                        value=sh))
+        if self.wcs.naxis > self.ndim:
+            assert ind != 0
+            for ii in range(self.wcs.naxis - self.ndim):
+                log.debug('Adding NAXIS{0} at position {1}'.format(ind+ii+2,
+                                                                   3+ind+ii+2))
+                header.insert(3+ind+ii+2,
+                              Card(keyword='NAXIS{0:1d}'.format(ind+ii+2),
+                                   value=1))
 
         if 'beam' in self.meta:
             header.update(self.meta['beam'].to_header_keywords())
@@ -209,9 +220,6 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
-
-        if wcs is not None and wcs.wcs.naxis != 2:
-            raise ValueError("wcs should have two dimension")
 
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
@@ -466,9 +474,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         if np.asarray(value).ndim != 1:
             raise ValueError("value should be a 1-d array")
 
-        if wcs is not None and wcs.wcs.naxis != 1:
-            raise ValueError("wcs should have two dimension")
-
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
         self._wcs = wcs
@@ -524,16 +529,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     @property
     def header(self):
-        header = self._header
-        # This inplace update is OK; it's not bad to overwrite WCS in this
-        # header
-        if self.wcs is not None:
-            header.update(self.wcs.to_header())
-        header['BUNIT'] = self.unit.to_string(format='fits')
-        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
-        for ind,sh in enumerate(self.shape[::-1]):
-            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
-                                      value=sh))
+        # use the generic LowerDimensionalObject header, but more
+        header = super(OneDSpectrum, self).header
 
         # Preserve the spectrum's spectral units
         if 'CUNIT1' in header and self._spectral_unit != u.Unit(header['CUNIT1']):
