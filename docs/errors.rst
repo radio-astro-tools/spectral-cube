@@ -77,4 +77,3 @@ or the FWHM.
 The solution is either to make a tighter mask, excluding the pixels far from
 the centroid position, or to ensure that the baseline does not have any
 negative systematic offset.
-
