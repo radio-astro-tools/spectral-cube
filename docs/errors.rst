@@ -41,7 +41,8 @@ There are several options to manage this problem:
 
   1. Increase the threshold.  This is best done if the beams still differ by a
      small amount, but larger than 1%.  To do this, set ``cube.beam_threshold =
-     [new value]``.
+     [new value]``.  This is the `"tape over the check engine light"
+     <https://www.youtube.com/watch?v=ddPQAJSm2cQ>`_ approach; use with caution.
   2. Convolve the cube to a common resolution using
      `~spectral_cube.SpectralCube.convolve_to`.  This is again best if the largest
      beam is only slightly larger than the smallest.
@@ -57,3 +58,23 @@ There are several options to manage this problem:
    Option 3 above will become easier when
    https://github.com/radio-astro-tools/radio_beam/pull/51 has been merged into
    radio-beam.
+
+
+Moment-2 or FWHM calculations give unexpected NaNs
+--------------------------------------------------
+
+It is fairly common to have moment 2 calculations return NaN values along
+pixels where real values are expected, e.g., along pixels where both moment0
+and moment1 return real values.
+
+Most commonly, this is caused by "bad baselines", specifically, by large sections
+of the spectrum being slightly negative at large distances from the centroid position
+(the moment 1 position).  Because moment 2 weights pixels at larger distances more
+highly (as the square of the distance), slight negative values at large distances
+can result in negative values entering the square root when computing the line width
+or the FWHM.
+
+The solution is either to make a tighter mask, excluding the pixels far from
+the centroid position, or to ensure that the baseline does not have any
+negative systematic offset.
+
