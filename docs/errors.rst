@@ -19,7 +19,7 @@ threshold factor.  A default threshold of 1% is set because for most
 interferometric images, beam differences on this scale are negligible (they
 correspond to flux measurement errors of 10^-4).  
 
-To inspect the beam properties, look at the `beams` attribute, for example:
+To inspect the beam properties, look at the ``beams`` attribute, for example:
 
 .. code::
 
