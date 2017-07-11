@@ -1,3 +1,6 @@
+.. doctest-skip-all
+
+
 Explanations of commonly-encountered error messages
 ===================================================
 
@@ -23,7 +26,7 @@ To inspect the beam properties, look at the ``beams`` attribute, for example:
 
 .. code::
 
-   >>> cube.beams
+   >>> cube.beams 
    [Beam: BMAJ=1.1972888708114624 arcsec BMIN=1.0741511583328247 arcsec BPA=72.71219635009766 deg,
     Beam: BMAJ=1.1972869634628296 arcsec BMIN=1.0741279125213623 arcsec BPA=72.71561431884766 deg,
     Beam: BMAJ=1.1972919702529907 arcsec BMIN=1.0741302967071533 arcsec BPA=72.71575164794922 deg,
