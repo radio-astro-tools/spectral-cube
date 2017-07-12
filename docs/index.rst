@@ -61,6 +61,7 @@ Getting started
    smoothing.rst
    writing.rst
    moments.rst
+   errors.rst
    quick_looks.rst
 
 Advanced
