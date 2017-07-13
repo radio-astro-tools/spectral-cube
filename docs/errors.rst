@@ -53,14 +53,10 @@ There are several options to manage this problem:
 
 .. code::
 
-   good_beams = np.array([bm.major < 5*u.arcsec for bm in cube.beams], dtype='bool')
-   mcube = cube.with_mask(good_beams)
+   good_beams = cube.identify_bad_beams(threshold=0.1)
+   mcube = cube.mask_out_bad_beams(threshold=0.1)
 
 
-.. note::
-   Option 3 above will become easier when
-   https://github.com/radio-astro-tools/radio_beam/pull/51 has been merged into
-   radio-beam.
 
 
 Moment-2 or FWHM calculations give unexpected NaNs
