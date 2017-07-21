@@ -2944,6 +2944,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             if need_to_handle_beams:
                 avg_beam = self.average_beams(beam_threshold, warn=True)
                 result.meta['beam'] = avg_beam
+                result._beam = avg_beam
 
             return result
 
