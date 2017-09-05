@@ -63,6 +63,7 @@ Getting started
    moments.rst
    errors.rst
    quick_looks.rst
+   spectral_extraction.rst
 
 Advanced
 ^^^^^^^^
