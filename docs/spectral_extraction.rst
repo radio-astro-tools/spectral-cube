@@ -8,8 +8,9 @@ a single pixel:
 
     >>> spectrum = cube[:, 50, 60]
 
-Slicing along the first dimension will create a `OneDSpectrum` object, which
-has a few useful capabilities.
+Slicing along the first dimension will create a
+`~spectral_cube.lower_dimensional_structures.OneDSpectrum` object, which has a few
+useful capabilities.
 
 Aperture Extraction
 -------------------
@@ -47,8 +48,9 @@ mask.  The ds9 region support relies on `pyregion
 <https://pyregion.readthedocs.io/en/latest/>`_, which supports most shapes in
 ds9, so you are not limited to circular apertures.
 
-In this example, we'll create a region "from scratch", but you can also
-use a predefined region file using `pyregion.open`.
+In this example, we'll create a region "from scratch", but you can also use a
+predefined region file using `pyregion.open
+<http://pyregion.readthedocs.io/en/latest/api/pyregion.open.html>`_.
 
     >>> shapelist = pyregion.parse("fk5; circle(19:23:43.907,+14:30:34.66, 3\")")
     >>> subcube = cube.subcube_from_ds9region(shapelist)
