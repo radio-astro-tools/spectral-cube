@@ -2142,8 +2142,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # No copying
             return self
 
-        # scaling factor
-        factor = self.unit.to(unit, equivalencies=equivalencies)
+        if unit.is_equivalent(u.Jy/u.beam):
+            # replace "beam" with the actual beam
+            if not hasattr(self, 'beam'):
+                raise ValueError("To convert cubes with Jy/beam units, "
+                                 "the cube needs to have a beam defined.")
+            brightness_unit = self.unit * u.beam / self.beam
+
+            # create a beam equivalency for brightness temperature
+            bmequiv = self.beam.jtok_equiv(self.with_spectral_unit(u.Hz).spectral_axis)
+            factor = brightness_unit.to(unit,
+                                        equivalencies=bmequiv)
+        else:
+            # scaling factor
+            factor = self.unit.to(unit, equivalencies=equivalencies)
 
         # special case: array in equivalencies
         # (I don't think this should have to be special cased, but I don't know
@@ -3062,3 +3074,47 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
+
+    @warn_slow
+    def to(self, unit, equivalencies=()):
+        """
+        Return the cube converted to the given unit (assuming it is equivalent).
+        If conversion was required, this will be a copy, otherwise it will
+        """
+
+        if not isinstance(unit, u.Unit):
+            unit = u.Unit(unit)
+
+        if unit == self.unit:
+            # No copying
+            return self
+
+        if unit.is_equivalent(u.Jy/u.beam):
+            # replace "beam" with the actual beam
+            if not hasattr(self, 'beams'):
+                raise ValueError("To convert cubes with Jy/beam units, "
+                                 "the cube needs to have beams defined.")
+            factors = []
+            for bm,frq in zip(self.beams,
+                              self.with_spectral_unit(u.Hz).spectral_axis):
+                brightness_unit = self.unit * u.beam / bm
+
+                # create a beam equivalency for brightness temperature
+                bmequiv = bm.jtok_equiv(frq)
+                factor = brightness_unit.to(unit,
+                                            equivalencies=bmequiv)
+                factors.append(factor)
+            factor = np.array(factors)
+        else:
+            # scaling factor
+            factor = self.unit.to(unit, equivalencies=equivalencies)
+
+        # special case: array in equivalencies
+        # (I don't think this should have to be special cased, but I don't know
+        # how to manipulate broadcasting rules any other way)
+        if hasattr(factor, '__len__') and len(factor) == len(self):
+            return self._new_cube_with(data=self._data*factor[:,None,None],
+                                       unit=unit)
+        else:
+            return self._new_cube_with(data=self._data*factor,
+                                       unit=unit)
