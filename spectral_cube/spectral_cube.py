@@ -2142,17 +2142,17 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # No copying
             return self
 
-        if unit.is_equivalent(u.Jy/u.beam):
+        if self.unit.is_equivalent(u.Jy/u.beam):
             # replace "beam" with the actual beam
             if not hasattr(self, 'beam'):
                 raise ValueError("To convert cubes with Jy/beam units, "
                                  "the cube needs to have a beam defined.")
-            brightness_unit = self.unit * u.beam / self.beam
+            brightness_unit = self.unit * u.beam
 
             # create a beam equivalency for brightness temperature
             bmequiv = self.beam.jtok_equiv(self.with_spectral_unit(u.Hz).spectral_axis)
             factor = brightness_unit.to(unit,
-                                        equivalencies=bmequiv)
+                                        equivalencies=bmequiv+list(equivalencies))
         else:
             # scaling factor
             factor = self.unit.to(unit, equivalencies=equivalencies)
@@ -3089,7 +3089,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             # No copying
             return self
 
-        if unit.is_equivalent(u.Jy/u.beam):
+        if self.unit.is_equivalent(u.Jy/u.beam):
             # replace "beam" with the actual beam
             if not hasattr(self, 'beams'):
                 raise ValueError("To convert cubes with Jy/beam units, "
@@ -3097,12 +3097,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             factors = []
             for bm,frq in zip(self.beams,
                               self.with_spectral_unit(u.Hz).spectral_axis):
-                brightness_unit = self.unit * u.beam / bm
+                brightness_unit = self.unit * u.beam
 
                 # create a beam equivalency for brightness temperature
                 bmequiv = bm.jtok_equiv(frq)
                 factor = brightness_unit.to(unit,
-                                            equivalencies=bmequiv)
+                                            equivalencies=bmequiv+list(equivalencies))
                 factors.append(factor)
             factor = np.array(factors)
         else:
