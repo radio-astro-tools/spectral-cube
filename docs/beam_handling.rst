@@ -25,4 +25,11 @@ loading the entire cube into memory!::
 Multi-beam cubes
 ----------------
 
-Varying resolution (multi-beam) cubes are somewhat trickier to work with.
+Varying resolution (multi-beam) cubes are somewhat trickier to work with in
+general, though unit conversion is easy.  You can perform the same sort of unit
+conversion with `~spectral_cube.spectral_cube.VaryingResolutionSpectralCube`s
+as with regular `~spectral_cube.spectral_cube.SpectralCube`s; ``spectral-cube``
+will use a different beam and frequency for each plane.
+
+For other sorts of operations, discussion of how to deal with these cubes via
+smoothing to a common resolution is in the `smoothing` document.

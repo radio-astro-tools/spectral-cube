@@ -1137,7 +1137,7 @@ def test_beam_jtok_array():
 
     cube, data = cube_and_raw('advs.fits')
     cube._meta['BUNIT'] = 'Jy / beam'
-    cube._unit = u.Jy
+    cube._unit = u.Jy/u.beam
 
     equiv = cube.beam.jtok_equiv(cube.with_spectral_unit(u.GHz).spectral_axis)
     jtok = cube.beam.jtok(cube.with_spectral_unit(u.GHz).spectral_axis)
