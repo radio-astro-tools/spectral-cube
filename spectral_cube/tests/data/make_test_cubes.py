@@ -41,26 +41,26 @@ if __name__ == "__main__":
     h['NAXIS4'] = 1
     d = np.random.random((1, 2, 3, 4))
 
-    fits.writeto('advs.fits', d, h, clobber=True)
+    fits.writeto('advs.fits', d, h, overwrite=True)
 
     d, h = transpose(d, h, [1, 2, 3, 0])
-    fits.writeto('dvsa.fits', d, h, clobber=True)
+    fits.writeto('dvsa.fits', d, h, overwrite=True)
 
     d, h = transpose(d, h, [1, 2, 3, 0])
-    fits.writeto('vsad.fits', d, h, clobber=True)
+    fits.writeto('vsad.fits', d, h, overwrite=True)
 
     d, h = transpose(d, h, [1, 2, 3, 0])
-    fits.writeto('sadv.fits', d, h, clobber=True)
+    fits.writeto('sadv.fits', d, h, overwrite=True)
 
     d, h = transpose(d, h, [0, 2, 1, 3])
-    fits.writeto('sdav.fits', d, h, clobber=True)
+    fits.writeto('sdav.fits', d, h, overwrite=True)
 
     del h['BMAJ'], h['BMIN'], h['BPA']
     # want 4 spectral channels
     d = np.random.random((4, 3, 2, 1))
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
-    hdul.writeto('sdav_beams.fits', clobber=True)
+    hdul.writeto('sdav_beams.fits', overwrite=True)
 
 
     # 3D files
@@ -75,25 +75,25 @@ if __name__ == "__main__":
             del h[k]
 
     d = np.random.random((4, 3, 2))
-    fits.writeto('adv.fits', d, h, clobber=True)
+    fits.writeto('adv.fits', d, h, overwrite=True)
 
     d, h = transpose(d, h, [2, 0, 1])
-    fits.writeto('vad.fits', d, h, clobber=True)
+    fits.writeto('vad.fits', d, h, overwrite=True)
 
     d, h = transpose(d, h, [2, 1, 0])
-    fits.writeto('vda.fits', d, h, clobber=True)
+    fits.writeto('vda.fits', d, h, overwrite=True)
 
     h['BUNIT'] = 'JY/BEAM'
-    fits.writeto('vda_JYBEAM_upper.fits', d, h, clobber=True)
+    fits.writeto('vda_JYBEAM_upper.fits', d, h, overwrite=True)
     h['BUNIT'] = 'Jy/beam'
-    fits.writeto('vda_Jybeam_lower.fits', d, h, clobber=True)
+    fits.writeto('vda_Jybeam_lower.fits', d, h, overwrite=True)
     h['BUNIT'] = ' Jy / beam '
-    fits.writeto('vda_Jybeam_whitespace.fits', d, h, clobber=True)
+    fits.writeto('vda_Jybeam_whitespace.fits', d, h, overwrite=True)
 
     del h['BMAJ'], h['BMIN'], h['BPA']
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
-    hdul.writeto('vda_beams.fits', clobber=True)
+    hdul.writeto('vda_beams.fits', overwrite=True)
 
     # make a version with spatial pixels
     h = fits.header.Header.fromtextfile(HEADER_FILENAME)
@@ -102,22 +102,22 @@ if __name__ == "__main__":
             del h[k]
     h['BUNIT'] = 'K' # Kelvins are a valid unit, JY/BEAM are not: they should be tested separately
     d = np.arange(2*5*5).reshape((2,5,5))
-    fits.writeto('255.fits', d, h, clobber=True)
+    fits.writeto('255.fits', d, h, overwrite=True)
 
     # test cube for convolution, regridding
     d = np.zeros([2,5,5], dtype='float')
     d[0,2,2] = 1.0
-    fits.writeto('255_delta.fits', d, h, clobber=True)
+    fits.writeto('255_delta.fits', d, h, overwrite=True)
 
     d = np.zeros([4,5,5], dtype='float')
     d[:,2,2] = 1.0
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
-    hdul.writeto('455_delta_beams.fits', clobber=True)
+    hdul.writeto('455_delta_beams.fits', overwrite=True)
 
     d = np.zeros([5,2,2], dtype='float')
     d[2,:,:] = 1.0
-    fits.writeto('522_delta.fits', d, h, clobber=True)
+    fits.writeto('522_delta.fits', d, h, overwrite=True)
 
     beams = np.recarray(5, dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'),
                                   ('BPA', '>f4'), ('CHAN', '>i4'),
@@ -131,7 +131,7 @@ if __name__ == "__main__":
 
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
-    hdul.writeto('522_delta_beams.fits', clobber=True)
+    hdul.writeto('522_delta_beams.fits', overwrite=True)
 
     # Make a 2D spatial version
     h = fits.header.Header.fromtextfile(HEADER_FILENAME)
@@ -140,9 +140,9 @@ if __name__ == "__main__":
             del h[k]
     h['BUNIT'] = 'K'
     d = np.arange(5 * 5).reshape((5, 5))
-    fits.writeto('55.fits', d, h, clobber=True)
+    fits.writeto('55.fits', d, h, overwrite=True)
 
     # test cube for convolution, regridding
     d = np.zeros([5, 5], dtype='float')
     d[2, 2] = 1.0
-    fits.writeto('55_delta.fits', d, h, clobber=True)
+    fits.writeto('55_delta.fits', d, h, overwrite=True)

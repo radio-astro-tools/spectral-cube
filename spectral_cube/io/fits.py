@@ -202,6 +202,9 @@ def write_fits_cube(filename, cube, overwrite=False,
         hdulist[0].header.add_history("Written by spectral_cube v{version} on "
                                       "{date}".format(version=SPECTRAL_CUBE_VERSION,
                                                       date=now))
-        hdulist.writeto(filename, clobber=overwrite)
+        try:
+            hdulist.writeto(filename, overwrite=overwrite)
+        except TypeError:
+            hdulist.writeto(filename, clobber=overwrite)
     else:
         raise NotImplementedError()
