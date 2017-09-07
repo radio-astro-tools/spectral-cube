@@ -18,8 +18,8 @@ loading the entire cube into memory!::
 
    >>> cube.unit  # doctest: +SKIP
    Unit("Jy / beam")
-   >>> kcube = cube.to(u.K)
-   >>> kcube.unit
+   >>> kcube = cube.to(u.K)  # doctest: +SKIP
+   >>> kcube.unit  # doctest: +SKIP
    Unit("K")
 
 Multi-beam cubes
