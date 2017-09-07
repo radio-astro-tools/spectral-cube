@@ -18,7 +18,7 @@ axis::
 
     >>> moment_0_along_x = cube.moment(order=0, axis=2)  # doctest: +SKIP
 
-.. note:: these follow the mathematical definition of moments, so the second
+.. note:: These follow the mathematical definition of moments, so the second
           moment is computed as the variance. For linewidth maps, see the
           `Linewidth maps`_ section.
 
