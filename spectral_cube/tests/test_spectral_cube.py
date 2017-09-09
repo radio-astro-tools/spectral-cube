@@ -1131,6 +1131,29 @@ def test_multibeam_slice():
     np.testing.assert_almost_equal(flatslice.header['BMAJ'],
                                    (0.1/3600.))
 
+def test_basic_unit_conversion():
+
+    cube, data = cube_and_raw('advs.fits')
+    assert cube.unit == u.K
+
+    mKcube = cube.to(u.mK)
+
+    np.testing.assert_almost_equal(mKcube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    1e3))
+
+    cube, data = cube_and_raw('vda_beams.fits')
+    cube._unit = u.K # want beams, but we want to force the unit to be something non-beamy
+    cube._meta['BUNIT'] = 'K'
+
+    assert cube.unit == u.K
+
+    mKcube = cube.to(u.mK)
+
+    np.testing.assert_almost_equal(mKcube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    1e3))
+
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_beam_jtok_array():
