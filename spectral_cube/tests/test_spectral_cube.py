@@ -1142,6 +1142,8 @@ def test_basic_unit_conversion():
                                    (cube.filled_data[:].value *
                                     1e3))
 
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_basic_unit_conversion_beams():
     cube, data = cube_and_raw('vda_beams.fits')
     cube._unit = u.K # want beams, but we want to force the unit to be something non-beamy
     cube._meta['BUNIT'] = 'K'
