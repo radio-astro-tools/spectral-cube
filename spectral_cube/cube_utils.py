@@ -401,7 +401,7 @@ def convert_bunit(bunit):
     # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
     bunit_lower = re.sub("\s", "", bunit.lower())
     if bunit_lower == 'jy/beam':
-        unit = u.Jy
+        unit = u.Jy / u.beam
     else:
         try:
             unit = u.Unit(bunit)

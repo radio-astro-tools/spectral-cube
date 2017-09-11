@@ -1131,15 +1131,38 @@ def test_multibeam_slice():
     np.testing.assert_almost_equal(flatslice.header['BMAJ'],
                                    (0.1/3600.))
 
+def test_basic_unit_conversion():
+
+    cube, data = cube_and_raw('advs.fits')
+    assert cube.unit == u.K
+
+    mKcube = cube.to(u.mK)
+
+    np.testing.assert_almost_equal(mKcube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    1e3))
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_basic_unit_conversion_beams():
+    cube, data = cube_and_raw('vda_beams.fits')
+    cube._unit = u.K # want beams, but we want to force the unit to be something non-beamy
+    cube._meta['BUNIT'] = 'K'
+
+    assert cube.unit == u.K
+
+    mKcube = cube.to(u.mK)
+
+    np.testing.assert_almost_equal(mKcube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    1e3))
+
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_beam_jtok_array():
 
     cube, data = cube_and_raw('advs.fits')
-    # technically this should be jy/beam, but astropy's equivalency doesn't
-    # handle this yet
-    cube._meta['BUNIT'] = 'Jy'
-    cube._unit = u.Jy
+    cube._meta['BUNIT'] = 'Jy / beam'
+    cube._unit = u.Jy/u.beam
 
     equiv = cube.beam.jtok_equiv(cube.with_spectral_unit(u.GHz).spectral_axis)
     jtok = cube.beam.jtok(cube.with_spectral_unit(u.GHz).spectral_axis)
@@ -1148,6 +1171,35 @@ def test_beam_jtok_array():
     np.testing.assert_almost_equal(Kcube.filled_data[:].value,
                                    (cube.filled_data[:].value *
                                     jtok[:,None,None]).value)
+
+    # test that the beam equivalencies are correctly automatically defined
+    Kcube = cube.to(u.K)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    jtok[:,None,None]).value)
+
+@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+def test_multibeam_jtok_array():
+
+    cube, data = cube_and_raw('vda_beams.fits')
+    assert cube.meta['BUNIT'].strip() == 'Jy / beam'
+    assert cube.unit.is_equivalent(u.Jy/u.beam)
+
+    #equiv = [bm.jtok_equiv(frq) for bm, frq in zip(cube.beams, cube.with_spectral_unit(u.GHz).spectral_axis)]
+    jtok = u.Quantity([bm.jtok(frq) for bm, frq in zip(cube.beams, cube.with_spectral_unit(u.GHz).spectral_axis)])
+
+    # don't try this, it's nonsense for the multibeam case
+    # Kcube = cube.to(u.K, equivalencies=equiv)
+    # np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+    #                                (cube.filled_data[:].value *
+    #                                 jtok[:,None,None]).value)
+
+    # test that the beam equivalencies are correctly automatically defined
+    Kcube = cube.to(u.K)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    jtok[:,None,None]).value)
+
 
 @pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_beam_jtok():
@@ -1208,7 +1260,7 @@ def test_jybeam_upper():
 
     cube, data = cube_and_raw('vda_JYBEAM_upper.fits')
 
-    assert cube.unit == u.Jy
+    assert cube.unit == u.Jy/u.beam
     if RADIO_BEAM_INSTALLED:
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
@@ -1218,7 +1270,7 @@ def test_jybeam_lower():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 
-    assert cube.unit == u.Jy
+    assert cube.unit == u.Jy/u.beam
     if RADIO_BEAM_INSTALLED:
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
@@ -1229,7 +1281,7 @@ def test_jybeam_whitespace():
 
     cube, data = cube_and_raw('vda_Jybeam_whitespace.fits')
 
-    assert cube.unit == u.Jy
+    assert cube.unit == u.Jy/u.beam
     if RADIO_BEAM_INSTALLED:
         assert hasattr(cube, 'beam')
         np.testing.assert_almost_equal(cube.beam.sr.value,
