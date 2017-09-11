@@ -65,6 +65,7 @@ Getting started
    quick_looks.rst
    beam_handling.rst
    spectral_extraction.rst
+   continuum_subtraction.rst
 
 Advanced
 ^^^^^^^^
