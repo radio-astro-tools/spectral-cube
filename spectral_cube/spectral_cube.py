@@ -2937,12 +2937,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             """ Wrapper function around the standard operations to handle beams
             when creating projections """
 
-            result = function(*args, **kwargs)
-
-            if not isinstance(result, LowerDimensionalObject):
-                # numpy arrays are sometimes returned; these have no metadata
-                return result
-
             # check that the spectral axis is being operated over.  If it is,
             # we need to average beams
             # moments are a special case b/c they default to axis=0
@@ -2954,7 +2948,17 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                      function.__name__))
 
             if need_to_handle_beams:
+                # do this check *first* so we don't do an expensive operation
+                # and crash afterward
                 avg_beam = self.average_beams(beam_threshold, warn=True)
+
+            result = function(*args, **kwargs)
+
+            if not isinstance(result, LowerDimensionalObject):
+                # numpy arrays are sometimes returned; these have no metadata
+                return result
+
+            elif need_to_handle_beams:
                 result.meta['beam'] = avg_beam
                 result._beam = avg_beam
 
