@@ -22,7 +22,7 @@ from .. import (SpectralCube, VaryingResolutionSpectralCube, BooleanArrayMask,
 from ..spectral_cube import OneDSpectrum, Projection
 from ..np_compat import allbadtonan
 from .. import spectral_axis
-from .. import spectral_cube
+from .. import base_class
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
@@ -1428,9 +1428,8 @@ def test_caching():
 
     assert len(cube._cache) == 1
 
-    # this part of the test doesn't work right now;
     # see https://stackoverflow.com/questions/46181936/access-a-parent-class-property-getter-from-the-child-class
-    #world_extrema_function = spectral_cube.base_class.SpatialCoordMixinClass.world_extrema.fget
+    world_extrema_function = base_class.SpatialCoordMixinClass.world_extrema.fget.wrapped_function
 
-    #assert cube.world_extrema is cube._cache[(world_extrema_function, ())]
+    assert cube.world_extrema is cube._cache[(world_extrema_function, ())]
     assert worldextrema == cube.world_extrema

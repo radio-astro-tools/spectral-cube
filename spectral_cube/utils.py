@@ -16,6 +16,8 @@ def cached(func):
             self._cache[(func, args)] = func(self, *args)
         return self._cache[(func, args)]
 
+    wrapper.wrapped_function = func
+
     return wrapper
 
 def warn_slow(function):
