@@ -12,9 +12,11 @@ def cached(func):
     @wraps(func)
     def wrapper(self, *args):
         # The cache lives in the instance so that it gets garbage collected
-        if func not in self._cache:
-            self._cache[func, args] = func(self, *args)
-        return self._cache[func, args]
+        if (func, args) not in self._cache:
+            self._cache[(func, args)] = func(self, *args)
+        return self._cache[(func, args)]
+
+    wrapper.wrapped_function = func
 
     return wrapper
 
