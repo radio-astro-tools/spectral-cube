@@ -249,11 +249,8 @@ def try_load_beam(header):
     '''
     Try loading a beam from a FITS header.
     '''
-    try:
-        from radio_beam import Beam
-    except ImportError:
-        warnings.warn("radio_beam is not installed. No beam "
-                      "can be created.")
+
+    from radio_beam import Beam
 
     try:
         beam = Beam.from_fits_header(header)
@@ -354,6 +351,7 @@ def smallest_beam(beams, includemask=None):
                     pa=pa[smallest_idx])
 
     return new_beam
+
 
 @contextlib.contextmanager
 def _map_context(numcores):

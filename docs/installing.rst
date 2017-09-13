@@ -9,6 +9,8 @@ This package has the following dependencies:
 * `Python <http://www.python.org>`_ 2.7 or later (Python 3.x is supported)
 * `Numpy <http://www.numpy.org>`_ 1.8 or later
 * `Astropy <http://www.astropy.org>`__ 1.0 or later
+* `radio_beam <https://github.com/radio-astro-tools/radio_beam>`_, used when
+  reading in spectral cubes that use the BMAJ/BMIN convention for specifying the beam size.
 * `Bottleneck <http://berkeleyanalytics.com/bottleneck/>`_, optional (speeds
   up median and percentile operations on cubes with missing data)
 

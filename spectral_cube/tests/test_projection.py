@@ -3,9 +3,12 @@ from __future__ import print_function, absolute_import, division
 import warnings
 import pytest
 import numpy as np
+
 from astropy import units as u
 from astropy.wcs import WCS
 from astropy.io import fits
+
+from radio_beam import Beam
 
 from .helpers import assert_allclose
 from .test_spectral_cube import cube_and_raw
@@ -14,12 +17,6 @@ from ..masks import BooleanArrayMask
 from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
 from ..utils import SliceWarning, WCSCelestialError
 from . import path
-
-try:
-    from radio_beam import Beam
-    RADIO_BEAM_INSTALLED = True
-except ImportError:
-    RADIO_BEAM_INSTALLED = False
 
 # set up for parametrization
 LDOs = (Projection, Slice, OneDSpectrum)
@@ -245,7 +242,6 @@ def test_quantity_property():
     assert not isinstance(arr, OneDSpectrum)
 
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_projection_with_beam():
 
     exp_beam = Beam(1.0 * u.arcsec)
@@ -289,7 +285,6 @@ def test_projection_from_hdu(LDO, data):
     assert (p == p_new).all()
 
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 @pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs_2d, data_two_2d))
 def test_projection_from_hdu_with_beam(LDO, data):

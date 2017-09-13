@@ -45,12 +45,7 @@ try:
 except ImportError:
     BOTTLENECK_INSTALLED = False
 
-try:
-    from radio_beam import Beam
-    RADIO_BEAM_INSTALLED = True
-except ImportError:
-    RADIO_BEAM_INSTALLED = False
-
+from radio_beam import Beam
 
 NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
 
@@ -1021,7 +1016,7 @@ def test_oned_slice():
     assert cube.unit == spec.unit
     assert spec.header['BUNIT'] == cube.header['BUNIT']
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_oned_slice_beams():
     # Check that a slice returns an appropriate spectrum
 
@@ -1054,7 +1049,7 @@ def test_oned_collapse():
     assert cube.unit == spec.unit
     assert spec.header['BUNIT'] == cube.header['BUNIT']
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_oned_collapse_beams():
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
@@ -1086,7 +1081,7 @@ def test_preserve_bunit():
     assert cube.unit == u.Jy
     assert cube.header['BUNIT'] == 'Jy'
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_preserve_beam():
 
     cube, data = cube_and_raw('advs.fits')
@@ -1095,7 +1090,7 @@ def test_preserve_beam():
 
     assert cube.beam == beam
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_beam_attach_to_header():
 
     cube, data = cube_and_raw('adv.fits')
@@ -1113,7 +1108,7 @@ def test_beam_attach_to_header():
     # Should be in meta too
     assert newcube.meta['beam'] == cube.beam
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_multibeam_slice():
 
     cube, data = cube_and_raw('vda_beams.fits')
@@ -1143,7 +1138,7 @@ def test_basic_unit_conversion():
                                    (cube.filled_data[:].value *
                                     1e3))
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_basic_unit_conversion_beams():
     cube, data = cube_and_raw('vda_beams.fits')
     cube._unit = u.K # want beams, but we want to force the unit to be something non-beamy
@@ -1158,7 +1153,7 @@ def test_basic_unit_conversion_beams():
                                     1e3))
 
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_beam_jtok_array():
 
     cube, data = cube_and_raw('advs.fits')
@@ -1179,7 +1174,7 @@ def test_beam_jtok_array():
                                    (cube.filled_data[:].value *
                                     jtok[:,None,None]).value)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_multibeam_jtok_array():
 
     cube, data = cube_and_raw('vda_beams.fits')
@@ -1202,7 +1197,7 @@ def test_multibeam_jtok_array():
                                     jtok[:,None,None]).value)
 
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_beam_jtok():
     # regression test for an error introduced when the previous test was solved
     # (the "is this an array?" test used len(x) where x could be scalar)
@@ -1221,7 +1216,7 @@ def test_beam_jtok():
                                    (cube.filled_data[:].value *
                                     jtok).value)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_varyres_moment():
     cube, data = cube_and_raw('vda_beams.fits')
 
@@ -1237,7 +1232,7 @@ def test_varyres_moment():
     assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
     assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_append_beam_to_hdr():
 
     cube, data = cube_and_raw('advs.fits')
@@ -1288,7 +1283,7 @@ def test_jybeam_whitespace():
         np.testing.assert_almost_equal(cube.beam.sr.value,
                                        (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_beam_proj_meta():
 
     cube, data = cube_and_raw('advs.fits')
@@ -1350,7 +1345,7 @@ def test_pix_sign():
     assert y>0
     assert x>0
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_varyres_moment_logic_issue364():
     """ regression test for issue364 """
     cube, data = cube_and_raw('vda_beams.fits')
@@ -1374,7 +1369,7 @@ def test_varyres_moment_logic_issue364():
         assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
     assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_mask_bad_beams():
     cube, data = cube_and_raw('vda_beams.fits')
 
@@ -1419,7 +1414,7 @@ def test_mad_std():
         np.testing.assert_almost_equal(mcube.mad_std(axis=0).value, result2)
 
 def test_caching():
-    
+
     cube, data = cube_and_raw('adv.fits')
 
     assert len(cube._cache) == 0

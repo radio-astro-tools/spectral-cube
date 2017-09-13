@@ -8,11 +8,7 @@ from .. import SpectralCube, StokesSpectralCube
 from . import path
 import pytest
 
-try:
-    from radio_beam import Beam
-    RADIO_BEAM_INSTALLED = True
-except ImportError:
-    RADIO_BEAM_INSTALLED = False
+from radio_beam import Beam
 
 def test_lmv_fits():
     c1 = SpectralCube.read(path('example_cube.fits'))
@@ -43,17 +39,15 @@ def test_4d_stokes():
     c = StokesSpectralCube.read(f)
     assert isinstance(c, StokesSpectralCube)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_3d_beams():
     c = SpectralCube.read(path('vda_beams.fits'))
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.1)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_4d_beams():
     c = SpectralCube.read(path('sdav_beams.fits'))
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.1)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_3d_beams_roundtrip():
     c = SpectralCube.read(path('vda_beams.fits'))
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.1)
@@ -66,7 +60,7 @@ def test_3d_beams_roundtrip():
 
     np.testing.assert_almost_equal(c2.beams[0].major.value, 0.1)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_4d_beams_roundtrip():
     # not sure if 4d can round-trip...
     c = SpectralCube.read(path('sdav_beams.fits'))

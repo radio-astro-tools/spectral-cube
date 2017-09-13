@@ -1,10 +1,13 @@
 import pytest
 import numpy as np
+
 from astropy import units as u
 from astropy import convolution
 from astropy.wcs import WCS
 from astropy import wcs
 from astropy.io import fits
+
+from radio_beam import beam, Beam
 
 from .. import SpectralCube
 from ..utils import WCSCelestialError
@@ -13,19 +16,12 @@ from .test_projection import load_projection
 from . import path
 
 try:
-    from radio_beam import beam,Beam
-    RADIO_BEAM_INSTALLED = True
-except ImportError:
-    RADIO_BEAM_INSTALLED = False
-
-try:
     import reproject
     REPROJECT_INSTALLED = True
 except ImportError:
     REPROJECT_INSTALLED = False
 
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
 def test_convolution():
     cube, data = cube_and_raw('255_delta.fits')
 
@@ -49,7 +45,7 @@ def test_convolution():
     # 2nd layer is all zeros
     assert np.all(conv_cube.filled_data[1,:,:] == 0.0)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_beams_convolution():
     cube, data = cube_and_raw('455_delta_beams.fits')
 
@@ -69,7 +65,7 @@ def test_beams_convolution():
         np.testing.assert_almost_equal(expected.array,
                                        conv_cube.filled_data[ii,:,:].value)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_beams_convolution_equal():
     cube, data = cube_and_raw('522_delta_beams.fits')
 
@@ -116,7 +112,7 @@ def test_spectral_smooth():
                                                                 x_size=5).array,
                                    4)
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_spectral_smooth_fail():
 
     cube, data = cube_and_raw('522_delta_beams.fits')
@@ -161,7 +157,7 @@ def test_spectral_interpolate_with_fillvalue():
                                    np.ones(4)*42)
 
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_spectral_interpolate_fail():
 
     cube, data = cube_and_raw('522_delta_beams.fits')
@@ -218,7 +214,7 @@ def test_spectral_interpolate_reversed():
     np.testing.assert_almost_equal(sg.value, result.spectral_axis.value)
 
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_convolution_2D():
 
     proj, hdu = load_projection("55_delta.fits")
@@ -241,7 +237,7 @@ def test_convolution_2D():
     assert conv_proj.beam == target_beam
 
 
-@pytest.mark.skipif('not RADIO_BEAM_INSTALLED')
+
 def test_nocelestial_convolution_2D_fail():
 
     cube, data = cube_and_raw('255_delta.fits')
