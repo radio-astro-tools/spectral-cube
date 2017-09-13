@@ -30,14 +30,14 @@ env:
         - ASTROPY_VERSION=stable
         - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
-        - PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
+        - PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - SETUP_XVFB=True
 
     matrix:
         - SETUP_CMD='egg_info'
         - # run with default settings
         - ASTROPY_VERSION='development'
-        - CONDA_DEPENDENCIES='pytest pytest-xdist' PIP_DEPENDENCIES=''
+        - CONDA_DEPENDENCIES='pytest pytest-xdist' PIP_DEPENDENCIES='radio_beam'
 
 matrix:
     include:
@@ -47,8 +47,6 @@ matrix:
         - python: 2.7
           env: SETUP_CMD='test --coverage'
                CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist'
-               ASTROPY_VERSION='development'
-               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -68,11 +66,12 @@ matrix:
         - python: 3.6
           env: NUMPY_VERSION=1.11 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
 
-        # Test with radio-beam
+        # Test with development versions
         - python: 2.7
           env:
               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
               ASTROPY_VERSION='development'
+
         - python: 3.5
           env:
               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
