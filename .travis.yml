@@ -37,7 +37,7 @@ env:
         - SETUP_CMD='egg_info'
         - # run with default settings
         - ASTROPY_VERSION='development'
-        - CONDA_DEPENDENCIES='pytest pytest-xdist' PIP_DEPENDENCIES=''
+        - CONDA_DEPENDENCIES='pytest pytest-xdist' PIP_DEPENDENCIES='radio_beam'
 
 matrix:
     include:
