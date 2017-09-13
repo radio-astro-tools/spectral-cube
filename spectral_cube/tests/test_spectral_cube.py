@@ -121,9 +121,8 @@ translist = [('advs', [0, 1, 2, 3]),
              ('vad', [2, 0, 1]),
              ('vda', [0, 2, 1]),
              ('adv', [0, 1, 2]),
+             ('vda_beams', [0, 2, 1])
              ]
-if RADIO_BEAM_INSTALLED:
-    translist.append(('vda_beams', [0, 2, 1]))
 
 class TestSpectralCube(object):
 
@@ -1257,20 +1256,18 @@ def test_jybeam_upper():
     cube, data = cube_and_raw('vda_JYBEAM_upper.fits')
 
     assert cube.unit == u.Jy/u.beam
-    if RADIO_BEAM_INSTALLED:
-        assert hasattr(cube, 'beam')
-        np.testing.assert_almost_equal(cube.beam.sr.value,
-                                       (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
+    assert hasattr(cube, 'beam')
+    np.testing.assert_almost_equal(cube.beam.sr.value,
+                                   (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
 def test_jybeam_lower():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 
     assert cube.unit == u.Jy/u.beam
-    if RADIO_BEAM_INSTALLED:
-        assert hasattr(cube, 'beam')
-        np.testing.assert_almost_equal(cube.beam.sr.value,
-                                       (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
+    assert hasattr(cube, 'beam')
+    np.testing.assert_almost_equal(cube.beam.sr.value,
+                                   (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
 # Regression test for #257 (https://github.com/radio-astro-tools/spectral-cube/pull/257)
 def test_jybeam_whitespace():
@@ -1278,10 +1275,9 @@ def test_jybeam_whitespace():
     cube, data = cube_and_raw('vda_Jybeam_whitespace.fits')
 
     assert cube.unit == u.Jy/u.beam
-    if RADIO_BEAM_INSTALLED:
-        assert hasattr(cube, 'beam')
-        np.testing.assert_almost_equal(cube.beam.sr.value,
-                                       (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
+    assert hasattr(cube, 'beam')
+    np.testing.assert_almost_equal(cube.beam.sr.value,
+                                   (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
 
 def test_beam_proj_meta():
