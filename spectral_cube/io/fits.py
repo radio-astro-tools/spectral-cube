@@ -134,6 +134,10 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
 
     data, header, beam_table = read_data_fits(input, hdu=hdu, **kwargs)
 
+    if data is None:
+        raise Exception('No data found in HDU {0}. You can try using the hdu= '
+                        'keyword argument to read data from another HDU.'.format(hdu))
+
     if meta is None:
         meta = {}
 
