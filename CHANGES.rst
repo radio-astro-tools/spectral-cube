@@ -9,6 +9,8 @@
    (https://github.com/radio-astro-tools/spectral-cube/pull/373)
  - Add tools for masking bad beams in VaryingResolutionSpectralCubes
    (https://github.com/radio-astro-tools/spectral-cube/pull/373)
+ - Don't warn if no beam was found in a cube
+   (https://github.com/radio-astro-tools/spectral-cube/pull/422)
 
 0.4.0 (2016-09-06)
 ------------------
