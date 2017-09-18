@@ -88,7 +88,6 @@ install:
     - source ci-helpers/travis/setup_conda.sh
 
 script:
-    - if [[ $SETUP_CMD != egg_info ]]; then cd spectral_cube/tests/data ; make ; cd ../../../; fi
     - python setup.py $SETUP_CMD
 
 after_success:
