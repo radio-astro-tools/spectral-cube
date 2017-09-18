@@ -103,3 +103,7 @@ setup(name='spectral-cube',
       zip_safe=False,
       **package_info
 )
+
+os.chdir('spectral_Cube/tests/data')
+os.system('make')
+os.chdir('../../..')
