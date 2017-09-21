@@ -280,14 +280,18 @@ def try_load_beams(data):
 
         for ihdu, hdu_item in enumerate(data):
             if isinstance(hdu_item, (fits.PrimaryHDU, fits.ImageHDU)):
-                pass
+                beam = try_load_beams(hdu_item.header)
             elif isinstance(hdu_item, fits.BinTableHDU):
                 if 'BPA' in hdu_item.data.names:
                     beam_table = hdu_item.data
                     return beam_table
-
-        # if the for loop has completed, we didn't find a beam table
-        raise ValueError("No beam table found")
+        
+        try:
+            # if there was a beam in a header, but not a beam table
+            return beam
+        except NameError:
+            # if the for loop has completed, we didn't find a beam table
+            raise ValueError("No beam table found")
     elif isinstance(data, (fits.PrimaryHDU, fits.ImageHDU)):
         return try_load_beams(data.header)
     elif isinstance(data, fits.Header):
