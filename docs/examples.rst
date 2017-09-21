@@ -2,6 +2,10 @@
 
 Examples
 ========
+Note that these examples are not tested by continuous integration tests; it is
+possible they will become out-of-date over time.  If you notice any mistakes or
+inconsistencies, please post them at
+https://github.com/radio-astro-tools/spectral-cube/issues.
 
 1. From a cube with many lines, extract each line and create moment maps using
    the brightest line as a mask:
