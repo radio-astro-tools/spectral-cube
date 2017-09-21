@@ -78,12 +78,12 @@ def test_1d():
     hdu = pyfits.open(path('5_spectral.fits'))[0]
     spec = OneDSpectrum.from_hdu(hdu)
 
-    assert np.testing.assert_almost_equal(spec.data, np.arange(5))
+    assert np.testing.assert_almost_equal(spec.data, np.arange(5, dtype='float'))
 
 def test_1d_beams():
     hdu = pyfits.open(path('5_spectral_beams.fits'))
     spec = OneDSpectrum.from_hdu(hdu)
 
-    assert np.testing.assert_almost_equal(spec.data, np.arange(5))
+    assert np.testing.assert_almost_equal(spec.data, np.arange(5, dtype='float'))
     assert hasattr(spec, 'beams')
     assert len(spec.beams) == 5

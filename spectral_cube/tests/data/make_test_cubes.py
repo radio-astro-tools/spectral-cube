@@ -149,7 +149,7 @@ if __name__ == "__main__":
     fits.writeto('55_delta.fits', d, h, overwrite=True)
     
     # oneD spectra
-    d = np.arange(5)
+    d = np.arange(5, dtype='float')
     h = wcs.WCS(fits.Header.fromtextfile(HEADER_FILENAME)).sub([wcs.WCSSUB_SPECTRAL]).to_header()
     fits.writeto('5_spectral.fits', d, h, overwrite=True)
 
