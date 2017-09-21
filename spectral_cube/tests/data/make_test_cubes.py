@@ -4,6 +4,7 @@ in various transpositions
 """
 
 from astropy.io import fits
+from astropy import wcs
 import numpy as np
 
 HEADER_FILENAME = 'header_jybeam.hdr'
@@ -146,3 +147,12 @@ if __name__ == "__main__":
     d = np.zeros([5, 5], dtype='float')
     d[2, 2] = 1.0
     fits.writeto('55_delta.fits', d, h, overwrite=True)
+    
+    # oneD spectra
+    d = np.arange(5, dtype='float')
+    h = wcs.WCS(fits.Header.fromtextfile(HEADER_FILENAME)).sub([wcs.WCSSUB_SPECTRAL]).to_header()
+    fits.writeto('5_spectral.fits', d, h, overwrite=True)
+
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto('5_spectral_beams.fits', overwrite=True)

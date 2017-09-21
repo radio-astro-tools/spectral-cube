@@ -4,7 +4,7 @@ import numpy as np
 from astropy.io import fits as pyfits
 from astropy import units as u
 from ..io import class_lmv, fits
-from .. import SpectralCube, StokesSpectralCube
+from .. import SpectralCube, StokesSpectralCube, OneDSpectrum
 from . import path
 import pytest
 
@@ -73,3 +73,17 @@ def test_4d_beams_roundtrip():
     #assert c.wcs == c2.wcs # not implemented correctly?
 
     np.testing.assert_almost_equal(c2.beams[0].major.value, 0.1)
+
+def test_1d():
+    hdu = pyfits.open(path('5_spectral.fits'))[0]
+    spec = OneDSpectrum.from_hdu(hdu)
+
+    np.testing.assert_almost_equal(spec, np.arange(5, dtype='float'))
+
+def test_1d_beams():
+    hdu = pyfits.open(path('5_spectral_beams.fits'))
+    spec = OneDSpectrum.from_hdu(hdu)
+
+    np.testing.assert_almost_equal(spec, np.arange(5, dtype='float'))
+    assert hasattr(spec, 'beams')
+    assert len(spec.beams) == 5

@@ -248,8 +248,11 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         '''
         Return a projection from a FITS HDU.
         '''
+        if isinstance(hdu, HDUList):
+            hdul = hdu
+            hdu = hdul[0]
 
-        if not len(hdu.shape) == 2:
+        if not len(hdu.data.shape) == 2:
             raise ValueError("HDU must contain two-dimensional data.")
 
         meta = {}
@@ -521,6 +524,38 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         arrstr = np.array2string(self.filled_data[:].value, separator=',',
                                  prefix=prefixstr)
         return '{0}{1}{2:s}>'.format(prefixstr, arrstr, self._unitstr)
+
+    @staticmethod
+    def from_hdu(hdu):
+        '''
+        Return a OneDSpectrum from a FITS HDU or HDU list.
+        '''
+
+        if isinstance(hdu, HDUList):
+            hdul = hdu
+            hdu = hdul[0]
+        else:
+            hdul = HDUList([hdu])
+
+        if not len(hdu.data.shape) == 1:
+            raise ValueError("HDU must contain one-dimensional data.")
+
+        meta = {}
+
+        mywcs = wcs.WCS(hdu.header)
+
+        if "BUNIT" in hdu.header:
+            unit = convert_bunit(hdu.header["BUNIT"])
+            meta["BUNIT"] = hdu.header["BUNIT"]
+        else:
+            unit = None
+
+        beams = cube_utils.try_load_beams(hdul)
+
+        self = OneDSpectrum(hdu.data, unit=unit, wcs=mywcs, meta=meta,
+                            header=hdu.header, beams=beams)
+
+        return self
 
     @property
     def header(self):

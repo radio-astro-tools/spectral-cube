@@ -12,6 +12,7 @@ import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
 from astropy import log
+from astropy.io import fits
 from astropy.io.fits import BinTableHDU, Column
 from astropy import units as u
 import itertools
@@ -258,6 +259,50 @@ def try_load_beam(header):
     except Exception as ex:
         warnings.warn("Could not parse beam information from header."
                       "  Exception was: {0}".format(ex.__repr__()))
+
+def try_load_beams(data):
+    '''
+    Try loading a beam table from a FITS HDU list.
+    '''
+    try:
+        from radio_beam import Beam
+    except ImportError:
+        warnings.warn("radio_beam is not installed. No beam "
+                      "can be created.")
+
+    if isinstance(data, fits.BinTableHDU):
+        if 'BPA' in data.data.names:
+            beam_table = data.data
+            return beam_table
+        else:
+            raise ValueError("No beam table found")
+    elif isinstance(data, fits.HDUList):
+
+        for ihdu, hdu_item in enumerate(data):
+            if isinstance(hdu_item, (fits.PrimaryHDU, fits.ImageHDU)):
+                beam = try_load_beams(hdu_item.header)
+            elif isinstance(hdu_item, fits.BinTableHDU):
+                if 'BPA' in hdu_item.data.names:
+                    beam_table = hdu_item.data
+                    return beam_table
+        
+        try:
+            # if there was a beam in a header, but not a beam table
+            return beam
+        except NameError:
+            # if the for loop has completed, we didn't find a beam table
+            raise ValueError("No beam table found")
+    elif isinstance(data, (fits.PrimaryHDU, fits.ImageHDU)):
+        return try_load_beams(data.header)
+    elif isinstance(data, fits.Header):
+        try:
+            beam = Beam.from_fits_header(data)
+            return beam
+        except Exception as ex:
+            warnings.warn("Could not parse beam information from header."
+                          "  Exception was: {0}".format(ex.__repr__()))
+    else:
+        raise ValueError("How did you get here?  This is some sort of error.")
 
 
 def beams_to_bintable(beams):
