@@ -154,6 +154,7 @@ installed.  You can use that to create a beam kernel:
 Find the pixel you want to integrate over form the image.  e.g.,
 
 .. code:: python
+
     x,y = 500, 150
 
 Then, cut out an appropriate sub-cube and integrate over it
