@@ -251,8 +251,6 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         if isinstance(hdu, HDUList):
             hdul = hdu
             hdu = hdul[0]
-        else:
-            hdul = HDUList([hdu])
 
         if not len(hdu.data.shape) == 2:
             raise ValueError("HDU must contain two-dimensional data.")
@@ -267,7 +265,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         else:
             unit = None
 
-        beam = cube_utils.try_load_beam(hdul)
+        beam = cube_utils.try_load_beam(hdu.header)
 
         self = Projection(hdu.data, unit=unit, wcs=mywcs, meta=meta,
                           header=hdu.header, beam=beam)
