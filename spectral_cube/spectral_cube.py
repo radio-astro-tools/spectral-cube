@@ -2328,6 +2328,125 @@ class SpectralCube(BaseSpectralCube):
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
+    def spatial_smooth_median(self, ksize,
+                        #numcores=None,
+                        **kwargs):
+        """
+        Smooth the cube along the spectral dimension
+
+        Parameters
+        ----------
+        kernel : `~astropy.convolution.Kernel1D`
+            A 1D kernel from astropy
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        kwargs : dict
+            Passed to the convolve function
+        """
+
+        shape = self.shape
+
+        # "cubelist" is a generator
+        # the boolean check will skip smoothing for bad spectra
+        # TODO: should spatial good/bad be cached?
+        cubelist = ((self.filled_data[ii],
+                     self.mask.include(view=(ii, slice(None), slice(None))))
+                    for ii in range(self.shape[0]))
+
+        pb = ProgressBar(shape[0])
+
+        def _gsmooth_image(args):
+            """
+            Helper function to smooth a spectrum
+            """
+            (im, includemask),kwargs = args
+            pb.update()
+
+            if includemask.any():
+                return ndimage.filters.median_filter(im, size=ksize)
+            else:
+                return im
+
+        # could be numcores, except _gsmooth_spectrum is unpicklable
+        with cube_utils._map_context(1) as map:
+            smoothcube_ = np.array([x for x in
+                                    map(_gsmooth_image, zip(cubelist,
+                                                               itertools.cycle([kwargs]),
+                                                              )
+                                       )
+                                  ])
+
+        # TODO: do something about the mask?
+        newcube = self._new_cube_with(data=smoothcube_, wcs=self.wcs,
+                                      mask=self.mask, meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
+
+    def spatial_smooth(self, kernel,
+                        #numcores=None,
+                        convolve=convolution.convolve,
+                        **kwargs):
+        """
+        Smooth the cube along the spectral dimension
+
+        Parameters
+        ----------
+        kernel : `~astropy.convolution.Kernel1D`
+            A 1D kernel from astropy
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        kwargs : dict
+            Passed to the convolve function
+        """
+
+        shape = self.shape
+
+        # "cubelist" is a generator
+        # the boolean check will skip smoothing for bad spectra
+        # TODO: should spatial good/bad be cached?
+        cubelist = ((self.filled_data[ii],
+                     self.mask.include(view=(ii, slice(None), slice(None))))
+                    for ii in range(self.shape[0]))
+
+        pb = ProgressBar(shape[0])
+
+        def _gsmooth_image(args):
+            """
+            Helper function to smooth a spectrum
+            """
+            (im, includemask),kernel,kwargs = args
+            pb.update()
+
+            if includemask.any():
+                if str(kernel) == 'median':
+                    return ndimage.filters.median_filter(im, size=3)
+                else:
+                    return convolve(im, kernel, normalize_kernel=True, **kwargs)
+            else:
+                return im
+
+        # could be numcores, except _gsmooth_spectrum is unpicklable
+        with cube_utils._map_context(1) as map:
+            smoothcube_ = np.array([x for x in
+                                    map(_gsmooth_image, zip(cubelist,
+                                                               itertools.cycle([kernel]),
+                                                               itertools.cycle([kwargs]),
+                                                              )
+                                       )
+                                  ])
+
+        # TODO: do something about the mask?
+        newcube = self._new_cube_with(data=smoothcube_, wcs=self.wcs,
+                                      mask=self.mask, meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
+
     def spectral_smooth(self, kernel,
                         #numcores=None,
                         convolve=convolution.convolve,
