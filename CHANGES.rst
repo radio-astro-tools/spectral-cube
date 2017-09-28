@@ -1,5 +1,9 @@
 0.4.1 (unreleased)
 ------------------
+
+ - Raise a nicer error if no data is present in the default or
+   selected HDU
+   (https://github.com/radio-astro-tools/spectral-cube/pull/424)
  - Check mask inputs to OneDSpectrum and add mask handling for
    OneDSpectrum.spectral_interpolate
    (https://github.com/radio-astro-tools/spectral-cube/pull/400)
