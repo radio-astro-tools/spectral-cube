@@ -273,8 +273,11 @@ def try_load_beam(header):
         beam = Beam.from_fits_header(header)
         return beam
     except Exception as ex:
-        warnings.warn("Could not parse beam information from header."
-                      "  Exception was: {0}".format(ex.__repr__()))
+        # We don't emit a warning if no beam was found since it's ok for
+        # cubes to not have beams
+        if 'No BMAJ' not in str(ex):
+            warnings.warn("Could not parse beam information from header."
+                          "  Exception was: {0}".format(ex.__repr__()))
 
 def try_load_beams(data):
     '''
