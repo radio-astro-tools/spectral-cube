@@ -30,7 +30,7 @@ def _fix_spectral(wcs):
 
     types = [a['coordinate_type'] for a in axtypes]
 
-    if wcs.naxis not in (3,4):
+    if wcs.naxis not in (3, 4):
         raise TypeError("The WCS has {0} axes of types {1}".format(len(types),
                                                                    types))
 
@@ -146,6 +146,22 @@ def _orient(array, wcs):
     axtypes = wcs.get_axis_types()[::-1]
 
     types = [a['coordinate_type'] for a in axtypes]
+
+    n_celestial = types.count('celestial')
+
+    if n_celestial == 0:
+        raise ValueError('No celestial axes found in WCS')
+    elif n_celestial != 2:
+        raise ValueError('WCS should contain 2 celestial dimensions but '
+                         'contains {0}'.format(n_celestial))
+
+    n_spectral = types.count('spectral')
+
+    if n_spectral == 0:
+        raise ValueError('No spectral axes found in WCS')
+    elif n_spectral != 1:
+        raise ValueError('WCS should contain one spectral dimension but '
+                         'contains {0}'.format(n_spectral))
 
     nums = [None if a['coordinate_type'] != 'celestial' else a['number']
             for a in axtypes]

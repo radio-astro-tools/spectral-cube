@@ -3,6 +3,9 @@
  - Check mask inputs to OneDSpectrum and add mask handling for
    OneDSpectrum.spectral_interpolate
    (https://github.com/radio-astro-tools/spectral-cube/pull/400)
+ - Improve exception if cube does not have two celestial and one
+   spectral dimesnion
+   (https://github.com/radio-astro-tools/spectral-cube/pull/425)
  - Add creating a Projection from a FITS HDU
    (https://github.com/radio-astro-tools/spectral-cube/pull/376)
  - Deprecate numpy <=1.8 because nanmedian is needed
