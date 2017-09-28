@@ -31,6 +31,11 @@ from .helpers import assert_allclose, assert_array_equal
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
 
+try:
+    import scipy.ndimage
+    SCIPYOK = True
+except ImportError:
+    SCIPYOK = False
 
 try:
     import yt
@@ -1472,6 +1477,7 @@ def test_spatial_smooth_t2d():
 
     np.testing.assert_almost_equal(cube_t2d[2].value, result2)
 
+@pytest.mark.skipif('not SCIPYOK')
 def test_spatial_smooth_median():
     cube, data = cube_and_raw('adv.fits')
 
@@ -1491,6 +1497,7 @@ def test_spatial_smooth_median():
 
     np.testing.assert_almost_equal(cube_median[2].value, result2)
 
+@pytest.mark.skipif('not SCIPYOK')
 def test_spectral_smooth_median():
     cube, data = cube_and_raw('adv.fits')
 
