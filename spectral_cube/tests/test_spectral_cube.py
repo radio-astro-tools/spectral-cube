@@ -1427,7 +1427,7 @@ def test_caching():
     assert worldextrema == cube.world_extrema
 
 def test_spatial_smooth_g2d():
-    cube, data = cube_and_raw('example_cube.fits')
+    cube, data = cube_and_raw('adv.fits')
 
     #
     # Guassian 2D smoothing test
@@ -1436,23 +1436,21 @@ def test_spatial_smooth_g2d():
     cube_g2d = cube.spatial_smooth(g2d)
 
     # Check first slice
-    result0 = np.array([[-0.0008981 , -0.00096062, -0.00092691],
-                        [-0.00100624, -0.00107654, -0.00103898],
-                        [-0.00102397, -0.00109573, -0.00105773],
-                        [-0.00094606, -0.00101257, -0.00097763]])
+    result0 = np.array([[ 0.06653894,  0.06598313],
+                        [ 0.07206352,  0.07151016],
+                        [ 0.0702898 ,  0.0697944 ]])
 
     np.testing.assert_almost_equal(cube_g2d[0].value, result0)
 
     # Check third slice
-    result3 = np.array([[ 0.00054107,  0.0005706 ,  0.00054271],
-                        [ 0.0005493 ,  0.00058047,  0.0005532 ],
-                        [ 0.00050116,  0.00053089,  0.00050715],
-                        [ 0.00041077,  0.00043641,  0.00041806]])
+    result2 = np.array([[ 0.04217102,  0.04183251],
+                        [ 0.04470876,  0.04438826],
+                        [ 0.04269588,  0.04242956]])
 
-    np.testing.assert_almost_equal(cube_g2d[3].value, result3)
+    np.testing.assert_almost_equal(cube_g2d[2].value, result2)
 
 def test_spatial_smooth_t2d():
-    cube, data = cube_and_raw('example_cube.fits')
+    cube, data = cube_and_raw('adv.fits')
 
     #
     # Tophat 2D smoothing test
@@ -1461,48 +1459,44 @@ def test_spatial_smooth_t2d():
     cube_t2d = cube.spatial_smooth(t2d)
 
     # Check first slice
-    result0 = np.array([[-0.00185113, -0.00189217, -0.00196782],
-                        [-0.00238577, -0.00238577, -0.00238577],
-                        [-0.00238577, -0.00238577, -0.00238577],
-                        [-0.00202949, -0.00204376, -0.00208637]])
+    result0 = np.array([[ 0.14864167,  0.14864167],
+                        [ 0.14864167,  0.14864167],
+                        [ 0.14864167,  0.14864167]])
 
     np.testing.assert_almost_equal(cube_t2d[0].value, result0)
 
     # Check third slice
-    result3 = np.array([[ 0.00120031,  0.00125922,  0.00127079],
-                        [ 0.00120425,  0.00120425,  0.00120425],
-                        [ 0.00120425,  0.00120425,  0.00120425],
-                        [ 0.0008614 ,  0.00083749,  0.00081036]])
+    result2 = np.array([[ 0.09203958,  0.09203958],
+                        [ 0.09203958,  0.09203958],
+                        [ 0.09203958,  0.09203958]])
 
-    np.testing.assert_almost_equal(cube_t2d[3].value, result3)
+    np.testing.assert_almost_equal(cube_t2d[2].value, result2)
 
 def test_spatial_smooth_median():
-    cube, data = cube_and_raw('example_cube.fits')
+    cube, data = cube_and_raw('adv.fits')
 
     cube_median = cube.spatial_smooth_median(3)
 
     # Check first slice
-    result0 = np.array([[-0.0041447 , -0.00454833, -0.00578391],
-                        [-0.00454833, -0.00493878, -0.00578391],
-                        [-0.00493878, -0.00575357, -0.00665533],
-                        [-0.00546517, -0.00665533, -0.00786909]])
+    result0 = np.array([[ 0.54671028,  0.54671028],
+                        [ 0.89482735,  0.77513282],
+                        [ 0.93949894,  0.89482735]])
 
     np.testing.assert_almost_equal(cube_median[0].value, result0)
 
     # Check third slice
-    result3 = np.array([[ 0.0053649 , 0.00459953, 0.004578  ],
-                        [ 0.00459953, 0.00455446, 0.00431277],
-                        [ 0.00166061, 0.00261821, 0.00288139],
-                        [-0.00011069, 0.00022495, 0.00022495]])
+    result2 = np.array([[ 0.38867729,  0.35675333],
+                        [ 0.38867729,  0.35675333],
+                        [ 0.35675333,  0.54269608]])
 
-    np.testing.assert_almost_equal(cube_median[3].value, result3)
+    np.testing.assert_almost_equal(cube_median[2].value, result2)
 
 def test_spectral_smooth_median():
-    cube, data = cube_and_raw('example_cube.fits')
+    cube, data = cube_and_raw('adv.fits')
 
     cube_spectral_median = cube.spectral_smooth_median(3)
 
     # Check first slice
-    result = np.array([-0.00786909,  0.01062183,  0.01062183,  0.00609776,  0.00357377, 0.00357377, -0.00225733])
+    result = np.array([ 0.77513282,  0.35675333,  0.35675333,  0.98688694])
 
-    np.testing.assert_almost_equal(cube_spectral_median[:,2,2].value, result)
+    np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
