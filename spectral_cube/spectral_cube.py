@@ -2341,6 +2341,8 @@ class SpectralCube(BaseSpectralCube):
         kwargs : dict
             Passed to the convolve function
         """
+        if not scipyOK:
+            raise ImportError("Scipy could not be imported: this function won't work.")
 
         shape = self.shape
 
@@ -2457,6 +2459,9 @@ class SpectralCube(BaseSpectralCube):
         kwargs : dict
             Passed to the convolve function
         """
+
+        if not scipyOK:
+            raise ImportError("Scipy could not be imported: this function won't work.")
 
         shape = self.shape
 
