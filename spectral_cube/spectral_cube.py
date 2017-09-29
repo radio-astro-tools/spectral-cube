@@ -2328,9 +2328,7 @@ class SpectralCube(BaseSpectralCube):
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
-    def spatial_smooth_median(self, ksize,
-                        #numcores=None,
-                        **kwargs):
+    def spatial_smooth_median(self, ksize, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
@@ -2384,9 +2382,8 @@ class SpectralCube(BaseSpectralCube):
         return newcube
 
     def spatial_smooth(self, kernel,
-                        #numcores=None,
-                        convolve=convolution.convolve,
-                        **kwargs):
+                       #numcores=None,
+                       convolve=convolution.convolve, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
 
@@ -2409,7 +2406,7 @@ class SpectralCube(BaseSpectralCube):
         # TODO: should spatial good/bad be cached?
         imagelist = ((self.filled_data[ii],
                      self.mask.include(view=(ii, slice(None), slice(None))))
-                    for ii in range(self.shape[0]))
+                     for ii in range(self.shape[0]))
 
         pb = ProgressBar(shape[0])
 
@@ -2442,20 +2439,14 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def spectral_smooth_median(self, ksize,
-                        #numcores=None,
-                        **kwargs):
+    def spectral_smooth_median(self, ksize, **kwargs):
         """
         Smooth the cube along the spectral dimension
 
         Parameters
         ----------
-        kernel : `~astropy.convolution.Kernel1D`
-            A 1D kernel from astropy
-        convolve : function
-            The astropy convolution function to use, either
-            `astropy.convolution.convolve` or
-            `astropy.convolution.convolve_fft`
+        ksize : int
+            Size of the median filter (scipy.ndimage.filters.median_filter)
         kwargs : dict
             Passed to the convolve function
         """
