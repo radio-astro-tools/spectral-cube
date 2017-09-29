@@ -15,6 +15,7 @@ from astropy.wcs import WCS
 from astropy.wcs import _wcs
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.extern import six
+from astropy.convolution import Gaussian2DKernel, Tophat2DKernel
 import numpy as np
 
 from .. import (SpectralCube, VaryingResolutionSpectralCube, BooleanArrayMask,
@@ -30,6 +31,11 @@ from .helpers import assert_allclose, assert_array_equal
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
 
+try:
+    import scipy.ndimage
+    SCIPYOK = True
+except ImportError:
+    SCIPYOK = False
 
 try:
     import yt
@@ -1424,3 +1430,80 @@ def test_caching():
 
     assert cube.world_extrema is cube._cache[(world_extrema_function, ())]
     assert worldextrema == cube.world_extrema
+
+def test_spatial_smooth_g2d():
+    cube, data = cube_and_raw('adv.fits')
+
+    #
+    # Guassian 2D smoothing test
+    #
+    g2d = Gaussian2DKernel(3)
+    cube_g2d = cube.spatial_smooth(g2d)
+
+    # Check first slice
+    result0 = np.array([[ 0.06653894,  0.06598313],
+                        [ 0.07206352,  0.07151016],
+                        [ 0.0702898 ,  0.0697944 ]])
+
+    np.testing.assert_almost_equal(cube_g2d[0].value, result0)
+
+    # Check third slice
+    result2 = np.array([[ 0.04217102,  0.04183251],
+                        [ 0.04470876,  0.04438826],
+                        [ 0.04269588,  0.04242956]])
+
+    np.testing.assert_almost_equal(cube_g2d[2].value, result2)
+
+def test_spatial_smooth_t2d():
+    cube, data = cube_and_raw('adv.fits')
+
+    #
+    # Tophat 2D smoothing test
+    #
+    t2d = Tophat2DKernel(3)
+    cube_t2d = cube.spatial_smooth(t2d)
+
+    # Check first slice
+    result0 = np.array([[ 0.14864167,  0.14864167],
+                        [ 0.14864167,  0.14864167],
+                        [ 0.14864167,  0.14864167]])
+
+    np.testing.assert_almost_equal(cube_t2d[0].value, result0)
+
+    # Check third slice
+    result2 = np.array([[ 0.09203958,  0.09203958],
+                        [ 0.09203958,  0.09203958],
+                        [ 0.09203958,  0.09203958]])
+
+    np.testing.assert_almost_equal(cube_t2d[2].value, result2)
+
+@pytest.mark.skipif('not SCIPYOK')
+def test_spatial_smooth_median():
+    cube, data = cube_and_raw('adv.fits')
+
+    cube_median = cube.spatial_smooth_median(3)
+
+    # Check first slice
+    result0 = np.array([[ 0.54671028,  0.54671028],
+                        [ 0.89482735,  0.77513282],
+                        [ 0.93949894,  0.89482735]])
+
+    np.testing.assert_almost_equal(cube_median[0].value, result0)
+
+    # Check third slice
+    result2 = np.array([[ 0.38867729,  0.35675333],
+                        [ 0.38867729,  0.35675333],
+                        [ 0.35675333,  0.54269608]])
+
+    np.testing.assert_almost_equal(cube_median[2].value, result2)
+
+@pytest.mark.skipif('not SCIPYOK')
+def test_spectral_smooth_median():
+    cube, data = cube_and_raw('adv.fits')
+
+    cube_spectral_median = cube.spectral_smooth_median(3)
+
+    # Check first slice
+    result = np.array([ 0.77513282,  0.35675333,  0.35675333,  0.98688694])
+
+    np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
