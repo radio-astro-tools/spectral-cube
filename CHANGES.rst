@@ -1,14 +1,23 @@
 0.4.1 (unreleased)
 ------------------
+
+ - Raise a nicer error if no data is present in the default or
+   selected HDU
+   (https://github.com/radio-astro-tools/spectral-cube/pull/424)
  - Check mask inputs to OneDSpectrum and add mask handling for
    OneDSpectrum.spectral_interpolate
    (https://github.com/radio-astro-tools/spectral-cube/pull/400)
+ - Improve exception if cube does not have two celestial and one
+   spectral dimesnion
+   (https://github.com/radio-astro-tools/spectral-cube/pull/425)
  - Add creating a Projection from a FITS HDU
    (https://github.com/radio-astro-tools/spectral-cube/pull/376)
  - Deprecate numpy <=1.8 because nanmedian is needed
    (https://github.com/radio-astro-tools/spectral-cube/pull/373)
  - Add tools for masking bad beams in VaryingResolutionSpectralCubes
    (https://github.com/radio-astro-tools/spectral-cube/pull/373)
+ - Don't warn if no beam was found in a cube
+   (https://github.com/radio-astro-tools/spectral-cube/pull/422)
 
 0.4.0 (2016-09-06)
 ------------------
