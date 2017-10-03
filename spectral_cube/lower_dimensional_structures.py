@@ -10,6 +10,7 @@ from astropy import units as u
 from astropy import wcs
 #from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
+from radio_beam import Beam
 
 from .io.core import determine_format
 from . import spectral_axis
@@ -224,20 +225,35 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
             self._header = Header()
 
         if beam is not None:
-            self._beam = beam
-            self.meta['beam'] = beam
+            self.attach_beam(beam=beam)
         else:
             if "beam" in self.meta:
                 self._beam = self.meta['beam']
             elif read_beam:
                 beam = cube_utils.try_load_beam(header)
                 if beam is not None:
-                    self._beam = beam
-                    self.meta['beam'] = beam
+                    self.attach_beam(beam=beam)
                 else:
                     warnings.warn("Cannot load beam from header.")
 
         return self
+
+    def attach_beam(self, beam):
+        '''
+        Attach a new beam object to the Projection.
+
+        Parameters
+        ----------
+        beam : `~radio_beam.Beam`
+            A new beam object.
+        '''
+
+        if not isinstance(beam, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        self._beam = beam
+        self._meta['beam'] = beam
+        # self._header.update(beam.to_header_keywords())
 
     @property
     def beam(self):
