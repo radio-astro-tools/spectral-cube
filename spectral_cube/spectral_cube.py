@@ -2679,8 +2679,7 @@ class SpectralCube(BaseSpectralCube):
                                        normalize_kernel=True)
             pb.update()
 
-        newcube = self._new_cube_with(data=newdata, read_beam=False,
-                                      beam=beam)
+        newcube = self._new_cube_with(data=newdata, beam=beam)
 
         return newcube
 
@@ -3213,7 +3212,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                meta=self.meta, fill_value=self.fill_value,
                                header=self.header,
                                allow_huge_operations=self.allow_huge_operations,
-                               read_beam=False,
                                beam=beam,
                                wcs_tolerance=self._wcs_tolerance)
 
