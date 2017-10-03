@@ -17,6 +17,7 @@ from astropy.io.fits import BinTableHDU, Column
 from astropy import units as u
 import itertools
 import re
+from radio_beam import Beam
 
 
 def _fix_spectral(wcs):
@@ -267,8 +268,6 @@ def try_load_beam(header):
     Try loading a beam from a FITS header.
     '''
 
-    from radio_beam import Beam
-
     try:
         beam = Beam.from_fits_header(header)
         return beam
@@ -304,7 +303,7 @@ def try_load_beams(data):
                 if 'BPA' in hdu_item.data.names:
                     beam_table = hdu_item.data
                     return beam_table
-        
+
         try:
             # if there was a beam in a header, but not a beam table
             return beam
