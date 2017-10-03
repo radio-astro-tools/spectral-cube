@@ -24,6 +24,8 @@ from astropy import stats
 
 import numpy as np
 
+from radio_beam import Beam
+
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
@@ -187,13 +189,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return cube
 
-    def _attach_beam(self):
+    def attach_beam(self, beam=None):
 
-        beam = cube_utils.try_load_beam(self.header)
+        if beam is None:
+            beam = cube_utils.try_load_beam(self.header)
+        else:
+            if not isinstance(beam, Beam):
+                raise TypeError("beam must be a radio_beam.Beam object.")
 
         if beam is not None:
             self.beam = beam
             self._meta['beam'] = beam
+            self._header.update(beam.to_header_keywords())
 
     @property
     def unit(self):
@@ -2275,7 +2282,7 @@ class SpectralCube(BaseSpectralCube):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, beam=None,
-                 read_beam=True, wcs_tolerance=0.0, **kwargs):
+                 wcs_tolerance=0.0, **kwargs):
 
         super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
                                            meta=meta, fill_value=fill_value,
@@ -2285,34 +2292,7 @@ class SpectralCube(BaseSpectralCube):
                                            **kwargs)
 
         # Beam loading must happen *after* WCS is read
-        if beam is None and read_beam:
-            self._attach_beam()
-
-        if beam is None and not read_beam and 'BUNIT' in self._meta:
-            bunit = re.sub("\s", "", self._meta['BUNIT'].lower())
-            if bunit == 'jy/beam':
-                warnings.warn("Units are in Jy/beam. Attempting to parse "
-                              "header for beam information.")
-
-                self._attach_beam()
-
-                if hasattr(self, 'beam') or hasattr(self, 'beams'):
-                    warnings.warn("Units were Jy/beam.  The 'beam' is now "
-                                  "stored in the .beam attribute, and the "
-                                  "units are set to Jy")
-                else:
-                    warnings.warn("Could not parse Jy/beam unit.  Either "
-                                  "you should install the radio_beam "
-                                  "package or manually replace the units."
-                                  " For now, the units are being interpreted "
-                                  "as Jy.")
-
-        if beam is not None:
-            self.beam = beam
-            self._meta['beam'] = beam
-
-            # Ensure that the beam is properly defined in the header
-            self._header.update(beam.to_header_keywords())
+        self.attach_beam(beam=beam)
 
         if 'beam' in self._meta:
             self.pixels_per_beam = (self.beam.sr /
