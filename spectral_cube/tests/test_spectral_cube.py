@@ -1114,6 +1114,33 @@ def test_beam_attach_to_header():
     assert newcube.meta['beam'] == cube.beam
 
 
+def test_beam_custom():
+
+    cube, data = cube_and_raw('adv.fits')
+
+    header = cube._header.copy()
+    beam = Beam.from_fits_header(header)
+    del header["BMAJ"], header["BMIN"], header["BPA"]
+
+    newcube = SpectralCube(data=data, wcs=cube.wcs, header=header)
+
+    # newcube should now not have a beam
+    assert not hasattr(newcube, "beam")
+
+    # Attach the beam
+    newcube.attach_beam(beam=beam)
+
+    assert newcube.beam == cube.beam
+
+    # Header should be updated
+    assert cube.header["BMAJ"] == newcube.header["BMAJ"]
+    assert cube.header["BMIN"] == newcube.header["BMIN"]
+    assert cube.header["BPA"] == newcube.header["BPA"]
+
+    # Should be in meta too
+    assert newcube.meta['beam'] == cube.beam
+
+
 def test_multibeam_slice():
 
     cube, data = cube_and_raw('vda_beams.fits')
