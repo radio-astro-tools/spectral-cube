@@ -127,12 +127,13 @@ translist = [('advs', [0, 1, 2, 3]),
              ('vad', [2, 0, 1]),
              ('vda', [0, 2, 1]),
              ('adv', [0, 1, 2]),
-             ('vda_beams', [0, 2, 1])
              ]
+
+translist_vrsc = [('vda_beams', [0, 2, 1])]
 
 class TestSpectralCube(object):
 
-    @pytest.mark.parametrize(('name', 'trans'), translist)
+    @pytest.mark.parametrize(('name', 'trans'), translist + translist_vrsc)
     def test_consistent_transposition(self, name, trans):
         """data() should return velocity axis first, then world 1, then world 0"""
         c, d = cube_and_raw(name + '.fits')
@@ -290,6 +291,54 @@ class TestSpectralCube(object):
         #assert_allclose(c2[1,1,:].value, expected[1,1,:])
         #assert_allclose(c2[1,:,1].value, expected[1,:,1])
         assert_allclose(c2[:,1,1].value, expected[:,1,1])
+
+    @pytest.mark.parametrize(('name', 'trans'), translist_vrsc)
+    def test_getitem_vrsc(self, name, trans):
+        c, d = cube_and_raw(name + '.fits')
+
+        expected = np.squeeze(d.transpose(trans))
+
+        # No pv slices for VRSC.
+
+        assert_allclose(c[0,:,:].value, expected[0,:,:])
+
+        # Not implemented:
+        #assert_allclose(c[0,0,:].value, expected[0,0,:])
+        #assert_allclose(c[0,:,0].value, expected[0,:,0])
+        assert_allclose(c[:,0,0].value, expected[:,0,0])
+
+        assert_allclose(c[1,:,:].value, expected[1,:,:])
+
+        # Not implemented:
+        #assert_allclose(c[1,1,:].value, expected[1,1,:])
+        #assert_allclose(c[1,:,1].value, expected[1,:,1])
+        assert_allclose(c[:,1,1].value, expected[:,1,1])
+
+        c2 = c.with_spectral_unit(u.km/u.s, velocity_convention='radio')
+
+        assert_allclose(c2[0,:,:].value, expected[0,:,:])
+
+        # Not implemented:
+        #assert_allclose(c2[0,0,:].value, expected[0,0,:])
+        #assert_allclose(c2[0,:,0].value, expected[0,:,0])
+        assert_allclose(c2[:,0,0].value, expected[:,0,0])
+
+        assert_allclose(c2[1,:,:].value, expected[1,:,:])
+
+        # Not implemented:
+        #assert_allclose(c2[1,1,:].value, expected[1,1,:])
+        #assert_allclose(c2[1,:,1].value, expected[1,:,1])
+        assert_allclose(c2[:,1,1].value, expected[:,1,1])
+
+        # @pytest.mark.xfail(raises=AttributeError)
+        @pytest.mark.parametrize(('name', 'trans'), translist_vrsc)
+        def test_getitem_vrsc(self, name, trans):
+            c, d = cube_and_raw(name + '.fits')
+
+            expected = np.squeeze(d.transpose(trans))
+
+            assert_allclose(c[:,:,0].value, expected[:,:,0])
+
 
 class TestArithmetic(object):
 
