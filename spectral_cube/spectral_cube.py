@@ -2853,6 +2853,16 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
             # Slice objects know how to parse Beam objects stored in the
             # metadata
+            # A 2D slice with a VRSC should not be allowed along a
+            # position-spectral axis
+            if not isinstance(self.beams[specslice], Beam):
+                raise AttributeError("2D slices along a spectral axis are not "
+                                     "allowed for "
+                                     "VaryingResolutionSpectralCubes. Convolve"
+                                     " to a common resolution with "
+                                     "`convolve_to` before attempting "
+                                     "position-spectral slicing.")
+
             meta['beam'] = self.beams[specslice]
             return Slice(value=self.filled_data[view],
                          wcs=newwcs,
