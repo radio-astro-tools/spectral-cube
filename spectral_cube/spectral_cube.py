@@ -189,19 +189,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return cube
 
-    def attach_beam(self, beam=None):
-
-        if beam is None:
-            beam = cube_utils.try_load_beam(self.header)
-        else:
-            if not isinstance(beam, Beam):
-                raise TypeError("beam must be a radio_beam.Beam object.")
-
-        if beam is not None:
-            self.beam = beam
-            self._meta['beam'] = beam
-            self._header.update(beam.to_header_keywords())
-
     @property
     def unit(self):
         """ The flux unit """
@@ -2292,7 +2279,17 @@ class SpectralCube(BaseSpectralCube):
                                            **kwargs)
 
         # Beam loading must happen *after* WCS is read
-        self.attach_beam(beam=beam)
+
+        if beam is None:
+            beam = cube_utils.try_load_beam(self.header)
+        else:
+            if not isinstance(beam, Beam):
+                raise TypeError("beam must be a radio_beam.Beam object.")
+
+        if beam is not None:
+            self.beam = beam
+            self._meta['beam'] = beam
+            self._header.update(beam.to_header_keywords())
 
         if 'beam' in self._meta:
             self.pixels_per_beam = (self.beam.sr /
@@ -2307,6 +2304,30 @@ class SpectralCube(BaseSpectralCube):
         return newcube
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
+
+    def with_beam(self, beam):
+        '''
+        Attach a beam object to the `~SpectralCube`.
+
+        Parameters
+        ----------
+        beam : `~radio_beam.Beam`
+            `Beam` object defining the resolution element of the
+            `~SpectralCube`.
+        '''
+
+        if not isinstance(beam, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        meta = self._meta.copy()
+        meta['beam'] = beam
+
+        header = self._header.copy()
+        header.update(beam.to_header_keywords())
+
+        newcube = self._new_cube_with(meta=self.meta, beam=beam)
+
+        return newcube
 
     def spatial_smooth_median(self, ksize, **kwargs):
         """

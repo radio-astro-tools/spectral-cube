@@ -224,21 +224,24 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         else:
             self._header = Header()
 
-        if beam is not None:
-            self.attach_beam(beam=beam)
-        else:
+        if beam is None:
             if "beam" in self.meta:
-                self._beam = self.meta['beam']
+                beam = self.meta['beam']
             elif read_beam:
                 beam = cube_utils.try_load_beam(header)
-                if beam is not None:
-                    self.attach_beam(beam=beam)
-                else:
+                if beam is None:
                     warnings.warn("Cannot load beam from header.")
+
+        if beam is not None:
+            self.beam = beam
+            self.meta['beam'] = beam
+            # TODO: Enable header updating when non-celestial slices are
+            # properly handled in the WCS object.
+            # self._header.update(beam.to_header_keywords())
 
         return self
 
-    def attach_beam(self, beam):
+    def with_beam(self, beam):
         '''
         Attach a new beam object to the Projection.
 
@@ -248,16 +251,26 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
             A new beam object.
         '''
 
-        if not isinstance(beam, Beam):
-            raise TypeError("beam must be a radio_beam.Beam object.")
+        meta = self.meta.copy()
+        meta['beam'] = beam
 
-        self._beam = beam
-        self._meta['beam'] = beam
-        # self._header.update(beam.to_header_keywords())
+        self = Projection(self.value, unit=self.unit, wcs=self.wcs,
+                          meta=meta, header=self.header,
+                          beam=beam)
+
+        return self
 
     @property
     def beam(self):
         return self._beam
+
+    @beam.setter
+    def beam(self, obj):
+
+        if not isinstance(obj, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        self._beam = obj
 
     @staticmethod
     def from_hdu(hdu):
