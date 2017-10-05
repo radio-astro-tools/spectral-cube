@@ -282,6 +282,22 @@ def test_projection_with_beam():
     assert new_proj.meta['beam'] == exp_beam
 
 
+def test_projection_attach_beam():
+
+    exp_beam = Beam(1.0 * u.arcsec)
+    newbeam = Beam(2.0 * u.arcsec)
+
+    proj, hdu = load_projection("55.fits")
+
+    new_proj = proj.with_beam(newbeam)
+
+    assert proj.beam == exp_beam
+    assert proj.meta['beam'] == exp_beam
+
+    assert new_proj.beam == newbeam
+    assert new_proj.meta['beam'] == newbeam
+
+
 @pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs_2d, data_two_2d))
 def test_projection_from_hdu(LDO, data):

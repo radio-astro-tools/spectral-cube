@@ -1128,7 +1128,7 @@ def test_beam_custom():
     assert not hasattr(newcube, "beam")
 
     # Attach the beam
-    newcube.attach_beam(beam=beam)
+    newcube = newcube.with_beam(beam=beam)
 
     assert newcube.beam == cube.beam
 
@@ -1139,6 +1139,21 @@ def test_beam_custom():
 
     # Should be in meta too
     assert newcube.meta['beam'] == cube.beam
+
+    # Try changing the beam properties
+    newbeam = Beam(beam.major * 2)
+
+    newcube2 = newcube.with_beam(beam=newbeam)
+
+    assert newcube2.beam == newbeam
+
+    # Header should be updated
+    assert newcube2.header["BMAJ"] == newbeam.major.value
+    assert newcube2.header["BMIN"] == newbeam.minor.value
+    assert newcube2.header["BPA"] == newbeam.pa.value
+
+    # Should be in meta too
+    assert newcube2.meta['beam'] == newbeam
 
 
 def test_multibeam_slice():
