@@ -2740,7 +2740,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             'pa':5.0}``
         """
         # these types of cube are undefined without the radio_beam package
-        from radio_beam import Beam
 
         beam_table = kwargs.pop('beam_table', None)
         beams = kwargs.pop('beams', None)
@@ -3005,7 +3004,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         includemask : np.array
             A boolean array where ``True`` indicates the good beams
         """
-        from radio_beam import Beam
 
         includemask = np.ones(len(self.beams), dtype='bool')
 
