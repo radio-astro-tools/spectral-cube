@@ -2,3 +2,4 @@
 numpy
 Cython
 -e git+http://github.com/astropy/astropy.git#egg=astropy
+-e git+http://github.com/radio-astro-tools/radio-beam.git#egg=radio_beam
