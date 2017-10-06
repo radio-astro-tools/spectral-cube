@@ -1,5 +1,6 @@
 py:class spectral_cube.spectral_cube.BaseSpectralCube
 py:obj radio_beam.Beam
+py:obj Beam
 py:obj astroquery.splatalogue.Splatalogue
 py:class spectral_cube.base_class.BaseNDClass
 py:class spectral_cube.base_class.SpectralAxisMixinClass

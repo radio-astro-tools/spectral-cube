@@ -22,6 +22,33 @@ loading the entire cube into memory!::
    >>> kcube.unit  # doctest: +SKIP
    Unit("K")
 
+
+Adding a Beam
+-------------
+
+If your cube does not have a beam, a custom beam can be attached given::
+
+    >>> new_beam = Beam(1. * u.deg)  # doctest: +SKIP
+    >>> new_cube = cube.with_beam(new_beam)  # doctest: +SKIP
+    >>> new_cube.beam  # doctest: +SKIP
+    Beam: BMAJ=3600.0 arcsec BMIN=3600.0 arcsec BPA=0.0 deg
+
+This is handy for synthetic observations, which initially have a point-like beam::
+
+    >>> point_beam = Beam(0 * u.deg)  # doctest: +SKIP
+    >>> new_cube = synth_cube.with_beam(point_beam)  # doctest: +SKIP
+    Beam: BMAJ=0.0 arcsec BMIN=0.0 arcsec BPA=0.0 deg
+
+The cube can then be convolved to a new resolution::
+
+    >>> new_beam = Beam(60 * u.arcsec)  # doctest: +SKIP
+    >>> conv_synth_cube = synth_cube.convolve_to(new_beam)  # doctest: +SKIP
+    >>> conv_synth_cube.beam  # doctest: +SKIP
+    Beam: BMAJ=60.0 arcsec BMIN=60.0 arcsec BPA=0.0 deg
+
+Beam can also be attached in the same way for `~spectral_cube.Projection` and
+`~spectral_cube.Slice` objects.
+
 Multi-beam cubes
 ----------------
 

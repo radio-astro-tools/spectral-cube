@@ -1,6 +1,8 @@
 0.4.1 (unreleased)
 ------------------
-
+ - Add SpectralCube.with_beam and Projection.with_beam for attaching
+   beam objects. Raise error for position-spectral slices of VRSCs
+   (https://github.com/radio-astro-tools/spectral-cube/pull/433)
  - Raise a nicer error if no data is present in the default or
    selected HDU
    (https://github.com/radio-astro-tools/spectral-cube/pull/424)

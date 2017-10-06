@@ -10,6 +10,7 @@ from astropy import units as u
 from astropy import wcs
 #from astropy import log
 from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
+from radio_beam import Beam
 
 from .io.core import determine_format
 from . import spectral_axis
@@ -223,25 +224,53 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         else:
             self._header = Header()
 
-        if beam is not None:
-            self._beam = beam
-            self.meta['beam'] = beam
-        else:
+        if beam is None:
             if "beam" in self.meta:
-                self._beam = self.meta['beam']
+                beam = self.meta['beam']
             elif read_beam:
                 beam = cube_utils.try_load_beam(header)
-                if beam is not None:
-                    self._beam = beam
-                    self.meta['beam'] = beam
-                else:
+                if beam is None:
                     warnings.warn("Cannot load beam from header.")
+
+        if beam is not None:
+            self.beam = beam
+            self.meta['beam'] = beam
+            # TODO: Enable header updating when non-celestial slices are
+            # properly handled in the WCS object.
+            # self._header.update(beam.to_header_keywords())
+
+        return self
+
+    def with_beam(self, beam):
+        '''
+        Attach a new beam object to the Projection.
+
+        Parameters
+        ----------
+        beam : `~radio_beam.Beam`
+            A new beam object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beam'] = beam
+
+        self = Projection(self.value, unit=self.unit, wcs=self.wcs,
+                          meta=meta, header=self.header,
+                          beam=beam)
 
         return self
 
     @property
     def beam(self):
         return self._beam
+
+    @beam.setter
+    def beam(self, obj):
+
+        if not isinstance(obj, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        self._beam = obj
 
     @staticmethod
     def from_hdu(hdu):

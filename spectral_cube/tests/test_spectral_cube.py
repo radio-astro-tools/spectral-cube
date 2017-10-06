@@ -127,12 +127,13 @@ translist = [('advs', [0, 1, 2, 3]),
              ('vad', [2, 0, 1]),
              ('vda', [0, 2, 1]),
              ('adv', [0, 1, 2]),
-             ('vda_beams', [0, 2, 1])
              ]
+
+translist_vrsc = [('vda_beams', [0, 2, 1])]
 
 class TestSpectralCube(object):
 
-    @pytest.mark.parametrize(('name', 'trans'), translist)
+    @pytest.mark.parametrize(('name', 'trans'), translist + translist_vrsc)
     def test_consistent_transposition(self, name, trans):
         """data() should return velocity axis first, then world 1, then world 0"""
         c, d = cube_and_raw(name + '.fits')
@@ -290,6 +291,54 @@ class TestSpectralCube(object):
         #assert_allclose(c2[1,1,:].value, expected[1,1,:])
         #assert_allclose(c2[1,:,1].value, expected[1,:,1])
         assert_allclose(c2[:,1,1].value, expected[:,1,1])
+
+    @pytest.mark.parametrize(('name', 'trans'), translist_vrsc)
+    def test_getitem_vrsc(self, name, trans):
+        c, d = cube_and_raw(name + '.fits')
+
+        expected = np.squeeze(d.transpose(trans))
+
+        # No pv slices for VRSC.
+
+        assert_allclose(c[0,:,:].value, expected[0,:,:])
+
+        # Not implemented:
+        #assert_allclose(c[0,0,:].value, expected[0,0,:])
+        #assert_allclose(c[0,:,0].value, expected[0,:,0])
+        assert_allclose(c[:,0,0].value, expected[:,0,0])
+
+        assert_allclose(c[1,:,:].value, expected[1,:,:])
+
+        # Not implemented:
+        #assert_allclose(c[1,1,:].value, expected[1,1,:])
+        #assert_allclose(c[1,:,1].value, expected[1,:,1])
+        assert_allclose(c[:,1,1].value, expected[:,1,1])
+
+        c2 = c.with_spectral_unit(u.km/u.s, velocity_convention='radio')
+
+        assert_allclose(c2[0,:,:].value, expected[0,:,:])
+
+        # Not implemented:
+        #assert_allclose(c2[0,0,:].value, expected[0,0,:])
+        #assert_allclose(c2[0,:,0].value, expected[0,:,0])
+        assert_allclose(c2[:,0,0].value, expected[:,0,0])
+
+        assert_allclose(c2[1,:,:].value, expected[1,:,:])
+
+        # Not implemented:
+        #assert_allclose(c2[1,1,:].value, expected[1,1,:])
+        #assert_allclose(c2[1,:,1].value, expected[1,:,1])
+        assert_allclose(c2[:,1,1].value, expected[:,1,1])
+
+        # @pytest.mark.xfail(raises=AttributeError)
+        @pytest.mark.parametrize(('name', 'trans'), translist_vrsc)
+        def test_getitem_vrsc(self, name, trans):
+            c, d = cube_and_raw(name + '.fits')
+
+            expected = np.squeeze(d.transpose(trans))
+
+            assert_allclose(c[:,:,0].value, expected[:,:,0])
+
 
 class TestArithmetic(object):
 
@@ -1112,6 +1161,48 @@ def test_beam_attach_to_header():
 
     # Should be in meta too
     assert newcube.meta['beam'] == cube.beam
+
+
+def test_beam_custom():
+
+    cube, data = cube_and_raw('adv.fits')
+
+    header = cube._header.copy()
+    beam = Beam.from_fits_header(header)
+    del header["BMAJ"], header["BMIN"], header["BPA"]
+
+    newcube = SpectralCube(data=data, wcs=cube.wcs, header=header)
+
+    # newcube should now not have a beam
+    assert not hasattr(newcube, "beam")
+
+    # Attach the beam
+    newcube = newcube.with_beam(beam=beam)
+
+    assert newcube.beam == cube.beam
+
+    # Header should be updated
+    assert cube.header["BMAJ"] == newcube.header["BMAJ"]
+    assert cube.header["BMIN"] == newcube.header["BMIN"]
+    assert cube.header["BPA"] == newcube.header["BPA"]
+
+    # Should be in meta too
+    assert newcube.meta['beam'] == cube.beam
+
+    # Try changing the beam properties
+    newbeam = Beam(beam.major * 2)
+
+    newcube2 = newcube.with_beam(beam=newbeam)
+
+    assert newcube2.beam == newbeam
+
+    # Header should be updated
+    assert newcube2.header["BMAJ"] == newbeam.major.value
+    assert newcube2.header["BMIN"] == newbeam.minor.value
+    assert newcube2.header["BPA"] == newbeam.pa.value
+
+    # Should be in meta too
+    assert newcube2.meta['beam'] == newbeam
 
 
 def test_multibeam_slice():
