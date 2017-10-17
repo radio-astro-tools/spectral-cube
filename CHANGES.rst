@@ -1,4 +1,4 @@
-0.4.1 (unreleased)
+0.4.1 (2017-10-17)
 ------------------
  - Add SpectralCube.with_beam and Projection.with_beam for attaching
    beam objects. Raise error for position-spectral slices of VRSCs
