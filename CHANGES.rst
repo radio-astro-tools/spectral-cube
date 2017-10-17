@@ -1,3 +1,7 @@
+0.4.2 (unreleased)
+------------------
+ - none yet
+
 0.4.1 (2017-10-17)
 ------------------
  - Add SpectralCube.with_beam and Projection.with_beam for attaching
