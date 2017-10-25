@@ -2766,6 +2766,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                 for row in beam_data_table],
                          )
             goodbeams = beams.isfinite
+
+            # track which, if any, beams are masked for later use
+            self._beams_mask = goodbeams
+
             if not all(goodbeams):
                 warnings.warn("There were {0} non-finite beams; layers with "
                               "non-finite beams will be masked out.".format(
@@ -2925,13 +2929,18 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         return slab
 
-    def _new_cube_with(self, **kwargs):
+    def _new_cube_with(self, beams_mask=None, **kwargs):
         beams = kwargs.pop('beams', self.beams)
         beam_threshold = kwargs.pop('beam_threshold', self.beam_threshold)
+
         VRSC = VaryingResolutionSpectralCube
         newcube = super(VRSC, self)._new_cube_with(beams=beams,
                                                    beam_threshold=beam_threshold,
                                                    **kwargs)
+        if beams_mask is not None:
+            # otherwise, the __init__ above should reset it to be isfinite(beams)
+            newcube._beams_mask = beams_mask
+
         return newcube
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
@@ -3044,17 +3053,19 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             The cube with bad beams masked out
         """
 
-        includemask = self.identify_bad_beams(threshold=threshold,
-                                              reference_beam=reference_beam,
-                                              criteria=criteria,
-                                              mid_value=mid_value)
+        goodbeams = self.identify_bad_beams(threshold=threshold,
+                                            reference_beam=reference_beam,
+                                            criteria=criteria,
+                                            mid_value=mid_value)
 
-        includemask = BooleanArrayMask(includemask[:,None,None],
+        includemask = BooleanArrayMask(goodbeams[:,None,None],
                                        self._wcs,
                                        shape=self._data.shape)
 
         return self._new_cube_with(mask=self.mask & includemask,
-                                   beam_threshold=threshold)
+                                   beam_threshold=threshold,
+                                   beams_mask=self._beams_mask & ~goodbeams,
+                                  )
 
 
     def average_beams(self, threshold, mask='compute', warn=False):
@@ -3213,9 +3224,13 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
-        for bm in self.beams:
-            # Point response when beams are equal, don't convolve.
-            if beam == bm:
+        for bm,valid in zip(self.beams, self._beams_mask):
+            if not valid:
+                # just skip masked-out beams
+                convolution_kernels.append(None)
+                continue
+            elif beam == bm:
+                # Point response when beams are equal, don't convolve.
                 convolution_kernels.append(None)
                 continue
             try:
