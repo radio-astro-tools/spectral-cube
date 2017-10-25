@@ -1466,6 +1466,9 @@ def test_varyres_moment_logic_issue364():
 def test_mask_bad_beams():
     cube, data = cube_and_raw('vda_beams.fits')
 
+    # make sure all of the beams are initially good (finite)
+    assert np.all(cube._goodbeams_mask)
+
     # middle two beams have same area
     masked_cube = cube.mask_out_bad_beams(0.01,
                                           reference_beam=Beam(0.3*u.arcsec,
@@ -1473,6 +1476,7 @@ def test_mask_bad_beams():
                                                               60*u.deg))
 
     assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])
+    assert np.all(cube._goodbeams_mask == [False,False,True,False])
 
     mean = masked_cube.mean(axis=0)
     assert np.all(mean == cube[2,:,:])
@@ -1482,6 +1486,7 @@ def test_mask_bad_beams():
 
     mean2 = masked_cube2.mean(axis=0)
     assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
+    assert np.all(cube._goodbeams_mask == [False,True,True,False])
 
 def test_mad_std():
     cube, data = cube_and_raw('adv.fits')

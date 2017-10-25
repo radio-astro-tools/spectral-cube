@@ -2768,7 +2768,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             goodbeams = beams.isfinite
 
             # track which, if any, beams are masked for later use
-            self._beams_mask = goodbeams
+            self._goodbeams_mask = goodbeams
 
             if not all(goodbeams):
                 warnings.warn("There were {0} non-finite beams; layers with "
@@ -2929,7 +2929,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         return slab
 
-    def _new_cube_with(self, beams_mask=None, **kwargs):
+    def _new_cube_with(self, goodbeams_mask=None, **kwargs):
         beams = kwargs.pop('beams', self.beams)
         beam_threshold = kwargs.pop('beam_threshold', self.beam_threshold)
 
@@ -2937,9 +2937,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         newcube = super(VRSC, self)._new_cube_with(beams=beams,
                                                    beam_threshold=beam_threshold,
                                                    **kwargs)
-        if beams_mask is not None:
+        if goodbeams_mask is not None:
             # otherwise, the __init__ above should reset it to be isfinite(beams)
-            newcube._beams_mask = beams_mask
+            newcube._goodbeams_mask = goodbeams_mask
 
         return newcube
 
@@ -3064,7 +3064,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         return self._new_cube_with(mask=self.mask & includemask,
                                    beam_threshold=threshold,
-                                   beams_mask=self._beams_mask & ~goodbeams,
+                                   goodbeams_mask=self._goodbeams_mask & ~goodbeams,
                                   )
 
 
@@ -3224,7 +3224,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
-        for bm,valid in zip(self.beams, self._beams_mask):
+        for bm,valid in zip(self.beams, self._goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
                 convolution_kernels.append(None)
