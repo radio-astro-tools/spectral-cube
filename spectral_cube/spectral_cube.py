@@ -3090,7 +3090,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         return self._new_cube_with(mask=self.mask & includemask,
                                    beam_threshold=threshold,
-                                   goodbeams_mask=self._goodbeams_mask & ~goodbeams,
+                                   goodbeams_mask=self._goodbeams_mask & goodbeams,
                                   )
 
 
