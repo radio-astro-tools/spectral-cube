@@ -3229,6 +3229,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         """
         Convolve each channel in the cube to a specified beam
 
+        Note that if there is any misaligment between the cube's spatial pixel
+        axes and the WCS's spatial axes *and* the beams are not round, the
+        convolution kernels used here may be incorrect.  Be wary in such cases!
+
         Parameters
         ----------
         beam : `radio_beam.Beam`
@@ -3246,6 +3250,15 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         cube : `SpectralCube`
             A SpectralCube with a single ``beam``
         """
+
+        if ((self.wcs.celestial.wcs.get_pc()[0,1] != 0 or
+             self.wcs.celestial.wcs.get_pc()[1,0] != 0)):
+            warnings.warn("The beams will produce convolution kernels "
+                          "that are not aware of any misaligment "
+                          "between pixel and world coordinates, "
+                          "and there are off-diagonal elements of the "
+                          "WCS spatial transformation matrix.  "
+                          "Unexpected results are likely.")
 
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
