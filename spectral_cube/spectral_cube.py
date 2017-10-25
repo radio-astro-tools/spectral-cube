@@ -24,7 +24,7 @@ from astropy import stats
 
 import numpy as np
 
-from radio_beam import Beam
+from radio_beam import Beam, Beams
 
 from . import cube_utils
 from . import wcs_utils
@@ -2758,14 +2758,14 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         if beam_table is not None:
             # CASA beam tables are in arcsec, and that's what we support
-            beams = [Beam(major=u.Quantity(row['BMAJ'], u.arcsec),
-                          minor=u.Quantity(row['BMIN'], u.arcsec),
-                          pa=u.Quantity(row['BPA'], u.deg),
-                          meta={key: row[key] for key in beam_table.names
-                                if key not in ('BMAJ','BPA', 'BMIN')},
+            beams = Beams(major=u.Quantity(beam_data_table['BMAJ'], u.arcsec),
+                          minor=u.Quantity(beam_data_table['BMIN'], u.arcsec),
+                          pa=u.Quantity(beam_data_table['BPA'], u.deg),
+                          meta=[{key: row[key] for key in beam_table.names
+                                 if key not in ('BMAJ','BPA', 'BMIN')}
+                                for row in beam_data_table],
                          )
-                     for row in beam_data_table]
-            goodbeams = np.array([bm.isfinite for bm in beams], dtype='bool')
+            goodbeams = beams.isfinite
             if not all(goodbeams):
                 warnings.warn("There were {0} non-finite beams; layers with "
                               "non-finite beams will be masked out.".format(
@@ -2947,9 +2947,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         else:
             mask = np.ones(len(self.beams), dtype='bool')
 
-        qtys = dict(sr=u.Quantity(self.beams, u.sr),
-                    major=u.Quantity([bm.major for bm in self.beams], u.deg),
-                    minor=u.Quantity([bm.minor for bm in self.beams], u.deg),
+        qtys = dict(sr=self.beams.sr,
+                    major=self.beams.major.to(u.deg),
+                    minor=self.beams.minor.to(u.deg),
                     # position angles are not really comparable
                     #pa=u.Quantity([bm.pa for bm in self.beams], u.deg),
                    )
@@ -3004,7 +3004,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             A boolean array where ``True`` indicates the good beams
         """
 
-        includemask = np.ones(len(self.beams), dtype='bool')
+        includemask = np.ones(self.beams.size, dtype='bool')
 
         all_criteria = ['sr','major','minor','pa']
         if not set.issubset(set(criteria), set(all_criteria)):
@@ -3086,8 +3086,14 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         else:
             beam_mask = mask
 
-        new_beam = cube_utils.average_beams(self.beams, includemask=beam_mask)
-        assert not np.isnan(new_beam)
+        new_beam = self.beams.average_beam(includemask=beam_mask)
+
+        if np.isnan(new_beam):
+            raise ValueError("Beam was not finite after averaging.  "
+                             "This either indicates that there was a problem "
+                             "with the include mask, one of the beam's values, "
+                             "or a bug.")
+
         self._check_beam_areas(threshold, mean_beam=new_beam, mask=beam_mask)
         if warn:
             warnings.warn("Arithmetic beam averaging is being performed.  This is "
