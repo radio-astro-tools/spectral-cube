@@ -2712,8 +2712,8 @@ class SpectralCube(BaseSpectralCube):
 
         Parameters
         ----------
-        badchannels : array
-            A boolean array declaring which channels should be kept.
+        goodchannels : array
+            A 1D boolean array declaring which channels should be kept.
 
         Returns
         -------
@@ -3229,9 +3229,11 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         """
         Convolve each channel in the cube to a specified beam
 
-        Note that if there is any misaligment between the cube's spatial pixel
-        axes and the WCS's spatial axes *and* the beams are not round, the
-        convolution kernels used here may be incorrect.  Be wary in such cases!
+        .. warning::
+            Note that if there is any misaligment between the cube's spatial
+            pixel axes and the WCS's spatial axes *and* the beams are not
+            round, the convolution kernels used here may be incorrect.  Be wary
+            in such cases!
 
         Parameters
         ----------
@@ -3372,8 +3374,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         Parameters
         ----------
-        badchannels : array
-            A boolean array declaring which channels should be kept.
+        goodchannels : array
+            A 1D boolean array declaring which channels should be kept.
 
         Returns
         -------
