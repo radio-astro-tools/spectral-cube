@@ -2703,6 +2703,32 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
+    def mask_channels(self, goodchannels):
+        """
+        Helper function to mask out channels.  This function is equivalent to
+        adding a mask with ``cube[view]`` where ``view`` is broadcastable to
+        the cube shape, but it accepts 1D arrays that are not normally
+        broadcastable.
+
+        Parameters
+        ----------
+        badchannels : array
+            A boolean array declaring which channels should be kept.
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A cube with the specified channels masked
+        """
+        goodchannels = np.asarray(goodchannels, dtype='bool')
+
+        if goodchannels.ndim != 1:
+            raise ValueError("goodchannels mask must be one-dimensional")
+        if goodchannels.size != self.shape[0]:
+            raise ValueError("goodchannels must have a length equal to the "
+                             "cube's spectral dimension.")
+        return self.with_mask(goodchannels[:,None,None])
+
 
 class VaryingResolutionSpectralCube(BaseSpectralCube):
     """
@@ -3321,3 +3347,36 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         else:
             return self._new_cube_with(data=self._data*factor,
                                        unit=unit)
+
+    def mask_channels(self, goodchannels):
+        """
+        Helper function to mask out channels.  This function is equivalent to
+        adding a mask with ``cube[view]`` where ``view`` is broadcastable to
+        the cube shape, but it accepts 1D arrays that are not normally
+        broadcastable.  Additionally, for `VaryingResolutionSpectralCube`s,
+        the beams in the bad channels will not be checked when averaging,
+        convolving, and doing other operations that are multibeam-aware.
+
+        Parameters
+        ----------
+        badchannels : array
+            A boolean array declaring which channels should be kept.
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A cube with the specified channels masked
+        """
+        goodchannels = np.asarray(goodchannels, dtype='bool')
+
+        if goodchannels.ndim != 1:
+            raise ValueError("goodchannels mask must be one-dimensional")
+        if goodchannels.size != self.shape[0]:
+            raise ValueError("goodchannels must have a length equal to the "
+                             "cube's spectral dimension.")
+
+        mask = BooleanArrayMask(goodchannels[:,None,None], self._wcs,
+                                shape=self._data.shape)
+
+        return self._new_cube_with(mask=mask,
+                                   goodbeams_mask=goodchannels & self._goodbeams_mask)

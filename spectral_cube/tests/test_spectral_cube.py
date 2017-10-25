@@ -1488,6 +1488,29 @@ def test_mask_bad_beams():
     assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
     assert np.all(cube._goodbeams_mask == [False,True,True,False])
 
+def test_convolve_to_with_bad_beams():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    convolved = cube.convolve_to(Beam(0.5*u.arcsec))
+
+
+    with pytest.raises(ValueError) as exc:
+        # should not work: biggest beam is 0.4"
+        convolved = cube.convolve_to(Beam(0.35*u.arcsec))
+
+    assert exc.value.args[0] == "Beam could not be deconvolved"
+
+
+    # middle two beams are smaller than 0.4
+    masked_cube = cube.mask_channels([False, True, True, False])
+
+    # should work: biggest beam is 0.3 arcsec (major)
+    convolved = masked_cube.convolve_to(Beam(0.35*u.arcsec))
+
+    # this is a copout test; should really check for correctness...
+    assert np.all(np.isfinite(convolved))
+
+
 def test_mad_std():
     cube, data = cube_and_raw('adv.fits')
 
