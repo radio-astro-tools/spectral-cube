@@ -118,6 +118,15 @@ class BaseTest(object):
         self.mask = mask
         self.d = d
 
+class BaseTestMultiBeams(object):
+
+    def setup_method(self, method):
+        c, d = cube_and_raw('adv_beams.fits')
+        mask = BooleanArrayMask(d > 0.5, c._wcs)
+        c._mask = mask
+        self.c = c
+        self.mask = mask
+        self.d = d
 
 translist = [('advs', [0, 1, 2, 3]),
              ('dvsa', [2, 3, 0, 1]),
@@ -612,6 +621,10 @@ class TestSlab(BaseTest):
         crpix = list(self.c._wcs.wcs.crpix)
         self.c.spectral_slab(-318600 * ms, -320000 * ms)
         assert list(self.c._wcs.wcs.crpix) == crpix
+
+class TestSlabMultiBeams(BaseTestMultiBeams, TestSlab):
+    """ same tests with multibeams """
+    pass
 
 
 class TestRepr(BaseTest):
@@ -1466,6 +1479,9 @@ def test_varyres_moment_logic_issue364():
 def test_mask_bad_beams():
     cube, data = cube_and_raw('vda_beams.fits')
 
+    # make sure all of the beams are initially good (finite)
+    assert np.all(cube._goodbeams_mask)
+
     # middle two beams have same area
     masked_cube = cube.mask_out_bad_beams(0.01,
                                           reference_beam=Beam(0.3*u.arcsec,
@@ -1473,6 +1489,7 @@ def test_mask_bad_beams():
                                                               60*u.deg))
 
     assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])
+    assert np.all(masked_cube._goodbeams_mask == [False,False,True,False])
 
     mean = masked_cube.mean(axis=0)
     assert np.all(mean == cube[2,:,:])
@@ -1482,6 +1499,36 @@ def test_mask_bad_beams():
 
     mean2 = masked_cube2.mean(axis=0)
     assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
+    assert np.all(masked_cube2._goodbeams_mask == [False,True,True,False])
+
+def test_convolve_to_with_bad_beams():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    convolved = cube.convolve_to(Beam(0.5*u.arcsec))
+
+
+    with pytest.raises(ValueError) as exc:
+        # should not work: biggest beam is 0.4"
+        convolved = cube.convolve_to(Beam(0.35*u.arcsec))
+
+    assert exc.value.args[0] == "Beam could not be deconvolved"
+
+
+    # middle two beams are smaller than 0.4
+    masked_cube = cube.mask_channels([False, True, True, False])
+
+    # should work: biggest beam is 0.3 arcsec (major)
+    convolved = masked_cube.convolve_to(Beam(0.35*u.arcsec))
+
+    # this is a copout test; should really check for correctness...
+    assert np.all(np.isfinite(convolved.filled_data[1:3]))
+
+def test_channelmask_singlebeam():
+    cube, data = cube_and_raw('adv.fits')
+
+    masked_cube = cube.mask_channels([False, True, True, False])
+
+    assert np.all(masked_cube.mask.include()[:,0,0] == [False, True, True, False])
 
 def test_mad_std():
     cube, data = cube_and_raw('adv.fits')

@@ -361,31 +361,6 @@ def beam_props(beams, includemask=None):
     return major, minor, pa
 
 
-def average_beams(beams, includemask=None, raise_for_nan=True):
-    """
-    Average the beam major, minor, and PA attributes.
-
-    This is usually a dumb thing to do!
-    """
-
-    from radio_beam import Beam
-    from astropy.stats import circmean
-
-    major, minor, pa = beam_props(beams, includemask)
-
-    if raise_for_nan and (np.any(np.isnan(major)) or np.any(np.isnan(minor)) or
-                          np.any(np.isnan(pa))):
-        raise ValueError("Some beam parameters are NaN.  Try masking out the bad beams.")
-
-    new_beam = Beam(major=major.mean(), minor=minor.mean(),
-                    pa=circmean(pa, weights=major/minor))
-
-    if raise_for_nan and np.any(np.isnan(new_beam)):
-        raise ValueError("NaNs after averaging.  This is a bug.")
-
-    return new_beam
-
-
 def largest_beam(beams, includemask=None):
     """
     Returns the largest beam (by area) in a list of beams.

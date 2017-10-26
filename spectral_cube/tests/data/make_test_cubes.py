@@ -78,6 +78,24 @@ if __name__ == "__main__":
     d = np.random.random((4, 3, 2))
     fits.writeto('adv.fits', d, h, overwrite=True)
 
+    h['BUNIT'] = 'JY/BEAM'
+    fits.writeto('adv_JYBEAM_upper.fits', d, h, overwrite=True)
+    h['BUNIT'] = 'Jy/beam'
+    fits.writeto('adv_Jybeam_lower.fits', d, h, overwrite=True)
+    h['BUNIT'] = ' Jy / beam '
+    fits.writeto('adv_Jybeam_whitespace.fits', d, h, overwrite=True)
+
+    bmaj, bmin, bpa = h['BMAJ'], h['BMIN'], h['BPA']
+    del h['BMAJ'], h['BMIN'], h['BPA']
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto('adv_beams.fits', overwrite=True)
+
+
+    h['BUNIT'] = 'K'
+    h['BMAJ'] = bmaj
+    h['BMIN'] = bmin
+    h['BPA'] = bpa
     d, h = transpose(d, h, [2, 0, 1])
     fits.writeto('vad.fits', d, h, overwrite=True)
 

@@ -73,7 +73,9 @@ def test_beams_convolution_equal():
     # Fake the beam in the first channel. Then ensure that the first channel
     # has NOT been convolved.
     target_beam = Beam(1.0 * u.arcsec, 1.0 * u.arcsec, 0.0 * u.deg)
-    cube.beams[0] = target_beam
+    cube.beams.major[0] = target_beam.major
+    cube.beams.minor[0] = target_beam.minor
+    cube.beams.pa[0] = target_beam.pa
 
     conv_cube = cube.convolve_to(target_beam)
 

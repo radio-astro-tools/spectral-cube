@@ -24,7 +24,7 @@ from astropy import stats
 
 import numpy as np
 
-from radio_beam import Beam
+from radio_beam import Beam, Beams
 
 from . import cube_utils
 from . import wcs_utils
@@ -2703,6 +2703,32 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
+    def mask_channels(self, goodchannels):
+        """
+        Helper function to mask out channels.  This function is equivalent to
+        adding a mask with ``cube[view]`` where ``view`` is broadcastable to
+        the cube shape, but it accepts 1D arrays that are not normally
+        broadcastable.
+
+        Parameters
+        ----------
+        goodchannels : array
+            A 1D boolean array declaring which channels should be kept.
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A cube with the specified channels masked
+        """
+        goodchannels = np.asarray(goodchannels, dtype='bool')
+
+        if goodchannels.ndim != 1:
+            raise ValueError("goodchannels mask must be one-dimensional")
+        if goodchannels.size != self.shape[0]:
+            raise ValueError("goodchannels must have a length equal to the "
+                             "cube's spectral dimension.")
+        return self.with_mask(goodchannels[:,None,None])
+
 
 class VaryingResolutionSpectralCube(BaseSpectralCube):
     """
@@ -2758,14 +2784,18 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         if beam_table is not None:
             # CASA beam tables are in arcsec, and that's what we support
-            beams = [Beam(major=u.Quantity(row['BMAJ'], u.arcsec),
-                          minor=u.Quantity(row['BMIN'], u.arcsec),
-                          pa=u.Quantity(row['BPA'], u.deg),
-                          meta={key: row[key] for key in beam_table.names
-                                if key not in ('BMAJ','BPA', 'BMIN')},
+            beams = Beams(major=u.Quantity(beam_data_table['BMAJ'], u.arcsec),
+                          minor=u.Quantity(beam_data_table['BMIN'], u.arcsec),
+                          pa=u.Quantity(beam_data_table['BPA'], u.deg),
+                          meta=[{key: row[key] for key in beam_table.names
+                                 if key not in ('BMAJ','BPA', 'BMIN')}
+                                for row in beam_data_table],
                          )
-                     for row in beam_data_table]
-            goodbeams = np.array([bm.isfinite for bm in beams], dtype='bool')
+            goodbeams = beams.isfinite
+
+            # track which, if any, beams are masked for later use
+            self._goodbeams_mask = goodbeams
+
             if not all(goodbeams):
                 warnings.warn("There were {0} non-finite beams; layers with "
                               "non-finite beams will be masked out.".format(
@@ -2925,13 +2955,18 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         return slab
 
-    def _new_cube_with(self, **kwargs):
+    def _new_cube_with(self, goodbeams_mask=None, **kwargs):
         beams = kwargs.pop('beams', self.beams)
         beam_threshold = kwargs.pop('beam_threshold', self.beam_threshold)
+
         VRSC = VaryingResolutionSpectralCube
         newcube = super(VRSC, self)._new_cube_with(beams=beams,
                                                    beam_threshold=beam_threshold,
                                                    **kwargs)
+        if goodbeams_mask is not None:
+            # otherwise, the __init__ above should reset it to be isfinite(beams)
+            newcube._goodbeams_mask = goodbeams_mask
+
         return newcube
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
@@ -2947,9 +2982,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         else:
             mask = np.ones(len(self.beams), dtype='bool')
 
-        qtys = dict(sr=u.Quantity(self.beams, u.sr),
-                    major=u.Quantity([bm.major for bm in self.beams], u.deg),
-                    minor=u.Quantity([bm.minor for bm in self.beams], u.deg),
+        qtys = dict(sr=self.beams.sr,
+                    major=self.beams.major.to(u.deg),
+                    minor=self.beams.minor.to(u.deg),
                     # position angles are not really comparable
                     #pa=u.Quantity([bm.pa for bm in self.beams], u.deg),
                    )
@@ -2957,10 +2992,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         errormessage = ""
 
         for (qtyname, qty) in (qtys.items()):
-            minv = qty[mask].min().value
-            maxv = qty[mask].max().value
-            mn = getattr(mean_beam, qtyname).value
-            maxdiff = np.max(np.abs((maxv-mn, minv-mn)))/mn
+            minv = qty[mask].min()
+            maxv = qty[mask].max()
+            mn = getattr(mean_beam, qtyname)
+            maxdiff = (np.max(np.abs(u.Quantity((maxv-mn, minv-mn))))/mn).decompose()
 
             if isinstance(threshold, dict):
                 th = threshold[qtyname]
@@ -3004,7 +3039,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             A boolean array where ``True`` indicates the good beams
         """
 
-        includemask = np.ones(len(self.beams), dtype='bool')
+        includemask = np.ones(self.beams.size, dtype='bool')
 
         all_criteria = ['sr','major','minor','pa']
         if not set.issubset(set(criteria), set(all_criteria)):
@@ -3044,17 +3079,19 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             The cube with bad beams masked out
         """
 
-        includemask = self.identify_bad_beams(threshold=threshold,
-                                              reference_beam=reference_beam,
-                                              criteria=criteria,
-                                              mid_value=mid_value)
+        goodbeams = self.identify_bad_beams(threshold=threshold,
+                                            reference_beam=reference_beam,
+                                            criteria=criteria,
+                                            mid_value=mid_value)
 
-        includemask = BooleanArrayMask(includemask[:,None,None],
+        includemask = BooleanArrayMask(goodbeams[:,None,None],
                                        self._wcs,
                                        shape=self._data.shape)
 
         return self._new_cube_with(mask=self.mask & includemask,
-                                   beam_threshold=threshold)
+                                   beam_threshold=threshold,
+                                   goodbeams_mask=self._goodbeams_mask & goodbeams,
+                                  )
 
 
     def average_beams(self, threshold, mask='compute', warn=False):
@@ -3082,12 +3119,23 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             A new radio beam object that is the average of the unmasked beams
         """
         if mask == 'compute':
-            beam_mask = np.any(self.mask.include(), axis=(1,2))
+            beam_mask = np.any(self.mask.include() &
+                               self._goodbeams_mask[:,None,None],
+                               axis=(1,2))
         else:
-            beam_mask = mask
+            if mask.ndim > 1:
+                beam_mask = mask & self._goodbeams_mask[:,None,None]
+            else:
+                beam_mask = mask & self._goodbeams_mask
 
-        new_beam = cube_utils.average_beams(self.beams, includemask=beam_mask)
-        assert not np.isnan(new_beam)
+        new_beam = self.beams.average_beam(includemask=beam_mask)
+
+        if np.isnan(new_beam):
+            raise ValueError("Beam was not finite after averaging.  "
+                             "This either indicates that there was a problem "
+                             "with the include mask, one of the beam's values, "
+                             "or a bug.")
+
         self._check_beam_areas(threshold, mean_beam=new_beam, mask=beam_mask)
         if warn:
             warnings.warn("Arithmetic beam averaging is being performed.  This is "
@@ -3186,6 +3234,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         """
         Convolve each channel in the cube to a specified beam
 
+        .. warning::
+            Note that if there is any misaligment between the cube's spatial
+            pixel axes and the WCS's spatial axes *and* the beams are not
+            round, the convolution kernels used here may be incorrect.  Be wary
+            in such cases!
+
         Parameters
         ----------
         beam : `radio_beam.Beam`
@@ -3204,12 +3258,25 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             A SpectralCube with a single ``beam``
         """
 
+        if ((self.wcs.celestial.wcs.get_pc()[0,1] != 0 or
+             self.wcs.celestial.wcs.get_pc()[1,0] != 0)):
+            warnings.warn("The beams will produce convolution kernels "
+                          "that are not aware of any misaligment "
+                          "between pixel and world coordinates, "
+                          "and there are off-diagonal elements of the "
+                          "WCS spatial transformation matrix.  "
+                          "Unexpected results are likely.")
+
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
-        for bm in self.beams:
-            # Point response when beams are equal, don't convolve.
-            if beam == bm:
+        for bm,valid in zip(self.beams, self._goodbeams_mask):
+            if not valid:
+                # just skip masked-out beams
+                convolution_kernels.append(None)
+                continue
+            elif beam == bm:
+                # Point response when beams are equal, don't convolve.
                 convolution_kernels.append(None)
                 continue
             try:
@@ -3300,3 +3367,36 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         else:
             return self._new_cube_with(data=self._data*factor,
                                        unit=unit)
+
+    def mask_channels(self, goodchannels):
+        """
+        Helper function to mask out channels.  This function is equivalent to
+        adding a mask with ``cube[view]`` where ``view`` is broadcastable to
+        the cube shape, but it accepts 1D arrays that are not normally
+        broadcastable.  Additionally, for `VaryingResolutionSpectralCube` s,
+        the beams in the bad channels will not be checked when averaging,
+        convolving, and doing other operations that are multibeam-aware.
+
+        Parameters
+        ----------
+        goodchannels : array
+            A 1D boolean array declaring which channels should be kept.
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A cube with the specified channels masked
+        """
+        goodchannels = np.asarray(goodchannels, dtype='bool')
+
+        if goodchannels.ndim != 1:
+            raise ValueError("goodchannels mask must be one-dimensional")
+        if goodchannels.size != self.shape[0]:
+            raise ValueError("goodchannels must have a length equal to the "
+                             "cube's spectral dimension.")
+
+        mask = BooleanArrayMask(goodchannels[:,None,None], self._wcs,
+                                shape=self._data.shape)
+
+        return self._new_cube_with(mask=mask,
+                                   goodbeams_mask=goodchannels & self._goodbeams_mask)
