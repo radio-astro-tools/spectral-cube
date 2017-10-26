@@ -2964,8 +2964,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                                                    beam_threshold=beam_threshold,
                                                    **kwargs)
         if goodbeams_mask is not None:
-            # otherwise, the __init__ above should reset it to be isfinite(beams)
             newcube._goodbeams_mask = goodbeams_mask
+        else:
+            newcube._goodbeams_mask = newcube.beams.isfinite
 
         return newcube
 

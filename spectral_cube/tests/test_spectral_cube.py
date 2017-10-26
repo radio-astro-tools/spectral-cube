@@ -1481,6 +1481,8 @@ def test_mask_bad_beams():
 
     # make sure all of the beams are initially good (finite)
     assert np.all(cube._goodbeams_mask)
+    # make sure cropping the cube maintains the mask
+    assert np.all(cube[:3]._goodbeams_mask)
 
     # middle two beams have same area
     masked_cube = cube.mask_out_bad_beams(0.01,

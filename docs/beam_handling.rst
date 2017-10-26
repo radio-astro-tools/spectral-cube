@@ -58,5 +58,14 @@ conversion with `~spectral_cube.spectral_cube.VaryingResolutionSpectralCube` s
 as with regular `~spectral_cube.spectral_cube.SpectralCube` s; ``spectral-cube``
 will use a different beam and frequency for each plane.
 
+You can identify channels with bad beams (i.e., beams that differ from a reference beam,
+which by default is the median beam) using
+`~spectral_cube.spectral_cube.VaryingResolutionSpectralCube.identify_bad_beams`
+(the returned value is a mask array where ``True`` means the channel is good),
+mask channels with undesirable beams using
+`~spectral_cube.spectral_cube.VaryingResolutionSpectralCube.mask_out_bad_beams`,
+and in general mask out individual channels using
+`~spectral_cube.spectral_cube.VaryingResolutionSpectralCube.mask_channels`.
+
 For other sorts of operations, discussion of how to deal with these cubes via
 smoothing to a common resolution is in the :doc:`smoothing` document.
