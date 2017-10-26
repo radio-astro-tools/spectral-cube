@@ -1510,6 +1510,12 @@ def test_convolve_to_with_bad_beams():
     # this is a copout test; should really check for correctness...
     assert np.all(np.isfinite(convolved.filled_data[1:3]))
 
+def test_channelmask_singlebeam():
+    cube, data = cube_and_raw('adv.fits')
+
+    masked_cube = cube.mask_channels([False, True, True, False])
+
+    assert np.all(masked_cube._goodbeams_mask == [False, True, True, False])
 
 def test_mad_std():
     cube, data = cube_and_raw('adv.fits')
