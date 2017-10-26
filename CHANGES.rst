@@ -1,6 +1,9 @@
 0.4.2 (unreleased)
 ------------------
- - none yet
+ - Bugfix and enhancement: handle multiple beams using radio_beam's
+   multiple-beams feature.  This allows `convolve_to` to work when some beams
+   are masked out.
+   (https://github.com/radio-astro-tools/spectral-cube/pull/437)
 
 0.4.1 (2017-10-17)
 ------------------
