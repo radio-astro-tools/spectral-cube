@@ -2992,10 +2992,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         errormessage = ""
 
         for (qtyname, qty) in (qtys.items()):
-            minv = qty[mask].min().value
-            maxv = qty[mask].max().value
-            mn = getattr(mean_beam, qtyname).value
-            maxdiff = np.max(np.abs((maxv-mn, minv-mn)))/mn
+            minv = qty[mask].min()
+            maxv = qty[mask].max()
+            mn = getattr(mean_beam, qtyname)
+            maxdiff = (np.max(np.abs(u.Quantity((maxv-mn, minv-mn))))/mn).decompose()
 
             if isinstance(threshold, dict):
                 th = threshold[qtyname]
@@ -3119,9 +3119,14 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             A new radio beam object that is the average of the unmasked beams
         """
         if mask == 'compute':
-            beam_mask = np.any(self.mask.include(), axis=(1,2))
+            beam_mask = np.any(self.mask.include() &
+                               self._goodbeams_mask[:,None,None],
+                               axis=(1,2))
         else:
-            beam_mask = mask
+            if mask.ndim > 1:
+                beam_mask = mask & self._goodbeams_mask[:,None,None]
+            else:
+                beam_mask = mask & self._goodbeams_mask
 
         new_beam = self.beams.average_beam(includemask=beam_mask)
 

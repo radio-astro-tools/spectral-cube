@@ -1476,7 +1476,7 @@ def test_mask_bad_beams():
                                                               60*u.deg))
 
     assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])
-    assert np.all(cube._goodbeams_mask == [False,False,True,False])
+    assert np.all(masked_cube._goodbeams_mask == [False,False,True,False])
 
     mean = masked_cube.mean(axis=0)
     assert np.all(mean == cube[2,:,:])
@@ -1486,7 +1486,7 @@ def test_mask_bad_beams():
 
     mean2 = masked_cube2.mean(axis=0)
     assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
-    assert np.all(cube._goodbeams_mask == [False,True,True,False])
+    assert np.all(masked_cube2._goodbeams_mask == [False,True,True,False])
 
 def test_convolve_to_with_bad_beams():
     cube, data = cube_and_raw('vda_beams.fits')
