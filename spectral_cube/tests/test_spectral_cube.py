@@ -118,6 +118,15 @@ class BaseTest(object):
         self.mask = mask
         self.d = d
 
+class BaseTestMultiBeams(object):
+
+    def setup_method(self, method):
+        c, d = cube_and_raw('adv_beams.fits')
+        mask = BooleanArrayMask(d > 0.5, c._wcs)
+        c._mask = mask
+        self.c = c
+        self.mask = mask
+        self.d = d
 
 translist = [('advs', [0, 1, 2, 3]),
              ('dvsa', [2, 3, 0, 1]),
@@ -612,6 +621,10 @@ class TestSlab(BaseTest):
         crpix = list(self.c._wcs.wcs.crpix)
         self.c.spectral_slab(-318600 * ms, -320000 * ms)
         assert list(self.c._wcs.wcs.crpix) == crpix
+
+class TestSlabMultiBeams(BaseTestMultiBeams, TestSlab):
+    """ same tests with multibeams """
+    pass
 
 
 class TestRepr(BaseTest):
@@ -1515,7 +1528,7 @@ def test_channelmask_singlebeam():
 
     masked_cube = cube.mask_channels([False, True, True, False])
 
-    assert np.all(masked_cube._goodbeams_mask == [False, True, True, False])
+    assert np.all(masked_cube.mask.include()[:,0,0] == [False, True, True, False])
 
 def test_mad_std():
     cube, data = cube_and_raw('adv.fits')
