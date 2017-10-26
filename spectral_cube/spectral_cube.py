@@ -3368,7 +3368,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         Helper function to mask out channels.  This function is equivalent to
         adding a mask with ``cube[view]`` where ``view`` is broadcastable to
         the cube shape, but it accepts 1D arrays that are not normally
-        broadcastable.  Additionally, for `VaryingResolutionSpectralCube`s,
+        broadcastable.  Additionally, for `VaryingResolutionSpectralCube` s,
         the beams in the bad channels will not be checked when averaging,
         convolving, and doing other operations that are multibeam-aware.
 

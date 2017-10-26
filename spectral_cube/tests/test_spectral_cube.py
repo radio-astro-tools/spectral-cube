@@ -1508,7 +1508,7 @@ def test_convolve_to_with_bad_beams():
     convolved = masked_cube.convolve_to(Beam(0.35*u.arcsec))
 
     # this is a copout test; should really check for correctness...
-    assert np.all(np.isfinite(convolved))
+    assert np.all(np.isfinite(convolved.filled_data[1:3]))
 
 
 def test_mad_std():
