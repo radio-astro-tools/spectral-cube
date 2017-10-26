@@ -15,6 +15,7 @@ import astropy.wcs
 from astropy import units as u
 from astropy.extern import six
 from astropy.extern.six.moves import range as xrange
+from astropy.extern.six.moves import zip
 from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
 from astropy.utils.console import ProgressBar
 from astropy import log
