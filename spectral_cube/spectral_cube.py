@@ -3292,11 +3292,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
 
         pb = ProgressBar(self.shape[0])
 
-        # "precondition" the data by loading it once here.... this should be a
-        # cached operation and therefore fast, in principle
-        # (this is to fix a segfaulty bug found on one specific machine)
-        self.filled_data[:]
-
         newdata = np.empty(self.shape)
         for ii,(img,kernel) in enumerate(zip(self.filled_data[:],
                                              convolution_kernels)):
