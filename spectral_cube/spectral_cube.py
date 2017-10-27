@@ -492,7 +492,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                            includemask=True)
         return counts
 
-    @aggregation_docstring
     def std(self, axis=None, how='cube', ddof=0):
         """
         Return the standard deviation of the cube, optionally over an axis.
@@ -508,7 +507,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         ddof : int
             Means Delta Degrees of Freedom.  The divisor used in calculations
             is ``N - ddof``, where ``N`` represents the number of elements.  By
-            default `ddof` is zero.
+            default ``ddof`` is zero.
         """
 
         projection = self._naxes_dropped(axis) in (1,2)
