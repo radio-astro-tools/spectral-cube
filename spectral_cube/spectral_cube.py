@@ -1628,9 +1628,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 raise u.UnitsError("The X and Y slices must be specified in "
                                    "degree-equivalent units.")
 
+        # list to track which entries had units
+        united = []
+
         for lim in limit_dict:
             limval = limit_dict[lim]
             if hasattr(limval, 'unit'):
+                united.append(lim)
                 dim = dims[lim[0]]
                 sl = [slice(0,1)]*2
                 sl.insert(dim, slice(None))
@@ -1638,18 +1642,33 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 val = np.argmin(np.abs(limval-spine))
                 if limval > spine.max() or limval < spine.min():
                     log.warning("The limit {0} is out of bounds."
-                             "  Using min/max instead.".format(lim))
-                if lim[1:] == 'hi':
-                    # End-inclusive indexing: need to add one for the high
-                    # slice
-                    limit_dict[lim] = val + 1
-                else:
-                    limit_dict[lim] = val
+                                "  Using min/max instead.".format(lim))
+                limit_dict[lim] = val
+
+        for xx in 'zyx':
+            hi,lo = limit_dict[xx+'hi'], limit_dict[xx+'lo']
+            if hi < lo:
+                # must have high > low
+                limit_dict[xx+'hi'], limit_dict[xx+'lo'] = lo, hi
+
+            if xx+'lo' in united:
+                # End-inclusive indexing: need to add one for the high slice
+                # Only do this for converted values, not for pixel values
+                # (i.e., if the xlo/ylo/zlo value had units)
+                limit_dict[xx+'hi'] += 1
+
+        for xx in 'zyx':
+            if limit_dict[xx+'hi'] == limit_dict[xx+'lo']:
+                # I think this should be unreachable now
+                raise ValueError("The slice in the {0} direction will remove "
+                                 "all elements.  If you want a single-channel "
+                                 "slice, you need a different approach."
+                                 .format(xx))
 
         slices = [slice(limit_dict[xx+'lo'], limit_dict[xx+'hi'])
-                  if (limit_dict[xx+'lo'] < limit_dict[xx+'hi'])
-                  else slice(limit_dict[xx+'hi'], limit_dict[xx+'lo'])
                   for xx in 'zyx']
+
+        log.debug('slices: {0}'.format(slices))
 
         return self[slices]
 
@@ -2904,6 +2923,11 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         newmask = self._mask[view] if self._mask is not None else None
 
         newwcs = wcs_utils.slice_wcs(self._wcs, view, shape=self.shape)
+        newwcs._naxis = list(self.shape)
+
+        # this is an assertion to ensure that the WCS produced is valid
+        # (this is basically a regression test for #442)
+        assert newwcs[:, slice(None), slice(None)]
 
         return self._new_cube_with(data=self._data[view],
                                    wcs=newwcs,

@@ -122,8 +122,8 @@ Extract a spatial and spectral subcube
 --------------------------------------
 There is a generic subcube function that allows slices in the spatial and
 spectral axes simultaneously, as long as the spatial axes are aligned with the
-pixel axes.  An arbitrary example looks like this:
+pixel axes.  An arbitrary example looks like this::
 
-    >>> sub_cube = cube.subcube(xlo=5*u.deg, xhi=6*u.deg,
-                                ylo=2*u.deg, yhi=2.1*u.deg,
+    >>> sub_cube = cube.subcube(xlo=5*u.deg, xhi=6*u.deg, # doctest: +SKIP
+                                ylo=2*u.deg, yhi=2.1*u.deg, # doctest: +SKIP
                                 zlo=50*u.GHz, zhi=51*u.GHz) # doctest: +SKIP
