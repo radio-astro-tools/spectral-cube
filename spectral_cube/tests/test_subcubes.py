@@ -22,10 +22,13 @@ def test_subcube():
 
     sc1 = cube.subcube(xlo=1, xhi=3)
     sc2 = cube.subcube(xlo=24.06269*u.deg, xhi=24.06206*u.deg)
+    sc2b = cube.subcube(xlo=24.06206*u.deg, xhi=24.06269*u.deg)
 
     assert sc1.shape == (2,3,2)
     assert sc2.shape == (2,3,2)
+    assert sc2b.shape == (2,3,2)
     assert sc1.wcs.wcs.compare(sc2.wcs.wcs)
+    assert sc1.wcs.wcs.compare(sc2b.wcs.wcs)
 
     sc3 = cube.subcube(ylo=1, yhi=3)
     sc4 = cube.subcube(ylo=29.93464 * u.deg,

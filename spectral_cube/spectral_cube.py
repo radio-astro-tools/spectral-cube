@@ -1647,6 +1647,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     limit_dict[lim] = val
 
         slices = [slice(limit_dict[xx+'lo'], limit_dict[xx+'hi'])
+                  if (limit_dict[xx+'lo'] < limit_dict[xx+'hi'])
+                  else slice(limit_dict[xx+'hi'], limit_dict[xx+'lo'])
                   for xx in 'zyx']
 
         return self[slices]
