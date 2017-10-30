@@ -1,5 +1,5 @@
-Manipulating cubes
-==================
+Manipulating cubes and extracting subcubes
+==========================================
 
 Modifying the spectral axis
 ---------------------------
@@ -116,3 +116,14 @@ minimal enclosing sub-cube::
 You can also shrink any cube by this mechanism::
 
     >>> sub_cube = cube.with_mask(smaller_region).minimal_subcube()  # doctest: +SKIP
+
+
+Extract a spatial and spectral subcube
+--------------------------------------
+There is a generic subcube function that allows slices in the spatial and
+spectral axes simultaneously, as long as the spatial axes are aligned with the
+pixel axes.  An arbitrary example looks like this::
+
+    >>> sub_cube = cube.subcube(xlo=5*u.deg, xhi=6*u.deg, # doctest: +SKIP
+                                ylo=2*u.deg, yhi=2.1*u.deg, # doctest: +SKIP
+                                zlo=50*u.GHz, zhi=51*u.GHz) # doctest: +SKIP
