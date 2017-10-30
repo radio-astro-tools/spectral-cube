@@ -1101,6 +1101,13 @@ def test_oned_slice_beams():
     assert hasattr(spec, 'beams')
     assert 'BMAJ' in spec.hdulist[1].data.names
 
+def test_subcube_slab_beams():
+    cube, data = cube_and_raw('sdav_beams.fits')
+
+    slcube = cube[1:]
+
+    assert all(slcube.hdulist[1].data['CHAN'] == np.arange(slcube.shape[0]))
+
 def test_oned_collapse():
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
