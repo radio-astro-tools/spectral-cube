@@ -113,7 +113,7 @@ def test_wcs_comparison():
     assert not check_equality(wcs1,wcs4)
     assert check_equality(wcs1, wcs4, wcs_tolerance=1e-3)
 
-@pytest.mark.parametrize(fn, ('cubewcs1.hdr', 'cubewcs2.hdr'))
+@pytest.mark.parametrize('fn', ('cubewcs1.hdr', 'cubewcs2.hdr'))
 def test_strip_wcs(fn):
 
     header1 = fits.Header.fromtextfile(path(fn))
