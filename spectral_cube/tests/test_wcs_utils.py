@@ -1,5 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
+import pytest
+
 from astropy.io import fits
 
 from ..wcs_utils import *
@@ -111,20 +113,23 @@ def test_wcs_comparison():
     assert not check_equality(wcs1,wcs4)
     assert check_equality(wcs1, wcs4, wcs_tolerance=1e-3)
 
-def test_strip_wcs():
+@pytest.mark.parametrize('fn', ('cubewcs1.hdr', 'cubewcs2.hdr'))
+def test_strip_wcs(fn):
 
-    header1 = fits.Header.fromtextfile(path('cubewcs1.hdr'))
+    header1 = fits.Header.fromtextfile(path(fn))
     header1_stripped = strip_wcs_from_header(header1)
 
-    with open(path('cubewcs1.hdr'),'r') as fh:
+    with open(path(fn),'r') as fh:
         hdrlines = fh.readlines()
+
+    newfn = fn.replace('.hdr', '_blanks.hdr')
 
     hdrlines.insert(-20,"\n")
     hdrlines.insert(-1,"\n")
-    with open(path('cubewcs1_blanks.hdr'),'w') as fh:
+    with open(path(newfn),'w') as fh:
         fh.writelines(hdrlines)
 
-    header2 = fits.Header.fromtextfile(path('cubewcs1_blanks.hdr'))
+    header2 = fits.Header.fromtextfile(path(newfn))
     header2_stripped = strip_wcs_from_header(header2)
 
     assert header1_stripped == header2_stripped
