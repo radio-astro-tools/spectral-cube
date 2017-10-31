@@ -1,5 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
+import pytest
+
 from astropy.io import fits
 
 from ..wcs_utils import *
