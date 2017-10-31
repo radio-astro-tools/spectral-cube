@@ -202,6 +202,16 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
     def _mask(self, value):
         self.__mask = value
 
+    def shrink_mask(self):
+        """
+        Copy of the numpy masked_array shrink_mask method.  This is essentially
+        a hack needed for matplotlib to show images.
+        """
+        m = self._mask
+        if m.ndim and not m.any():
+            self._mask = nomask
+        return self
+
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,

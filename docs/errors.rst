@@ -76,3 +76,27 @@ or the FWHM.
 The solution is either to make a tighter mask, excluding the pixels far from
 the centroid position, or to ensure that the baseline does not have any
 negative systematic offset.
+
+
+Looking at images with matplotlib
+---------------------------------
+Matplotlib accesses a lot of hidden properties of arrays when plotting.  If you
+try to show a slice with ``imshow``, you may encounter the WCS-related error::
+
+    NotImplementedError: Reversing an axis is not implemented.
+
+If you see this error, the only solution at present is to specify
+``origin='lower'``, which is the standard for images anyway.  For example::
+
+    import pylab as pl
+    pl.imshow(cube[5,:,:], origin='lower')
+
+should work, where ``origin='upper'`` will not.  This is due to a limitation in
+``astropy.wcs`` slicing.
+
+An alternative option, if it is absolutely necessary to use ``origin='upper'``
+or if you encounter other matplotlib-related issues, is to use the ``.value``
+attribute of the slice to get a bald numpy array to plot::
+
+    import pylab as pl
+    pl.imshow(cube[5,:,:].value)

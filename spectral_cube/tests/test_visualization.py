@@ -45,8 +45,19 @@ def test_projvis():
     mom0 = cube.moment0()
     mom0.quicklook(use_aplpy=False)
 
+@pytest.mark.skipif("not MATPLOTLIB_INSTALLED")
+def test_proj_imshow():
+
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+
+    mom0 = cube.moment0()
+
+    import pylab as pl
+    pl.imshow(mom0)
+
+
 @pytest.mark.skipif("not APLPY_INSTALLED")
-def test_projvis():
+def test_projvis_aplpy():
 
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 
