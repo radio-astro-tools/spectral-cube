@@ -48,3 +48,48 @@ def stack_spectra(cube, velocity_field, average=np.nanmean):
     template_hdu.data = meanspec
 
     return template_hdu
+
+def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean):
+    """
+    Create a stacked cube by averaging on a common velocity grid.
+
+    Parameters
+    ----------
+    cube : SpectralCube
+        The cube
+    linelist : list of Quantities
+        An iterable of Quantities representing line rest frequencies
+    vmin / vmax : Quantity
+        Velocity-equivalent quantities specifying the velocity range to average
+        over
+    average : function
+        A function that can operate over a list of numpy arrays (and accepts
+        ``axis=0``) to average the spectra.  `numpy.nanmean` is the default,
+        though one might consider `numpy.mean` or `numpy.median` as other
+        options.
+    """
+    
+    line_cube = cube.with_spectral_unit(u.km/u.s,
+                                        velocity_convention='radio',
+                                        rest_value=linelist[0])
+    reference_cube = line_cube.spectral_slab(vmin, vmax)
+
+    cutout_cubes = [reference_cube[:].value]
+
+    for restval in linelist[1:]:
+        line_cube = cube.with_spectral_unit(u.km/u.s,
+                                            velocity_convention='radio',
+                                            rest_value=restval)
+        line_cutout = line_cube.spectral_slab(vmin, vmax)
+
+        regridded = line_cutout.spectral_interpolate(reference_cube.spectral_axis)
+
+        cutout_cubes.append(regridded[:].value)
+
+    stacked_cube = average(cutout_cubes, axis=0)
+
+    hdu = reference_cube.hdu
+
+    hdu.data = stacked_cube
+
+    return hdu
