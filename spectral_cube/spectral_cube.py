@@ -96,6 +96,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
 
+        # must extract unit from data before stripping it
+        if 'BUNIT' in self._meta:
+            self._unit = cube_utils.convert_bunit(self._meta["BUNIT"])
+        elif hasattr(data, 'unit'):
+            self._unit = data.unit
+        else:
+            self._unit = None
+
         # data must not be a quantity when stored in self._data
         if hasattr(data, 'unit'):
             # strip the unit so that it can be treated as cube metadata
@@ -114,13 +122,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         self._header = Header() if header is None else header
         if not isinstance(self._header, Header):
             raise TypeError("If a header is given, it must be a fits.Header")
-
-        if 'BUNIT' in self._meta:
-            self._unit = cube_utils.convert_bunit(self._meta["BUNIT"])
-        elif hasattr(data, 'unit'):
-            self._unit = data.unit
-        else:
-            self._unit = None
 
         # We don't pass the spectral unit via the initializer since the user
         # should be using ``with_spectral_unit`` if they want to set it.
