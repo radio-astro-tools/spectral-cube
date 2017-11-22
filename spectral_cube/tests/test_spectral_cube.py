@@ -1654,3 +1654,13 @@ def test_spectral_smooth_median():
     result = np.array([ 0.77513282,  0.35675333,  0.35675333,  0.98688694])
 
     np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
+
+def test_initialization_from_units():
+    """
+    Regression test for issue 447
+    """
+    cube, data = cube_and_raw('adv.fits')
+
+    newcube = SpectralCube(data=cube.filled_data[:], wcs=cube.wcs)
+
+    assert newcube.unit == cube.unit
