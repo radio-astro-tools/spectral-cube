@@ -1,10 +1,27 @@
 
 import numpy as np
 import astropy.units as u
-from scipy.optimize import curve_fit
+from astropy.modeling import models, fitting
 
 from ..analysis_utilities import stack_spectra
-from .utilities import generate_gaussian_cube, gaussian
+from .utilities import generate_gaussian_cube
+
+
+def fit_gaussian(vels, data):
+    g_init = models.Gaussian1D()
+
+    fit_g = fitting.LevMarLSQFitter()
+
+    g_fit = fit_g(g_init, vels, data)
+
+    cov = fit_g.fit_info['param_cov']
+    if cov is None:
+        cov = np.zeros((3, 3)) * np.NaN
+    parvals = g_fit.parameters
+
+    parerrs = np.sqrt(np.diag(cov))
+
+    return parvals, parerrs
 
 
 def test_stacking():
@@ -29,9 +46,7 @@ def test_stacking():
                       verbose=False, pad_edges=False)
 
     # Now fit a Gaussian to the mean stacked profile.
-
-    fit_vals = curve_fit(gaussian, stacked.spectral_axis.value,
-                         stacked.value)[0]
+    fit_vals = fit_gaussian(stacked.spectral_axis.value, stacked.value)[0]
 
     np.testing.assert_allclose(fit_vals, np.array([amp, 0.0, sigma]),
                                atol=1e-3)
@@ -64,9 +79,7 @@ def test_stacking_wpadding():
                       verbose=False, pad_edges=True)
 
     # Now fit a Gaussian to the mean stacked profile.
-
-    fit_vals = curve_fit(gaussian, stacked.spectral_axis.value,
-                         stacked.value)[0]
+    fit_vals = fit_gaussian(stacked.spectral_axis.value, stacked.value)[0]
 
     np.testing.assert_allclose(fit_vals, np.array([amp, 0.0, sigma]),
                                atol=1e-3)
@@ -101,13 +114,9 @@ def test_stacking_noisy():
                       verbose=False,
                       pad_edges=True)
 
-    stacked.quicklook()
-
     # Now fit a Gaussian to the mean stacked profile.
-
-    fit_vals, fit_cov = curve_fit(gaussian, stacked.spectral_axis.value,
-                                  stacked.value)
-    fit_errs = np.sqrt(np.diag(fit_cov))
+    fit_vals, fit_errs = fit_gaussian(stacked.spectral_axis.value,
+                                      stacked.value)
 
     # Check that the fit is consistent with the true values within 1-sigma err
     for fit_val, fit_err, true_val in zip(fit_vals, fit_errs,
