@@ -110,7 +110,7 @@ def get_chunks(num_items, chunk):
 
     chunks = \
         np.array_split(items,
-                       [chunk * i for i in xrange(num_items / chunk)])
+                       [chunk * i for i in xrange(int(num_items / chunk))])
     if chunks[-1].size == 0:
         # Last one is empty
         chunks = chunks[:-1]
@@ -233,7 +233,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
     all_shifted_spectra = []
 
     if chunk_size == -1:
-        chunk_size == len(xy_posns)
+        chunk_size = len(xy_posns)
 
     n_chunks = len(xy_posns[0]) / chunk_size
 
