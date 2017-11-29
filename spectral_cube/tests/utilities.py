@@ -75,8 +75,8 @@ def generate_gaussian_cube(shape=(100, 100, 100), sigma=8., amp=1.,
     test_cube = np.empty(shape)
     mean_positions = np.empty(shape[1:])
 
-    spec_middle = shape[0] / 2
-    spec_quarter = shape[0] / 4
+    spec_middle = int(shape[0] / 2)
+    spec_quarter = int(shape[0] / 4)
 
     with NumpyRNGContext(seed):
 
