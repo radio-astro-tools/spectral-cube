@@ -2,6 +2,7 @@ import numpy as np
 
 from astropy import units as u
 from astropy.extern.six.moves import zip
+from astropy.extern.six.moves import range as xrange
 from astropy import log
 from astropy.wcs import WCS
 
