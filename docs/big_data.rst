@@ -90,3 +90,33 @@ is arranged as a 1D sequence of bytes in a file. Data access is much faster
 when it corresponds to a single contiguous scan of bytes on disk.
 For more information on this topic, see `this tutorial on Numpy strides
 <http://scipy-lectures.github.io/advanced/advanced_numpy/#indexing-scheme-strides>`_.
+
+Recipe for large cube operations that can't be done in memory
+-------------------------------------------------------------
+
+Sometimes, you will need to run full-cube operations that can't be done in
+memory and can't be handled by spectral-cube's built in operations.
+An example might be converting your cube from Jy/beam to K when you have
+a very large (e.g., >10GB) cube.
+
+Handling this sort of situation requires several manual steps. First, hard
+drive space needs to be allocated for the output data.  Then, the cube
+must be manually looped over using a strategy that holds only limited data
+in memory.::
+
+    >>> import shutil
+    >>> from spectral_cube import SpectralCube
+    >>> from astropy.io import fits
+
+    >>> cube = SpectralCube.read('file.fits')
+
+    >>> # this copy step is necessary to allocate memory for the output
+    >>> shutil.copy('file.fits', 'newfile.fits')
+    >>> outfh = fits.open('newfile.fits', mode='update')
+
+    >>> jtok_factors = cube.jtok_factors()
+    >>> for index,(slice,factor) in enumerate(zip(cube,factors)):
+    ...     outfh[0].data[index] = slice * factor
+    ...     outfh.flush() # write the data to disk
+    >>> outfh[0].header['BUNIT'] = 'K'
+    >>> outfh.flush()
