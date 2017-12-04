@@ -3351,6 +3351,24 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
+    
+    def jtok_factors(self, equivalencies=()):
+        """
+        Compute an array of multiplicative factors that will convert from
+        Jy/beam to K
+        """
+
+        factors = []
+        for bm,frq in zip(self.beams,
+                          self.with_spectral_unit(u.Hz).spectral_axis):
+
+            # create a beam equivalency for brightness temperature
+            bmequiv = bm.jtok_equiv(frq)
+            factor = (u.Jy).to(u.K, equivalencies=bmequiv+list(equivalencies))
+            factors.append(factor)
+        factor = np.array(factors)
+
+        return factor
 
     @warn_slow
     def to(self, unit, equivalencies=()):
@@ -3371,17 +3389,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             if not hasattr(self, 'beams'):
                 raise ValueError("To convert cubes with Jy/beam units, "
                                  "the cube needs to have beams defined.")
-            factors = []
-            for bm,frq in zip(self.beams,
-                              self.with_spectral_unit(u.Hz).spectral_axis):
-                brightness_unit = self.unit * u.beam
-
-                # create a beam equivalency for brightness temperature
-                bmequiv = bm.jtok_equiv(frq)
-                factor = brightness_unit.to(unit,
-                                            equivalencies=bmequiv+list(equivalencies))
-                factors.append(factor)
-            factor = np.array(factors)
+            factor = self.jtok_factors(equivalencies=equivalencies) * (self.unit*u.beam).to(u.Jy)
         else:
             # scaling factor
             factor = self.unit.to(unit, equivalencies=equivalencies)

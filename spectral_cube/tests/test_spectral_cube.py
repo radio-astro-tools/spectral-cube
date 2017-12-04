@@ -1532,6 +1532,13 @@ def test_convolve_to_with_bad_beams():
     # this is a copout test; should really check for correctness...
     assert np.all(np.isfinite(convolved.filled_data[1:3]))
 
+def test_jybeam_factors():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    assert_allclose(cube.jtok_factors(),
+                    [15111171.12641629, 10074201.06746361, 10074287.73828087,
+                     15111561.14508185])
+
 def test_channelmask_singlebeam():
     cube, data = cube_and_raw('adv.fits')
 
