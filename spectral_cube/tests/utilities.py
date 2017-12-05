@@ -51,7 +51,7 @@ def gaussian(x, amp, mean, sigma):
     return amp * np.exp(- (x - mean)**2 / (2 * sigma**2))
 
 
-def generate_gaussian_cube(shape=(100, 100, 100), sigma=8., amp=1.,
+def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
                            noise=None, spec_scale=1 * u.km / u.s,
                            pixel_scale=1 * u.arcsec,
                            beamfwhm=3 * u.arcsec,
