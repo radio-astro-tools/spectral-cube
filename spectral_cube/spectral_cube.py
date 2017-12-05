@@ -338,6 +338,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
+        if how == 'cube':
+            self
+
         if out is None:
             out = function(self._get_filled_data(fill=fill,
                                                  check_endian=check_endian),
@@ -459,6 +462,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return 1
 
     @aggregation_docstring
+    @warn_how
     def sum(self, axis=None, how='auto', **kwargs):
         """
         Return the sum of the cube, optionally over an axis.
@@ -472,6 +476,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          projection=projection, **kwargs)
 
     @aggregation_docstring
+    @warn_how
     def mean(self, axis=None, how='cube', **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
@@ -593,6 +598,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          projection=projection)
 
     @aggregation_docstring
+    @warn_how
     def mad_std(self, axis=None, **kwargs):
         """
         Use astropy's mad_std to computer the standard deviation
@@ -607,6 +613,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
 
     @aggregation_docstring
+    @warn_how
     def max(self, axis=None, how='auto', **kwargs):
         """
         Return the maximum data value of the cube, optionally over an axis.
@@ -619,6 +626,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          projection=projection, **kwargs)
 
     @aggregation_docstring
+    @warn_how
     def min(self, axis=None, how='auto', **kwargs):
         """
         Return the minimum data value of the cube, optionally over an axis.
@@ -631,6 +639,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          projection=projection, **kwargs)
 
     @aggregation_docstring
+    @warn_how
     def argmax(self, axis=None, how='auto', **kwargs):
         """
         Return the index of the maximum data value.
@@ -643,6 +652,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          how=how, axis=axis, **kwargs)
 
     @aggregation_docstring
+    @warn_how
     def argmin(self, axis=None, how='auto', **kwargs):
         """
         Return the index of the minimum data value.
