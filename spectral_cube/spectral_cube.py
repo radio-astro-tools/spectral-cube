@@ -338,9 +338,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
-        if how == 'cube':
-            self
-
         if out is None:
             out = function(self._get_filled_data(fill=fill,
                                                  check_endian=check_endian),
