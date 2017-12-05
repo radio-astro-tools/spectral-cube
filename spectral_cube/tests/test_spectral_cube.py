@@ -570,8 +570,8 @@ class TestNumpyMethods(BaseTest):
         assert not np.any(np.isnan(scpct.value))
         assert scpct.unit == self.c.unit
 
-    @pytest.mark.parametrize('method', ('sum', 'min', 'max',
-                             'median', 'argmin', 'argmax'))
+    @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
+                                        'median', 'argmin', 'argmax'))
     def test_transpose(self, method):
         c1, d1 = cube_and_raw('adv.fits')
         c2, d2 = cube_and_raw('vad.fits')
