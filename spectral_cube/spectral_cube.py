@@ -541,14 +541,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         Return the standard deviation of the cube, optionally over an axis.
 
-        Parameters
-        ----------
-        axis : int or None
-            The axis to average over
-        how : str
-            The method to use.  This method supports slice-wise standard
-            deviation calculation ('slice') and full-cube ('cube'), but not
-            'ray'.
+        Other Parameters
+        ----------------
         ddof : int
             Means Delta Degrees of Freedom.  The divisor used in calculations
             is ``N - ddof``, where ``N`` represents the number of elements.  By
