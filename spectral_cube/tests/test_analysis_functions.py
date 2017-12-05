@@ -4,8 +4,43 @@ import numpy as np
 import astropy.units as u
 # from astropy.modeling import models, fitting
 
-from ..analysis_utilities import stack_spectra
+from ..analysis_utilities import stack_spectra, fourier_shift
 from .utilities import generate_gaussian_cube, gaussian
+
+
+def test_shift():
+
+    amp = 1
+    v0 = 0 * u.m / u.s
+    sigma = 8
+    spectral_axis = np.arange(-50, 51) * u.m / u.s
+
+    true_spectrum = gaussian(spectral_axis.value,
+                             amp, v0.value, sigma)
+
+    # Shift is an integer, so rolling is equivalent
+    rolled_spectrum = np.roll(true_spectrum, 10)
+
+    shift_spectrum = fourier_shift(true_spectrum, 10)
+
+    np.testing.assert_allclose(shift_spectrum,
+                               rolled_spectrum,
+                               rtol=1e-4)
+
+    # With part masked
+    masked_spectrum = true_spectrum.copy()
+    mask = np.abs(spectral_axis.value) <= 30
+    masked_spectrum[~mask] = np.NaN
+
+    rolled_mask = np.roll(mask, 10)
+    rolled_masked_spectrum = rolled_spectrum.copy()
+    rolled_masked_spectrum[~rolled_mask] = np.NaN
+
+    shift_spectrum = fourier_shift(masked_spectrum, 10)
+
+    np.testing.assert_allclose(shift_spectrum,
+                               rolled_masked_spectrum,
+                               rtol=1e-4)
 
 
 def test_stacking():
