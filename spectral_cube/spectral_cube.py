@@ -480,6 +480,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         projection = self._naxes_dropped(axis) in (1,2)
 
         if how == 'slice':
+            # two-pass approach: first total the # of points,
+            # then total the value of the points, then divide
+            # (a one-pass approach is possible but requires
+            # more sophisticated bookkeeping)
             counts = self._count_nonzero_slicewise(axis=axis)
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                             axis=axis, unit=None,
