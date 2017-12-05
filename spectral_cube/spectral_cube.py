@@ -490,12 +490,26 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                             projection=False, **kwargs)
             out = ttl / counts
             if projection:
-                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-                meta = {'collapse_axis': axis}
-                meta.update(self._meta)
-                return Projection(out, copy=False, wcs=new_wcs,
-                                  meta=meta,
-                                  unit=self.unit, header=self._nowcs_header)
+                if self._naxes_dropped(axis) == 1:
+                    new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                    meta = {'collapse_axis': axis}
+                    meta.update(self._meta)
+                    return Projection(out, copy=False, wcs=new_wcs,
+                                      meta=meta,
+                                      unit=self.unit, header=self._nowcs_header)
+                elif axis == (1,2):
+                    newwcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
+                    return OneDSpectrum(value=out,
+                                        wcs=newwcs,
+                                        copy=False,
+                                        unit=self.unit,
+                                        spectral_unit=self._spectral_unit,
+                                        beams=self.beams,
+                                        meta=meta)
+                else:
+                    raise NotImplementedError("We don't yet know how to deal "
+                                              "with multidimensional averages "
+                                              "that are non-spectral")
             else:
                 return out
 
