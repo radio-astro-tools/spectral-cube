@@ -100,6 +100,11 @@ def test_huge_disallowed():
             cube + 5*cube.unit
         assert 'entire cube into memory' in exc.value.args[0]
 
+        with pytest.raises(ValueError) as exc:
+            cube.max(how='cube')
+        assert 'entire cube into memory' in exc.value.args[0]
+
+
         cube.allow_huge_operations = True
 
         # just make sure it doesn't fail
@@ -570,14 +575,17 @@ class TestNumpyMethods(BaseTest):
         assert not np.any(np.isnan(scpct.value))
         assert scpct.unit == self.c.unit
 
-    @pytest.mark.parametrize('method', ('sum', 'min', 'max',
-                             'median', 'argmin', 'argmax'))
+    @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
+                                        'median', 'argmin', 'argmax'))
     def test_transpose(self, method):
         c1, d1 = cube_and_raw('adv.fits')
         c2, d2 = cube_and_raw('vad.fits')
         for axis in [None, 0, 1, 2]:
             assert_allclose(getattr(c1, method)(axis=axis),
                             getattr(c2, method)(axis=axis))
+            # check that all these accept progressbar kwargs
+            assert_allclose(getattr(c1, method)(axis=axis, progressbar=True),
+                            getattr(c2, method)(axis=axis, progressbar=True))
 
 
 class TestSlab(BaseTest):
@@ -1108,7 +1116,8 @@ def test_subcube_slab_beams():
 
     assert all(slcube.hdulist[1].data['CHAN'] == np.arange(slcube.shape[0]))
 
-def test_oned_collapse():
+@pytest.mark.parametrize('how', ('auto', 'cube', 'slice', 'ray'))
+def test_oned_collapse(how):
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
 
@@ -1116,7 +1125,7 @@ def test_oned_collapse():
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
-    spec = cube.mean(axis=(1,2))
+    spec = cube.mean(axis=(1,2), how=how)
     assert isinstance(spec, OneDSpectrum)
     # data has a redundant 1st axis
     np.testing.assert_equal(spec.value, data.mean(axis=(0,2,3)))

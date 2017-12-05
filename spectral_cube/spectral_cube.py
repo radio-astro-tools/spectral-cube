@@ -264,6 +264,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                              unit=None,
                              check_endian=False,
                              progressbar=False,
+                             includemask=False,
                              **kwargs):
         """
         Apply a numpy function to the cube
@@ -327,12 +328,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         out = None
 
+        log.debug("applying numpy function {0} with strategy {1}"
+                  .format(function, strategy))
+
         if strategy == 'slice' and reduce:
-            try:
-                out = self._reduce_slicewise(function, fill, check_endian,
-                                             progressbar=progressbar, **kwargs)
-            except NotImplementedError:
-                pass
+            out = self._reduce_slicewise(function, fill, check_endian,
+                                         includemask=includemask,
+                                         progressbar=progressbar, **kwargs)
         elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
@@ -391,25 +393,41 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         ax = ax or 0
 
         if isinstance(ax, tuple):
-            raise NotImplementedError("Multi-axis reductions are not "
-                                      "supported with how='slice'")
+            assert len(ax) == 2 # we only work with cubes...
+            iterax = [x for x in range(3) if x not in ax][0]
+        else:
+            iterax = ax
+
+        log.debug("reducing slicewise with axis = {0}".format(ax))
 
         if includemask:
-            planes = self._iter_mask_slices(ax)
+            planes = self._iter_mask_slices(iterax)
         else:
-            planes = self._iter_slices(ax, fill=fill, check_endian=check_endian)
+            planes = self._iter_slices(iterax, fill=fill, check_endian=check_endian)
         result = next(planes)
 
         if progressbar:
-            progressbar = ProgressBar(self.shape[ax])
+            progressbar = ProgressBar(self.shape[iterax])
             pbu = progressbar.update
         else:
             pbu = lambda: True
 
-
-        for plane in planes:
-            result = function(np.dstack((result, plane)), axis=2, **kwargs)
-            pbu()
+        if isinstance(ax, tuple):
+            # have to make a result a list of itself, since we already "got"
+            # the first plane above
+            result = [function(result, axis=(0,1), **kwargs)]
+            for plane in planes:
+                # apply to axes 0 and 1, because we're fully reducing the plane
+                # to a number if we're applying over two axes
+                result.append(function(plane, axis=(0,1), **kwargs))
+                pbu()
+            result = np.array(result)
+        else:
+            for plane in planes:
+                # axis = 2 means we're stacking two planes, the previously
+                # computed one and the current one
+                result = function(np.dstack((result, plane)), axis=2, **kwargs)
+                pbu()
 
         if full_reduce:
             result = function(result)
@@ -441,7 +459,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return 1
 
     @aggregation_docstring
-    def sum(self, axis=None, how='auto'):
+    @warn_slow
+    def sum(self, axis=None, how='auto', **kwargs):
         """
         Return the sum of the cube, optionally over an axis.
         """
@@ -451,10 +470,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.apply_numpy_function(allbadtonan(np.nansum), fill=np.nan,
                                          how=how, axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
     @aggregation_docstring
-    def mean(self, axis=None, how='cube'):
+    @warn_slow
+    def mean(self, axis=None, how='cube', **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
         """
@@ -462,26 +482,47 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         projection = self._naxes_dropped(axis) in (1,2)
 
         if how == 'slice':
-            counts = self._count_nonzero_slicewise(axis=axis)
+            # two-pass approach: first total the # of points,
+            # then total the value of the points, then divide
+            # (a one-pass approach is possible but requires
+            # more sophisticated bookkeeping)
+            counts = self._count_nonzero_slicewise(axis=axis,
+                                                   progressbar=kwargs.get('progressbar'))
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                             axis=axis, unit=None,
-                                            projection=False)
+                                            projection=False, **kwargs)
             out = ttl / counts
             if projection:
-                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-                meta = {'collapse_axis': axis}
-                meta.update(self._meta)
-                return Projection(out, copy=False, wcs=new_wcs,
-                                  meta=meta,
-                                  unit=self.unit, header=self._nowcs_header)
+                if self._naxes_dropped(axis) == 1:
+                    new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                    meta = {'collapse_axis': axis}
+                    meta.update(self._meta)
+                    return Projection(out, copy=False, wcs=new_wcs,
+                                      meta=meta,
+                                      unit=self.unit, header=self._nowcs_header)
+                elif axis == (1,2):
+                    newwcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
+                    return OneDSpectrum(value=out,
+                                        wcs=newwcs,
+                                        copy=False,
+                                        unit=self.unit,
+                                        spectral_unit=self._spectral_unit,
+                                        beams=(self.beams
+                                               if hasattr(self, 'beams')
+                                               else None),
+                                        meta=self.meta)
+                else:
+                    raise NotImplementedError("We don't yet know how to deal "
+                                              "with multidimensional averages "
+                                              "that are non-spectral")
             else:
                 return out
 
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
-    def _count_nonzero_slicewise(self, axis=None):
+    def _count_nonzero_slicewise(self, axis=None, progressbar=False):
         """
         Count the number of finite pixels along an axis slicewise.  This is a
         helper function for the mean and std deviation slicewise iterators.
@@ -490,21 +531,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                            how='slice', axis=axis,
                                            unit=None,
                                            projection=False,
+                                           progressbar=progressbar,
                                            includemask=True)
         return counts
 
-    def std(self, axis=None, how='cube', ddof=0):
+    @aggregation_docstring
+    @warn_slow
+    def std(self, axis=None, how='cube', ddof=0, **kwargs):
         """
         Return the standard deviation of the cube, optionally over an axis.
 
-        Parameters
-        ----------
-        axis : int or None
-            The axis to average over
-        how : str
-            The method to use.  This method supports slice-wise standard
-            deviation calculation ('slice') and full-cube ('cube'), but not
-            'ray'.
+        Other Parameters
+        ----------------
         ddof : int
             Means Delta Degrees of Freedom.  The divisor used in calculations
             is ``N - ddof``, where ``N`` represents the number of elements.  By
@@ -519,10 +557,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                           "cannot be computed in a slicewise "
                                           "manner.  Please use a "
                                           "different strategy.")
+            if hasattr(axis, '__len__') and len(axis) == 2:
+                raise NotImplementedError("Standard deviation across two "
+                                          "dimensions slicewise is not "
+                                          "yet implemented.")
             counts = self._count_nonzero_slicewise(axis=axis)
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how='slice',
                                             axis=axis, unit=None,
-                                            projection=False)
+                                            projection=False, **kwargs)
             # Equivalent, but with more overhead:
             # ttl = self.sum(axis=axis, how='slice').value
             mean = ttl/counts
@@ -550,10 +592,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # implement raywise reduction
         return self.apply_numpy_function(np.nanstd, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
     @aggregation_docstring
-    def mad_std(self, axis=None):
+    @warn_slow
+    def mad_std(self, axis=None, **kwargs):
         """
         Use astropy's mad_std to computer the standard deviation
         """
@@ -563,11 +606,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.apply_numpy_function(stats.mad_std, fill=np.nan,
                                          how='cube', axis=axis, unit=self.unit,
                                          ignore_nan=True,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
 
     @aggregation_docstring
-    def max(self, axis=None, how='auto'):
+    @warn_slow
+    def max(self, axis=None, how='auto', **kwargs):
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
@@ -576,10 +620,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.apply_numpy_function(np.nanmax, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
     @aggregation_docstring
-    def min(self, axis=None, how='auto'):
+    @warn_slow
+    def min(self, axis=None, how='auto', **kwargs):
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
@@ -588,10 +633,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.apply_numpy_function(np.nanmin, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
     @aggregation_docstring
-    def argmax(self, axis=None, how='auto'):
+    @warn_slow
+    def argmax(self, axis=None, how='auto', **kwargs):
         """
         Return the index of the maximum data value.
 
@@ -600,10 +646,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         return self.apply_numpy_function(np.nanargmax, fill=-np.inf,
                                          reduce=False, projection=False,
-                                         how=how, axis=axis)
+                                         how=how, axis=axis, **kwargs)
 
     @aggregation_docstring
-    def argmin(self, axis=None, how='auto'):
+    @warn_slow
+    def argmin(self, axis=None, how='auto', **kwargs):
         """
         Return the index of the minimum data value.
 
@@ -612,7 +659,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         return self.apply_numpy_function(np.nanargmin, fill=np.inf,
                                          reduce=False, projection=False,
-                                         how=how, axis=axis)
+                                         how=how, axis=axis, **kwargs)
 
     def chunked(self, chunksize=1000):
         """
