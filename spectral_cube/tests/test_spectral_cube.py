@@ -100,6 +100,11 @@ def test_huge_disallowed():
             cube + 5*cube.unit
         assert 'entire cube into memory' in exc.value.args[0]
 
+        with pytest.raises(ValueError) as exc:
+            cube.max(how='cube')
+        assert 'entire cube into memory' in exc.value.args[0]
+
+
         cube.allow_huge_operations = True
 
         # just make sure it doesn't fail
