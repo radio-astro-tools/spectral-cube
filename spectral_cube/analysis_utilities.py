@@ -3,8 +3,8 @@ import numpy as np
 from astropy import units as u
 from astropy.extern.six.moves import zip
 from astropy.extern.six.moves import range as xrange
-from astropy import log
 from astropy.wcs import WCS
+from astropy.utils.console import ProgressBar
 
 from .cube_utils import _map_context
 from .lower_dimensional_structures import OneDSpectrum
@@ -31,12 +31,17 @@ def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
         Shifted array.
 
     '''
-    mask = ~np.isfinite(x)
+    nanmask = ~np.isfinite(x)
+
+    # If all NaNs, there is nothing to shift
+    if nanmask.all():
+        return x
+
     nonan = x.copy()
 
     shift_mask = False
-    if not mask.all():
-        nonan[mask] = 0.0
+    if nanmask.any():
+        nonan[nanmask] = 0.0
         shift_mask = True
 
     # Optionally pad the edges
@@ -53,11 +58,11 @@ def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
         pad_nonan = np.pad(nonan, pad_size, mode='constant',
                            constant_values=(0))
         if shift_mask:
-            pad_mask = np.pad(mask, pad_size, mode='constant',
+            pad_mask = np.pad(nanmask, pad_size, mode='constant',
                               constant_values=(0))
     else:
         pad_nonan = nonan
-        pad_mask = mask
+        pad_mask = nanmask
 
     nonan_shift = _fourier_shifter(pad_nonan, shift, axis)
     if shift_mask:
@@ -67,23 +72,17 @@ def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
     return nonan_shift
 
 
-def _padder(x, pad_size, shift):
-    '''
-    Pad x with zeros.
-    '''
-    return np.pad(x, pad_size, mode='constant',
-                  constant_values=(0))
-
-
 def _fourier_shifter(x, shift, axis):
     '''
     Helper function for `~fourier_shift`.
     '''
     ftx = np.fft.fft(x, axis=axis)
     m = np.fft.fftfreq(x.shape[axis])
-    m_shape = [1] * len(x.shape)
-    m_shape[axis] = m.shape[0]
-    m = m.reshape(m_shape)
+    # m_shape = [1] * x.ndim
+    # m_shape[axis] = m.shape[0]
+    # m = m.reshape(m_shape)
+    slices = [slice(None) if ii == axis else None for ii in range(x.ndim)]
+    m = m[slices]
     phase = np.exp(-2 * np.pi * m * 1j * shift)
     x2 = np.real(np.fft.ifft(ftx * phase, axis=axis))
     return x2
@@ -130,7 +129,8 @@ def stack_spectra(cube, velocity_surface, v0=None,
                   stack_function=np.nanmean,
                   xy_posns=None, num_cores=1,
                   chunk_size=-1,
-                  verbose=False, pad_edges=True):
+                  progressbar=False, pad_edges=True,
+                  vdiff_tol=0.01):
     '''
     Shift spectra in a cube according to a given velocity surface (peak
     velocity, centroid, rotation model, etc.).
@@ -157,7 +157,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
         Chunk size sets the number of spectra that, if memory-mapping is used,
         is the number of spectra loaded into memory. Defaults to -1, which is
         all spectra.
-    verbose : bool, optional
+    progressbar : bool, optional
         Print progress through every chunk iteration.
     pad_edges : bool, optional
         Pad the edges of the shuffled spectra to stop data from rolling over.
@@ -165,6 +165,9 @@ def stack_spectra(cube, velocity_surface, v0=None,
         boundary as periodic. This should only be disabled if you know that
         the velocity range exceeds the range that a spectrum has to be
         shuffled to reach `v0`.
+    vdiff_tol : float, optional
+        Allowed tolerance for changes in the spectral axis spacing. Default
+        is 0.01, or 1%.
 
     Returns
     -------
@@ -199,6 +202,12 @@ def stack_spectra(cube, velocity_surface, v0=None,
     # Calculate the pixel shifts that will be applied.
     vdiff = np.abs(np.diff(cube.spectral_axis[:2])[0])
     vel_unit = vdiff.unit
+
+    # Check to make sure vdiff doesn't change more than the allowed tolerance
+    # over the spectral axis
+    vdiff2 = np.abs(np.diff(cube.spectral_axis[-2:])[0])
+    if not np.isclose(vdiff2.value, vdiff.value, rtol=vdiff_tol):
+        raise ValueError("Cannot shift spectra on a non-linear axes")
 
     pix_shifts = -((velocity_surface.to(vel_unit) -
                     v0.to(vel_unit)) / vdiff).value[xy_posns]
@@ -235,13 +244,14 @@ def stack_spectra(cube, velocity_surface, v0=None,
     if chunk_size == -1:
         chunk_size = len(xy_posns)
 
-    n_chunks = len(xy_posns[0]) / chunk_size
-
     # Create chunks of spectra for read-out.
-    for i, chunk in enumerate(get_chunks(len(xy_posns[0]), chunk_size)):
+    chunks = get_chunks(len(xy_posns[0]), chunk_size)
+    if progressbar:
+        iterat = ProgressBar(chunks)
+    else:
+        iterat = chunks
 
-        if verbose:
-            log.info("On chunk {0} of {1}".format(i + 1, n_chunks))
+    for i, chunk in enumerate(iterat):
 
         gen = ((cube.unmasked_data[:, y, x], shift, pad_edges, pad_size)
                for y, x, shift in

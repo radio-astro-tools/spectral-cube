@@ -1,4 +1,5 @@
 
+import pytest
 import numpy as np
 import astropy.units as u
 # from astropy.modeling import models, fitting
@@ -17,9 +18,11 @@ def test_stacking():
     v0 = 0. * u.km / u.s
     sigma = 8.
     noise = None
+    shape = (100, 25, 25)
 
     test_cube, test_vels = \
-        generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise)
+        generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
+                               shape=shape)
 
     true_spectrum = gaussian(test_cube.spectral_axis.value,
                              amp, v0.value, sigma)
@@ -30,7 +33,7 @@ def test_stacking():
                       stack_function=np.nanmean,
                       xy_posns=None, num_cores=1,
                       chunk_size=-1,
-                      verbose=False, pad_edges=False)
+                      progressbar=False, pad_edges=False)
 
     # Calculate residuals
     resid = np.abs(stacked.value - true_spectrum)
@@ -57,7 +60,7 @@ def test_stacking_wpadding():
     sigma = 8.
     v0 = 0. * u.km / u.s
     noise = None
-    shape = (100, 100, 100)
+    shape = (100, 25, 25)
 
     test_cube, test_vels = \
         generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise)
@@ -68,7 +71,7 @@ def test_stacking_wpadding():
                       stack_function=np.nanmean,
                       xy_posns=None, num_cores=1,
                       chunk_size=-1,
-                      verbose=False, pad_edges=True)
+                      progressbar=False, pad_edges=True)
 
     true_spectrum = gaussian(stacked.spectral_axis.value,
                              amp, v0.value, sigma)
@@ -100,7 +103,7 @@ def test_stacking_noisy():
     sigma = 8.
     v0 = 0 * u.km / u.s
     noise = 5.0
-    shape = (100, 100, 100)
+    shape = (100, 25, 25)
 
     test_cube, test_vels = \
         generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
@@ -112,7 +115,7 @@ def test_stacking_noisy():
                       stack_function=np.nanmean,
                       xy_posns=None, num_cores=1,
                       chunk_size=-1,
-                      verbose=False,
+                      progressbar=False,
                       pad_edges=True)
 
     true_spectrum = gaussian(stacked.spectral_axis.value,
