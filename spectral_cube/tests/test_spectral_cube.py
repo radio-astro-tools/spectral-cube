@@ -578,6 +578,9 @@ class TestNumpyMethods(BaseTest):
         for axis in [None, 0, 1, 2]:
             assert_allclose(getattr(c1, method)(axis=axis),
                             getattr(c2, method)(axis=axis))
+            # check that all these accept progressbar kwargs
+            assert_allclose(getattr(c1, method)(axis=axis, progressbar=True),
+                            getattr(c2, method)(axis=axis, progressbar=True))
 
 
 class TestSlab(BaseTest):
