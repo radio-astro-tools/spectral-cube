@@ -593,7 +593,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          projection=projection)
 
     @aggregation_docstring
-    def mad_std(self, axis=None):
+    def mad_std(self, axis=None, **kwargs):
         """
         Use astropy's mad_std to computer the standard deviation
         """
@@ -603,11 +603,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.apply_numpy_function(stats.mad_std, fill=np.nan,
                                          how='cube', axis=axis, unit=self.unit,
                                          ignore_nan=True,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
 
     @aggregation_docstring
-    def max(self, axis=None, how='auto'):
+    def max(self, axis=None, how='auto', **kwargs):
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
@@ -616,10 +616,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.apply_numpy_function(np.nanmax, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
     @aggregation_docstring
-    def min(self, axis=None, how='auto'):
+    def min(self, axis=None, how='auto', **kwargs):
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
@@ -628,10 +628,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.apply_numpy_function(np.nanmin, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
     @aggregation_docstring
-    def argmax(self, axis=None, how='auto'):
+    def argmax(self, axis=None, how='auto', **kwargs):
         """
         Return the index of the maximum data value.
 
@@ -640,10 +640,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         return self.apply_numpy_function(np.nanargmax, fill=-np.inf,
                                          reduce=False, projection=False,
-                                         how=how, axis=axis)
+                                         how=how, axis=axis, **kwargs)
 
     @aggregation_docstring
-    def argmin(self, axis=None, how='auto'):
+    def argmin(self, axis=None, how='auto', **kwargs):
         """
         Return the index of the minimum data value.
 
@@ -652,7 +652,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         return self.apply_numpy_function(np.nanargmin, fill=np.inf,
                                          reduce=False, projection=False,
-                                         how=how, axis=axis)
+                                         how=how, axis=axis, **kwargs)
 
     def chunked(self, chunksize=1000):
         """
