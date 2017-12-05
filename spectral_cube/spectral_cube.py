@@ -264,6 +264,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                              unit=None,
                              check_endian=False,
                              progressbar=False,
+                             includemask=False,
                              **kwargs):
         """
         Apply a numpy function to the cube
@@ -327,12 +328,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         out = None
 
+        log.debug("applying numpy function {0} with strategy {1}"
+                  .format(function, strategy))
+
         if strategy == 'slice' and reduce:
-            try:
-                out = self._reduce_slicewise(function, fill, check_endian,
-                                             progressbar=progressbar, **kwargs)
-            except NotImplementedError:
-                pass
+            out = self._reduce_slicewise(function, fill, check_endian,
+                                         includemask=includemask,
+                                         progressbar=progressbar, **kwargs)
         elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
@@ -391,25 +393,41 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         ax = ax or 0
 
         if isinstance(ax, tuple):
-            raise NotImplementedError("Multi-axis reductions are not "
-                                      "supported with how='slice'")
+            assert len(ax) == 2 # we only work with cubes...
+            iterax = [x for x in range(3) if x not in ax][0]
+        else:
+            iterax = ax
+
+        log.debug("reducing slicewise with axis = {0}".format(ax))
 
         if includemask:
-            planes = self._iter_mask_slices(ax)
+            planes = self._iter_mask_slices(iterax)
         else:
-            planes = self._iter_slices(ax, fill=fill, check_endian=check_endian)
+            planes = self._iter_slices(iterax, fill=fill, check_endian=check_endian)
         result = next(planes)
 
         if progressbar:
-            progressbar = ProgressBar(self.shape[ax])
+            progressbar = ProgressBar(self.shape[iterax])
             pbu = progressbar.update
         else:
             pbu = lambda: True
 
-
-        for plane in planes:
-            result = function(np.dstack((result, plane)), axis=2, **kwargs)
-            pbu()
+        if isinstance(ax, tuple):
+            # have to make a result a list of itself, since we already "got"
+            # the first plane above
+            result = [function(result, axis=(0,1), **kwargs)]
+            for plane in planes:
+                # apply to axes 0 and 1, because we're fully reducing the plane
+                # to a number if we're applying over two axes
+                result.append(function(plane, axis=(0,1), **kwargs))
+                pbu()
+            result = np.array(result)
+        else:
+            for plane in planes:
+                # axis = 2 means we're stacking two planes, the previously
+                # computed one and the current one
+                result = function(np.dstack((result, plane)), axis=2, **kwargs)
+                pbu()
 
         if full_reduce:
             result = function(result)
@@ -441,7 +459,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return 1
 
     @aggregation_docstring
-    def sum(self, axis=None, how='auto'):
+    def sum(self, axis=None, how='auto', **kwargs):
         """
         Return the sum of the cube, optionally over an axis.
         """
@@ -451,10 +469,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.apply_numpy_function(allbadtonan(np.nansum), fill=np.nan,
                                          how=how, axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
     @aggregation_docstring
-    def mean(self, axis=None, how='cube'):
+    def mean(self, axis=None, how='cube', **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
         """
@@ -465,7 +483,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             counts = self._count_nonzero_slicewise(axis=axis)
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                             axis=axis, unit=None,
-                                            projection=False)
+                                            projection=False, **kwargs)
             out = ttl / counts
             if projection:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
@@ -479,9 +497,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.apply_numpy_function(np.nanmean, fill=np.nan, how=how,
                                          axis=axis, unit=self.unit,
-                                         projection=projection)
+                                         projection=projection, **kwargs)
 
-    def _count_nonzero_slicewise(self, axis=None):
+    def _count_nonzero_slicewise(self, axis=None, progressbar=False):
         """
         Count the number of finite pixels along an axis slicewise.  This is a
         helper function for the mean and std deviation slicewise iterators.
@@ -490,6 +508,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                            how='slice', axis=axis,
                                            unit=None,
                                            projection=False,
+                                           progressbar=progressbar,
                                            includemask=True)
         return counts
 
