@@ -484,7 +484,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # then total the value of the points, then divide
             # (a one-pass approach is possible but requires
             # more sophisticated bookkeeping)
-            counts = self._count_nonzero_slicewise(axis=axis)
+            counts = self._count_nonzero_slicewise(axis=axis,
+                                                   progressbar=kwargs.get('progressbar'))
             ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how=how,
                                             axis=axis, unit=None,
                                             projection=False, **kwargs)
@@ -504,7 +505,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                         copy=False,
                                         unit=self.unit,
                                         spectral_unit=self._spectral_unit,
-                                        beams=self.beams,
+                                        beams=(self.beams
+                                               if hasattr(self, 'beams')
+                                               else None),
                                         meta=self.meta)
                 else:
                     raise NotImplementedError("We don't yet know how to deal "

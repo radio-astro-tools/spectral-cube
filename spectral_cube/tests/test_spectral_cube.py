@@ -1108,7 +1108,8 @@ def test_subcube_slab_beams():
 
     assert all(slcube.hdulist[1].data['CHAN'] == np.arange(slcube.shape[0]))
 
-def test_oned_collapse():
+@pytest.mark.parametrize('how', ('auto', 'cube', 'slice', 'ray'))
+def test_oned_collapse(how):
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
 
@@ -1116,7 +1117,7 @@ def test_oned_collapse():
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
-    spec = cube.mean(axis=(1,2))
+    spec = cube.mean(axis=(1,2), how=how)
     assert isinstance(spec, OneDSpectrum)
     # data has a redundant 1st axis
     np.testing.assert_equal(spec.value, data.mean(axis=(0,2,3)))
