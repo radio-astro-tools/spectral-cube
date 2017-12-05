@@ -505,7 +505,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                         unit=self.unit,
                                         spectral_unit=self._spectral_unit,
                                         beams=self.beams,
-                                        meta=meta)
+                                        meta=self.meta)
                 else:
                     raise NotImplementedError("We don't yet know how to deal "
                                               "with multidimensional averages "
