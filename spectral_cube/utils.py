@@ -25,7 +25,7 @@ def warn_slow(function):
     @wraps(function)
     def wrapper(self, *args, **kwargs):
         # if the function accepts a 'how', the 'cube' approach requires the whole cube in memory
-        warn_how = ('how' in kwargs and kwargs['how'] == 'cube') or 'how' not in kwargs
+        warn_how = (kwargs.get('how') == 'cube') or 'how' not in kwargs
         if self._is_huge and not self.allow_huge_operations and warn_how:
             raise ValueError("This function ({0}) requires loading the entire "
                              "cube into memory, and the cube is large ({1} "
