@@ -34,7 +34,8 @@ def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
     nanmask = ~np.isfinite(x)
 
     # If all NaNs, there is nothing to shift
-    if nanmask.all():
+    # But only if there is no added padding. Otherwise we need to pad
+    if nanmask.all() and not add_pad:
         return x
 
     nonan = x.copy()
@@ -63,6 +64,10 @@ def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
     else:
         pad_nonan = nonan
         pad_mask = nanmask
+
+    # Check if there are all NaNs before shifting
+    if nanmask.all():
+        return np.array([np.NaN] * pad_mask.size)
 
     nonan_shift = _fourier_shifter(pad_nonan, shift, axis)
     if shift_mask:
@@ -105,7 +110,7 @@ def get_chunks(num_items, chunk):
     items = np.arange(num_items)
 
     if num_items == chunk:
-        return items
+        return [items]
 
     chunks = \
         np.array_split(items,
@@ -221,8 +226,8 @@ def stack_spectra(cube, velocity_surface, v0=None,
         # component that the velocity surface is derived from.
 
         # Find max +/- pixel shifts, rounding up to the nearest integer
-        max_pos_shift = np.ceil(pix_shifts.max()).astype(int)
-        max_neg_shift = np.ceil(pix_shifts.min()).astype(int)
+        max_pos_shift = np.ceil(np.nanmax(pix_shifts)).astype(int)
+        max_neg_shift = np.ceil(np.nanmin(pix_shifts)).astype(int)
 
         # The total pixel size of the new spectral axis
         num_vel_pix = cube.spectral_axis.size + max_pos_shift - max_neg_shift
@@ -236,13 +241,10 @@ def stack_spectra(cube, velocity_surface, v0=None,
     else:
         pad_size = None
 
-    # Adjust the header to have velocities centered at v0.
-    # new_header["CRVAL1"] = new_header["CRVAL1"] - v0.to(u.m / u.s).value
-
     all_shifted_spectra = []
 
     if chunk_size == -1:
-        chunk_size = len(xy_posns)
+        chunk_size = len(xy_posns[0])
 
     # Create chunks of spectra for read-out.
     chunks = get_chunks(len(xy_posns[0]), chunk_size)
@@ -253,7 +255,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
 
     for i, chunk in enumerate(iterat):
 
-        gen = ((cube.unmasked_data[:, y, x], shift, pad_edges, pad_size)
+        gen = ((cube.filled_data[:, y, x].value, shift, pad_edges, pad_size)
                for y, x, shift in
                zip(xy_posns[0][chunk], xy_posns[1][chunk], pix_shifts[chunk]))
 
