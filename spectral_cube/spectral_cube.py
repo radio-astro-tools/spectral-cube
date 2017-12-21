@@ -2363,6 +2363,8 @@ class SpectralCube(BaseSpectralCube):
             self.pixels_per_beam = (self.beam.sr /
                                     (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
                                      u.deg**2)).to(u.dimensionless_unscaled).value
+        self.abort = False  # Checked mid calculation
+        self.external_update_function = None  # External function that updates a gui's progress bar
 
     def _new_cube_with(self, **kwargs):
         beam = kwargs.pop('beam', None)
@@ -2420,14 +2422,21 @@ class SpectralCube(BaseSpectralCube):
                       self.mask.include(view=(ii, slice(None), slice(None))))
                       for ii in range(self.shape[0]))
 
-        pb = ProgressBar(shape[0])
+        if self.external_update_function is None:
+            pb = ProgressBar(shape[0])
+            update_function = pb.update
+        else:
+            update_function = self.external_update_function
 
         def _gsmooth_image(args):
             """
             Helper function to smooth a spectrum
             """
             (im, includemask),kwargs = args
-            pb.update()
+            if self.abort:
+                return  # dump calculation
+            else:
+                update_function()
 
             if includemask.any():
                 return ndimage.filters.median_filter(im, size=ksize)
@@ -2442,6 +2451,8 @@ class SpectralCube(BaseSpectralCube):
                                                            )
                                        )
                                   ])
+        if self.abort:
+            return
 
         # TODO: do something about the mask?
         newcube = self._new_cube_with(data=smoothcube_, wcs=self.wcs,
@@ -2477,14 +2488,21 @@ class SpectralCube(BaseSpectralCube):
                      self.mask.include(view=(ii, slice(None), slice(None))))
                      for ii in range(self.shape[0]))
 
-        pb = ProgressBar(shape[0])
+        if self.external_update_function is None:
+            pb = ProgressBar(shape[0])
+            update_function = pb.update
+        else:
+            update_function = self.external_update_function
 
         def _gsmooth_image(args):
             """
             Helper function to smooth an image
             """
             (im, includemask),kernel,kwargs = args
-            pb.update()
+            if self.abort:
+                return  # dump calculation
+            else:
+                update_function()
 
             if includemask.any():
                 return convolve(im, kernel, normalize_kernel=True, **kwargs)
@@ -2500,6 +2518,8 @@ class SpectralCube(BaseSpectralCube):
                                                            )
                                        )
                                   ])
+        if self.abort:
+            return
 
         # TODO: do something about the mask?
         newcube = self._new_cube_with(data=smoothcube_, wcs=self.wcs,
@@ -2533,14 +2553,21 @@ class SpectralCube(BaseSpectralCube):
                     for jj in range(self.shape[1])
                     for ii in range(self.shape[2]))
 
-        pb = ProgressBar(shape[1]*shape[2])
+        if self.external_update_function is None:
+            pb = ProgressBar(shape[1] * shape[2])
+            update_function = pb.update
+        else:
+            update_function = self.external_update_function
 
         def _gsmooth_spectrum(args):
             """
             Helper function to smooth a spectrum
             """
             (spec, includemask),kwargs = args
-            pb.update()
+            if self.abort:
+                return  # dump calculation
+            else:
+                update_function()
 
             if any(includemask):
                 return ndimage.filters.median_filter(spec, size=ksize)
@@ -2556,6 +2583,8 @@ class SpectralCube(BaseSpectralCube):
                                        )
                                    ]
                                   )
+        if self.abort:
+            return
 
         # empirical: need to swapaxes to get shape right
         # cube = np.arange(6*5*4).reshape([4,5,6]).swapaxes(0,2)
@@ -2598,14 +2627,21 @@ class SpectralCube(BaseSpectralCube):
                     for jj in range(self.shape[1])
                     for ii in range(self.shape[2]))
 
-        pb = ProgressBar(shape[1]*shape[2])
+        if self.external_update_function is None:
+            pb = ProgressBar(shape[1] * shape[2])
+            update_function = pb.update
+        else:
+            update_function = self.external_update_function
 
         def _gsmooth_spectrum(args):
             """
             Helper function to smooth a spectrum
             """
             (spec, includemask),kernel,kwargs = args
-            pb.update()
+            if self.abort:
+                return  # dump calculation
+            else:
+                update_function()
 
             if any(includemask):
                 return convolve(spec, kernel, normalize_kernel=True, **kwargs)
@@ -2622,6 +2658,8 @@ class SpectralCube(BaseSpectralCube):
                                        )
                                    ]
                                   )
+        if self.abort:
+            return
 
         # empirical: need to swapaxes to get shape right
         # cube = np.arange(6*5*4).reshape([4,5,6]).swapaxes(0,2)
@@ -2797,6 +2835,13 @@ class SpectralCube(BaseSpectralCube):
             raise ValueError("goodchannels must have a length equal to the "
                              "cube's spectral dimension.")
         return self.with_mask(goodchannels[:,None,None])
+
+    def abort_function(self):
+        """
+        Toggles abort value to true.
+        Used interrupt smoothing calculations.
+        """
+        self.abort = True
 
 
 class VaryingResolutionSpectralCube(BaseSpectralCube):
