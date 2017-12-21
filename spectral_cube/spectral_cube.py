@@ -2405,6 +2405,9 @@ class SpectralCube(BaseSpectralCube):
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
+        update_function : method
+            Method that is called to update an external progressbar.
+            If provided, it disables the default `astropy.utils.console.ProgressBar`.
         kwargs : dict
             Passed to the convolve function
         """
@@ -2468,6 +2471,9 @@ class SpectralCube(BaseSpectralCube):
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        update_function : method
+            Method that is called to update an external progressbar.
+            If provided, it disables the default `astropy.utils.console.ProgressBar`.
         kwargs : dict
             Passed to the convolve function
         """
@@ -2522,6 +2528,9 @@ class SpectralCube(BaseSpectralCube):
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
+        update_function : method
+            Method that is called to update an external progressbar.
+            If provided, it disables the default `astropy.utils.console.ProgressBar`.
         kwargs : dict
             Passed to the convolve function
         """
@@ -2593,6 +2602,9 @@ class SpectralCube(BaseSpectralCube):
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        update_function : method
+            Method that is called to update an external progressbar.
+            If provided, it disables the default `astropy.utils.console.ProgressBar`.
         kwargs : dict
             Passed to the convolve function
         """
