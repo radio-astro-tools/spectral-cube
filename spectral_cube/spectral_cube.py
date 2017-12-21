@@ -2363,7 +2363,6 @@ class SpectralCube(BaseSpectralCube):
             self.pixels_per_beam = (self.beam.sr /
                                     (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
                                      u.deg**2)).to(u.dimensionless_unscaled).value
-        self.external_update_function = None  # External function that updates a gui's progress bar
 
     def _new_cube_with(self, **kwargs):
         beam = kwargs.pop('beam', None)
@@ -2398,7 +2397,7 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def spatial_smooth_median(self, ksize, **kwargs):
+    def spatial_smooth_median(self, ksize, update_function=None, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
@@ -2421,11 +2420,9 @@ class SpectralCube(BaseSpectralCube):
                       self.mask.include(view=(ii, slice(None), slice(None))))
                       for ii in range(self.shape[0]))
 
-        if self.external_update_function is None:
+        if update_function is None:
             pb = ProgressBar(shape[0])
             update_function = pb.update
-        else:
-            update_function = self.external_update_function
 
         def _gsmooth_image(args):
             """
@@ -2457,7 +2454,9 @@ class SpectralCube(BaseSpectralCube):
 
     def spatial_smooth(self, kernel,
                        #numcores=None,
-                       convolve=convolution.convolve, **kwargs):
+                       convolve=convolution.convolve,
+                       update_function=None,
+                       **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
 
@@ -2482,11 +2481,9 @@ class SpectralCube(BaseSpectralCube):
                      self.mask.include(view=(ii, slice(None), slice(None))))
                      for ii in range(self.shape[0]))
 
-        if self.external_update_function is None:
+        if update_function is None:
             pb = ProgressBar(shape[0])
             update_function = pb.update
-        else:
-            update_function = self.external_update_function
 
         def _gsmooth_image(args):
             """
@@ -2517,7 +2514,7 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def spectral_smooth_median(self, ksize, **kwargs):
+    def spectral_smooth_median(self, ksize, update_function=None, **kwargs):
         """
         Smooth the cube along the spectral dimension
 
@@ -2542,11 +2539,9 @@ class SpectralCube(BaseSpectralCube):
                     for jj in range(self.shape[1])
                     for ii in range(self.shape[2]))
 
-        if self.external_update_function is None:
+        if update_function is None:
             pb = ProgressBar(shape[1] * shape[2])
             update_function = pb.update
-        else:
-            update_function = self.external_update_function
 
         def _gsmooth_spectrum(args):
             """
@@ -2585,6 +2580,7 @@ class SpectralCube(BaseSpectralCube):
     def spectral_smooth(self, kernel,
                         #numcores=None,
                         convolve=convolution.convolve,
+                        update_function=None,
                         **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -2611,11 +2607,9 @@ class SpectralCube(BaseSpectralCube):
                     for jj in range(self.shape[1])
                     for ii in range(self.shape[2]))
 
-        if self.external_update_function is None:
+        if update_function is None:
             pb = ProgressBar(shape[1] * shape[2])
             update_function = pb.update
-        else:
-            update_function = self.external_update_function
 
         def _gsmooth_spectrum(args):
             """
