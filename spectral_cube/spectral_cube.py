@@ -2406,8 +2406,8 @@ class SpectralCube(BaseSpectralCube):
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
         update_function : method
-            Method that is called to update an external progressbar.
-            If provided, it disables the default `astropy.utils.console.ProgressBar`.
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
             Passed to the convolve function
         """
@@ -2472,8 +2472,8 @@ class SpectralCube(BaseSpectralCube):
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
         update_function : method
-            Method that is called to update an external progressbar.
-            If provided, it disables the default `astropy.utils.console.ProgressBar`.
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
             Passed to the convolve function
         """
@@ -2529,8 +2529,8 @@ class SpectralCube(BaseSpectralCube):
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
         update_function : method
-            Method that is called to update an external progressbar.
-            If provided, it disables the default `astropy.utils.console.ProgressBar`.
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
             Passed to the convolve function
         """
@@ -2603,8 +2603,8 @@ class SpectralCube(BaseSpectralCube):
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
         update_function : method
-            Method that is called to update an external progressbar.
-            If provided, it disables the default `astropy.utils.console.ProgressBar`.
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
             Passed to the convolve function
         """
@@ -2660,7 +2660,8 @@ class SpectralCube(BaseSpectralCube):
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
-                             fill_value=None):
+                             fill_value=None,
+                             update_function=None):
         """Resample the cube spectrally onto a specific grid
 
         Parameters
@@ -2677,6 +2678,9 @@ class SpectralCube(BaseSpectralCube):
             the spectral range defined in the original data.  The
             default is to use the nearest spectral channel in the
             cube.
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
 
         Returns
         -------
@@ -2722,8 +2726,10 @@ class SpectralCube(BaseSpectralCube):
                            dtype='bool')
 
         yy,xx = np.indices(self.shape[1:])
+        if update_function is None:
+            pb = ProgressBar(xx.size)
+            update_function = pb.update
 
-        pb = ProgressBar(xx.size)
         for ix, iy in (zip(xx.flat, yy.flat)):
             mask = self.mask.include(view=(specslice, iy, ix))
             if any(mask):
@@ -2741,7 +2747,7 @@ class SpectralCube(BaseSpectralCube):
                 newmask[:, iy, ix] = False
                 newcube[:, iy, ix] = np.NaN
 
-            pb.update()
+            update_function()
 
         newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[2] = 1
@@ -2760,7 +2766,7 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def convolve_to(self, beam, convolve=convolution.convolve_fft):
+    def convolve_to(self, beam, convolve=convolution.convolve_fft, update_function=None):
         """
         Convolve each channel in the cube to a specified beam
 
@@ -2772,6 +2778,9 @@ class SpectralCube(BaseSpectralCube):
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
 
         Returns
         -------
@@ -2783,13 +2792,15 @@ class SpectralCube(BaseSpectralCube):
 
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
 
-        pb = ProgressBar(self.shape[0])
+        if update_function is None:
+            pb = ProgressBar(self.shape[0])
+            update_function = pb.update
 
         newdata = np.empty(self.shape)
         for ii,img in enumerate(self.filled_data[:]):
             newdata[ii,:,:] = convolve(img, convolution_kernel,
                                        normalize_kernel=True)
-            pb.update()
+            update_function()
 
         newcube = self._new_cube_with(data=newdata, beam=beam)
 
@@ -3328,7 +3339,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
         return HDUList([hdu, bmhdu])
 
     def convolve_to(self, beam, allow_smaller=False,
-                    convolve=convolution.convolve_fft):
+                    convolve=convolution.convolve_fft,
+                    update_function=None):
         """
         Convolve each channel in the cube to a specified beam
 
@@ -3349,6 +3361,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
 
         Returns
         -------
@@ -3387,7 +3402,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                 else:
                     raise
 
-        pb = ProgressBar(self.shape[0])
+        if update_function is None:
+            pb = ProgressBar(self.shape[0])
+            update_function = pb.update
 
         newdata = np.empty(self.shape)
         for ii,(img,kernel) in enumerate(zip(self.filled_data[:],
@@ -3399,7 +3416,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
             else:
                 newdata[ii, :, :] = convolve(img, kernel,
                                              normalize_kernel=True)
-            pb.update()
+            update_function()
 
         newcube = SpectralCube(data=newdata, wcs=self.wcs, mask=self.mask,
                                meta=self.meta, fill_value=self.fill_value,
