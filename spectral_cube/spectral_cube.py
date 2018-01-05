@@ -131,8 +131,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # This can be overridden with Header below
         self._spectral_unit = u.Unit(self._wcs.wcs.cunit[2])
 
-        if spectral_axis.unit_from_header(self._header) is not None:
-            self._spectral_unit = spectral_axis.unit_from_header(self._header)
+        # This operation is kind of expensive?
+        header_specaxnum = astropy.wcs.WCS(header).wcs.spec
+        header_specaxunit = spectral_axis.unit_from_header(self._header,
+                                                           spectral_axis_number=header_specaxnum+1)
+
+        # Allow the original header spectral axis unit to override the default
+        # unit
+        if header_specaxunit is not None:
+            self._spectral_unit = header_specaxunit
 
         self._spectral_scale = spectral_axis.wcs_unit_scale(self._spectral_unit)
 
@@ -2167,7 +2174,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         header.insert(5, Card(keyword='NAXIS3', value=self.shape[0]))
 
         # Preserve the cube's spectral units
-        if self._spectral_unit != u.Unit(header['CUNIT3']):
+        # (if CUNIT3 is not in the header, it is whatever that type's default unit is)
+        if 'CUNIT3' in header and self._spectral_unit != u.Unit(header['CUNIT3']):
             header['CDELT3'] *= self._spectral_scale
             header['CRVAL3'] *= self._spectral_scale
             header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')

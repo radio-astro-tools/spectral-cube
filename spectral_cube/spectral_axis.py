@@ -54,10 +54,11 @@ LINEAR_CUNIT_DICT = {'VRAD': u.Hz, 'VOPT': u.m, 'FREQ': u.Hz, 'WAVE': u.m,
                      'VELO': u.m/u.s, 'AWAV': u.m}
 LINEAR_CUNIT_DICT.update(WCS_UNIT_DICT)
 
-def unit_from_header(header):
+def unit_from_header(header, spectral_axis_number=3):
     """ Retrieve the spectral unit from a header """
-    if 'CUNIT3' in header:
-        return u.Unit(header['CUNIT3'])
+    cunitind = 'CUNIT{0}'.format(spectral_axis_number)
+    if cunitind in header:
+        return u.Unit(header[cunitind])
 
 def wcs_unit_scale(unit):
     """
