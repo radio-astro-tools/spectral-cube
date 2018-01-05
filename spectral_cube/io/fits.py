@@ -150,6 +150,8 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
 
         data, wcs = cube_utils._orient(data, wcs)
 
+        header.update(wcs.to_header())
+
         mask = LazyMask(np.isfinite, data=data, wcs=wcs)
         assert data.shape == mask._data.shape
         if beam_table is None:
