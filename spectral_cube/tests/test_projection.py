@@ -465,13 +465,13 @@ def test_spectral_units():
 
     sp = cube[:,0,0]
 
-    assert sp.spectral_axis.unit == u.m/u.s
-    assert sp.header['CUNIT1'] in ('m s-1', 'm/s')
-
-    sp = cube.with_spectral_unit(u.km/u.s)[:,0,0]
-
     assert sp.spectral_axis.unit == u.km/u.s
     assert sp.header['CUNIT1'] == 'km s-1'
+
+    sp = cube.with_spectral_unit(u.m/u.s)[:,0,0]
+
+    assert sp.spectral_axis.unit == u.m/u.s
+    assert sp.header['CUNIT1'] in ('m s-1', 'm/s')
 
 def test_repr_1d():
 

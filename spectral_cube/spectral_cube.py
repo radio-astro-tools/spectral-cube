@@ -251,7 +251,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         s += (" n_s: {0:6d}  type_s: {1:8s}  unit_s: {2:5s}"
               "  range: {3:12.3f}:{4:12.3f}".format(self.shape[0],
                                                     self.wcs.wcs.ctype[2],
-                                                    self.wcs.wcs.cunit[2],
+                                                    self._spectral_unit,
                                                     self.spectral_extrema[0],
                                                     self.spectral_extrema[1],
                                                    ))
