@@ -29,7 +29,7 @@ env:
         - ASTROPY_VERSION=stable
         - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist astropy-helpers'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
-        - PIP_DEPENDENCIES='astropy-helpers https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
+        - PIP_DEPENDENCIES='https://github.com/astropy/astropy-helpers/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - SETUP_XVFB=True
 
     matrix:
