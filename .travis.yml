@@ -27,7 +27,7 @@ env:
         - SETUP_CMD='test -a "--boxed"'
         - NUMPY_VERSION=1.13
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist'
+        - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist astropy-helpers'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
         - PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - SETUP_XVFB=True
