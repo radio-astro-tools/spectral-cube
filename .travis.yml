@@ -55,7 +55,7 @@ matrix:
         # Try older numpy versions
         - python: 2.7
           env: NUMPY_VERSION=1.9
-               PIP_DEPENDENCIES='future https://github.com/astropy/astropy-helpers/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
+               PIP_DEPENDENCIES='https://github.com/astropy/astropy-helpers/archive/v2.0.2.tar.gz https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         #We need nanmedian.  <=1.8 deprecated
         # - python: 2.7
         #   env: NUMPY_VERSION=1.8
@@ -63,7 +63,7 @@ matrix:
         # Test with bottleneck
         - python: 2.7
           env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist astropy-helpers'
-               PIP_DEPENDENCIES='future https://github.com/astropy/astropy-helpers/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
+               PIP_DEPENDENCIES='https://github.com/astropy/astropy-helpers/archive/v2.0.2.tar.gz https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - python: 3.6
           env: NUMPY_VERSION=1.11 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
 
