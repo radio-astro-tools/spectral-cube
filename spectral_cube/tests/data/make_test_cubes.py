@@ -14,7 +14,7 @@ def transpose(d, h, axes):
     h2 = h.copy()
 
     for i in range(len(axes)):
-        for key in ['NAXIS', 'CDELT', 'CRPIX', 'CRVAL', 'CTYPE']:
+        for key in ['NAXIS', 'CDELT', 'CRPIX', 'CRVAL', 'CTYPE', 'CUNIT']:
             h2['%s%i' % (key, i + 1)] = h['%s%i' % (key, axes[i] + 1)]
 
     return d, h2

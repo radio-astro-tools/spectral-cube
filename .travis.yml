@@ -27,7 +27,7 @@ env:
         - SETUP_CMD='test -a "--boxed"'
         - NUMPY_VERSION=1.13
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist'
+        - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist astropy-helpers'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
         - PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - SETUP_XVFB=True
@@ -41,11 +41,11 @@ env:
 matrix:
     include:
 
-        # Do a coverage test in Python 2.
+        # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
-        - python: 2.7
+        - python: 3.6
           env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist'
+               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -55,13 +55,15 @@ matrix:
         # Try older numpy versions
         - python: 2.7
           env: NUMPY_VERSION=1.9
+               PIP_DEPENDENCIES='https://github.com/astropy/astropy-helpers/archive/v2.0.2.tar.gz https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         #We need nanmedian.  <=1.8 deprecated
         # - python: 2.7
         #   env: NUMPY_VERSION=1.8
 
         # Test with bottleneck
         - python: 2.7
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
+          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist astropy-helpers'
+               PIP_DEPENDENCIES='https://github.com/astropy/astropy-helpers/archive/v2.0.2.tar.gz https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - python: 3.6
           env: NUMPY_VERSION=1.11 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
 

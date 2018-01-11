@@ -642,7 +642,7 @@ class TestRepr(BaseTest):
 SpectralCube with shape=(4, 3, 2) and unit=K:
  n_x:      2  type_x: RA---SIN  unit_x: deg    range:    24.062698 deg:   24.063349 deg
  n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
- n_s:      4  type_s: VOPT      unit_s: m / s  range:  -321214.699 m / s: -317350.054 m / s
+ n_s:      4  type_s: VOPT      unit_s: km / s  range:     -321.215 km / s:    -317.350 km / s
         """.strip()
 
     def test_repr_withunit(self):
@@ -651,7 +651,7 @@ SpectralCube with shape=(4, 3, 2) and unit=K:
 SpectralCube with shape=(4, 3, 2) and unit=Jy:
  n_x:      2  type_x: RA---SIN  unit_x: deg    range:    24.062698 deg:   24.063349 deg
  n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
- n_s:      4  type_s: VOPT      unit_s: m / s  range:  -321214.699 m / s: -317350.054 m / s
+ n_s:      4  type_s: VOPT      unit_s: km / s  range:     -321.215 km / s:    -317.350 km / s
         """.strip()
 
 
@@ -946,16 +946,19 @@ def test_header_units_consistent():
 
     cube, data = cube_and_raw('advs.fits')
 
+    cube_ms = cube.with_spectral_unit(u.m/u.s)
     cube_kms = cube.with_spectral_unit(u.km/u.s)
     cube_Mms = cube.with_spectral_unit(u.Mm/u.s)
 
-    assert cube.header['CUNIT3'] == 'm s-1'
+    assert cube.header['CUNIT3'] == 'km s-1'
+    assert cube_ms.header['CUNIT3'] == 'm s-1'
     assert cube_kms.header['CUNIT3'] == 'km s-1'
     assert cube_Mms.header['CUNIT3'] == 'Mm s-1'
 
     # Wow, the tolerance here is really terrible...
-    assert_allclose(cube_Mms.header['CDELT3'], cube.header['CDELT3']/1e6,rtol=1e-3,atol=1e-5)
-    assert_allclose(cube.header['CDELT3']/1e3, cube_kms.header['CDELT3'],rtol=1e-2,atol=1e-5)
+    assert_allclose(cube_Mms.header['CDELT3'], cube.header['CDELT3']/1e3,rtol=1e-3,atol=1e-5)
+    assert_allclose(cube.header['CDELT3'], cube_kms.header['CDELT3'],rtol=1e-2,atol=1e-5)
+    assert_allclose(cube.header['CDELT3']*1e3, cube_ms.header['CDELT3'],rtol=1e-2,atol=1e-5)
 
     cube_freq = cube.with_spectral_unit(u.Hz)
 
