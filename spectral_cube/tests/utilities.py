@@ -55,6 +55,7 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
                            noise=None, spec_scale=1 * u.km / u.s,
                            pixel_scale=1 * u.arcsec,
                            beamfwhm=3 * u.arcsec,
+                           v0=None,
                            vel_surface=None,
                            seed=247825498):
     '''
@@ -79,6 +80,9 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
     spec_middle = int(shape[0] / 2)
     spec_quarter = int(shape[0] / 4)
 
+    if v0 is None:
+        v0 = 0
+
     with NumpyRNGContext(seed):
 
         spec_inds = np.mgrid[-spec_middle:spec_middle] * spec_scale.value
@@ -88,13 +92,13 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
             mean_pos = \
                 np.random.uniform(low=spec_inds[spec_quarter],
                                   high=spec_inds[spec_quarter + spec_middle])
-            mean_positions[y, x] = mean_pos
             test_cube[:, y, x] = gaussian(spec_inds, amp, mean_pos, sigma)
+            mean_positions[y, x] = mean_pos + v0
             if noise is not None:
                 test_cube[:, y, x] += np.random.normal(0, noise, shape[0])
 
     test_hdu = generate_hdu(test_cube, pixel_scale, spec_scale, beamfwhm,
-                            spec_inds[0])
+                            spec_inds[0] + v0)
 
     spec_cube = SpectralCube.read(test_hdu)
 
