@@ -205,7 +205,11 @@ def stack_spectra(cube, velocity_surface, v0=None,
                              "axis of the cube.")
 
     # Calculate the pixel shifts that will be applied.
-    vdiff = np.abs(np.diff(cube.spectral_axis[:2])[0])
+    spec_size = np.diff(cube.spectral_axis[:2])[0]
+    # Assign the correct +/- for pixel shifts based on whether the spectral
+    # axis is increasing (-1) or decreasing (+1)
+    vdiff_sign = -1. if spec_size.value > 0. else 1.
+    vdiff = np.abs(spec_size)
     vel_unit = vdiff.unit
 
     # Check to make sure vdiff doesn't change more than the allowed tolerance
@@ -214,8 +218,8 @@ def stack_spectra(cube, velocity_surface, v0=None,
     if not np.isclose(vdiff2.value, vdiff.value, rtol=vdiff_tol):
         raise ValueError("Cannot shift spectra on a non-linear axes")
 
-    pix_shifts = -((velocity_surface.to(vel_unit) -
-                    v0.to(vel_unit)) / vdiff).value[xy_posns]
+    pix_shifts = vdiff_sign * ((velocity_surface.to(vel_unit) -
+                                v0.to(vel_unit)) / vdiff).value[xy_posns]
 
     # May a header copy so we can start altering
     new_header = cube[:, 0, 0].header.copy()

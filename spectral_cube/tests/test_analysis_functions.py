@@ -4,8 +4,8 @@ import numpy as np
 import astropy.units as u
 # from astropy.modeling import models, fitting
 
-from spectral_cube.analysis_utilities import stack_spectra, fourier_shift
-from spectral_cube.tests.utilities import generate_gaussian_cube, gaussian
+from ..analysis_utilities import stack_spectra, fourier_shift
+from .utilities import generate_gaussian_cube, gaussian
 
 
 def test_shift():
@@ -79,6 +79,42 @@ def test_stacking():
 
     # np.testing.assert_allclose(fit_vals, np.array([amp, v0.value, sigma]),
     #                            atol=1e-3)
+
+    # The stacked spectrum should have the same spectral axis
+    np.testing.assert_allclose(stacked.spectral_axis.value,
+                               test_cube.spectral_axis.value)
+
+
+def test_stacking_reversed_specaxis():
+    '''
+    Use a set of identical Gaussian profiles randomly offset to ensure the
+    shifted spectrum has the correct properties.
+    '''
+
+    amp = 1.
+    v0 = 0. * u.km / u.s
+    sigma = 8.
+    noise = None
+    shape = (100, 25, 25)
+
+    test_cube, test_vels = \
+        generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
+                               shape=shape, spec_scale=-1. * u.km / u.s)
+
+    true_spectrum = gaussian(test_cube.spectral_axis.value,
+                             amp, v0.value, sigma)
+
+    # Stack the spectra in the cube
+    stacked = \
+        stack_spectra(test_cube, test_vels, v0=v0,
+                      stack_function=np.nanmean,
+                      xy_posns=None, num_cores=1,
+                      chunk_size=-1,
+                      progressbar=False, pad_edges=False)
+
+    # Calculate residuals
+    resid = np.abs(stacked.value - true_spectrum)
+    assert np.std(resid) <= 1e-3
 
     # The stacked spectrum should have the same spectral axis
     np.testing.assert_allclose(stacked.spectral_axis.value,
@@ -161,12 +197,6 @@ def test_stacking_woffset():
     # Calculate residuals
     resid = np.abs(stacked.value - true_spectrum)
     assert np.std(resid) <= 1e-3
-
-    # Now fit a Gaussian to the mean stacked profile.
-    # fit_vals = fit_gaussian(stacked.spectral_axis.value, stacked.value)[0]
-
-    # np.testing.assert_allclose(fit_vals, np.array([amp, 0.0, sigma]),
-    #                            atol=1e-3)
 
     # The spectral axis should be padded by ~25% on each side
     stack_shape = int(test_cube.shape[0] * 1.5)
