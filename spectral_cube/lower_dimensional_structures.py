@@ -671,8 +671,17 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         newheader['CUNIT1'] = unit.to_string(format='FITS')
         newheader['CDELT1'] *= wcs_cunit.to(unit)
 
+        if self._mask is not None:
+            newmask = self._mask.with_spectral_unit(unit,
+                                                    velocity_convention=velocity_convention,
+                                                    rest_value=rest_value)
+            newmask._wcs = newwcs
+        else:
+            newmask = None
+
         return self._new_spectrum_with(wcs=newwcs, spectral_unit=unit,
-                                       meta=newmeta, header=newheader)
+                                       mask=newmask, meta=newmeta,
+                                       header=newheader)
 
     def __getitem__(self, key, **kwargs):
         try:
