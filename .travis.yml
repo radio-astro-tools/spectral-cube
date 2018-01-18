@@ -27,8 +27,8 @@ env:
         - SETUP_CMD='test -a "--boxed"'
         - NUMPY_VERSION=1.13
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist astropy-helpers'
-        - CONDA_CHANNELS='astropy-ci-extras astropy'
+        - CONDA_DEPENDENCIES='matplotlib aplpy pytest pytest-xdist astropy-helpers python-casacore'
+        - CONDA_CHANNELS='astropy-ci-extras astropy conda-forge'
         - PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - SETUP_XVFB=True
 
@@ -45,7 +45,7 @@ matrix:
         # make sure *everything* is run for coverage tests
         - python: 3.6
           env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers'
+               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers python-casacore'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
@@ -56,16 +56,17 @@ matrix:
         - python: 2.7
           env: NUMPY_VERSION=1.9
                PIP_DEPENDENCIES='https://github.com/astropy/astropy-helpers/archive/v2.0.2.tar.gz https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
+
         #We need nanmedian.  <=1.8 deprecated
         # - python: 2.7
         #   env: NUMPY_VERSION=1.8
 
         # Test with bottleneck
         - python: 2.7
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist astropy-helpers'
+          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist astropy-helpers python-casacore'
                PIP_DEPENDENCIES='https://github.com/astropy/astropy-helpers/archive/v2.0.2.tar.gz https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - python: 3.6
-          env: NUMPY_VERSION=1.11 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist'
+          env: NUMPY_VERSION=1.11 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist python-casacore'
 
         # Test with development versions
         - python: 3.5
