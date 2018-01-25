@@ -761,7 +761,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self._new_cube_with(data=data, unit=unit)
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
-                       projection=False, progressbar=False, **kwargs):
+                       projection=False, progressbar=False, 
+                       update_function=None, keep_shape=False, **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
@@ -785,6 +786,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         progressbar : bool
             Show a progressbar while iterating over the slices/rays through the
             cube?
+        keep_shape : bool
+            If `True`, the returned object will be the same dimensionality as
+            the cube.
+        update_function : function
+            An alternative tracker for the progress of applying the function
+            to the cube data. If `progressbar` is `True`, this argument is
+            ignored.
 
         Returns
         -------
@@ -803,13 +811,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         # determine the output array shape
         nx, ny = self._get_flat_shape(axis)
+        nz = self.shape[axis] if keep_shape else 1
 
         # allocate memory for output array
-        out = np.empty([nx, ny]) * np.nan
+        out = np.empty([nz, nx, ny]) * np.nan
 
         if progressbar:
             progressbar = ProgressBar(nx*ny)
             pbu = progressbar.update
+        elif update_function is not None:
+            pbu = update_function
         else:
             pbu = lambda: True
 
@@ -821,12 +832,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 result = function(data, **kwargs)
                 if hasattr(result, 'value'):
                     # store result in array
-                    out[y, x] = result.value
+                    out[:, y, x] = result.value
                 else:
-                    out[y, x] = result
+                    out[:, y, x] = result
             pbu()
 
-        if projection and axis in (0,1,2):
+        if not keep_shape:
+            out = out[0, :, :]
+
+        if projection and axis in (0, 1, 2):
             new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
             meta = {'collapse_axis': axis}
