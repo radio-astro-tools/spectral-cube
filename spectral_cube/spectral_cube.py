@@ -791,7 +791,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             the cube.
         update_function : function
             An alternative tracker for the progress of applying the function
-            to the cube data. If progressbar is true, this argument is
+            to the cube data. If ``progressbar`` is ``True``, this argument is
             ignored.
 
         Returns
