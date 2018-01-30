@@ -342,6 +342,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             out = self._reduce_slicewise(function, fill, check_endian,
                                          includemask=includemask,
                                          progressbar=progressbar, **kwargs)
+        elif how == 'ray':
+            raise NotImplementedError("Raywise numpy function applications "
+                                      "are not yet supported.")
         elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how)
 
@@ -603,16 +606,19 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     @aggregation_docstring
     @warn_slow
-    def mad_std(self, axis=None, **kwargs):
+    def mad_std(self, axis=None, how='cube', **kwargs):
         """
         Use astropy's mad_std to computer the standard deviation
         """
         if int(astropy.__version__[0]) < 2:
             raise NotImplementedError("mad_std requires astropy >= 2")
         projection = self._naxes_dropped(axis) in (1,2)
+        if how == 'slice':
+            raise NotImplementedError("mad_std cannot be computed slicewise")
         return self.apply_numpy_function(stats.mad_std, fill=np.nan,
-                                         how='cube', axis=axis, unit=self.unit,
+                                         axis=axis, unit=self.unit,
                                          ignore_nan=True,
+                                         how=how,
                                          projection=projection, **kwargs)
 
 
