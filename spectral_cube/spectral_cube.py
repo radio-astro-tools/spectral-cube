@@ -613,9 +613,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if int(astropy.__version__[0]) < 2:
             raise NotImplementedError("mad_std requires astropy >= 2")
         projection = self._naxes_dropped(axis) in (1,2)
-        if how == 'slice':
-            raise NotImplementedError("mad_std cannot be computed slicewise")
-        elif how == 'ray':
+        if how == 'ray':
             # no need for fill here; masked-out data are simply not included
             return self.apply_function(stats.mad_std,
                                        axis=axis,
