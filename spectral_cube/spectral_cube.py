@@ -615,11 +615,19 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         projection = self._naxes_dropped(axis) in (1,2)
         if how == 'slice':
             raise NotImplementedError("mad_std cannot be computed slicewise")
-        return self.apply_numpy_function(stats.mad_std, fill=np.nan,
-                                         axis=axis, unit=self.unit,
-                                         ignore_nan=True,
-                                         how=how,
-                                         projection=projection, **kwargs)
+        elif how == 'ray':
+            # no need for fill here; masked-out data are simply not included
+            return self.apply_function(stats.mad_std,
+                                       axis=axis,
+                                       unit=self.unit,
+                                       projection=projection,
+                                      )
+        else:
+            return self.apply_numpy_function(stats.mad_std, fill=np.nan,
+                                             axis=axis, unit=self.unit,
+                                             ignore_nan=True,
+                                             how=how,
+                                             projection=projection, **kwargs)
 
 
     @aggregation_docstring
@@ -806,6 +814,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 return u.Quantity(out, unit=unit)
             else:
                 return out
+        if hasattr(axis, '__len__'):
+            raise NotImplementedError("`apply_function` does not support "
+                                      "function application across multiple "
+                                      "axes.  Try `apply_numpy_function`.")
 
         # determine the output array shape
         nx, ny = self._get_flat_shape(axis)
