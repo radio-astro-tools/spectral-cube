@@ -38,7 +38,9 @@ from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
                          MaskableArrayMixinClass)
-from .utils import cached, warn_slow, VarianceWarning, BeamAverageWarning
+from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
+                    UnsupportedIterationStrategyWarning, WCSMismatchWarning,
+                    NotImplementedWarning)
 
 from distutils.version import LooseVersion
 
@@ -343,10 +345,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          includemask=includemask,
                                          progressbar=progressbar, **kwargs)
         elif how == 'ray':
-            raise NotImplementedError("Raywise numpy function applications "
-                                      "are not yet supported.")
+            out = self.apply_function(function, **kwargs)
         elif how not in ['auto', 'cube']:
-            warnings.warn("Cannot use how=%s. Using how=cube" % how)
+            warnings.warn("Cannot use how=%s. Using how=cube" % how,
+                          UnsupportedIterationStrategyWarning)
 
         if out is None:
             out = function(self._get_filled_data(fill=fill,
@@ -749,7 +751,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                .format(self.unit, cube.unit))
         if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True,
                                         **kwargs):
-            warnings.warn("Cube WCSs do not match, but their shapes do")
+            warnings.warn("Cube WCSs do not match, but their shapes do",
+                          WCSMismatchWarning)
         try:
             test_result = function(np.ones([1,1,1])*self.unit,
                                    np.ones([1,1,1])*self.unit)
@@ -1585,7 +1588,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             except NotImplementedError:
                 warnings.warn("Mask slicing not implemented for "
                               "{0} - dropping mask".
-                              format(self._mask.__class__.__name__))
+                              format(self._mask.__class__.__name__),
+                              NotImplementedWarning
+                             )
                 mask_slab = None
 
         # Create new spectral cube
@@ -1979,10 +1984,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         cube = read(filename, format=format, hdu=hdu, **kwargs)
         if isinstance(cube, StokesSpectralCube):
             if hasattr(cube, 'I'):
-                warnings.warn("Cube is a Stokes cube, returning spectral cube for I component")
+                warnings.warn("Cube is a Stokes cube, "
+                              "returning spectral cube for I component")
                 return cube.I
             else:
-                raise ValueError("Spectral cube is a Stokes cube that does not have an I component")
+                raise ValueError("Spectral cube is a Stokes cube that "
+                                 "does not have an I component")
         else:
             return cube
 

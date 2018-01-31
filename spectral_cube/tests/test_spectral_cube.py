@@ -24,12 +24,16 @@ from ..spectral_cube import OneDSpectrum, Projection
 from ..np_compat import allbadtonan
 from .. import spectral_axis
 from .. import base_class
+from .. import utils
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
 
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
+warnings.simplefilter('error', utils.UnsupportedIterationStrategyWarning)
+warnings.simplefilter('error', utils.NotImplementedWarning)
+warnings.simplefilter('error', utils.WCSMismatchWarning)
 
 try:
     import scipy.ndimage
@@ -1119,7 +1123,9 @@ def test_subcube_slab_beams():
 
     assert all(slcube.hdulist[1].data['CHAN'] == np.arange(slcube.shape[0]))
 
-@pytest.mark.parametrize('how', ('auto', 'cube', 'slice', 'ray'))
+# collapsing to one dimension raywise doesn't make sense and is therefore
+# not supported.
+@pytest.mark.parametrize('how', ('auto', 'cube', 'slice'))
 def test_oned_collapse(how):
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
