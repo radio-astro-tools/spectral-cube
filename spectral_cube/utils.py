@@ -40,6 +40,9 @@ def warn_slow(function):
         return function(self, *args, **kwargs)
     return wrapper
 
+class UnsupportedIterationStrategyWarning(AstropyUserWarning):
+    pass
+
 class VarianceWarning(AstropyUserWarning):
     pass
 
@@ -50,4 +53,10 @@ class BeamAverageWarning(AstropyUserWarning):
     pass
 
 class WCSCelestialError(Exception):
+    pass
+
+class WCSMismatchWarning(AstropyUserWarning):
+    pass
+
+class NotImplementedWarning(AstropyUserWarning):
     pass
