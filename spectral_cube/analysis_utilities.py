@@ -269,7 +269,10 @@ def stack_spectra(cube, velocity_surface, v0=None,
 
             all_shifted_spectra.extend([out for out in shifted_spectra])
 
-    stacked = stack_function(all_shifted_spectra, axis=0)
+    shifted_spectra_array = np.array(all_shifted_spectra)
+    assert shifted_spectra_array.ndim == 2
+
+    stacked = stack_function(shifted_spectra_array, axis=0)
 
     stack_spec = \
         OneDSpectrum(stacked, unit=cube.unit, wcs=WCS(new_header),
