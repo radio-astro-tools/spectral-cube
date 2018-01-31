@@ -37,7 +37,6 @@ def test_spectral_cube_mask():
     assert_allclose(m._filled(data, wcs, view=(0, 0, slice(1, 4))), [1, 2, np.nan])
     assert_allclose(m._flattened(data, wcs, view=(0, 0, slice(1, 4))), [1, 2])
 
-
 def test_lazy_mask():
 
     data = np.arange(5).reshape((1, 1, 5))
@@ -543,3 +542,16 @@ def test_filled():
     assert_allclose(filled, filled_)
 
     assert (np.isnan(filled) == mcube.mask.exclude()).all()
+
+def test_boolean_array_composite_mask():
+
+    cube, data = cube_and_raw('adv.fits')
+
+    med = cube.median()
+    mask = cube > med
+    arrmask = cube.max(axis=0) > med
+
+    # we're just testing that this doesn't fail
+    combined_mask = mask & arrmask
+
+    mcube = cube.with_mask(combined_mask)
