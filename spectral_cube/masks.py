@@ -314,6 +314,17 @@ class CompositeMask(MaskBase):
     """
 
     def __init__(self, mask1, mask2, operation='and'):
+        if isinstance(mask1, np.ndarray) and isinstance(mask2, MaskBase):
+            if not is_broadcastable_and_smaller(mask1.shape, mask2.shape):
+                raise ValueError("Mask1 shape is not broadcastable to Mask2 shape: "
+                                 "%s vs %s" % (mask1.shape, mask2.shape))
+            mask1 = BooleanArrayMask(mask1, mask2._wcs, shape=mask2.shape)
+        elif isinstance(mask2, np.ndarray) and isinstance(mask1, MaskBase):
+            if not is_broadcastable_and_smaller(mask2.shape, mask1.shape):
+                raise ValueError("Mask2 shape is not broadcastable to Mask1 shape: "
+                                 "%s vs %s" % (mask2.shape, mask1.shape))
+            mask2 = BooleanArrayMask(mask2, mask1._wcs, shape=mask1.shape)
+
         self._mask1 = mask1
         self._mask2 = mask2
         self._operation = operation
