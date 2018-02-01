@@ -112,7 +112,7 @@ class MaskBase(object):
         self._validate_wcs(data, wcs, **kwargs)
         return self._include(data=data, wcs=wcs, view=view)
 
-    def _validate_wcs(self, new_data, new_wcs, **kwargs):
+    def _validate_wcs(self, new_data=None, new_wcs=None, **kwargs):
         """
         This method can be overridden in cases where the data and WCS have to
         conform to some rules. This gets called automatically when
@@ -345,9 +345,9 @@ class CompositeMask(MaskBase):
         self._mask2 = mask2
         self._operation = operation
 
-    def _validate_wcs(self, new_data, new_wcs, **kwargs):
-        self._mask1._validate_wcs(new_data, new_wcs, **kwargs)
-        self._mask2._validate_wcs(new_data, new_wcs, **kwargs)
+    def _validate_wcs(self, new_data=None, new_wcs=None, **kwargs):
+        self._mask1._validate_wcs(new_data=new_data, new_wcs=new_wcs, **kwargs)
+        self._mask2._validate_wcs(new_data=new_data, new_wcs=new_wcs, **kwargs)
 
     @property
     def shape(self):
@@ -715,7 +715,7 @@ class FunctionMask(MaskBase):
     def __init__(self, function):
         self._function = function
 
-    def _validate_wcs(self, new_data, new_wcs, **kwargs):
+    def _validate_wcs(self, new_data=None, new_wcs=None, **kwargs):
         pass
 
     def _include(self, data=None, wcs=None, view=()):
