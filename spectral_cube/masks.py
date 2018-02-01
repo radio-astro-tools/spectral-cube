@@ -336,7 +336,7 @@ class CompositeMask(MaskBase):
 
         # both entries must have compatible, which effectively means
         # equal, WCSes.
-        self._mask1._validate_wcs(self._mask2._wcs)
+        mask1._validate_wcs(mask2._wcs)
         # In order to composite composites, they must have a _wcs defined.
         # (maybe this should be a property?)
         self._wcs = self._mask1._wcs
