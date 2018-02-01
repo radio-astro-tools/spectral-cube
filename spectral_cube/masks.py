@@ -167,7 +167,7 @@ class MaskBase(object):
 
     def _filled(self, data, wcs=None, fill=np.nan, view=(), **kwargs):
         """
-        Replace the exluded elements of *array* with *fill*.
+        Replace the excluded elements of *array* with *fill*.
 
         Parameters
         ----------
@@ -207,6 +207,11 @@ class MaskBase(object):
 
     def __invert__(self):
         return InvertedMask(self)
+
+    @property
+    def shape(self):
+        raise NotImplementedError("{0} mask classes do not have shape attributes."
+                                  .format(self.__class__.__name__))
 
     def __getitem__(self):
         raise NotImplementedError("Slicing not supported by mask class {0}"
@@ -282,6 +287,10 @@ class InvertedMask(MaskBase):
     def __init__(self, mask):
         self._mask = mask
 
+    @property
+    def shape(self):
+        return self._mask.shape
+
     def _include(self, data=None, wcs=None, view=()):
         return ~self._mask.include(data=data, wcs=wcs, view=view)
 
@@ -314,12 +323,12 @@ class CompositeMask(MaskBase):
     """
 
     def __init__(self, mask1, mask2, operation='and'):
-        if isinstance(mask1, np.ndarray) and isinstance(mask2, MaskBase):
+        if isinstance(mask1, np.ndarray) and isinstance(mask2, MaskBase) and hasattr(mask2, 'shape'):
             if not is_broadcastable_and_smaller(mask1.shape, mask2.shape):
                 raise ValueError("Mask1 shape is not broadcastable to Mask2 shape: "
                                  "%s vs %s" % (mask1.shape, mask2.shape))
             mask1 = BooleanArrayMask(mask1, mask2._wcs, shape=mask2.shape)
-        elif isinstance(mask2, np.ndarray) and isinstance(mask1, MaskBase):
+        elif isinstance(mask2, np.ndarray) and isinstance(mask1, MaskBase) and hasattr(mask1, 'shape'):
             if not is_broadcastable_and_smaller(mask2.shape, mask1.shape):
                 raise ValueError("Mask2 shape is not broadcastable to Mask1 shape: "
                                  "%s vs %s" % (mask2.shape, mask1.shape))
@@ -332,6 +341,20 @@ class CompositeMask(MaskBase):
     def _validate_wcs(self, new_data, new_wcs, **kwargs):
         self._mask1._validate_wcs(new_data, new_wcs, **kwargs)
         self._mask2._validate_wcs(new_data, new_wcs, **kwargs)
+
+    @property
+    def shape(self):
+        try:
+            assert self._mask1.shape == self._mask2.shape
+            return self._mask1.shape
+        except AssertionError:
+            raise ValueError("The composite mask does not have a well-defined "
+                             "shape; its two components have shapes {0} and "
+                             "{1}.".format(self._mask1.shape,
+                                           self._mask2.shape))
+        except NotImplementedError:
+            raise ValueError("The composite mask contains at least one "
+                             "component with no defined shape.")
 
     def _include(self, data=None, wcs=None, view=()):
         result_mask_1 = self._mask1._include(data=data, wcs=wcs, view=view)
@@ -524,6 +547,10 @@ class LazyMask(MaskBase):
             raise ValueError("Either a cube or (data & wcs) is required.")
 
         self._wcs_whitelist = set()
+
+    @property
+    def shape(self):
+        return self._data.shape
 
     def _validate_wcs(self, new_data=None, new_wcs=None, **kwargs):
         """
