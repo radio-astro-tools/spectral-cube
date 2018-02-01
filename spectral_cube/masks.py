@@ -334,6 +334,13 @@ class CompositeMask(MaskBase):
                                  "%s vs %s" % (mask2.shape, mask1.shape))
             mask2 = BooleanArrayMask(mask2, mask1._wcs, shape=mask1.shape)
 
+        # both entries must have compatible, which effectively means
+        # equal, WCSes.
+        self._mask1._validate_wcs(self._mask2._wcs)
+        # In order to composite composites, they must have a _wcs defined.
+        # (maybe this should be a property?)
+        self._wcs = self._mask1._wcs
+
         self._mask1 = mask1
         self._mask2 = mask2
         self._operation = operation
