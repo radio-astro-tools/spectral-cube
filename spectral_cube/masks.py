@@ -335,11 +335,18 @@ class CompositeMask(MaskBase):
             mask2 = BooleanArrayMask(mask2, mask1._wcs, shape=mask1.shape)
 
         # both entries must have compatible, which effectively means
-        # equal, WCSes.
-        mask1._validate_wcs(new_data=None, wcs=mask2._wcs)
-        # In order to composite composites, they must have a _wcs defined.
-        # (maybe this should be a property?)
-        self._wcs = mask1._wcs
+        # equal, WCSes.  Unless one is a function.
+        if hasattr(mask1, '_wcs') and hasattr(mask2, '_wcs'):
+            mask1._validate_wcs(new_data=None, wcs=mask2._wcs)
+            # In order to composite composites, they must have a _wcs defined.
+            # (maybe this should be a property?)
+            self._wcs = mask1._wcs
+        elif hasattr(mask1, '_wcs'):
+            # if one mask doesn't have a WCS, but the other does, the
+            # compositemask should have the same WCS as the one that does
+            self._wcs = mask1._wcs
+        elif hasattr(mask2, '_wcs'):
+            self._wcs = mask2._wcs
 
         self._mask1 = mask1
         self._mask2 = mask2
