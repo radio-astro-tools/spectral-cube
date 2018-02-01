@@ -339,7 +339,7 @@ class CompositeMask(MaskBase):
         mask1._validate_wcs(mask2._wcs)
         # In order to composite composites, they must have a _wcs defined.
         # (maybe this should be a property?)
-        self._wcs = self._mask1._wcs
+        self._wcs = mask1._wcs
 
         self._mask1 = mask1
         self._mask2 = mask2
