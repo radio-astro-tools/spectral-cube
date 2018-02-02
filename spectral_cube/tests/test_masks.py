@@ -555,3 +555,6 @@ def test_boolean_array_composite_mask():
     combined_mask = mask & arrmask
 
     mcube = cube.with_mask(combined_mask)
+
+    # not doing assert_almost_equal because I don't want to worry about precision
+    assert (mcube.sum() > 9.5 * u.K) & (mcube.sum() < 9.6*u.K)
