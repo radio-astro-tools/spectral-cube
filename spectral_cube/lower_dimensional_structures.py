@@ -81,7 +81,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         if format is None:
             format = determine_format(filename)
         if format == 'fits':
-            self.hdu.writeto(filename, clobber=overwrite)
+            try:
+                self.hdu.writeto(filename, overwrite=overwrite)
+            except TypeError:
+                self.hdu.writeto(filename, clobber=overwrite)
         else:
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
