@@ -170,6 +170,61 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         """
         return u.Quantity(self)
 
+    def to(self, unit, equivalencies=[], freq=None):
+        """
+        Return a new `~spectral_cube.lower_dimensional_structures.Projection`
+        of the same class with the specified unit.
+
+        See `astropy.units.Quantity.to` for further details.
+        """
+
+        if not isinstance(unit, u.Unit):
+            unit = u.Unit(unit)
+
+        if unit == self.unit:
+            # No copying
+            return self
+
+        if self.unit.is_equivalent(u.Jy / u.beam):
+            # replace "beam" with the actual beam
+            if not hasattr(self, 'beam'):
+                raise ValueError("To convert objects with Jy/beam units, "
+                                 "the object needs to have a beam defined.")
+            brightness_unit = self.unit * u.beam
+
+            # create a beam equivalency for brightness temperature
+            if freq is None:
+                try:
+                    freq = self.with_spectral_unit(u.Hz).spectral_axis
+                except AttributeError:
+                    raise TypeError("Object of type {0} has no spectral "
+                                    "information. `freq` must be provided for"
+                                    " unit conversion from Jy/beam"
+                                    .format(type(self)))
+            else:
+                if not freq.unit.is_equivalent(u.Hz):
+                    raise u.UnitsError("freq must be given in equivalent "
+                                       "frequency units.")
+
+            bmequiv = self.beam.jtok_equiv(freq)
+            factor = brightness_unit.to(unit,
+                                        equivalencies=bmequiv + list(equivalencies))
+        else:
+            # scaling factor
+            factor = self.unit.to(unit, equivalencies=equivalencies)
+
+        converted_array = (self.quantity * factor).value
+
+        # use private versions of variables, not the generated property
+        # versions
+        # Not entirely sure the use of __class__ here is kosher, but we do want
+        # self.__class__, not super()
+        new = self.__class__(value=converted_array, unit=unit, copy=True,
+                             wcs=self._wcs, meta=self._meta, mask=self._mask,
+                             header=self._header)
+
+        return new
+
     @property
     def _mask(self):
         """ Annoying hack to deal with np.ma.core.is_mask failures (I don't
@@ -480,52 +535,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
         See `astropy.units.Quantity.to` for further details.
         """
 
-        if not isinstance(unit, u.Unit):
-            unit = u.Unit(unit)
-
-        if unit == self.unit:
-            # No copying
-            return self
-
-        if self.unit.is_equivalent(u.Jy / u.beam):
-            # replace "beam" with the actual beam
-            if not hasattr(self, 'beam'):
-                raise ValueError("To convert objects with Jy/beam units, "
-                                 "the object needs to have a beam defined.")
-            brightness_unit = self.unit * u.beam
-
-            # create a beam equivalency for brightness temperature
-            if freq is None:
-                try:
-                    freq = self.with_spectral_unit(u.Hz).spectral_axis
-                except AttributeError:
-                    raise TypeError("Object of type {0} has no spectral "
-                                    "information. `freq` must be provided for"
-                                    " unit conversion from Jy/beam"
-                                    .format(type(self)))
-            else:
-                if not freq.unit.is_equivalent(u.Hz):
-                    raise u.UnitsError("freq must be given in equivalent "
-                                       "frequency units.")
-
-            bmequiv = self.beam.jtok_equiv(freq)
-            factor = brightness_unit.to(unit,
-                                        equivalencies=bmequiv + list(equivalencies))
-        else:
-            # scaling factor
-            factor = self.unit.to(unit, equivalencies=equivalencies)
-
-        converted_array = (self.quantity * factor).value
-
-        # use private versions of variables, not the generated property
-        # versions
-        # Not entirely sure the use of __class__ here is kosher, but we do want
-        # self.__class__, not super()
-        new = self.__class__(value=converted_array, unit=unit, copy=True,
-                             wcs=self._wcs, meta=self._meta, mask=self._mask,
-                             header=self._header)
-
-        return new
+        return super(Projection, self).to(unit, equivalencies, freq)
 
 # A slice is just like a projection in every way
 class Slice(Projection):
@@ -879,25 +889,12 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     def to(self, unit, equivalencies=[]):
         """
-        Return a new `~spectral_cube.lower_dimensional_structures.OneDSpectrum` of the same class with the
-        specified unit.
+        Return a new `~spectral_cube.lower_dimensional_structures.OneDSpectrum`
+        of the same class with the specified unit.
         See `astropy.units.Quantity.to` for further details.
         """
 
-        # NOTE: This won't work for conversions from Jy/beam
-
-        converted_array = u.Quantity.to(self, unit,
-                                        equivalencies=equivalencies).value
-
-        # use private versions of variables, not the generated property
-        # versions
-        # Not entirely sure the use of __class__ here is kosher, but we do want
-        # self.__class__, not super()
-        new = self.__class__(value=converted_array, unit=unit, copy=True,
-                             wcs=self._wcs, meta=self._meta, mask=self._mask,
-                             header=self._header)
-
-        return new
+        return super(OneDSpectrum, self).to(unit, equivalencies, freq=None)
 
     def with_fill_value(self, fill_value):
         """
