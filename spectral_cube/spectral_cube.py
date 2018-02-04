@@ -38,7 +38,9 @@ from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
                          MaskableArrayMixinClass)
-from .utils import cached, warn_slow, VarianceWarning, BeamAverageWarning
+from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
+                    UnsupportedIterationStrategyWarning, WCSMismatchWarning,
+                    NotImplementedWarning)
 
 from distutils.version import LooseVersion
 
@@ -342,8 +344,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             out = self._reduce_slicewise(function, fill, check_endian,
                                          includemask=includemask,
                                          progressbar=progressbar, **kwargs)
+        elif how == 'ray':
+            out = self.apply_function(function, **kwargs)
         elif how not in ['auto', 'cube']:
-            warnings.warn("Cannot use how=%s. Using how=cube" % how)
+            warnings.warn("Cannot use how=%s. Using how=cube" % how,
+                          UnsupportedIterationStrategyWarning)
 
         if out is None:
             out = function(self._get_filled_data(fill=fill,
@@ -603,17 +608,26 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     @aggregation_docstring
     @warn_slow
-    def mad_std(self, axis=None, **kwargs):
+    def mad_std(self, axis=None, how='cube', **kwargs):
         """
         Use astropy's mad_std to computer the standard deviation
         """
         if int(astropy.__version__[0]) < 2:
             raise NotImplementedError("mad_std requires astropy >= 2")
         projection = self._naxes_dropped(axis) in (1,2)
-        return self.apply_numpy_function(stats.mad_std, fill=np.nan,
-                                         how='cube', axis=axis, unit=self.unit,
-                                         ignore_nan=True,
-                                         projection=projection, **kwargs)
+        if how == 'ray':
+            # no need for fill here; masked-out data are simply not included
+            return self.apply_function(stats.mad_std,
+                                       axis=axis,
+                                       unit=self.unit,
+                                       projection=projection,
+                                      )
+        else:
+            return self.apply_numpy_function(stats.mad_std, fill=np.nan,
+                                             axis=axis, unit=self.unit,
+                                             ignore_nan=True,
+                                             how=how,
+                                             projection=projection, **kwargs)
 
 
     @aggregation_docstring
@@ -737,7 +751,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                .format(self.unit, cube.unit))
         if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True,
                                         **kwargs):
-            warnings.warn("Cube WCSs do not match, but their shapes do")
+            warnings.warn("Cube WCSs do not match, but their shapes do",
+                          WCSMismatchWarning)
         try:
             test_result = function(np.ones([1,1,1])*self.unit,
                                    np.ones([1,1,1])*self.unit)
@@ -800,6 +815,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 return u.Quantity(out, unit=unit)
             else:
                 return out
+        if hasattr(axis, '__len__'):
+            raise NotImplementedError("`apply_function` does not support "
+                                      "function application across multiple "
+                                      "axes.  Try `apply_numpy_function`.")
 
         # determine the output array shape
         nx, ny = self._get_flat_shape(axis)
@@ -1569,7 +1588,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             except NotImplementedError:
                 warnings.warn("Mask slicing not implemented for "
                               "{0} - dropping mask".
-                              format(self._mask.__class__.__name__))
+                              format(self._mask.__class__.__name__),
+                              NotImplementedWarning
+                             )
                 mask_slab = None
 
         # Create new spectral cube
@@ -1963,10 +1984,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         cube = read(filename, format=format, hdu=hdu, **kwargs)
         if isinstance(cube, StokesSpectralCube):
             if hasattr(cube, 'I'):
-                warnings.warn("Cube is a Stokes cube, returning spectral cube for I component")
+                warnings.warn("Cube is a Stokes cube, "
+                              "returning spectral cube for I component")
                 return cube.I
             else:
-                raise ValueError("Spectral cube is a Stokes cube that does not have an I component")
+                raise ValueError("Spectral cube is a Stokes cube that "
+                                 "does not have an I component")
         else:
             return cube
 

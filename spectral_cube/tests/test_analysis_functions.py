@@ -85,6 +85,42 @@ def test_stacking():
                                test_cube.spectral_axis.value)
 
 
+def test_stacking_reversed_specaxis():
+    '''
+    Use a set of identical Gaussian profiles randomly offset to ensure the
+    shifted spectrum has the correct properties.
+    '''
+
+    amp = 1.
+    v0 = 0. * u.km / u.s
+    sigma = 8.
+    noise = None
+    shape = (100, 25, 25)
+
+    test_cube, test_vels = \
+        generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
+                               shape=shape, spec_scale=-1. * u.km / u.s)
+
+    true_spectrum = gaussian(test_cube.spectral_axis.value,
+                             amp, v0.value, sigma)
+
+    # Stack the spectra in the cube
+    stacked = \
+        stack_spectra(test_cube, test_vels, v0=v0,
+                      stack_function=np.nanmean,
+                      xy_posns=None, num_cores=1,
+                      chunk_size=-1,
+                      progressbar=False, pad_edges=False)
+
+    # Calculate residuals
+    resid = np.abs(stacked.value - true_spectrum)
+    assert np.std(resid) <= 1e-3
+
+    # The stacked spectrum should have the same spectral axis
+    np.testing.assert_allclose(stacked.spectral_axis.value,
+                               test_cube.spectral_axis.value)
+
+
 def test_stacking_wpadding():
     '''
     Use a set of identical Gaussian profiles randomly offset to ensure the
@@ -120,6 +156,47 @@ def test_stacking_wpadding():
 
     # np.testing.assert_allclose(fit_vals, np.array([amp, 0.0, sigma]),
     #                            atol=1e-3)
+
+    # The spectral axis should be padded by ~25% on each side
+    stack_shape = int(test_cube.shape[0] * 1.5)
+    # This is rounded, so the shape could be +/- 1
+    assert (stacked.size == stack_shape) or (stacked.size == stack_shape - 1) \
+        or (stacked.size == stack_shape + 1)
+
+
+def test_stacking_woffset():
+    '''
+    Use a set of identical Gaussian profiles randomly offset to ensure the
+    shifted spectrum has the correct properties.
+
+    Make sure the operations aren't affected by absolute velocity offsets
+
+    '''
+
+    amp = 1.
+    sigma = 8.
+    v0 = 100. * u.km / u.s
+    noise = None
+    shape = (100, 25, 25)
+
+    test_cube, test_vels = \
+        generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise,
+                               v0=v0.value)
+
+    # Stack the spectra in the cube
+    stacked = \
+        stack_spectra(test_cube, test_vels, v0=v0,
+                      stack_function=np.nanmean,
+                      xy_posns=None, num_cores=1,
+                      chunk_size=-1,
+                      progressbar=False, pad_edges=True)
+
+    true_spectrum = gaussian(stacked.spectral_axis.value,
+                             amp, v0.value, sigma)
+
+    # Calculate residuals
+    resid = np.abs(stacked.value - true_spectrum)
+    assert np.std(resid) <= 1e-3
 
     # The spectral axis should be padded by ~25% on each side
     stack_shape = int(test_cube.shape[0] * 1.5)
