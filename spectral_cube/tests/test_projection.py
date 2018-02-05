@@ -541,3 +541,26 @@ def test_LDO_arithmetic():
     spx2 = sp * 2
     assert np.all(spx2.value == sp.value*2)
     assert np.all(spx2.filled_data[:].value == sp.value*2)
+
+
+def test_beam_jtok_2D():
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._meta['BUNIT'] = 'Jy / beam'
+    cube._unit = u.Jy / u.beam
+
+    plane = cube[0]
+
+    freq = cube.with_spectral_unit(u.GHz).spectral_axis[0]
+
+    equiv = plane.beam.jtok_equiv(freq)
+    jtok = plane.beam.jtok(freq)
+
+    Kplane = plane.to(u.K, equivalencies=equiv, freq=freq)
+    np.testing.assert_almost_equal(Kplane.value,
+                                   (plane.value * jtok).value)
+
+    # test that the beam equivalencies are correctly automatically defined
+    Kplane = plane.to(u.K, freq=freq)
+    np.testing.assert_almost_equal(Kplane.value,
+                                   (plane.value * jtok).value)
