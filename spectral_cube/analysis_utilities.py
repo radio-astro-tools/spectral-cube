@@ -236,6 +236,9 @@ def stack_spectra(cube, velocity_surface, v0=None,
             # if there are no negative shifts, we can ignore them and just
             # use the positive shift
             max_neg_shift = 0
+        if max_pos_shift < 0:
+            # same for positive
+            max_pos_shift = 0
 
         # The total pixel size of the new spectral axis
         num_vel_pix = cube.spectral_axis.size + max_pos_shift - max_neg_shift
