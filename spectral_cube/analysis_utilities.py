@@ -232,6 +232,10 @@ def stack_spectra(cube, velocity_surface, v0=None,
         # Find max +/- pixel shifts, rounding up to the nearest integer
         max_pos_shift = np.ceil(np.nanmax(pix_shifts)).astype(int)
         max_neg_shift = np.ceil(np.nanmin(pix_shifts)).astype(int)
+        if max_neg_shift > 0:
+            # if there are no negative shifts, we can ignore them and just
+            # use the positive shift
+            max_neg_shift = 0
 
         # The total pixel size of the new spectral axis
         num_vel_pix = cube.spectral_axis.size + max_pos_shift - max_neg_shift
