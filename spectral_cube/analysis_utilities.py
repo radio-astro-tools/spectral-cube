@@ -245,7 +245,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
         new_header['NAXIS1'] = num_vel_pix
 
         # Adjust CRPIX in header
-        new_header['CRPIX1'] += max_pos_shift
+        new_header['CRPIX1'] += -max_neg_shift
 
         pad_size = (-max_neg_shift, max_pos_shift)
 

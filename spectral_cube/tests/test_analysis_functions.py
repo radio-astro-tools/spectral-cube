@@ -171,10 +171,12 @@ def test_padding_direction():
     v0 = 0. * u.km / u.s
     noise = None
     shape = (100, 2, 2)
+
     vel_surface = np.array([[0, 5], [5, 10]])
 
     test_cube, test_vels = \
-        generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise)
+        generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise,
+                               vel_surface=vel_surface)
 
     # Stack the spectra in the cube
     stacked = \
@@ -187,15 +189,14 @@ def test_padding_direction():
     true_spectrum = gaussian(stacked.spectral_axis.value,
                              amp, v0.value, sigma)
 
+    # now check that the stacked spectral axis is right
+    # (all shifts are negative, so vmin < -50 km/s, should be -60?)
+    assert stacked.spectral_axis.min() == -60*u.km/u.s
+    assert stacked.spectral_axis.max() == 49*u.km/u.s
+
     # Calculate residuals
     resid = np.abs(stacked.value - true_spectrum)
     assert np.std(resid) <= 1e-3
-
-    # now check that the stacked spectral axis is right
-    # (all shifts are negative, so vmin < -50 km/s, should be -60?)
-    assert stacked.spectral_axis.min() < -50*u.km/u.s
-    # max should be 49 or 50...
-    assert stacked.spectral_axis.max() <= 50*u.km/u.s
 
 
 def test_stacking_woffset():
