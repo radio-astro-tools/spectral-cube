@@ -89,9 +89,12 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
         spat_inds = np.indices(shape[1:])
         for y, x in zip(spat_inds[0].flatten(), spat_inds[1].flatten()):
             # Lock the mean to within 25% from the centre
-            mean_pos = \
-                np.random.uniform(low=spec_inds[spec_quarter],
-                                  high=spec_inds[spec_quarter + spec_middle])
+            if vel_surface is not None:
+                mean_pos = vel_surface[y,x]
+            else:
+                mean_pos = \
+                    np.random.uniform(low=spec_inds[spec_quarter],
+                                      high=spec_inds[spec_quarter + spec_middle])
             test_cube[:, y, x] = gaussian(spec_inds, amp, mean_pos, sigma)
             mean_positions[y, x] = mean_pos + v0
             if noise is not None:

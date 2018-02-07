@@ -232,15 +232,22 @@ def stack_spectra(cube, velocity_surface, v0=None,
         # Find max +/- pixel shifts, rounding up to the nearest integer
         max_pos_shift = np.ceil(np.nanmax(pix_shifts)).astype(int)
         max_neg_shift = np.ceil(np.nanmin(pix_shifts)).astype(int)
+        if max_neg_shift > 0:
+            # if there are no negative shifts, we can ignore them and just
+            # use the positive shift
+            max_neg_shift = 0
+        if max_pos_shift < 0:
+            # same for positive
+            max_pos_shift = 0
 
         # The total pixel size of the new spectral axis
         num_vel_pix = cube.spectral_axis.size + max_pos_shift - max_neg_shift
         new_header['NAXIS1'] = num_vel_pix
 
         # Adjust CRPIX in header
-        new_header['CRPIX1'] += max_pos_shift
+        new_header['CRPIX1'] += -max_neg_shift
 
-        pad_size = (max_pos_shift, -max_neg_shift)
+        pad_size = (-max_neg_shift, max_pos_shift)
 
     else:
         pad_size = None
@@ -269,7 +276,10 @@ def stack_spectra(cube, velocity_surface, v0=None,
 
             all_shifted_spectra.extend([out for out in shifted_spectra])
 
-    stacked = stack_function(all_shifted_spectra, axis=0)
+    shifted_spectra_array = np.array(all_shifted_spectra)
+    assert shifted_spectra_array.ndim == 2
+
+    stacked = stack_function(shifted_spectra_array, axis=0)
 
     stack_spec = \
         OneDSpectrum(stacked, unit=cube.unit, wcs=WCS(new_header),
