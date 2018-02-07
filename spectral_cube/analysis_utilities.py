@@ -183,6 +183,12 @@ def stack_spectra(cube, velocity_surface, v0=None,
     if not np.isfinite(velocity_surface).any():
         raise ValueError("velocity_surface contains no finite values.")
 
+    vshape = velocity_surface.shape
+    cshape = cube.shape[1:]
+    if not (vshape == cshape):
+        raise ValueError("Velocity surface map does not match cube spatial "
+                         "dimensions.")
+
     if xy_posns is None:
         # Only compute where a shift can be found
         xy_posns = np.where(np.isfinite(velocity_surface))
