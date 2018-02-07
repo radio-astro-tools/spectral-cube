@@ -240,6 +240,45 @@ def test_stacking_woffset():
         or (stacked.size == stack_shape + 1)
 
 
+def test_stacking_shape_failure():
+    """
+    Regression test for #466
+    """
+    amp = 1.
+    v0 = 0. * u.km / u.s
+    sigma = 8.
+    noise = None
+    shape = (100, 25, 25)
+
+    test_cube, test_vels = \
+        generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
+                               shape=shape)
+
+    # make the test_vels array the wrong shape
+    test_vels = test_vels[:-1, :-1]
+
+    with pytest.raises(ValueError) as exc:
+        stack_spectra(test_cube, test_vels, v0=v0,
+                      stack_function=np.nanmean,
+                      xy_posns=None, num_cores=1,
+                      chunk_size=-1,
+                      progressbar=False, pad_edges=False)
+
+    assert 'Velocity surface map does not match' in exc.value.args[0]
+
+    
+    test_vels = np.ones(shape[1:], dtype='float') + np.nan
+
+    with pytest.raises(ValueError) as exc:
+        stack_spectra(test_cube, test_vels, v0=v0,
+                      stack_function=np.nanmean,
+                      xy_posns=None, num_cores=1,
+                      chunk_size=-1,
+                      progressbar=False, pad_edges=False)
+
+    assert "velocity_surface contains no finite values" in exc.value.args[0]
+
+
 def test_stacking_noisy():
 
     # Test stack w/ S/N of 0.2
