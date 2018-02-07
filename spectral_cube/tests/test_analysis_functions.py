@@ -164,6 +164,40 @@ def test_stacking_wpadding():
         or (stacked.size == stack_shape + 1)
 
 
+def test_padding_direction():
+
+    amp = 1.
+    sigma = 8.
+    v0 = 0. * u.km / u.s
+    noise = None
+    shape = (100, 2, 2)
+    vel_surface = np.array([[0, 5], [5, 10]])
+
+    test_cube, test_vels = \
+        generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise)
+
+    # Stack the spectra in the cube
+    stacked = \
+        stack_spectra(test_cube, test_vels, v0=v0,
+                      stack_function=np.nanmean,
+                      xy_posns=None, num_cores=1,
+                      chunk_size=-1,
+                      progressbar=False, pad_edges=True)
+
+    true_spectrum = gaussian(stacked.spectral_axis.value,
+                             amp, v0.value, sigma)
+
+    # Calculate residuals
+    resid = np.abs(stacked.value - true_spectrum)
+    assert np.std(resid) <= 1e-3
+
+    # now check that the stacked spectral axis is right
+    # (all shifts are negative, so vmin < -50 km/s, should be -60?)
+    assert stacked.spectral_axis.min() < -50*u.km/u.s
+    # max should be 49 or 50...
+    assert stacked.spectral_axis.max() <= 50*u.km/u.s
+
+
 def test_stacking_woffset():
     '''
     Use a set of identical Gaussian profiles randomly offset to ensure the
