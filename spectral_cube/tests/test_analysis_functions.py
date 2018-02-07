@@ -266,7 +266,7 @@ def test_stacking_shape_failure():
 
     assert 'Velocity surface map does not match' in exc.value.args[0]
 
-    
+
     test_vels = np.ones(shape[1:], dtype='float') + np.nan
 
     with pytest.raises(ValueError) as exc:
