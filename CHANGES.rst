@@ -9,6 +9,12 @@
    are masked out.  Also removes ``cube_utils.average_beams``, which is now
    implemented directly in radio_beam
    (https://github.com/radio-astro-tools/spectral-cube/pull/437)
+ - Added a variety of stacking tools, both for stacking full velocity
+   cubes of different lines and for stacking full spectra based on
+   a velocity field (https://github.com/radio-astro-tools/spectral-cube/pull/446,
+   https://github.com/radio-astro-tools/spectral-cube/pull/453,
+   https://github.com/radio-astro-tools/spectral-cube/pull/457,
+   https://github.com/radio-astro-tools/spectral-cube/pull/465)
 
 0.4.1 (2017-10-17)
 ------------------
