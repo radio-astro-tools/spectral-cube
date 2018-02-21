@@ -1,4 +1,4 @@
-0.4.2 (unreleased)
+0.4.2 (2018-02-21)
 ------------------
  - Bugfix and enhancement: handle multiple beams using radio_beam's
    multiple-beams feature.  This allows `convolve_to` to work when some beams
