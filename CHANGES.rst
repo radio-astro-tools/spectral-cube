@@ -1,3 +1,7 @@
+0.4.3 (unreleased)
+------------------
+ - none yet
+
 0.4.2 (2018-02-21)
 ------------------
  - Bugfix and enhancement: handle multiple beams using radio_beam's
