@@ -188,7 +188,12 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             # No copying
             return self
 
-        if self.unit.is_equivalent(u.Jy / u.beam):
+        if ((self.unit.is_equivalent(u.Jy / u.beam) and
+             not any({u.Jy, u.K}.issubset(set(eq)) for eq in equivalencies))):
+            # the 'not any' above checks that there is not already a defined
+            # Jy<->K equivalency.  If there is, the code below is redundant
+            # and will cause problems.
+
             # replace "beam" with the actual beam
             if not hasattr(self, 'beam'):
                 raise ValueError("To convert objects with Jy/beam units, "
@@ -197,17 +202,13 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
             # create a beam equivalency for brightness temperature
             if freq is None:
-                if any({u.Jy, u.K}.issubset(set(eq)) for eq in equivalencies):
-                    # Do nothing: we already have a valid equivalency
-                    pass
-                else:
-                    try:
-                        freq = self.with_spectral_unit(u.Hz).spectral_axis
-                    except AttributeError:
-                        raise TypeError("Object of type {0} has no spectral "
-                                        "information. `freq` must be provided for"
-                                        " unit conversion from Jy/beam"
-                                        .format(type(self)))
+                try:
+                    freq = self.with_spectral_unit(u.Hz).spectral_axis
+                except AttributeError:
+                    raise TypeError("Object of type {0} has no spectral "
+                                    "information. `freq` must be provided for"
+                                    " unit conversion from Jy/beam"
+                                    .format(type(self)))
             else:
                 if not freq.unit.is_equivalent(u.Hz):
                     raise u.UnitsError("freq must be given in equivalent "
@@ -216,6 +217,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             bmequiv = self.beam.jtok_equiv(freq)
             factor = brightness_unit.to(unit,
                                         equivalencies=bmequiv + list(equivalencies))
+
         else:
             # scaling factor
             factor = self.unit.to(unit, equivalencies=equivalencies)
