@@ -20,7 +20,7 @@ import numpy as np
 
 from .. import (SpectralCube, VaryingResolutionSpectralCube, BooleanArrayMask,
                 FunctionMask, LazyMask, CompositeMask)
-from ..spectral_cube import OneDSpectrum, Projection
+from ..spectral_cube import OneDSpectrum, Projection, VaryingResolutionOneDSpectrum
 from ..np_compat import allbadtonan
 from .. import spectral_axis
 from .. import base_class
@@ -1676,7 +1676,7 @@ def test_spectral_smooth_median():
     cube_spectral_median = cube.spectral_smooth_median(3)
 
     # Check first slice
-    result = np.array([ 0.77513282,  0.35675333,  0.35675333,  0.98688694])
+    result = np.array([0.77513282,  0.35675333,  0.35675333,  0.98688694])
 
     np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
 
@@ -1689,3 +1689,18 @@ def test_initialization_from_units():
     newcube = SpectralCube(data=cube.filled_data[:], wcs=cube.wcs)
 
     assert newcube.unit == cube.unit
+
+def test_varyres_spectra():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    assert isinstance(cube, VaryingResolutionSpectralCube)
+
+    sp = cube[:,0,0]
+
+    assert isinstance(sp, VaryingResolutionOneDSpectrum)
+    assert hasattr(sp, 'beams')
+
+    sp = cube.mean(axis=(1,2))
+
+    assert isinstance(sp, VaryingResolutionOneDSpectrum)
+    assert hasattr(sp, 'beams')
