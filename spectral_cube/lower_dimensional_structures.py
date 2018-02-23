@@ -197,13 +197,17 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
             # create a beam equivalency for brightness temperature
             if freq is None:
-                try:
-                    freq = self.with_spectral_unit(u.Hz).spectral_axis
-                except AttributeError:
-                    raise TypeError("Object of type {0} has no spectral "
-                                    "information. `freq` must be provided for"
-                                    " unit conversion from Jy/beam"
-                                    .format(type(self)))
+                if any({u.Jy, u.K}.issubset(set(eq)) for eq in equivalencies):
+                    # Do nothing: we already have a valid equivalency
+                    pass
+                else:
+                    try:
+                        freq = self.with_spectral_unit(u.Hz).spectral_axis
+                    except AttributeError:
+                        raise TypeError("Object of type {0} has no spectral "
+                                        "information. `freq` must be provided for"
+                                        " unit conversion from Jy/beam"
+                                        .format(type(self)))
             else:
                 if not freq.unit.is_equivalent(u.Hz):
                     raise u.UnitsError("freq must be given in equivalent "
