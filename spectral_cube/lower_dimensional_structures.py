@@ -189,7 +189,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             return self
 
         if ((self.unit.is_equivalent(u.Jy / u.beam) and
-             not any({u.Jy, u.K}.issubset(set(eq)) for eq in equivalencies))):
+             not any({u.Jy/u.beam, u.K}.issubset(set(eq)) for eq in equivalencies))):
             # the 'not any' above checks that there is not already a defined
             # Jy<->K equivalency.  If there is, the code below is redundant
             # and will cause problems.
@@ -215,6 +215,12 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
                                        "frequency units.")
 
             bmequiv = self.beam.jtok_equiv(freq)
+
+            # backport to handle astropy < 3: the beam equivalency was only
+            # modified to handle jy/beam in astropy 3
+            if bmequiv[0] == u.Jy:
+                bmequiv.append([u.Jy/u.beam, u.K, bmequiv[2], bmequiv[3]])
+
             factor = brightness_unit.to(unit,
                                         equivalencies=bmequiv + list(equivalencies))
 
