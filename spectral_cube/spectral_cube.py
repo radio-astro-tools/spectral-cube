@@ -372,17 +372,17 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 if set(axis) == set((1,2)):
                     new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
                     header = self._nowcs_header
-                    return OneDSpectrum(value=out,
-                                        wcs=new_wcs,
-                                        copy=False,
-                                        unit=unit,
-                                        header=header,
-                                        meta=meta,
-                                        spectral_unit=self._spectral_unit,
-                                        beams=(self.beams
-                                               if hasattr(self,'beams')
-                                               else None),
-                                       )
+                    return self._oned_spectrum(value=out,
+                                               wcs=new_wcs,
+                                               copy=False,
+                                               unit=unit,
+                                               header=header,
+                                               meta=meta,
+                                               spectral_unit=self._spectral_unit,
+                                               beams=(self.beams
+                                                      if hasattr(self,'beams')
+                                                      else None),
+                                              )
                 else:
                     return out
 
@@ -516,15 +516,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       unit=self.unit, header=self._nowcs_header)
                 elif axis == (1,2):
                     newwcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
-                    return OneDSpectrum(value=out,
-                                        wcs=newwcs,
-                                        copy=False,
-                                        unit=self.unit,
-                                        spectral_unit=self._spectral_unit,
-                                        beams=(self.beams
-                                               if hasattr(self, 'beams')
-                                               else None),
-                                        meta=self.meta)
+                    return self._oned_spectrum(value=out,
+                                               wcs=newwcs,
+                                               copy=False,
+                                               unit=self.unit,
+                                               spectral_unit=self._spectral_unit,
+                                               beams=(self.beams
+                                                      if hasattr(self, 'beams')
+                                                      else None),
+                                               meta=self.meta)
                 else:
                     raise NotImplementedError("We don't yet know how to deal "
                                               "with multidimensional averages "
@@ -1097,14 +1097,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                return OneDSpectrum(value=self._data[view],
-                                    wcs=newwcs,
-                                    copy=False,
-                                    unit=self.unit,
-                                    spectral_unit=self._spectral_unit,
-                                    mask=self.mask[view],
-                                    meta=meta,
-                                   )
+                return self._oned_spectrum(value=self._data[view],
+                                           wcs=newwcs,
+                                           copy=False,
+                                           unit=self.unit,
+                                           spectral_unit=self._spectral_unit,
+                                           mask=self.mask[view],
+                                           meta=meta,
+                                          )
 
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
@@ -2383,6 +2383,8 @@ class SpectralCube(BaseSpectralCube):
 
     __name__ = "SpectralCube"
 
+    _oned_spectrum = OneDSpectrum
+
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, beam=None,
                  wcs_tolerance=0.0, **kwargs):
@@ -2888,6 +2890,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
     __name__ = "VaryingResolutionSpectralCube"
 
+    _oned_spectrum = VaryingResolutionOneDSpectrum
+
     def __init__(self, *args, **kwargs):
         """
         Create a SpectralCube with an associated beam table.  The new
@@ -3016,14 +3020,14 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                return VaryingResolutionOneDSpectrum(value=self._data[view],
-                                                     wcs=newwcs,
-                                                     copy=False,
-                                                     unit=self.unit,
-                                                     spectral_unit=self._spectral_unit,
-                                                     mask=self.mask[view],
-                                                     beams=self.beams[specslice],
-                                                     meta=meta)
+                return self._oned_spectrum(value=self._data[view],
+                                           wcs=newwcs,
+                                           copy=False,
+                                           unit=self.unit,
+                                           spectral_unit=self._spectral_unit,
+                                           mask=self.mask[view],
+                                           beams=self.beams[specslice],
+                                           meta=meta)
 
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
