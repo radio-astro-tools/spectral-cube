@@ -34,10 +34,12 @@ from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
                     is_broadcastable_and_smaller)
 from .ytcube import ytCube
 from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
-                                           LowerDimensionalObject)
+                                           LowerDimensionalObject,
+                                           VaryingResolutionOneDSpectrum
+                                          )
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
-                         MaskableArrayMixinClass)
+                         MaskableArrayMixinClass, MultiBeamMixinClass)
 from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning)
@@ -2878,7 +2880,7 @@ class SpectralCube(BaseSpectralCube):
         return self.with_mask(goodchannels[:,None,None])
 
 
-class VaryingResolutionSpectralCube(BaseSpectralCube):
+class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
     """
     A variant of the SpectralCube class that has PSF (beam) information on a
     per-channel basis.
@@ -3014,14 +3016,14 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                return OneDSpectrum(value=self._data[view],
-                                    wcs=newwcs,
-                                    copy=False,
-                                    unit=self.unit,
-                                    spectral_unit=self._spectral_unit,
-                                    mask=self.mask[view],
-                                    beams=self.beams[specslice],
-                                    meta=meta)
+                return VaryingResolutionOneDSpectrum(value=self._data[view],
+                                                     wcs=newwcs,
+                                                     copy=False,
+                                                     unit=self.unit,
+                                                     spectral_unit=self._spectral_unit,
+                                                     mask=self.mask[view],
+                                                     beams=self.beams[specslice],
+                                                     meta=meta)
 
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])
@@ -3484,24 +3486,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube):
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
     
-    def jtok_factors(self, equivalencies=()):
-        """
-        Compute an array of multiplicative factors that will convert from
-        Jy/beam to K
-        """
-
-        factors = []
-        for bm,frq in zip(self.beams,
-                          self.with_spectral_unit(u.Hz).spectral_axis):
-
-            # create a beam equivalency for brightness temperature
-            bmequiv = bm.jtok_equiv(frq)
-            factor = (u.Jy).to(u.K, equivalencies=bmequiv+list(equivalencies))
-            factors.append(factor)
-        factor = np.array(factors)
-
-        return factor
-
     @warn_slow
     def to(self, unit, equivalencies=()):
         """

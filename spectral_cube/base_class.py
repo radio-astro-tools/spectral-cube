@@ -287,3 +287,27 @@ class MaskableArrayMixinClass(object):
         to create a new cube with a different fill value.
         """
         return self._fill_value
+
+class MultiBeamMixinClass(object):
+    """
+    A mixin class to handle multibeam objects.  To be used by
+    VaryingResolutionSpectralCube's and OneDSpectrum's """
+
+    def jtok_factors(self, equivalencies=()):
+        """
+        Compute an array of multiplicative factors that will convert from
+        Jy/beam to K
+        """
+
+        factors = []
+        for bm,frq in zip(self.beams,
+                          self.with_spectral_unit(u.Hz).spectral_axis):
+
+            # create a beam equivalency for brightness temperature
+            bmequiv = bm.jtok_equiv(frq)
+            factor = (u.Jy).to(u.K, equivalencies=bmequiv+list(equivalencies))
+            factors.append(factor)
+        factor = np.array(factors)
+
+        return factor
+
