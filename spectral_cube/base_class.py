@@ -310,4 +310,3 @@ class MultiBeamMixinClass(object):
         factor = np.array(factors)
 
         return factor
-
