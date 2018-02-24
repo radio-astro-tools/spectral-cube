@@ -20,7 +20,9 @@ from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
 
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
-                         SpatialCoordMixinClass, MaskableArrayMixinClass)
+                         SpatialCoordMixinClass, MaskableArrayMixinClass,
+                         MultiBeamMixinClass
+                        )
 from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
@@ -188,30 +190,45 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             # No copying
             return self
 
-        if self.unit.is_equivalent(u.Jy / u.beam):
-            # replace "beam" with the actual beam
-            if not hasattr(self, 'beam'):
-                raise ValueError("To convert objects with Jy/beam units, "
-                                 "the object needs to have a beam defined.")
-            brightness_unit = self.unit * u.beam
+        if ((self.unit.is_equivalent(u.Jy / u.beam) and
+             not any({u.Jy/u.beam, u.K}.issubset(set(eq)) for eq in equivalencies))):
+            # the 'not any' above checks that there is not already a defined
+            # Jy<->K equivalency.  If there is, the code below is redundant
+            # and will cause problems.
 
-            # create a beam equivalency for brightness temperature
-            if freq is None:
-                try:
-                    freq = self.with_spectral_unit(u.Hz).spectral_axis
-                except AttributeError:
-                    raise TypeError("Object of type {0} has no spectral "
-                                    "information. `freq` must be provided for"
-                                    " unit conversion from Jy/beam"
-                                    .format(type(self)))
+            if hasattr(self, 'beams'):
+                factor = (self.jtok_factors(equivalencies=equivalencies) *
+                          (self.unit*u.beam).to(u.Jy))
             else:
-                if not freq.unit.is_equivalent(u.Hz):
-                    raise u.UnitsError("freq must be given in equivalent "
-                                       "frequency units.")
+                # replace "beam" with the actual beam
+                if not hasattr(self, 'beam'):
+                    raise ValueError("To convert objects with Jy/beam units, "
+                                     "the object needs to have a beam defined.")
+                brightness_unit = self.unit * u.beam
 
-            bmequiv = self.beam.jtok_equiv(freq)
-            factor = brightness_unit.to(unit,
-                                        equivalencies=bmequiv + list(equivalencies))
+                # create a beam equivalency for brightness temperature
+                if freq is None:
+                    try:
+                        freq = self.with_spectral_unit(u.Hz).spectral_axis
+                    except AttributeError:
+                        raise TypeError("Object of type {0} has no spectral "
+                                        "information. `freq` must be provided for"
+                                        " unit conversion from Jy/beam"
+                                        .format(type(self)))
+                else:
+                    if not freq.unit.is_equivalent(u.Hz):
+                        raise u.UnitsError("freq must be given in equivalent "
+                                           "frequency units.")
+
+                bmequiv = self.beam.jtok_equiv(freq)
+                # backport to handle astropy < 3: the beam equivalency was only
+                # modified to handle jy/beam in astropy 3
+                if bmequiv[0] == u.Jy:
+                    bmequiv.append([u.Jy/u.beam, u.K, bmequiv[2], bmequiv[3]])
+
+                factor = brightness_unit.to(unit,
+                                            equivalencies=bmequiv + list(equivalencies))
+
         else:
             # scaling factor
             factor = self.unit.to(unit, equivalencies=equivalencies)
@@ -982,3 +999,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         self._data = self.view(np.ndarray)
         self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
         super(OneDSpectrum, self).__array_finalize__(obj)
+
+class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
+    pass
