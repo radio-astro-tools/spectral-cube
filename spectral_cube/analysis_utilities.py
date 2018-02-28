@@ -8,6 +8,7 @@ from astropy.utils.console import ProgressBar
 
 from .cube_utils import _map_context
 from .lower_dimensional_structures import OneDSpectrum
+from .spectral_cube import VaryingResolutionSpectralCube
 
 
 def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
@@ -296,7 +297,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
     return stack_spec
 
 
-def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean):
+def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean, convolve_beam=None):
     """
     Create a stacked cube by averaging on a common velocity grid.
 
@@ -314,6 +315,10 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean):
         ``axis=0``) to average the spectra.  `numpy.nanmean` is the default,
         though one might consider `numpy.mean` or `numpy.median` as other
         options.
+    convolve_beam : None
+        If the cube is a VaryingResolutionSpectralCube, a convolution beam is
+        required to put the cube onto a common grid prior to spectral
+        interpolation.
     """
 
     line_cube = cube.with_spectral_unit(u.km/u.s,
@@ -328,6 +333,13 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean):
                                             velocity_convention='radio',
                                             rest_value=restval)
         line_cutout = line_cube.spectral_slab(vmin, vmax)
+
+        if isinstance(line_cube, VaryingResolutionSpectralCube):
+            if convolve_beam is None:
+                raise ValueError("When stacking VaryingResolutionSpectralCubes, "
+                                 "you must specify a target beam size with the "
+                                 "keyword `convolve_beam`")
+            line_cutout = line_cutout.convolve_to(convolve_beam)
 
         regridded = line_cutout.spectral_interpolate(reference_cube.spectral_axis)
 
