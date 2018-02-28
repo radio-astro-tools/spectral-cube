@@ -9,13 +9,6 @@ from astropy import log
 from astropy.extern import six
 import warnings
 
-try:
-    import yt
-    from yt.visualization.volume_rendering.transfer_function_helper import TransferFunctionHelper
-    ytOK = True
-except ImportError:
-    ytOK = False
-
 __all__ = ['ytCube']
 
 class ytCube(object):
@@ -121,8 +114,10 @@ class ytCube(object):
 
 
         """
-        if not ytOK:
-            raise IOError("yt could not be imported.  Cube renderings are not possible.")
+        try:
+            import yt
+        except ImportError:
+            raise ImportError("yt could not be imported.  Cube renderings are not possible.")
 
         scale = np.max(self.cube.shape)
 
@@ -171,6 +166,7 @@ class ytCube(object):
     def auto_transfer_function(self, cmap_range, log=False, colormap='doom',
                                **kwargs):
 
+        from yt.visualization.volume_rendering.transfer_function_helper import TransferFunctionHelper
         tfh = TransferFunctionHelper(self.dataset)
         tfh.set_field('flux')
         tfh.set_bounds(bounds=cmap_range)
