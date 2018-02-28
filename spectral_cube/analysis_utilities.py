@@ -321,7 +321,7 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean):
                                         rest_value=linelist[0])
     reference_cube = line_cube.spectral_slab(vmin, vmax)
 
-    cutout_cubes = [reference_cube[:].value]
+    cutout_cubes = [reference_cube.filled_data[:].value]
 
     for restval in linelist[1:]:
         line_cube = cube.with_spectral_unit(u.km/u.s,
@@ -331,7 +331,7 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean):
 
         regridded = line_cutout.spectral_interpolate(reference_cube.spectral_axis)
 
-        cutout_cubes.append(regridded[:].value)
+        cutout_cubes.append(regridded.filled_data[:].value)
 
     stacked_cube = average(cutout_cubes, axis=0)
 
