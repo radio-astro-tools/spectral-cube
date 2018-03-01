@@ -324,7 +324,14 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean, convolve_beam=Non
     line_cube = cube.with_spectral_unit(u.km/u.s,
                                         velocity_convention='radio',
                                         rest_value=linelist[0])
-    reference_cube = line_cube.spectral_slab(vmin, vmax)
+    if isinstance(line_cube, VaryingResolutionSpectralCube):
+        if convolve_beam is None:
+            raise ValueError("When stacking VaryingResolutionSpectralCubes, "
+                             "you must specify a target beam size with the "
+                             "keyword `convolve_beam`")
+        reference_cube = line_cube.spectral_slab(vmin, vmax).convolve_to(convolve_beam)
+    else:
+        reference_cube = line_cube.spectral_slab(vmin, vmax)
 
     cutout_cubes = [reference_cube.filled_data[:].value]
 
@@ -335,10 +342,6 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean, convolve_beam=Non
         line_cutout = line_cube.spectral_slab(vmin, vmax)
 
         if isinstance(line_cube, VaryingResolutionSpectralCube):
-            if convolve_beam is None:
-                raise ValueError("When stacking VaryingResolutionSpectralCubes, "
-                                 "you must specify a target beam size with the "
-                                 "keyword `convolve_beam`")
             line_cutout = line_cutout.convolve_to(convolve_beam)
 
         regridded = line_cutout.spectral_interpolate(reference_cube.spectral_axis)
