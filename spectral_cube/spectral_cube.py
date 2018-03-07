@@ -10,6 +10,7 @@ import operator
 import re
 import itertools
 import copy
+import tempfile
 
 import astropy.wcs
 from astropy import units as u
@@ -2639,6 +2640,7 @@ class SpectralCube(BaseSpectralCube):
                         #numcores=None,
                         convolve=convolution.convolve,
                         update_function=None,
+                        use_memmap=True,
                         **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -2654,6 +2656,9 @@ class SpectralCube(BaseSpectralCube):
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
         kwargs : dict
             Passed to the convolve function
         """
@@ -2663,8 +2668,10 @@ class SpectralCube(BaseSpectralCube):
         # "cubelist" is a generator
         # the boolean check will skip smoothing for bad spectra
         # TODO: should spatial good/bad be cached?
-        cubelist = ((self.filled_data[:,jj,ii],
-                     self.mask.include(view=(slice(None), jj, ii)))
+        spectra = ((self.filled_data[:,jj,ii],
+                    self.mask.include(view=(slice(None), jj, ii)),
+                    ii, jj,
+                   )
                     for jj in range(self.shape[1])
                     for ii in range(self.shape[2]))
 
@@ -2672,33 +2679,27 @@ class SpectralCube(BaseSpectralCube):
             pb = ProgressBar(shape[1] * shape[2])
             update_function = pb.update
 
+        if use_memmap:
+            ntf = tempfile.NamedTemporaryFile()
+            smoothcube = np.memmap(ntf, mode='w+', shape=shape, dtype=np.float)
+        else:
+            smoothcube = np.empty(shape=shape, dtype=np.float)
+
         def _gsmooth_spectrum(args):
             """
             Helper function to smooth a spectrum
             """
-            (spec, includemask),kernel,kwargs = args
+            (spec, includemask, ii, jj),kernel,kwargs = args
             update_function()
 
             if any(includemask):
-                return convolve(spec, kernel, normalize_kernel=True, **kwargs)
+                smoothcube[:,jj,ii] = convolve(spec, kernel, normalize_kernel=True, **kwargs)
             else:
-                return spec
+                smoothcube[:,jj,ii] = spec
 
         # could be numcores, except _gsmooth_spectrum is unpicklable
         with cube_utils._map_context(1) as map:
-            smoothcube_ = np.array([x for x in
-                                    map(_gsmooth_spectrum, zip(cubelist,
-                                                               itertools.cycle([kernel]),
-                                                               itertools.cycle([kwargs]),
-                                                              )
-                                       )
-                                   ]
-                                  )
-
-        # empirical: need to swapaxes to get shape right
-        # cube = np.arange(6*5*4).reshape([4,5,6]).swapaxes(0,2)
-        # cubelist.T.reshape(cube.shape) == cube
-        smoothcube = smoothcube_.T.reshape(shape)
+            map(_gsmooth_spectrum, zip(spectra, itertools.cycle([kernel]), itertools.cycle([kwargs]),))
 
         # TODO: do something about the mask?
         newcube = self._new_cube_with(data=smoothcube, wcs=self.wcs,
