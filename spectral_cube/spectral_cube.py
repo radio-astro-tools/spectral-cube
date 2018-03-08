@@ -2669,14 +2669,15 @@ class SpectralCube(BaseSpectralCube):
 
         shape = self.shape
 
+        # 'spectra' is a generator
         # the boolean check will skip smoothing for bad spectra
         # TODO: should spatial good/bad be cached?
-        spectra = [(self.filled_data[:,jj,ii],
+        spectra = ((self.filled_data[:,jj,ii],
                     self.mask.include(view=(slice(None), jj, ii)),
                     ii, jj,
                    )
                    for jj in range(shape[1])
-                   for ii in range(shape[2])]
+                   for ii in range(shape[2]))
 
         if update_function is None:
             pb = ProgressBar(shape[1] * shape[2])
