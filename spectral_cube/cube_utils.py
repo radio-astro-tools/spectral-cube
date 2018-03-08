@@ -397,6 +397,9 @@ def _map_context(numcores):
     """
     Mapping context manager to allow parallel mapping or regular mapping
     depending on the number of cores specified.
+
+    The builtin map is overloaded to handle python3 problems: python3 returns a
+    generator, while ``multiprocessing.Pool.map`` actually runs the whole thing
     """
     if numcores is not None and numcores > 1:
         try:
@@ -405,13 +408,13 @@ def _map_context(numcores):
             map = p.map
             parallel = True
         except ImportError:
-            map = builtins.map
+            map = lambda x,y: list(builtins.map(x,y))
             warnings.warn("Could not import multiprocessing.  "
                           "map will be non-parallel.")
             parallel = False
     else:
         parallel = False
-        map = builtins.map
+        map = lambda x,y: list(builtins.map(x,y))
 
     try:
         yield map

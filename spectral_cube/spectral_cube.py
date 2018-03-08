@@ -2637,13 +2637,17 @@ class SpectralCube(BaseSpectralCube):
         return newcube
 
     def spectral_smooth(self, kernel,
-                        #numcores=None,
                         convolve=convolution.convolve,
                         update_function=None,
                         use_memmap=True,
+                        #num_cores=None,
                         **kwargs):
+        #num_cores : int or None
+        #    The number of cores to use if running in parallel
         """
         Smooth the cube along the spectral dimension
+
+        Note that the mask is left unchanged in this operation.
 
         Parameters
         ----------
@@ -2665,15 +2669,14 @@ class SpectralCube(BaseSpectralCube):
 
         shape = self.shape
 
-        # "cubelist" is a generator
         # the boolean check will skip smoothing for bad spectra
         # TODO: should spatial good/bad be cached?
-        spectra = ((self.filled_data[:,jj,ii],
+        spectra = [(self.filled_data[:,jj,ii],
                     self.mask.include(view=(slice(None), jj, ii)),
                     ii, jj,
                    )
-                    for jj in range(self.shape[1])
-                    for ii in range(self.shape[2]))
+                   for jj in range(shape[1])
+                   for ii in range(shape[2])]
 
         if update_function is None:
             pb = ProgressBar(shape[1] * shape[2])
@@ -2683,13 +2686,21 @@ class SpectralCube(BaseSpectralCube):
             ntf = tempfile.NamedTemporaryFile()
             smoothcube = np.memmap(ntf, mode='w+', shape=shape, dtype=np.float)
         else:
+            if self._is_huge and not self.allow_huge_operations:
+                raise ValueError("Spectral smoothing without ``use_memmap`` "
+                                 "requires loading the whole array into "
+                                 "memory *twice*, which can overload the "
+                                 "machine's memory for large cubes.  Either "
+                                 "set ``use_memmap=True`` or set "
+                                 "``cube.allow_huge_operations=True`` to "
+                                 "override this restriction.")
             smoothcube = np.empty(shape=shape, dtype=np.float)
 
-        def _gsmooth_spectrum(args):
+        def _gsmooth_spectrum(arguments):
             """
             Helper function to smooth a spectrum
             """
-            (spec, includemask, ii, jj),kernel,kwargs = args
+            (spec, includemask, ii, jj),kernel,kwargs = arguments
             update_function()
 
             if any(includemask):
@@ -2698,8 +2709,14 @@ class SpectralCube(BaseSpectralCube):
                 smoothcube[:,jj,ii] = spec
 
         # could be numcores, except _gsmooth_spectrum is unpicklable
+        # There is no way to make 'map' do what I want.
+        # Some sort of shared-memory array is required because multiprocessing
+        # passes copies of data around as pickles rather than passing the
+        # objects themselves.
         with cube_utils._map_context(1) as map:
-            map(_gsmooth_spectrum, zip(spectra, itertools.cycle([kernel]), itertools.cycle([kwargs]),))
+            map(_gsmooth_spectrum, zip(spectra,
+                                       itertools.cycle([kernel]),
+                                       itertools.cycle([kwargs]),))
 
         # TODO: do something about the mask?
         newcube = self._new_cube_with(data=smoothcube, wcs=self.wcs,
