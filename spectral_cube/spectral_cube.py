@@ -779,7 +779,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self._new_cube_with(data=data, unit=unit)
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
-                       projection=False, progressbar=False, 
+                       projection=False, progressbar=False,
                        update_function=None, keep_shape=False, **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
