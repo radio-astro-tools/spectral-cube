@@ -2636,6 +2636,91 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
+    def apply_function_parallel_spectral(self,
+                                         function,
+                                         num_cores=None,
+                                         update_function=None,
+                                         use_memmap=True,
+                                         **kwargs
+                                        ):
+        """
+        Apply a function in parallel along the spectral dimension.  The
+        function will be performed on data with masked values replaced with the
+        cube's fill value.
+
+        Parameters
+        ----------
+        function : function
+            The function to apply in the spectral dimension.  It must take a
+            single argument, which is an array representing a spectrum.
+            It may also accept **kwargs.
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        num_cores : int or None
+            The number of cores to use if running in parallel
+        kwargs : dict
+            Passed to the convolve function
+        """
+        shape = self.shape
+
+        # 'spectra' is a generator
+        # the boolean check will skip the function for bad spectra
+        # TODO: should spatial good/bad be cached?
+        spectra = ((self.filled_data[:,jj,ii],
+                    self.mask.include(view=(slice(None), jj, ii)),
+                    ii, jj,
+                   )
+                   for jj in range(shape[1])
+                   for ii in range(shape[2]))
+
+        if update_function is None:
+            pb = ProgressBar(shape[1] * shape[2])
+            update_function = pb.update
+
+        if use_memmap:
+            ntf = tempfile.NamedTemporaryFile()
+            outcube = np.memmap(ntf, mode='w+', shape=shape, dtype=np.float)
+        else:
+            if self._is_huge and not self.allow_huge_operations:
+                raise ValueError("Applying a function without ``use_memmap`` "
+                                 "requires loading the whole array into "
+                                 "memory *twice*, which can overload the "
+                                 "machine's memory for large cubes.  Either "
+                                 "set ``use_memmap=True`` or set "
+                                 "``cube.allow_huge_operations=True`` to "
+                                 "override this restriction.")
+            outcube = np.empty(shape=shape, dtype=np.float)
+
+        def _apply_function(arguments, outcube=outcube, kwargs=kwargs):
+            """
+            Helper function to smooth a spectrum
+            """
+            (spec, includemask, ii, jj) = arguments
+            update_function()
+
+            if any(includemask):
+                outcube[:,jj,ii] = function(spec, **kwargs)
+            else:
+                outcube[:,jj,ii] = spec
+
+        # TEST
+        from joblib import Parallel, delayed
+        from joblib.pool import has_shareable_memory
+        Parallel(n_jobs=num_cores)(delayed(has_shareable_memory)(_apply_function(arg))
+                                   for arg in spectra)
+
+        # TODO: do something about the mask?
+        newcube = self._new_cube_with(data=outcube, wcs=self.wcs,
+                                      mask=self.mask, meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
+
+
     def spectral_smooth(self, kernel,
                         convolve=convolution.convolve,
                         update_function=None,
@@ -2667,74 +2752,13 @@ class SpectralCube(BaseSpectralCube):
             Passed to the convolve function
         """
 
-        shape = self.shape
+        def func(spec):
+            return convolve(spec, kernel, normalize_kernel=True, **kwargs)
 
-        # 'spectra' is a generator
-        # the boolean check will skip smoothing for bad spectra
-        # TODO: should spatial good/bad be cached?
-        spectra = ((self.filled_data[:,jj,ii],
-                    self.mask.include(view=(slice(None), jj, ii)),
-                    ii, jj,
-                   )
-                   for jj in range(shape[1])
-                   for ii in range(shape[2]))
-
-        if update_function is None:
-            pb = ProgressBar(shape[1] * shape[2])
-            update_function = pb.update
-
-        if use_memmap:
-            ntf = tempfile.NamedTemporaryFile()
-            smoothcube = np.memmap(ntf, mode='w+', shape=shape, dtype=np.float)
-        else:
-            if self._is_huge and not self.allow_huge_operations:
-                raise ValueError("Spectral smoothing without ``use_memmap`` "
-                                 "requires loading the whole array into "
-                                 "memory *twice*, which can overload the "
-                                 "machine's memory for large cubes.  Either "
-                                 "set ``use_memmap=True`` or set "
-                                 "``cube.allow_huge_operations=True`` to "
-                                 "override this restriction.")
-            smoothcube = np.empty(shape=shape, dtype=np.float)
-
-        def _gsmooth_spectrum(arguments, smoothcube=smoothcube):
-            """
-            Helper function to smooth a spectrum
-            """
-            (spec, includemask, ii, jj),kernel,kwargs = arguments
-            update_function()
-
-            if any(includemask):
-                smoothcube[:,jj,ii] = convolve(spec, kernel,
-                                               normalize_kernel=True, **kwargs)
-            else:
-                smoothcube[:,jj,ii] = spec
-
-        # TEST
-        from joblib import Parallel, delayed
-        from joblib.pool import has_shareable_memory
-        Parallel(n_jobs=num_cores)(delayed(has_shareable_memory)(_gsmooth_spectrum(arg))
-                                   for arg in zip(spectra,
-                                                  itertools.cycle([kernel]),
-                                                  itertools.cycle([kwargs]),))
-        #z = x(zip(spectra, itertools.cycle([kernel]), itertools.cycle([kwargs]),))
-
-        ## could be numcores, except _gsmooth_spectrum is unpicklable
-        ## There is no way to make 'map' do what I want.
-        ## Some sort of shared-memory array is required because multiprocessing
-        ## passes copies of data around as pickles rather than passing the
-        ## objects themselves.
-        #with cube_utils._map_context(num_cores) as map:
-        #    map(_gsmooth_spectrum, zip(spectra,
-        #                               itertools.cycle([kernel]),
-        #                               itertools.cycle([kwargs]),))
-
-        # TODO: do something about the mask?
-        newcube = self._new_cube_with(data=smoothcube, wcs=self.wcs,
-                                      mask=self.mask, meta=self.meta,
-                                      fill_value=self.fill_value)
-
-        return newcube
+        return self.apply_function_parallel_spectral(func, num_cores=num_cores,
+                                                     use_memmap=use_memmap,
+                                                     update_function=update_function,
+                                                     **kwargs)
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
