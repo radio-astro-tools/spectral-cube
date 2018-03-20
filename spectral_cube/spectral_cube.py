@@ -2651,9 +2651,10 @@ class SpectralCube(BaseSpectralCube):
         Parameters
         ----------
         function : function
-            The function to apply in the spectral dimension.  It must take a
-            single argument, which is an array representing a spectrum.
-            It may also accept **kwargs.
+            The function to apply in the spectral dimension.  It must take
+            two arguments: an array representing a spectrum and a boolean array
+            representing the mask.  It may also accept **kwargs.  The function
+            must return an object with the same shape as the input spectrum.
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
@@ -2703,7 +2704,7 @@ class SpectralCube(BaseSpectralCube):
             update_function()
 
             if any(includemask):
-                outcube[:,jj,ii] = function(spec, **kwargs)
+                outcube[:,jj,ii] = function(spec, mask, **kwargs)
             else:
                 outcube[:,jj,ii] = spec
 
@@ -2752,7 +2753,7 @@ class SpectralCube(BaseSpectralCube):
             Passed to the convolve function
         """
 
-        def func(spec):
+        def func(spec, mask):
             return convolve(spec, kernel, normalize_kernel=True, **kwargs)
 
         return self.apply_function_parallel_spectral(func, num_cores=num_cores,
@@ -2821,6 +2822,7 @@ class SpectralCube(BaseSpectralCube):
         if outdiff > 2 * indiff and not suppress_smooth_warning:
             warnings.warn("Input grid has too small a spacing. The data should "
                           "be smoothed prior to resampling.")
+
 
         newcube = np.empty([spectral_grid.size, self.shape[1], self.shape[2]],
                            dtype=cubedata[:1, 0, 0].dtype)
