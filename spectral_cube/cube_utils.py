@@ -403,24 +403,20 @@ def _map_context(numcores):
     """
     if numcores is not None and numcores > 1:
         try:
-            import multiprocessing
-            p = multiprocessing.Pool(processes=numcores)
-            map = p.map
+            from joblib import Parallel, delayed
+            from joblib.pool import has_shareable_memory
+            map = lambda x,y: Parallel(n_jobs=numcores)(delayed(has_shareable_memory)(x))(y)
             parallel = True
         except ImportError:
             map = lambda x,y: list(builtins.map(x,y))
-            warnings.warn("Could not import multiprocessing.  "
+            warnings.warn("Could not import joblib.  "
                           "map will be non-parallel.")
             parallel = False
     else:
         parallel = False
         map = lambda x,y: list(builtins.map(x,y))
 
-    try:
-        yield map
-    finally:
-        if parallel:
-            p.close()
+    yield map
 
 
 def convert_bunit(bunit):

@@ -2640,10 +2640,8 @@ class SpectralCube(BaseSpectralCube):
                         convolve=convolution.convolve,
                         update_function=None,
                         use_memmap=True,
-                        #num_cores=None,
+                        num_cores=None,
                         **kwargs):
-        #num_cores : int or None
-        #    The number of cores to use if running in parallel
         """
         Smooth the cube along the spectral dimension
 
@@ -2663,6 +2661,8 @@ class SpectralCube(BaseSpectralCube):
         use_memmap : bool
             If specified, a memory mapped temporary file on disk will be
             written to rather than storing the intermediate spectra in memory.
+        num_cores : int or None
+            The number of cores to use if running in parallel
         kwargs : dict
             Passed to the convolve function
         """
@@ -2697,7 +2697,7 @@ class SpectralCube(BaseSpectralCube):
                                  "override this restriction.")
             smoothcube = np.empty(shape=shape, dtype=np.float)
 
-        def _gsmooth_spectrum(arguments):
+        def _gsmooth_spectrum(arguments, smoothcube=smoothcube):
             """
             Helper function to smooth a spectrum
             """
@@ -2705,19 +2705,29 @@ class SpectralCube(BaseSpectralCube):
             update_function()
 
             if any(includemask):
-                smoothcube[:,jj,ii] = convolve(spec, kernel, normalize_kernel=True, **kwargs)
+                smoothcube[:,jj,ii] = convolve(spec, kernel,
+                                               normalize_kernel=True, **kwargs)
             else:
                 smoothcube[:,jj,ii] = spec
 
-        # could be numcores, except _gsmooth_spectrum is unpicklable
-        # There is no way to make 'map' do what I want.
-        # Some sort of shared-memory array is required because multiprocessing
-        # passes copies of data around as pickles rather than passing the
-        # objects themselves.
-        with cube_utils._map_context(1) as map:
-            map(_gsmooth_spectrum, zip(spectra,
-                                       itertools.cycle([kernel]),
-                                       itertools.cycle([kwargs]),))
+        # TEST
+        from joblib import Parallel, delayed
+        from joblib.pool import has_shareable_memory
+        Parallel(n_jobs=num_cores)(delayed(has_shareable_memory)(_gsmooth_spectrum(arg))
+                                   for arg in zip(spectra,
+                                                  itertools.cycle([kernel]),
+                                                  itertools.cycle([kwargs]),))
+        #z = x(zip(spectra, itertools.cycle([kernel]), itertools.cycle([kwargs]),))
+
+        ## could be numcores, except _gsmooth_spectrum is unpicklable
+        ## There is no way to make 'map' do what I want.
+        ## Some sort of shared-memory array is required because multiprocessing
+        ## passes copies of data around as pickles rather than passing the
+        ## objects themselves.
+        #with cube_utils._map_context(num_cores) as map:
+        #    map(_gsmooth_spectrum, zip(spectra,
+        #                               itertools.cycle([kernel]),
+        #                               itertools.cycle([kwargs]),))
 
         # TODO: do something about the mask?
         newcube = self._new_cube_with(data=smoothcube, wcs=self.wcs,
