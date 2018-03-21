@@ -2633,7 +2633,7 @@ class SpectralCube(BaseSpectralCube):
         num_cores : int or None
             The number of cores to use if running in parallel
         kwargs : dict
-            Passed to the convolve function
+            Passed to ``function``
         """
         shape = self.shape
 

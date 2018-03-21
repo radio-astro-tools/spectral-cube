@@ -2,7 +2,8 @@
 ------------------
  - Refactor spectral smoothing tools to allow parallelized application *and*
    memory mapped output (to avoid loading cube into memory).  Created
-   ``apply_function_parallel_spectral`` to make this general.
+   ``apply_function_parallel_spectral`` to make this general.  Added
+   ``joblib`` as a dependency.
    (https://github.com/radio-astro-tools/spectral-cube/pull/474)
 
 0.4.2 (2018-02-21)
