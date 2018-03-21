@@ -1680,6 +1680,17 @@ def test_spectral_smooth_median():
 
     np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
 
+@pytest.mark.skipif('not SCIPYOK')
+def test_spectral_smooth_median_4cores():
+    cube, data = cube_and_raw('adv.fits')
+
+    cube_spectral_median = cube.spectral_smooth_median(3, num_cores=4)
+
+    # Check first slice
+    result = np.array([0.77513282,  0.35675333,  0.35675333,  0.98688694])
+
+    np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
+
 def test_initialization_from_units():
     """
     Regression test for issue 447

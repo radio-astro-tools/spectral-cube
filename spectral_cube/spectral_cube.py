@@ -2570,7 +2570,11 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def spectral_smooth_median(self, ksize, update_function=None, **kwargs):
+    def spectral_smooth_median(self, ksize,
+                               update_function=None,
+                               use_memmap=True,
+                               num_cores=None,
+                               **kwargs):
         """
         Smooth the cube along the spectral dimension
 
@@ -2581,60 +2585,25 @@ class SpectralCube(BaseSpectralCube):
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        num_cores : int or None
+            The number of cores to use if running in parallel
         kwargs : dict
-            Passed to the convolve function
+            Not used at the moment.
         """
 
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        shape = self.shape
+        def func(spec, mask):
+            return ndimage.filters.median_filter(spec, size=ksize)
 
-        # "cubelist" is a generator
-        # the boolean check will skip smoothing for bad spectra
-        # TODO: should spatial good/bad be cached?
-        cubelist = ((self.filled_data[:,jj,ii],
-                     self.mask.include(view=(slice(None), jj, ii)))
-                    for jj in range(self.shape[1])
-                    for ii in range(self.shape[2]))
-
-        if update_function is None:
-            pb = ProgressBar(shape[1] * shape[2])
-            update_function = pb.update
-
-        def _gsmooth_spectrum(args):
-            """
-            Helper function to smooth a spectrum
-            """
-            (spec, includemask),kwargs = args
-            update_function()
-
-            if any(includemask):
-                return ndimage.filters.median_filter(spec, size=ksize)
-            else:
-                return spec
-
-        # could be numcores, except _gsmooth_spectrum is unpicklable
-        with cube_utils._map_context(1) as map:
-            smoothcube_ = np.array([x for x in
-                                    map(_gsmooth_spectrum, zip(cubelist,
-                                                               itertools.cycle([kwargs]),
-                                                              )
-                                       )
-                                   ]
-                                  )
-
-        # empirical: need to swapaxes to get shape right
-        # cube = np.arange(6*5*4).reshape([4,5,6]).swapaxes(0,2)
-        # cubelist.T.reshape(cube.shape) == cube
-        smoothcube = smoothcube_.T.reshape(shape)
-
-        # TODO: do something about the mask?
-        newcube = self._new_cube_with(data=smoothcube, wcs=self.wcs,
-                                      mask=self.mask, meta=self.meta,
-                                      fill_value=self.fill_value)
-
-        return newcube
+        return self.apply_function_parallel_spectral(func, num_cores=num_cores,
+                                                     use_memmap=use_memmap,
+                                                     update_function=update_function,
+                                                     **kwargs)
 
     def apply_function_parallel_spectral(self,
                                          function,
@@ -2704,7 +2673,7 @@ class SpectralCube(BaseSpectralCube):
             update_function()
 
             if any(includemask):
-                outcube[:,jj,ii] = function(spec, mask, **kwargs)
+                outcube[:,jj,ii] = function(spec, includemask, **kwargs)
             else:
                 outcube[:,jj,ii] = spec
 
