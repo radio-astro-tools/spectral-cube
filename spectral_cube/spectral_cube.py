@@ -2608,12 +2608,12 @@ class SpectralCube(BaseSpectralCube):
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        return self.apply_function_parallel_spectral(ndimage.filters.median_filter,
-                                                     data=self.filled_data,
-                                                     size=ksize,
-                                                     num_cores=num_cores,
-                                                     use_memmap=use_memmap,
-                                                     **kwargs)
+        return self._apply_function_parallel_spectral(ndimage.filters.median_filter,
+                                                      data=self.filled_data,
+                                                      size=ksize,
+                                                      num_cores=num_cores,
+                                                      use_memmap=use_memmap,
+                                                      **kwargs)
 
     def _apply_function_parallel_spectral(self,
                                           function,
