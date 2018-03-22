@@ -87,3 +87,23 @@ def test_parallel_performance_smoothing():
     print()
     print("memmap=True")
     print(rslt)
+
+
+    if False:
+        for shape in [(300,64,64), (600,64,64), (900,64,64),
+                      (300,128,128), (300,256,256), (900,256,256)]:
+
+            setup = 'cube,_ = utilities.generate_gaussian_cube(shape={0})'.format(shape)
+            stmt = 'result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(20.0), num_cores={0}, use_memmap=True)'
+
+            rslt = {}
+            for ncores in (1,2,3,4):
+                time = timeit.timeit(stmt=stmt.format(ncores), setup=setup, number=5, globals=globals())
+                rslt[ncores] = time
+
+            stmt = 'result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(20.0), num_cores={0}, use_memmap=True, parallel=False)'
+            rslt[0] = timeit.timeit(stmt=stmt.format(1), setup=setup, number=5, globals=globals())
+
+            print()
+            print("memmap=True shape={0}".format(shape))
+            print(rslt)
