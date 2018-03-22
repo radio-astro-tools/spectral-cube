@@ -61,7 +61,7 @@ def test_parallel_performance_smoothing():
 
     import timeit
 
-    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,100,100))'
+    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,32,32))'
     stmt = 'result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(20.0), num_cores={0}, use_memmap=False)'
 
     rslt = {}
@@ -73,7 +73,7 @@ def test_parallel_performance_smoothing():
     print("memmap=False")
     print(rslt)
 
-    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,100,100))'
+    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,32,32))'
     stmt = 'result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(20.0), num_cores={0}, use_memmap=True)'
 
     rslt = {}

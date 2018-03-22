@@ -2613,7 +2613,6 @@ class SpectralCube(BaseSpectralCube):
                                                      size=ksize,
                                                      num_cores=num_cores,
                                                      use_memmap=use_memmap,
-                                                     update_function=update_function,
                                                      **kwargs)
 
     def _apply_function_parallel_spectral(self,
@@ -2672,15 +2671,30 @@ class SpectralCube(BaseSpectralCube):
                                  "override this restriction.")
             outcube = np.empty(shape=shape, dtype=np.float)
 
-        from joblib import Parallel, delayed
+        try:
+            from joblib import Parallel, delayed
 
-        Parallel(n_jobs=num_cores,
-                 verbose=verbose,
-                 max_nbytes=None)(delayed(_apply_function)(arg,
-                                                           outcube,
-                                                           function,
-                                                           **kwargs)
-                                  for arg in spectra)
+            Parallel(n_jobs=num_cores,
+                     verbose=verbose,
+                     max_nbytes=None)(delayed(_apply_function)(arg,
+                                                               outcube,
+                                                               function,
+                                                               **kwargs)
+                                      for arg in spectra)
+        except ImportError:
+            if num_cores > 1:
+                warnings.warn("Could not import joblib.  Will run in serial.",
+                              ImportError)
+            if verbose > 0:
+                progressbar = ProgressBar(self.shape[1]*self.shape[2])
+                pbu = progressbar.update
+            else:
+                pbu = object
+
+            for arg in spectra:
+                _apply_function(arg, outcube, function, **kwargs)
+                pbu()
+
 
         # TODO: do something about the mask?
         newcube = self._new_cube_with(data=outcube, wcs=self.wcs,
