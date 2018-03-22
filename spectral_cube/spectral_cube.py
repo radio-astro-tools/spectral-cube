@@ -2621,6 +2621,7 @@ class SpectralCube(BaseSpectralCube):
                                           num_cores=None,
                                           verbose=0,
                                           use_memmap=True,
+                                          parallel=True,
                                           **kwargs
                                          ):
         """
@@ -2642,6 +2643,9 @@ class SpectralCube(BaseSpectralCube):
             written to rather than storing the intermediate spectra in memory.
         num_cores : int or None
             The number of cores to use if running in parallel
+        parallel : bool
+            If set to ``False``, will force the use of a single core without
+            using ``joblib``.
         kwargs : dict
             Passed to ``function``
         """
@@ -2671,20 +2675,26 @@ class SpectralCube(BaseSpectralCube):
                                  "override this restriction.")
             outcube = np.empty(shape=shape, dtype=np.float)
 
-        try:
-            from joblib import Parallel, delayed
+        if parallel:
+            try:
+                from joblib import Parallel, delayed
 
-            Parallel(n_jobs=num_cores,
-                     verbose=verbose,
-                     max_nbytes=None)(delayed(_apply_function)(arg,
-                                                               outcube,
-                                                               function,
-                                                               **kwargs)
-                                      for arg in spectra)
-        except ImportError:
-            if num_cores > 1:
-                warnings.warn("Could not import joblib.  Will run in serial.",
-                              ImportError)
+                Parallel(n_jobs=num_cores,
+                         verbose=verbose,
+                         max_nbytes=None)(delayed(_apply_function)(arg,
+                                                                   outcube,
+                                                                   function,
+                                                                   **kwargs)
+                                          for arg in spectra)
+            except ImportError:
+                if num_cores > 1:
+                    warnings.warn("Could not import joblib.  Will run in serial.",
+                                  ImportError)
+                parallel = False
+
+        # this isn't an else statement because we want to catch the case where
+        # the above clause fails on ImportError
+        if not parallel:
             if verbose > 0:
                 progressbar = ProgressBar(self.shape[1]*self.shape[2])
                 pbu = progressbar.update

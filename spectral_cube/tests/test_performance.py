@@ -81,6 +81,9 @@ def test_parallel_performance_smoothing():
         time = timeit.timeit(stmt=stmt.format(ncores), setup=setup, number=5, globals=globals())
         rslt[ncores] = time
 
+    stmt = 'result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(20.0), num_cores={0}, use_memmap=True, parallel=False)'
+    rslt[0] = timeit.timeit(stmt=stmt.format(1), setup=setup, number=5, globals=globals())
+
     print()
     print("memmap=True")
     print(rslt)
