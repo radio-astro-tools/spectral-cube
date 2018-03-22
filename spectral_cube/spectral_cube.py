@@ -88,6 +88,18 @@ def aggregation_docstring(func):
     wrapper.__doc__ += _NP_DOC
     return wrapper
 
+def _apply_function(arguments, outcube, function, **kwargs):
+    """
+    Helper function to smooth a spectrum
+    """
+    (spec, includemask, ii, jj) = arguments
+
+    if any(includemask):
+        outcube[:,jj,ii] = function(spec, **kwargs)
+    else:
+        outcube[:,jj,ii] = spec
+
+
 # convenience structures to keep track of the reversed index
 # conventions between WCS and numpy
 np2wcs = {2: 0, 1: 1, 0: 2}
@@ -2571,8 +2583,8 @@ class SpectralCube(BaseSpectralCube):
         return newcube
 
     def spectral_smooth_median(self, ksize,
-                               update_function=None,
                                use_memmap=True,
+                               verbose=0,
                                num_cores=None,
                                **kwargs):
         """
@@ -2582,9 +2594,8 @@ class SpectralCube(BaseSpectralCube):
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        verbose : int
+            Verbosity level to pass to joblib
         use_memmap : bool
             If specified, a memory mapped temporary file on disk will be
             written to rather than storing the intermediate spectra in memory.
@@ -2597,21 +2608,22 @@ class SpectralCube(BaseSpectralCube):
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        def func(spec, mask):
-            return ndimage.filters.median_filter(spec, size=ksize)
-
-        return self.apply_function_parallel_spectral(func, num_cores=num_cores,
+        return self.apply_function_parallel_spectral(ndimage.filters.median_filter,
+                                                     data=self.filled_data,
+                                                     size=ksize,
+                                                     num_cores=num_cores,
                                                      use_memmap=use_memmap,
                                                      update_function=update_function,
                                                      **kwargs)
 
-    def apply_function_parallel_spectral(self,
-                                         function,
-                                         num_cores=None,
-                                         update_function=None,
-                                         use_memmap=True,
-                                         **kwargs
-                                        ):
+    def _apply_function_parallel_spectral(self,
+                                          function,
+                                          data,
+                                          num_cores=None,
+                                          verbose=0,
+                                          use_memmap=True,
+                                          **kwargs
+                                         ):
         """
         Apply a function in parallel along the spectral dimension.  The
         function will be performed on data with masked values replaced with the
@@ -2624,9 +2636,8 @@ class SpectralCube(BaseSpectralCube):
             two arguments: an array representing a spectrum and a boolean array
             representing the mask.  It may also accept **kwargs.  The function
             must return an object with the same shape as the input spectrum.
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        verbose : int
+            Verbosity level to pass to joblib
         use_memmap : bool
             If specified, a memory mapped temporary file on disk will be
             written to rather than storing the intermediate spectra in memory.
@@ -2640,16 +2651,12 @@ class SpectralCube(BaseSpectralCube):
         # 'spectra' is a generator
         # the boolean check will skip the function for bad spectra
         # TODO: should spatial good/bad be cached?
-        spectra = ((self.filled_data[:,jj,ii],
+        spectra = ((data[:,jj,ii],
                     self.mask.include(view=(slice(None), jj, ii)),
                     ii, jj,
                    )
                    for jj in range(shape[1])
                    for ii in range(shape[2]))
-
-        if update_function is None:
-            pb = ProgressBar(shape[1] * shape[2])
-            update_function = pb.update
 
         if use_memmap:
             ntf = tempfile.NamedTemporaryFile()
@@ -2665,23 +2672,15 @@ class SpectralCube(BaseSpectralCube):
                                  "override this restriction.")
             outcube = np.empty(shape=shape, dtype=np.float)
 
-        def _apply_function(arguments, outcube=outcube, kwargs=kwargs):
-            """
-            Helper function to smooth a spectrum
-            """
-            (spec, includemask, ii, jj) = arguments
-            update_function()
-
-            if any(includemask):
-                outcube[:,jj,ii] = function(spec, includemask, **kwargs)
-            else:
-                outcube[:,jj,ii] = spec
-
-        # TEST
         from joblib import Parallel, delayed
-        from joblib.pool import has_shareable_memory
-        Parallel(n_jobs=num_cores)(delayed(has_shareable_memory)(_apply_function(arg))
-                                   for arg in spectra)
+
+        Parallel(n_jobs=num_cores,
+                 verbose=verbose,
+                 max_nbytes=None)(delayed(_apply_function)(arg,
+                                                           outcube,
+                                                           function,
+                                                           **kwargs)
+                                  for arg in spectra)
 
         # TODO: do something about the mask?
         newcube = self._new_cube_with(data=outcube, wcs=self.wcs,
@@ -2693,7 +2692,7 @@ class SpectralCube(BaseSpectralCube):
 
     def spectral_smooth(self, kernel,
                         convolve=convolution.convolve,
-                        update_function=None,
+                        verbose=0,
                         use_memmap=True,
                         num_cores=None,
                         **kwargs):
@@ -2710,9 +2709,8 @@ class SpectralCube(BaseSpectralCube):
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        verbose : int
+            Verbosity level to pass to joblib
         use_memmap : bool
             If specified, a memory mapped temporary file on disk will be
             written to rather than storing the intermediate spectra in memory.
@@ -2722,13 +2720,14 @@ class SpectralCube(BaseSpectralCube):
             Passed to the convolve function
         """
 
-        def func(spec, mask):
-            return convolve(spec, kernel, normalize_kernel=True, **kwargs)
-
-        return self.apply_function_parallel_spectral(func, num_cores=num_cores,
-                                                     use_memmap=use_memmap,
-                                                     update_function=update_function,
-                                                     **kwargs)
+        return self._apply_function_parallel_spectral(convolve,
+                                                      data=self.filled_data,
+                                                      kernel=kernel,
+                                                      normalize_kernel=True,
+                                                      num_cores=num_cores,
+                                                      use_memmap=use_memmap,
+                                                      verbose=verbose,
+                                                      **kwargs)
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
