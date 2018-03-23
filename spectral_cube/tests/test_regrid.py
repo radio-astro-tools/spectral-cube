@@ -134,6 +134,15 @@ def test_spectral_smooth_4cores():
 
     cube, data = cube_and_raw('522_delta.fits')
 
+
+    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=True)
+
+    np.testing.assert_almost_equal(result[:,0,0].value,
+                                   convolution.Gaussian1DKernel(1.0,
+                                                                x_size=5).array,
+                                   4)
+
+    # this is one way to test non-parallel mode
     result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
@@ -141,7 +150,9 @@ def test_spectral_smooth_4cores():
                                                                 x_size=5).array,
                                    4)
 
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=True)
+    # num_cores = 4 is a contradiction with parallel=False, but we want to make
+    # sure it does the same thing
+    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, parallel=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    convolution.Gaussian1DKernel(1.0,

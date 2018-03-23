@@ -90,7 +90,9 @@ def aggregation_docstring(func):
 
 def _apply_function(arguments, outcube, function, **kwargs):
     """
-    Helper function to smooth a spectrum
+    Helper function to apply a function to a spectrum.
+    Needs to be declared toward the top of the code to allow pickling by
+    joblib.
     """
     (spec, includemask, ii, jj) = arguments
 
@@ -2675,7 +2677,8 @@ class SpectralCube(BaseSpectralCube):
                                  "override this restriction.")
             outcube = np.empty(shape=shape, dtype=np.float)
 
-        if parallel:
+        if parallel and use_memmap:
+            # it is not possible to run joblib parallelization without memmap
             try:
                 from joblib import Parallel, delayed
 
@@ -2694,7 +2697,7 @@ class SpectralCube(BaseSpectralCube):
 
         # this isn't an else statement because we want to catch the case where
         # the above clause fails on ImportError
-        if not parallel:
+        if not parallel or not use_memmap:
             if verbose > 0:
                 progressbar = ProgressBar(self.shape[1]*self.shape[2])
                 pbu = progressbar.update
