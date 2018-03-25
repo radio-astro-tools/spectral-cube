@@ -2690,7 +2690,7 @@ class SpectralCube(BaseSpectralCube):
                                                                    **kwargs)
                                           for arg in spectra)
             except ImportError:
-                if num_cores > 1:
+                if num_cores is not None and num_cores > 1:
                     warnings.warn("Could not import joblib.  Will run in serial.",
                                   ImportError)
                 parallel = False
