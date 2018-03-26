@@ -36,6 +36,12 @@ warnings.simplefilter('error', utils.NotImplementedWarning)
 warnings.simplefilter('error', utils.WCSMismatchWarning)
 
 try:
+    import joblib
+    JOBLIB_INSTALLED = True
+except ImportError:
+    JOBLIB_INSTALLED = False
+
+try:
     import scipy.ndimage
     SCIPYOK = True
 except ImportError:
@@ -1674,6 +1680,18 @@ def test_spectral_smooth_median():
     cube, data = cube_and_raw('adv.fits')
 
     cube_spectral_median = cube.spectral_smooth_median(3)
+
+    # Check first slice
+    result = np.array([0.77513282,  0.35675333,  0.35675333,  0.98688694])
+
+    np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
+
+@pytest.mark.skipif('not SCIPYOK')
+@pytest.mark.skipif('not JOBLIB_INSTALLED')
+def test_spectral_smooth_median_4cores():
+    cube, data = cube_and_raw('adv.fits')
+
+    cube_spectral_median = cube.spectral_smooth_median(3, num_cores=4)
 
     # Check first slice
     result = np.array([0.77513282,  0.35675333,  0.35675333,  0.98688694])

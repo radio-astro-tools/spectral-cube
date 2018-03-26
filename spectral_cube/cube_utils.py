@@ -397,27 +397,26 @@ def _map_context(numcores):
     """
     Mapping context manager to allow parallel mapping or regular mapping
     depending on the number of cores specified.
+
+    The builtin map is overloaded to handle python3 problems: python3 returns a
+    generator, while ``multiprocessing.Pool.map`` actually runs the whole thing
     """
     if numcores is not None and numcores > 1:
         try:
-            import multiprocessing
-            p = multiprocessing.Pool(processes=numcores)
-            map = p.map
+            from joblib import Parallel, delayed
+            from joblib.pool import has_shareable_memory
+            map = lambda x,y: Parallel(n_jobs=numcores)(delayed(has_shareable_memory)(x))(y)
             parallel = True
         except ImportError:
-            map = builtins.map
-            warnings.warn("Could not import multiprocessing.  "
+            map = lambda x,y: list(builtins.map(x,y))
+            warnings.warn("Could not import joblib.  "
                           "map will be non-parallel.")
             parallel = False
     else:
         parallel = False
-        map = builtins.map
+        map = lambda x,y: list(builtins.map(x,y))
 
-    try:
-        yield map
-    finally:
-        if parallel:
-            p.close()
+    yield map
 
 
 def convert_bunit(bunit):

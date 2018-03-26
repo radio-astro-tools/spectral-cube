@@ -21,6 +21,12 @@ try:
 except ImportError:
     REPROJECT_INSTALLED = False
 
+try:
+    import joblib
+    JOBLIB_INSTALLED = True
+except ImportError:
+    JOBLIB_INSTALLED = False
+
 
 def test_convolution():
     cube, data = cube_and_raw('255_delta.fits')
@@ -107,12 +113,52 @@ def test_spectral_smooth():
 
     cube, data = cube_and_raw('522_delta.fits')
 
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0))
+    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), use_memmap=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    convolution.Gaussian1DKernel(1.0,
                                                                 x_size=5).array,
                                    4)
+
+    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), use_memmap=True)
+
+    np.testing.assert_almost_equal(result[:,0,0].value,
+                                   convolution.Gaussian1DKernel(1.0,
+                                                                x_size=5).array,
+                                   4)
+
+
+# TODO: uncomment this when we figure out how to make it work
+@pytest.mark.skipif('not JOBLIB_INSTALLED')
+def test_spectral_smooth_4cores():
+
+    cube, data = cube_and_raw('522_delta.fits')
+
+
+    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=True)
+
+    np.testing.assert_almost_equal(result[:,0,0].value,
+                                   convolution.Gaussian1DKernel(1.0,
+                                                                x_size=5).array,
+                                   4)
+
+    # this is one way to test non-parallel mode
+    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=False)
+
+    np.testing.assert_almost_equal(result[:,0,0].value,
+                                   convolution.Gaussian1DKernel(1.0,
+                                                                x_size=5).array,
+                                   4)
+
+    # num_cores = 4 is a contradiction with parallel=False, but we want to make
+    # sure it does the same thing
+    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, parallel=False)
+
+    np.testing.assert_almost_equal(result[:,0,0].value,
+                                   convolution.Gaussian1DKernel(1.0,
+                                                                x_size=5).array,
+                                   4)
+
 
 
 def test_spectral_smooth_fail():
