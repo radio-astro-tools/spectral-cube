@@ -93,6 +93,22 @@ def test_wcs_slice_reversal():
 
     np.testing.assert_allclose(spaxis, new_spaxis[::-1])
 
+def test_reversal_roundtrip():
+    wcs = WCS(naxis=3)
+    wcs.wcs.crpix = [50., 45., 30.]
+    wcs.wcs.crval = [0., 0., 0.]
+    wcs.wcs.cdelt = [1., 1., 1.]
+    wcs_new = slice_wcs(wcs, (slice(None, None, -1), slice(None), slice(None)),
+                        shape=[100., 150., 200.])
+    spaxis = wcs.sub([0]).wcs_pix2world(np.arange(100), 0)
+
+    re_reverse = slice_wcs(wcs_new, (slice(None, None, -1), slice(None), slice(None)),
+                           shape=[100., 150., 200.])
+    new_spaxis = re_reverse.sub([0]).wcs_pix2world(np.arange(100), 0)
+
+    np.testing.assert_allclose(spaxis, new_spaxis[::-1])
+    assert check_equality(wcs, re_reverse)
+
 
 def test_wcs_comparison():
     wcs1 = WCS(naxis=3)
