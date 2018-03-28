@@ -948,6 +948,9 @@ def test_slice_wcs_reversal():
     rcube = cube[view]
     rrcube = rcube[view]
 
+    np.testing.assert_array_equal(np.diff(cube.spectral_axis),
+                                  -np.diff(rcube.spectral_axis))
+
     np.testing.assert_array_equal(rrcube.spectral_axis.value,
                                   cube.spectral_axis.value)
     np.testing.assert_array_equal(rcube.spectral_axis.value,

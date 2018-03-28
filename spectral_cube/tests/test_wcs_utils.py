@@ -111,8 +111,19 @@ def test_reversal_roundtrip():
     new_spaxis = re_reverse.sub([0]).wcs_pix2world(np.arange(100), 0)
 
     np.testing.assert_allclose(spaxis, new_spaxis[::-1])
-    assert check_equality(wcs, re_reverse)
 
+    #These are NOT equal, but they are equivalent: CRVAL and CRPIX are shifted
+    #by an acceptable amount
+    # assert check_equality(wcs, re_reverse)
+
+    re_re_reverse = slice_wcs(re_reverse, (slice(None, None, -1), slice(None),
+                                           slice(None)),
+                              shape=[100., 150., 200.])
+    re_re_re_reverse = slice_wcs(re_re_reverse, (slice(None, None, -1), slice(None),
+                                           slice(None)),
+                                 shape=[100., 150., 200.])
+
+    assert check_equality(re_re_re_reverse, re_reverse)
 
 def test_wcs_comparison():
     wcs1 = WCS(naxis=3)
