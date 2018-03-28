@@ -102,6 +102,10 @@ def test_reversal_roundtrip():
                         shape=[100., 150., 200.])
     spaxis = wcs.sub([0]).wcs_pix2world(np.arange(100), 0)
 
+    new_spaxis = wcs_new.sub([0]).wcs_pix2world(np.arange(100), 0)
+
+    np.testing.assert_allclose(spaxis, new_spaxis[::-1])
+
     re_reverse = slice_wcs(wcs_new, (slice(None, None, -1), slice(None), slice(None)),
                            shape=[100., 150., 200.])
     new_spaxis = re_reverse.sub([0]).wcs_pix2world(np.arange(100), 0)

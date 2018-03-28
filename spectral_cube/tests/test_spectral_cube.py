@@ -932,6 +932,7 @@ def test_slicing():
                           ((slice(None), slice(None), 1), 2),
                           ((slice(None), slice(None), slice(1)), 3),
                           ((slice(1), slice(1), slice(1)), 3),
+                          ((slice(None, None, -1), slice(None), slice(None)), 3),
                          ])
 def test_slice_wcs(view, naxis):
 
@@ -939,6 +940,18 @@ def test_slice_wcs(view, naxis):
 
     sl = cube[view]
     assert sl.wcs.naxis == naxis
+
+def test_slice_wcs_reversal():
+    cube, data = cube_and_raw('advs.fits')
+    view = (slice(None,None,-1), slice(None), slice(None))
+
+    rcube = cube[view]
+    rrcube = rcube[view]
+
+    np.testing.assert_array_equal(rrcube.spectral_axis.value,
+                                  cube.spectral_axis.value)
+    np.testing.assert_array_equal(rcube.spectral_axis.value,
+                                  cube.spectral_axis.value[::-1])
 
 def test_spectral_slice_preserve_units():
     cube, data = cube_and_raw('advs.fits')
