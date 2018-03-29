@@ -989,7 +989,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             bnok = False
 
         # slicewise median is nonsense, must force how = 'cube'
-        if bnok and not iterate_rays:
+        # bottleneck.nanmedian does not allow axis to be a list or tuple
+        if bnok and not iterate_rays and not isinstance(axis, (list, tuple)):
             log.debug("Using bottleneck nanmedian")
             result = self.apply_numpy_function(nanmedian, axis=axis,
                                                projection=True, unit=self.unit,

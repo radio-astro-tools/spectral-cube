@@ -1722,3 +1722,19 @@ def test_varyres_spectra():
 
     assert isinstance(sp, VaryingResolutionOneDSpectrum)
     assert hasattr(sp, 'beams')
+
+def test_median_2axis():
+    """
+    As of this writing the bottleneck.nanmedian did not accept an axis that is a tuple/list so this test
+    is to make sure that is properly taken into account.
+
+    :return:
+    """
+    cube, data = cube_and_raw('adv.fits')
+
+    cube_median = cube.median(axis=(1, 2))
+
+    # Check first slice
+    result0 = np.array([0.83498009, 0.2606566 , 0.37271531, 0.48548023])
+
+    np.testing.assert_almost_equal(cube_median.value, result0)
