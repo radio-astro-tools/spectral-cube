@@ -955,6 +955,8 @@ def test_slice_wcs_reversal():
                                   cube.spectral_axis.value)
     np.testing.assert_array_equal(rcube.spectral_axis.value,
                                   cube.spectral_axis.value[::-1])
+    np.testing.assert_array_equal(rrcube.world_extrema.value,
+                                  cube.world_extrema.value)
 
 def test_spectral_slice_preserve_units():
     cube, data = cube_and_raw('advs.fits')
@@ -1623,7 +1625,8 @@ def test_caching():
     world_extrema_function = base_class.SpatialCoordMixinClass.world_extrema.fget.wrapped_function
 
     assert cube.world_extrema is cube._cache[(world_extrema_function, ())]
-    assert worldextrema == cube.world_extrema
+    np.testing.assert_almost_equal(worldextrema.value,
+                                   cube.world_extrema.value)
 
 def test_spatial_smooth_g2d():
     cube, data = cube_and_raw('adv.fits')

@@ -142,8 +142,9 @@ class SpatialCoordMixinClass(object):
         _lat_min = lat.min()
         _lat_max = lat.max()
 
-        return ((_lon_min, _lon_max),
-                (_lat_min, _lat_max))
+        return u.Quantity(((_lon_min.to(u.deg).value, _lon_max.to(u.deg).value),
+                           (_lat_min.to(u.deg).value, _lat_max.to(u.deg).value)),
+                          u.deg)
 
     @property
     @cached
