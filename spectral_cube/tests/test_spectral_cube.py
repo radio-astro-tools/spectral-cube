@@ -957,6 +957,11 @@ def test_slice_wcs_reversal():
                                   cube.spectral_axis.value[::-1])
     np.testing.assert_array_equal(rrcube.world_extrema.value,
                                   cube.world_extrema.value)
+    # check that the lon, lat arrays are *entirely* unchanged
+    np.testing.assert_array_equal(rrcube.spatial_coordinate_map[0].value,
+                                  cube.spatial_coordinate_map[0].value)
+    np.testing.assert_array_equal(rrcube.spatial_coordinate_map[1].value,
+                                  cube.spatial_coordinate_map[1].value)
 
 def test_spectral_slice_preserve_units():
     cube, data = cube_and_raw('advs.fits')

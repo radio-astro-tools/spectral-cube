@@ -119,8 +119,8 @@ def test_reversal_roundtrip():
     re_re_reverse = slice_wcs(re_reverse, (slice(None, None, -1), slice(None),
                                            slice(None)),
                               shape=[100., 150., 200.])
-    re_re_re_reverse = slice_wcs(re_re_reverse, (slice(None, None, -1), slice(None),
-                                           slice(None)),
+    re_re_re_reverse = slice_wcs(re_re_reverse, (slice(None, None, -1),
+                                                 slice(None), slice(None)),
                                  shape=[100., 150., 200.])
 
     assert check_equality(re_re_re_reverse, re_reverse)
