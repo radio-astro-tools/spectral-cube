@@ -5,6 +5,9 @@
    ``apply_function_parallel_spectral`` to make this general.  Added
    ``joblib`` as a dependency.
    (https://github.com/radio-astro-tools/spectral-cube/pull/474)
+ - Bugfix: Reversing a cube's spectral axis should now do something reasonable
+   instead of unreasonable
+   (https://github.com/radio-astro-tools/spectral-cube/pull/478)
 
 0.4.2 (2018-02-21)
 ------------------

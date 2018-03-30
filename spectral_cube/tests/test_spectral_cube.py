@@ -932,6 +932,7 @@ def test_slicing():
                           ((slice(None), slice(None), 1), 2),
                           ((slice(None), slice(None), slice(1)), 3),
                           ((slice(1), slice(1), slice(1)), 3),
+                          ((slice(None, None, -1), slice(None), slice(None)), 3),
                          ])
 def test_slice_wcs(view, naxis):
 
@@ -939,6 +940,28 @@ def test_slice_wcs(view, naxis):
 
     sl = cube[view]
     assert sl.wcs.naxis == naxis
+
+def test_slice_wcs_reversal():
+    cube, data = cube_and_raw('advs.fits')
+    view = (slice(None,None,-1), slice(None), slice(None))
+
+    rcube = cube[view]
+    rrcube = rcube[view]
+
+    np.testing.assert_array_equal(np.diff(cube.spectral_axis),
+                                  -np.diff(rcube.spectral_axis))
+
+    np.testing.assert_array_equal(rrcube.spectral_axis.value,
+                                  cube.spectral_axis.value)
+    np.testing.assert_array_equal(rcube.spectral_axis.value,
+                                  cube.spectral_axis.value[::-1])
+    np.testing.assert_array_equal(rrcube.world_extrema.value,
+                                  cube.world_extrema.value)
+    # check that the lon, lat arrays are *entirely* unchanged
+    np.testing.assert_array_equal(rrcube.spatial_coordinate_map[0].value,
+                                  cube.spatial_coordinate_map[0].value)
+    np.testing.assert_array_equal(rrcube.spatial_coordinate_map[1].value,
+                                  cube.spatial_coordinate_map[1].value)
 
 def test_spectral_slice_preserve_units():
     cube, data = cube_and_raw('advs.fits')
@@ -1607,7 +1630,8 @@ def test_caching():
     world_extrema_function = base_class.SpatialCoordMixinClass.world_extrema.fget.wrapped_function
 
     assert cube.world_extrema is cube._cache[(world_extrema_function, ())]
-    assert worldextrema == cube.world_extrema
+    np.testing.assert_almost_equal(worldextrema.value,
+                                   cube.world_extrema.value)
 
 def test_spatial_smooth_g2d():
     cube, data = cube_and_raw('adv.fits')
