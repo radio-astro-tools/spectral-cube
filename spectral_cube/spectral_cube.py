@@ -399,6 +399,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                       else None),
                                               )
                 else:
+                    warnings.warn("Averaging over a spatial and a spectral "
+                                  "dimension cannot produce a Projection "
+                                  "quantity (no units or WCS are preserved).")
                     return out
 
             else:
@@ -541,9 +544,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                       else None),
                                                meta=self.meta)
                 else:
-                    raise NotImplementedError("We don't yet know how to deal "
-                                              "with multidimensional averages "
-                                              "that are non-spectral")
+                    # this is a weird case, but even if projection is
+                    # specified, we can't return a Quantity here because of WCS
+                    # issues.  `apply_numpy_function` already does this
+                    # silently, which is unfortunate.
+                    warnings.warn("Averaging over a spatial and a spectral "
+                                  "dimension cannot produce a Projection "
+                                  "quantity (no units or WCS are preserved).")
+                    return out
             else:
                 return out
 
@@ -591,6 +599,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                  axis=axis,
                                                  how='slice',
                                                  projection=projection,
+                                                 unit=self.unit,
                                                  **kwargs)
             else:
                 counts = self._count_nonzero_slicewise(axis=axis)
