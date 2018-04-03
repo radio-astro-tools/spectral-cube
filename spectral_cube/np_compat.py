@@ -11,7 +11,7 @@ def allbadtonan(function):
     """
     def f(data, axis=None):
         result = function(data, axis=axis)
-        if LooseVersion(np.__version__) >= LooseVersion('1.9.0'):
+        if LooseVersion(np.__version__) >= LooseVersion('1.9.0') and hasattr(result, '__len__'):
             if axis is None:
                 if np.all(np.isnan(data)):
                     return np.nan

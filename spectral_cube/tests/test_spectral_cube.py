@@ -1085,6 +1085,37 @@ def test_twod_numpy(func, how, axis):
     np.testing.assert_equal(proj.value, dproj)
     assert cube.unit == proj.unit
 
+@pytest.mark.parametrize(('func','how','axis'),
+                         itertools.product(('sum','std','max','min','mean'),
+                                           ('slice','cube','auto'),
+                                           ((0,1),(1,2),(0,2))
+                                          ))
+def test_twod_numpy_twoaxes(func, how, axis):
+    # Check that a numpy function returns the correct result when applied along
+    # one axis
+    # This is partly a regression test for #211
+
+    cube, data = cube_and_raw('advs.fits')
+    cube._meta['BUNIT'] = 'K'
+    cube._unit = u.K
+
+    if func == 'mean' and axis != (1,2):
+        with warnings.catch_warnings(record=True) as wrn:
+            spec = getattr(cube,func)(axis=axis, how=how)
+
+        assert 'Averaging over a spatial and a spectral' in str(wrn[-1].message)
+
+    spec = getattr(cube,func)(axis=axis, how=how)
+    # data has a redundant 1st axis
+    dspec = getattr(data.squeeze(),func)(axis=axis)
+
+    if axis == (1,2):
+        assert isinstance(spec, OneDSpectrum)
+        assert cube.unit == spec.unit
+        np.testing.assert_almost_equal(spec.value, dspec)
+    else:
+        np.testing.assert_almost_equal(spec, dspec)
+
 def test_preserves_header_values():
     # Check that the non-WCS header parameters are preserved during projection
 
