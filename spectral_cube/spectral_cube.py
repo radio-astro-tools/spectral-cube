@@ -587,33 +587,36 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                           "manner.  Please use a "
                                           "different strategy.")
             if hasattr(axis, '__len__') and len(axis) == 2:
-                raise NotImplementedError("Standard deviation across two "
-                                          "dimensions slicewise is not "
-                                          "yet implemented.")
-            counts = self._count_nonzero_slicewise(axis=axis)
-            ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how='slice',
-                                            axis=axis, unit=None,
-                                            projection=False, **kwargs)
-            # Equivalent, but with more overhead:
-            # ttl = self.sum(axis=axis, how='slice').value
-            mean = ttl/counts
-
-            planes = self._iter_slices(axis, fill=np.nan, check_endian=False)
-            result = (next(planes)-mean)**2
-            for plane in planes:
-                result = np.nansum(np.dstack((result, (plane-mean)**2)), axis=2)
-
-            out = (result/(counts-ddof))**0.5
-
-            if projection:
-                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-                meta = {'collapse_axis': axis}
-                meta.update(self._meta)
-                return Projection(out, copy=False, wcs=new_wcs,
-                                  meta=meta,
-                                  unit=self.unit, header=self._nowcs_header)
+                return self.apply_numpy_function(np.nanstd,
+                                                 axis=axis,
+                                                 how='slice',
+                                                 projection=projection,
+                                                 **kwargs)
             else:
-                return out
+                counts = self._count_nonzero_slicewise(axis=axis)
+                ttl = self.apply_numpy_function(np.nansum, fill=np.nan, how='slice',
+                                                axis=axis, unit=None,
+                                                projection=False, **kwargs)
+                # Equivalent, but with more overhead:
+                # ttl = self.sum(axis=axis, how='slice').value
+                mean = ttl/counts
+
+                planes = self._iter_slices(axis, fill=np.nan, check_endian=False)
+                result = (next(planes)-mean)**2
+                for plane in planes:
+                    result = np.nansum(np.dstack((result, (plane-mean)**2)), axis=2)
+
+                out = (result/(counts-ddof))**0.5
+
+                if projection:
+                    new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                    meta = {'collapse_axis': axis}
+                    meta.update(self._meta)
+                    return Projection(out, copy=False, wcs=new_wcs,
+                                      meta=meta,
+                                      unit=self.unit, header=self._nowcs_header)
+                else:
+                    return out
 
         # standard deviation cannot be computed as a trivial step-by-step
         # process.  There IS a one-pass algorithm for std dev, but it is not
