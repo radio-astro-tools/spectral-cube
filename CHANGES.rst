@@ -1,4 +1,4 @@
-0.4.3 (unreleased)
+0.4.3 (2018-04-05)
 ------------------
  - Refactor spectral smoothing tools to allow parallelized application *and*
    memory mapped output (to avoid loading cube into memory).  Created
