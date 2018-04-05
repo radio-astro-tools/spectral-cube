@@ -1,3 +1,7 @@
+0.4.4 (unreleased)
+------------------
+ - none yet
+
 0.4.3 (2018-04-05)
 ------------------
  - Refactor spectral smoothing tools to allow parallelized application *and*
