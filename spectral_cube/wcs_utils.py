@@ -401,7 +401,7 @@ def strip_wcs_from_header(header):
 
     for kw in ('CRPIX{ii}', 'CRVAL{ii}', 'CDELT{ii}', 'CUNIT{ii}', 'CTYPE{ii}',
                'PC0{ii}_0{jj}', 'CD{ii}_{jj}', 'CROTA{ii}', 'PC{ii}_{jj}',
-               'PV0{ii}_0{jj}', 'PV{ii}_{jj}'):
+               'PC{ii:03d}{jj:03d}', 'PV0{ii}_0{jj}', 'PV{ii}_{jj}'):
         for ii in range(5):
             for jj in range(5):
                 k = kw.format(ii=ii,jj=jj)
