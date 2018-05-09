@@ -3,6 +3,7 @@ from __future__ import print_function, absolute_import, division
 import warnings
 
 from astropy.io import fits
+import astropy.wcs
 from astropy import wcs
 from astropy.wcs import WCS
 from astropy.extern import six
@@ -147,7 +148,9 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
         meta['BUNIT'] = header['BUNIT']
 
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning, append=True)
+        warnings.filterwarnings('ignore',
+                                category=astropy.wcs.FITSFixedWarning,
+                                append=True)
         wcs = WCS(header)
 
     if wcs.wcs.naxis == 3:
