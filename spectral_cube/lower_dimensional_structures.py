@@ -14,7 +14,7 @@ from radio_beam import Beam
 
 from .io.core import determine_format
 from . import spectral_axis
-from .utils import SliceWarning
+from .utils import SliceWarning, BeamWarning, SmoothingWarning
 from .cube_utils import convert_bunit
 from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
@@ -296,7 +296,9 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
             elif read_beam:
                 beam = cube_utils.try_load_beam(header)
                 if beam is None:
-                    warnings.warn("Cannot load beam from header.")
+                    warnings.warn("Cannot load beam from header.",
+                                  BeamWarning
+                                 )
 
         if beam is not None:
             self.beam = beam
@@ -785,7 +787,9 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
     def hdu(self):
         if hasattr(self, 'beams'):
             warnings.warn("There are multiple beams for this spectrum that "
-                          "are being ignored when creating the HDU.")
+                          "are being ignored when creating the HDU.",
+                          BeamWarning
+                         )
         return super(OneDSpectrum, self).hdu
 
     @property
@@ -854,7 +858,9 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
         if outdiff > 2 * indiff and not suppress_smooth_warning:
             warnings.warn("Input grid has too small a spacing. The data should "
-                          "be smoothed prior to resampling.")
+                          "be smoothed prior to resampling.",
+                          SmoothingWarning
+                         )
 
         newspec = np.empty([spectral_grid.size], dtype=self.dtype)
         newmask = np.empty([spectral_grid.size], dtype='bool')

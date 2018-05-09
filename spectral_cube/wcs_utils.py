@@ -6,6 +6,8 @@ import warnings
 from astropy import units as u
 from astropy import log
 
+from .utils import WCSWarning
+
 wcs_parameters_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
                               'latpole', 'lonpole', 'mjdavg', 'mjdobs', 'name',
                               'obsgeo', 'phi0', 'radesys', 'restfrq',
@@ -345,7 +347,7 @@ def check_equality(wcs1, wcs2, warn_missing=False,
                     if key in ('RESTFRQ','RESTWAV'):
                         warnings.warn("{0} is not equal in WCS; ignoring ".format(key)+
                                       "under the assumption that you want to"
-                                      " compare velocity cubes.")
+                                      " compare velocity cubes.", WCSWarning)
                         continue
                     if key in ignore_keywords:
                         log.debug("IGNORED Header 1, {0}: {1} != {2}".format(key,c1[1],c2[1]))
@@ -360,7 +362,7 @@ def check_equality(wcs1, wcs2, warn_missing=False,
                     OK = False
         else:
             if warn_missing:
-                warnings.warn("WCS2 is missing card {0}".format(key))
+                warnings.warn("WCS2 is missing card {0}".format(key), WCSWarning)
             elif key not in ignore_keywords:
                 OK = False
 
@@ -370,7 +372,7 @@ def check_equality(wcs1, wcs2, warn_missing=False,
         key = c2[0]
         if key not in matched:
             if warn_missing:
-                warnings.warn("WCS1 is missing card {0}".format(key))
+                warnings.warn("WCS1 is missing card {0}".format(key), WCSWarning)
             else:
                 OK = False
 

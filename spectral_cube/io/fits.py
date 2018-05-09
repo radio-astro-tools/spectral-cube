@@ -21,8 +21,8 @@ except ImportError:
 from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpectralCube
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
+from ..utils import FITSWarning
 
-warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning, append=True)
 
 def first(iterable):
     return next(iter(iterable))
@@ -86,7 +86,9 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
                 hdu = first(arrays)
                 warnings.warn("hdu= was not specified but multiple arrays"
                               " are present, reading in first available"
-                              " array (hdu={0})".format(hdu))
+                              " array (hdu={0})".format(hdu),
+                              FITSWarning
+                             )
 
             # hdu might not be an integer, so we first need to convert it
             # to the correct HDU index
@@ -144,7 +146,9 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
     if 'BUNIT' in header:
         meta['BUNIT'] = header['BUNIT']
 
-    wcs = WCS(header)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning, append=True)
+        wcs = WCS(header)
 
     if wcs.wcs.naxis == 3:
 
