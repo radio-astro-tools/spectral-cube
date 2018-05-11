@@ -2344,6 +2344,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if 'beam' in self._meta:
             header = self._meta['beam'].attach_to_header(header)
 
+        for key in self.meta:
+            if isinstance(key, str) and len(key) <= 8:
+                header[key] = self.meta[key]
+
         # TODO: incorporate other relevant metadata here
         return header
 
