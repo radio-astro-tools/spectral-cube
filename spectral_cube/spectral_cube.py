@@ -2714,7 +2714,7 @@ class SpectralCube(BaseSpectralCube):
             except ImportError:
                 if num_cores is not None and num_cores > 1:
                     warnings.warn("Could not import joblib.  Will run in serial.",
-                                  ImportError)
+                                  warnings.ImportWarning)
                 parallel = False
 
         # this isn't an else statement because we want to catch the case where
