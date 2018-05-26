@@ -108,7 +108,7 @@ If you don't like seeing warnings about potential slowdowns, etc., the
 following will catch and disable those warnings (see also
 http://docs.astropy.org/en/stable/warnings.html):
 
-.. python::
+.. code:: python
 
     import warnings
     from spectral_cube.utils import SpectralCubeWarning
