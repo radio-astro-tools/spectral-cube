@@ -22,7 +22,7 @@ except ImportError:
 from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpectralCube
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from ..utils import FITSWarning
+from ..utils import FITSWarning, FITSReadError
 
 
 def first(iterable):
@@ -138,8 +138,8 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
     data, header, beam_table = read_data_fits(input, hdu=hdu, **kwargs)
 
     if data is None:
-        raise Exception('No data found in HDU {0}. You can try using the hdu= '
-                        'keyword argument to read data from another HDU.'.format(hdu))
+        raise FITSReadError('No data found in HDU {0}. You can try using the hdu= '
+                            'keyword argument to read data from another HDU.'.format(hdu))
 
     if meta is None:
         meta = {}
@@ -195,7 +195,7 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
 
     else:
 
-        raise Exception("Data should be 3- or 4-dimensional")
+        raise FITSReadError("Data should be 3- or 4-dimensional")
 
     return cube
 
