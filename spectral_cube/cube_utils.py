@@ -11,6 +11,7 @@ except ImportError:
 import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
+from .utils import FITSWarning, AstropyUserWarning
 from astropy import log
 from astropy.io import fits
 from astropy.io.fits import BinTableHDU, Column
@@ -276,7 +277,9 @@ def try_load_beam(header):
         # cubes to not have beams
         if 'No BMAJ' not in str(ex):
             warnings.warn("Could not parse beam information from header."
-                          "  Exception was: {0}".format(ex.__repr__()))
+                          "  Exception was: {0}".format(ex.__repr__()),
+                          FITSWarning
+                         )
 
 def try_load_beams(data):
     '''
@@ -286,7 +289,9 @@ def try_load_beams(data):
         from radio_beam import Beam
     except ImportError:
         warnings.warn("radio_beam is not installed. No beam "
-                      "can be created.")
+                      "can be created.",
+                      ImportError
+                     )
 
     if isinstance(data, fits.BinTableHDU):
         if 'BPA' in data.data.names:
@@ -318,7 +323,9 @@ def try_load_beams(data):
             return beam
         except Exception as ex:
             warnings.warn("Could not parse beam information from header."
-                          "  Exception was: {0}".format(ex.__repr__()))
+                          "  Exception was: {0}".format(ex.__repr__()),
+                          FITSWarning
+                         )
     else:
         raise ValueError("How did you get here?  This is some sort of error.")
 
@@ -410,7 +417,9 @@ def _map_context(numcores):
         except ImportError:
             map = lambda x,y: list(builtins.map(x,y))
             warnings.warn("Could not import joblib.  "
-                          "map will be non-parallel.")
+                          "map will be non-parallel.",
+                          ImportError
+                         )
             parallel = False
     else:
         parallel = False
@@ -435,14 +444,15 @@ def convert_bunit(bunit):
     '''
 
     # special case: CASA (sometimes) makes non-FITS-compliant jy/beam headers
-    bunit_lower = re.sub("\s", "", bunit.lower())
+    bunit_lower = re.sub(r"\s", "", bunit.lower())
     if bunit_lower == 'jy/beam':
         unit = u.Jy / u.beam
     else:
         try:
             unit = u.Unit(bunit)
         except ValueError:
-            warnings.warn("Could not parse unit {0}".format(bunit))
+            warnings.warn("Could not parse unit {0}".format(bunit),
+                          AstropyUserWarning)
             unit = None
 
     return unit

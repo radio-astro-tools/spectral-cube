@@ -36,27 +36,59 @@ def warn_slow(function):
         elif warn_how and not self._is_huge:
             # TODO: add check for whether cube has been loaded into memory
             warnings.warn("This function ({0}) requires loading the entire cube into "
-                          "memory and may therefore be slow.".format(str(function)))
+                          "memory and may therefore be slow.".format(str(function)),
+                          PossiblySlowWarning
+                         )
         return function(self, *args, **kwargs)
     return wrapper
 
-class UnsupportedIterationStrategyWarning(AstropyUserWarning):
+class SpectralCubeWarning(AstropyUserWarning):
     pass
 
-class VarianceWarning(AstropyUserWarning):
+class UnsupportedIterationStrategyWarning(SpectralCubeWarning):
     pass
 
-class SliceWarning(AstropyUserWarning):
+class VarianceWarning(SpectralCubeWarning):
     pass
 
-class BeamAverageWarning(AstropyUserWarning):
+class SliceWarning(SpectralCubeWarning):
+    pass
+
+class BeamAverageWarning(SpectralCubeWarning):
+    pass
+
+class BeamWarning(SpectralCubeWarning):
     pass
 
 class WCSCelestialError(Exception):
     pass
 
-class WCSMismatchWarning(AstropyUserWarning):
+class WCSMismatchWarning(SpectralCubeWarning):
     pass
 
-class NotImplementedWarning(AstropyUserWarning):
+class NotImplementedWarning(SpectralCubeWarning):
+    pass
+
+class StokesWarning(SpectralCubeWarning):
+    pass
+
+class ExperimentalImplementationWarning(SpectralCubeWarning):
+    pass
+
+class PossiblySlowWarning(SpectralCubeWarning):
+    pass
+
+class SmoothingWarning(SpectralCubeWarning):
+    pass
+
+class NonFiniteBeamsWarning(SpectralCubeWarning):
+    pass
+
+class WCSWarning(SpectralCubeWarning):
+    pass
+
+class FITSWarning(SpectralCubeWarning):
+    pass
+
+class FITSReadError(Exception):
     pass

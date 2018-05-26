@@ -43,7 +43,9 @@ from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          MaskableArrayMixinClass, MultiBeamMixinClass)
 from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
-                    NotImplementedWarning)
+                    NotImplementedWarning, SliceWarning, SmoothingWarning,
+                    StokesWarning, ExperimentalImplementationWarning,
+                    BeamAverageWarning, NonFiniteBeamsWarning)
 
 from distutils.version import LooseVersion
 
@@ -401,7 +403,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 else:
                     warnings.warn("Averaging over a spatial and a spectral "
                                   "dimension cannot produce a Projection "
-                                  "quantity (no units or WCS are preserved).")
+                                  "quantity (no units or WCS are preserved).",
+                                  SliceWarning
+                                 )
                     return out
 
             else:
@@ -550,7 +554,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     # silently, which is unfortunate.
                     warnings.warn("Averaging over a spatial and a spectral "
                                   "dimension cannot produce a Projection "
-                                  "quantity (no units or WCS are preserved).")
+                                  "quantity (no units or WCS are preserved).",
+                                  SliceWarning
+                                 )
                     return out
             else:
                 return out
@@ -2029,7 +2035,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if isinstance(cube, StokesSpectralCube):
             if hasattr(cube, 'I'):
                 warnings.warn("Cube is a Stokes cube, "
-                              "returning spectral cube for I component")
+                              "returning spectral cube for I component",
+                              StokesWarning)
                 return cube.I
             else:
                 raise ValueError("Spectral cube is a Stokes cube that "
@@ -2328,7 +2335,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         warnings.warn("The line-finding routine is experimental.  Please "
                       "report bugs on the Issues page: "
-                      "https://github.com/radio-astro-tools/spectral-cube/issues")
+                      "https://github.com/radio-astro-tools/spectral-cube/issues",
+                      ExperimentalImplementationWarning
+                     )
         from astroquery.splatalogue import Splatalogue
         if velocity_convention in DOPPLER_CONVENTIONS:
             velocity_convention = DOPPLER_CONVENTIONS[velocity_convention]
@@ -2829,7 +2838,9 @@ class SpectralCube(BaseSpectralCube):
 
         if outdiff > 2 * indiff and not suppress_smooth_warning:
             warnings.warn("Input grid has too small a spacing. The data should "
-                          "be smoothed prior to resampling.")
+                          "be smoothed prior to resampling.",
+                         SmoothingWarning
+                         )
 
 
         newcube = np.empty([spectral_grid.size, self.shape[1], self.shape[2]],
@@ -3016,7 +3027,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             if not all(goodbeams):
                 warnings.warn("There were {0} non-finite beams; layers with "
                               "non-finite beams will be masked out.".format(
-                                  np.count_nonzero(~goodbeams)))
+                                  np.count_nonzero(~goodbeams)),
+                              NonFiniteBeamsWarning
+                             )
 
             beam_mask = BooleanArrayMask(goodbeams[:,None,None],
                                          wcs=self._wcs,
@@ -3167,7 +3180,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             except NotImplementedError:
                 warnings.warn("Mask slicing not implemented for "
                               "{0} - dropping mask".
-                              format(self._mask.__class__.__name__))
+                              format(self._mask.__class__.__name__),
+                              NotImplementedWarning
+                             )
                 mask_slab = None
 
         # Create new spectral cube
@@ -3492,7 +3507,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                           "between pixel and world coordinates, "
                           "and there are off-diagonal elements of the "
                           "WCS spatial transformation matrix.  "
-                          "Unexpected results are likely.")
+                          "Unexpected results are likely.",
+                          BeamWarning
+                         )
 
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 

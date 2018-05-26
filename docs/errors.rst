@@ -100,3 +100,21 @@ attribute of the slice to get a bald numpy array to plot::
 
     import pylab as pl
     pl.imshow(cube[5,:,:].value)
+
+
+Silencing Warnings
+------------------
+If you don't like seeing warnings about potential slowdowns, etc., the
+following will catch and disable those warnings (see also
+http://docs.astropy.org/en/stable/warnings.html):
+
+.. code:: python
+
+    import warnings
+    from spectral_cube.utils import SpectralCubeWarning
+    warnings.filterwarnings(action='ignore', category=SpectralCubeWarning,
+                            append=True)
+
+This will prevent any spectral-cube related warnings from being displayed.  If
+you'd like more granular control over which warnings to ignore, look at
+spectral-cube/utils.py, which lists a wide range of warning types.

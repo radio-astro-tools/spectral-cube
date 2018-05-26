@@ -5,6 +5,8 @@ from astropy import units as u
 from astropy import constants
 import warnings
 
+from .utils import ExperimentalImplementationWarning
+
 def _parse_velocity_convention(vc):
     if vc in (u.doppler_radio, 'radio', 'RADIO', 'VRAD', 'F', 'FREQ'):
         return u.doppler_radio
@@ -241,7 +243,9 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
 
     if in_spec_ctype == 'AWAV':
         warnings.warn("Support for air wavelengths is experimental and only "
-                      "works in the forward direction (air->vac, not vac->air).")
+                      "works in the forward direction (air->vac, not vac->air).",
+                      ExperimentalImplementationWarning
+                     )
         cdelt_in = air_to_vac_deriv(crval_in) * cdelt_in
         crval_in = air_to_vac(crval_in)
         in_spec_ctype = 'WAVE'

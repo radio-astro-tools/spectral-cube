@@ -3,6 +3,7 @@ from __future__ import print_function, absolute_import, division
 import warnings
 
 from astropy.io import fits
+import astropy.wcs
 from astropy import wcs
 from astropy.wcs import WCS
 from astropy.extern import six
@@ -21,8 +22,8 @@ except ImportError:
 from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpectralCube
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
+from ..utils import FITSWarning, FITSReadError
 
-warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning, append=True)
 
 def first(iterable):
     return next(iter(iterable))
@@ -86,7 +87,9 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
                 hdu = first(arrays)
                 warnings.warn("hdu= was not specified but multiple arrays"
                               " are present, reading in first available"
-                              " array (hdu={0})".format(hdu))
+                              " array (hdu={0})".format(hdu),
+                              FITSWarning
+                             )
 
             # hdu might not be an integer, so we first need to convert it
             # to the correct HDU index
@@ -135,8 +138,8 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
     data, header, beam_table = read_data_fits(input, hdu=hdu, **kwargs)
 
     if data is None:
-        raise Exception('No data found in HDU {0}. You can try using the hdu= '
-                        'keyword argument to read data from another HDU.'.format(hdu))
+        raise FITSReadError('No data found in HDU {0}. You can try using the hdu= '
+                            'keyword argument to read data from another HDU.'.format(hdu))
 
     if meta is None:
         meta = {}
@@ -144,7 +147,11 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
     if 'BUNIT' in header:
         meta['BUNIT'] = header['BUNIT']
 
-    wcs = WCS(header)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore',
+                                category=astropy.wcs.FITSFixedWarning,
+                                append=True)
+        wcs = WCS(header)
 
     if wcs.wcs.naxis == 3:
 
@@ -188,7 +195,7 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
 
     else:
 
-        raise Exception("Data should be 3- or 4-dimensional")
+        raise FITSReadError("Data should be 3- or 4-dimensional")
 
     return cube
 
