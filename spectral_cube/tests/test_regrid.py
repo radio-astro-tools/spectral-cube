@@ -354,3 +354,12 @@ def test_downsample():
 
     np.testing.assert_almost_equal(expected,
                                    dscube.filled_data[:].value)
+
+    dscube = cube.downsample_axis(factor=2, axis=1, truncate=True)
+
+    expected = np.array([data[:,:2,:].mean(axis=1),
+                         data[:,2:4,:].mean(axis=1),
+                        ]).swapaxes(0,1)
+
+    np.testing.assert_almost_equal(expected,
+                                   dscube.filled_data[:].value)
