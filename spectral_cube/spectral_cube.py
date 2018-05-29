@@ -2956,6 +2956,68 @@ class SpectralCube(BaseSpectralCube):
         return self.with_mask(goodchannels[:,None,None])
 
 
+    @warn_slow
+    def downsample_axis(myarr, factor, axis, estimator=numpy.nanmean, truncate=False):
+        """
+        Downsample the cube by averaging over *factor* pixels along an axis.
+        Crops right side if the shape is not a multiple of factor.
+
+        The WCS will be 'downsampled' by the specified factor as well.
+        If the downsample factor is odd, there will be an offset in the WCS.
+
+        (original code came from image_tools)
+
+        Parameters
+        ----------
+        myarr : `~numpy.ndarray`
+            The array to downsample
+        factor : int
+            The factor to downsample by
+        axis : int
+            The axis to downsample along
+        estimator : function
+            defaults to mean.  You can downsample by summing or
+            something else if you want a different estimator
+            (e.g., downsampling error: you want to sum & divide by sqrt(n))
+        truncate : bool
+            Whether to truncate the last chunk or average over a smaller number.
+            e.g., if you downsample [1,2,3,4] by a factor of 3, you could get either
+            [2] or [2,4] if truncate is True or False, respectively.
+        """
+        # size of the dimension of interest
+        xs = myarr.shape[axis]
+        
+        if xs % int(factor) != 0:
+            if truncate:
+                view = [slice(None) for ii in range(myarr.ndim)]
+                view[axis] = slice(None,xs-(xs % int(factor)))
+                crarr = myarr[view]
+            else:
+                newshape = list(myarr.shape)
+                newshape[axis] = (factor - xs % int(factor))
+                extension = numpy.empty(newshape) * numpy.nan
+                crarr = numpy.concatenate((myarr,extension), axis=axis)
+        else:
+            crarr = myarr
+
+        def makeslice(startpoint,axis=axis,step=factor):
+            # make empty slices
+            view = [slice(None) for ii in range(myarr.ndim)]
+            # then fill the appropriate slice
+            view[axis] = slice(startpoint,None,step)
+            return view
+
+        # The extra braces here are crucial: We're adding an extra dimension so we
+        # can average across it
+        stacked_array = numpy.concatenate([[crarr[makeslice(ii)]] for ii in
+                                           range(factor)])
+
+        dsarr = estimator(stacked_array, axis=0)
+
+        newwcs = self.wcs[makeslice(factor//2)]
+
+        return self._new_cube_with(data=dsarr, wcs=newwcs)
+
 class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
     """
     A variant of the SpectralCube class that has PSF (beam) information on a
