@@ -333,3 +333,24 @@ def test_nocelestial_reproject_2D_fail():
         proj.reproject(cube.header)
 
     assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
+
+
+def test_downsample():
+    cube, data = cube_and_raw('255.fits')
+
+    dscube = cube.downsample_axis(factor=2, axis=0)
+
+    expected = data.mean(axis=0)
+
+    np.testing.assert_almost_equal(expected[None,:,:],
+                                   dscube.filled_data[:].value)
+
+    dscube = cube.downsample_axis(factor=2, axis=1)
+
+    expected = np.array([data[:,:2,:].mean(axis=1),
+                         data[:,2:4,:].mean(axis=1),
+                         data[:,4:,:].mean(axis=1), # just data[:,4,:]
+                        ]).swapaxes(0,1)
+
+    np.testing.assert_almost_equal(expected,
+                                   dscube.filled_data[:].value)

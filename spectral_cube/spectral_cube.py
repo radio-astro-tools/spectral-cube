@@ -2957,7 +2957,7 @@ class SpectralCube(BaseSpectralCube):
 
 
     @warn_slow
-    def downsample_axis(myarr, factor, axis, estimator=numpy.nanmean, truncate=False):
+    def downsample_axis(self, factor, axis, estimator=np.nanmean, truncate=False):
         """
         Downsample the cube by averaging over *factor* pixels along an axis.
         Crops right side if the shape is not a multiple of factor.
@@ -2985,38 +2985,48 @@ class SpectralCube(BaseSpectralCube):
             [2] or [2,4] if truncate is True or False, respectively.
         """
         # size of the dimension of interest
-        xs = myarr.shape[axis]
+        xs = self.shape[axis]
         
         if xs % int(factor) != 0:
             if truncate:
-                view = [slice(None) for ii in range(myarr.ndim)]
+                view = [slice(None) for ii in range(self.ndim)]
                 view[axis] = slice(None,xs-(xs % int(factor)))
-                crarr = myarr[view]
+                crarr = self.filled_data[view]
+                mask = self.mask[view].include()
             else:
-                newshape = list(myarr.shape)
+                newshape = list(self.shape)
                 newshape[axis] = (factor - xs % int(factor))
-                extension = numpy.empty(newshape) * numpy.nan
-                crarr = numpy.concatenate((myarr,extension), axis=axis)
+                extension = np.empty(newshape) * np.nan
+                crarr = np.concatenate((self.filled_data[:], extension), axis=axis)
+                extension[:] = 0
+                mask = np.concatenate((self.mask.include(), extension), axis=axis)
         else:
-            crarr = myarr
+            crarr = self.filled_data[:]
+            mask = self.mask[:]
 
         def makeslice(startpoint,axis=axis,step=factor):
             # make empty slices
-            view = [slice(None) for ii in range(myarr.ndim)]
+            view = [slice(None) for ii in range(self.ndim)]
             # then fill the appropriate slice
             view[axis] = slice(startpoint,None,step)
             return view
 
         # The extra braces here are crucial: We're adding an extra dimension so we
         # can average across it
-        stacked_array = numpy.concatenate([[crarr[makeslice(ii)]] for ii in
+        stacked_array = np.concatenate([[crarr[makeslice(ii)]] for ii in
                                            range(factor)])
 
         dsarr = estimator(stacked_array, axis=0)
 
+        stacked_mask = np.concatenate([[mask[makeslice(ii)]] for ii in
+                                       range(factor)])
+
+        mask = np.any(stacked_array, axis=0)
+
         newwcs = self.wcs[makeslice(factor//2)]
 
-        return self._new_cube_with(data=dsarr, wcs=newwcs)
+        return self._new_cube_with(data=dsarr, wcs=newwcs,
+                                   mask=BooleanArrayMask(mask, wcs=newwcs))
 
 class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
     """
