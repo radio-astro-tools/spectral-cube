@@ -1861,7 +1861,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             ylo = 0
 
         log.debug("Region boundaries: ")
-        log.debug("xlo={xlo}, ylo={ylo}, xhi={xhi}, yhi={yhi}".format(xlo=xlo,
+        print("xlo={xlo}, ylo={ylo}, xhi={xhi}, yhi={yhi}".format(xlo=xlo,
                                                                       ylo=ylo,
                                                                       xhi=xhi,
                                                                       yhi=yhi))
@@ -1908,6 +1908,68 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         masked_subcube = subcube.with_mask(BooleanArrayMask(mask, subcube.wcs,
                                                             shape=subcube.shape))
+        # by using ceil / floor above, we potentially introduced a NaN buffer
+        # that we can now crop out
+        return masked_subcube.minimal_subcube(spatial_only=True)
+
+    def subcube_from_ds9region_new(self, ds9region, allow_empty=False):
+        """
+        Extract a masked subcube from a ds9 region or a Region list object
+        (only functions on celestial dimensions)
+
+        Parameters
+        ----------
+        ds9region: str or `regions.Region` list
+            The region to extract
+        allow_empty: bool
+            If this is False, an exception will be raised if the region
+            contains no overlap with the cube
+        """
+        import regions
+
+        if isinstance(ds9region, six.string_types):
+            shapelist = regions.DS9Parser(ds9region).shapes.to_regions()
+        else:
+            shapelist = ds9region
+
+        regionlist = []
+        for x in shapelist:
+            if isinstance(x, regions.SkyRegion):
+                regionlist.append(x.to_pixel(self.wcs.celestial))
+            else:
+                regionlist.append(x)
+
+        compound_region = _compound_region(regionlist)
+        mask = compound_region.to_mask()
+
+        xlo, xhi, ylo, yhi = mask.bbox.ixmin, mask.bbox.ixmax, mask.bbox.iymin, mask.bbox.iymax
+
+        # Negative indices will do bad things, like wrap around the cube
+        # If xhi/yhi are negative, there is not overlap
+        if (xhi < 0) or (yhi < 0):
+            raise ValueError("Region is outside of cube.")
+
+        if xlo < 0:
+            xlo = 0
+        if ylo < 0:
+            ylo = 0
+
+        subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+
+        if any(dim == 0 for dim in subcube.shape):
+            if allow_empty:
+                warnings.warn("The derived subset is empty: the region does not"
+                              " overlap with the cube (but allow_empty=True).")
+            else:
+                raise ValueError("The derived subset is empty: the region does not"
+                                 " overlap with the cube.")
+
+        maskarray = mask.data[(mask.data.shape[0]-subcube.shape[1]):, (mask.data.shape[1]-subcube.shape[2]):]
+
+        print(maskarray)
+        print(mask.data.shape, subcube.shape[1:])
+
+        masked_subcube = subcube.with_mask(BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape))
         # by using ceil / floor above, we potentially introduced a NaN buffer
         # that we can now crop out
         return masked_subcube.minimal_subcube(spatial_only=True)
@@ -3641,3 +3703,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         return self._new_cube_with(mask=mask,
                                    goodbeams_mask=goodchannels & self._goodbeams_mask)
+
+
+def _compound_region(region_list):
+    import regions
+    if len(region_list) == 1:
+        return region_list[0]
+    return regions.CompoundPixelRegion(_compound_region(region_list[:len(region_list)/2]),
+                                        _compound_region(region_list[len(region_list)/2:])
+                                        )

@@ -5,10 +5,12 @@ import pytest
 from astropy import units as u
 from astropy import wcs
 import numpy as np
+import regions
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
 from .test_spectral_cube import cube_and_raw
+from ..spectral_cube import _compound_region
 
 try:
     import pyregion
@@ -88,6 +90,20 @@ def test_ds9region_255(regfile):
 
     subcube = cube.subcube_from_ds9region(regions)
     assert_array_equal(subcube[0,:,:].value, np.array([11,12,16,17]).reshape((2,2)))
+
+
+@pytest.mark.parametrize('regfile',
+                         ('255-fk5.reg', '255-pixel.reg'),
+                        )
+def test_ds9region_255_new(regfile):
+    # specific test for correctness
+    cube, data = cube_and_raw('255.fits')
+
+    shapelist = regions.read_ds9(path(regfile))
+
+    subcube = cube.subcube_from_ds9region_new(shapelist)
+    assert_array_equal(subcube[0, :, :].value,
+                           np.array([11, 12, 16, 17]).reshape((2, 2)))
 
 
 
