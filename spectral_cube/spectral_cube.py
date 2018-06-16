@@ -2889,7 +2889,7 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
-    def convolve_to(self, beam, convolve=convolution.convolve_fft, update_function=None):
+    def convolve_to(self, beam, convolve=convolution.convolve_fft, update_function=None, **kwargs):
         """
         Convolve each channel in the cube to a specified beam
 
@@ -2904,6 +2904,8 @@ class SpectralCube(BaseSpectralCube):
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
+        kwargs : dict
+            Keyword arguments to pass to the convolution function
 
         Returns
         -------
@@ -2922,7 +2924,7 @@ class SpectralCube(BaseSpectralCube):
         newdata = np.empty(self.shape)
         for ii,img in enumerate(self.filled_data[:]):
             newdata[ii,:,:] = convolve(img, convolution_kernel,
-                                       normalize_kernel=True)
+                                       normalize_kernel=True, **kwargs)
             update_function()
 
         newcube = self._new_cube_with(data=newdata, beam=beam)
