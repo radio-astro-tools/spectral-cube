@@ -9,11 +9,13 @@ and will generally create a new cube in memory.
 Examples::
 
     >>> import astropy.units as u
+    >>> from astropy.utils import data
+    >>> fn = data.get_pkg_data_filename('tests/data/adv.fits', 'spectral_cube')
     >>> from spectral_cube import SpectralCube
-    >>> cube = SpectralCube.read('adv.fits')  # doctest: +SKIP
-    >>> cube2 = cube * 2  # doctest: +SKIP
-    >>> cube3 = cube + 1.5*u.K # doctest: +SKIP
-    >>> cube4 = cube2 + cube3 # doctest: +SKIP
+    >>> cube = SpectralCube.read(fn)
+    >>> cube2 = cube * 2
+    >>> cube3 = cube + 1.5*u.K
+    >>> cube4 = cube2 + cube3
 
 Each of these cubes is a new cube in memory.  Note that for addition and
 subtraction, the units must be equivalent to those of the cube.

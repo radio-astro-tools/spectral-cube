@@ -19,9 +19,11 @@ Quick start
 Here's a simple script demonstrating the spectral-cube package::
 
     >>> import astropy.units as u
+    >>> from astropy.utils import data
     >>> from spectral_cube import SpectralCube
-    >>> cube = SpectralCube.read('adv.fits')  # doctest: +SKIP
-    >>> print(cube)  # doctest: +SKIP
+    >>> fn = data.get_pkg_data_filename('tests/data/adv.fits', 'spectral_cube')
+    >>> cube = SpectralCube.read(fn)
+    >>> print(cube)
     SpectralCube with shape=(4, 3, 2) and unit=K:
     n_x:      2  type_x: RA---SIN  unit_x: deg    range:    24.062698 deg:   24.063349 deg
     n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
