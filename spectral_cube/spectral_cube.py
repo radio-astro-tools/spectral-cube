@@ -2004,7 +2004,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         # If None, then the whole spectral range of the cube is selected.
         if None in ranges:
-            subcube = self.subcube(xlo=xlo, ylo=yhi, xhi=xhi, yhi=yhi)
+            subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
         else:
             # reg.meta['ranges'] is str list but I am making them list of Quantity objects in regions.
             zlo = min([x[0] for x in ranges])

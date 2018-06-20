@@ -101,7 +101,7 @@ def test_ds9region_255_new(regfile):
 
     shapelist = regions.read_ds9(path(regfile))
 
-    subcube = cube.subcube_from_ds9region_new(shapelist)
+    subcube = cube.subcube_from_regions(shapelist)
     assert_array_equal(subcube[0, :, :].value,
                            np.array([11, 12, 16, 17]).reshape((2, 2)))
 
@@ -121,11 +121,11 @@ def test_ds9region_new(regfile, result):
 
     if isinstance(result, type) and issubclass(result, Exception):
         with pytest.raises(result) as exc:
-            sc = cube.subcube_from_ds9region_new(regionlist)
+            sc = cube.subcube_from_regions(regionlist)
         # this assertion is redundant, I think...
         assert exc.errisinstance(result)
     else:
-        sc = cube.subcube_from_ds9region_new(regionlist)
+        sc = cube.subcube_from_regions(regionlist)
         scsum = sc.sum()
         dsum = data[result].sum()
         assert_allclose(scsum, dsum)
