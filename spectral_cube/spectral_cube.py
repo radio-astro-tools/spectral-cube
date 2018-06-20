@@ -1914,12 +1914,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def subcube_from_ds9region_new(self, ds9region, allow_empty=False):
         """
-        Extract a masked subcube from a ds9 region or a Region list object
+        Extract a masked subcube from a ds9 region
         (only functions on celestial dimensions)
 
         Parameters
         ----------
-        ds9region: str or `regions.Region` list
+        ds9region: str
             The region to extract
         allow_empty: bool
             If this is False, an exception will be raised if the region
@@ -1928,19 +1928,69 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         import regions
 
         if isinstance(ds9region, six.string_types):
-            shapelist = regions.DS9Parser(ds9region).shapes.to_regions()
+            ds9region = regions.DS9Parser(ds9region).shapes.to_regions()
         else:
-            shapelist = ds9region
+            raise TypeError("{0} should be a DS9 string".format(ds9region))
 
-        regionlist = []
-        for x in shapelist:
+        return self.subcube_from_regions(ds9region, allow_empty)
+
+    def subcube_from_crtf(self, region, allow_empty=False):
+        """
+        Extract a masked subcube from a CRTF region
+        (only functions on celestial dimensions)
+
+        Parameters
+        ----------
+        region: str
+            The CRTF region string to extract
+        allow_empty: bool
+            If this is False, an exception will be raised if the region
+            contains no overlap with the cube
+        """
+        import regions
+
+        if isinstance(region, six.string_types):
+            region = regions.CRTFParser(region).shapes.to_regions()
+        else:
+            raise TypeError("{0} should be a CRTF string".format(region))
+
+        return self.subcube_from_regions(region, allow_empty)
+
+    def subcube_from_regions(self, region_list, allow_empty=False):
+        """
+        Extract a masked subcube from a list of `regions.Region` object
+        (only functions on celestial dimensions)
+
+        Parameters
+        ----------
+        region_list: `regions.Region` list
+            The region to extract
+        allow_empty: bool
+            If this is False, an exception will be raised if the region
+            contains no overlap with the cube
+        """
+        import regions
+
+        regs = []
+        for x in region_list:
             if isinstance(x, regions.SkyRegion):
-                regionlist.append(x.to_pixel(self.wcs.celestial))
+                regs.append(x.to_pixel(self.wcs.celestial))
+            elif isinstance(x, regions.PixelRegion):
+                regs.append(x)
             else:
-                regionlist.append(x)
+                raise TypeError("'{}' should be `regions.Region` object".format(x))
 
-        compound_region = _compound_region(regionlist)
+        compound_region = _compound_region(regs)
         mask = compound_region.to_mask()
+
+        ranges = [x.meta.get('range', None) for x in regs]
+        if None in ranges:
+            zlo = 'min'
+            zhi = 'max'
+        else:
+            # reg.meta['ranges'] is str list but I am making them list of Quantity objects in regions.
+            zlo = min([x[0] for x in ranges])
+            zhi = max([x[1] for x in ranges])
 
         xlo, xhi, ylo, yhi = mask.bbox.ixmin, mask.bbox.ixmax, mask.bbox.iymin, mask.bbox.iymax
 
@@ -1954,7 +2004,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if ylo < 0:
             ylo = 0
 
-        subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+        slab = self.spectral_slab(zlo, zhi)
+        subcube = slab.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
 
         if any(dim == 0 for dim in subcube.shape):
             if allow_empty:
@@ -1964,10 +2015,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 raise ValueError("The derived subset is empty: the region does not"
                                  " overlap with the cube.")
 
-        maskarray = mask.data[(mask.data.shape[0]-subcube.shape[1]):, (mask.data.shape[1]-subcube.shape[2]):]
-
-        print(maskarray)
-        print(mask.data.shape, subcube.shape[1:])
+        maskarray = mask.data[:subcube.shape[1], :subcube.shape[2]].astype('bool')
 
         masked_subcube = subcube.with_mask(BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape))
         # by using ceil / floor above, we potentially introduced a NaN buffer
