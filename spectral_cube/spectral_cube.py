@@ -1971,6 +1971,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         import regions
 
+        # Every region should be a `regions.PixelRegion` object.
         regs = []
         for x in region_list:
             if isinstance(x, regions.SkyRegion):
@@ -1980,17 +1981,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             else:
                 raise TypeError("'{}' should be `regions.Region` object".format(x))
 
+        # List of regions are converted to a `regions.CompoundPixelRegion` object.
         compound_region = _compound_region(regs)
+
+        # Compound mask of all the regions.
         mask = compound_region.to_mask()
 
+        # Checking for frequency/velocity range of each region.
         ranges = [x.meta.get('range', None) for x in regs]
-        if None in ranges:
-            zlo = 'min'
-            zhi = 'max'
-        else:
-            # reg.meta['ranges'] is str list but I am making them list of Quantity objects in regions.
-            zlo = min([x[0] for x in ranges])
-            zhi = max([x[1] for x in ranges])
 
         xlo, xhi, ylo, yhi = mask.bbox.ixmin, mask.bbox.ixmax, mask.bbox.iymin, mask.bbox.iymax
 
@@ -2004,8 +2002,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if ylo < 0:
             ylo = 0
 
-        slab = self.spectral_slab(zlo, zhi)
-        subcube = slab.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
+        # If None, then the whole spectral range of the cube is selected.
+        if None in ranges:
+            subcube = self.subcube(xlo=xlo, ylo=yhi, xhi=xhi, yhi=yhi)
+        else:
+            # reg.meta['ranges'] is str list but I am making them list of Quantity objects in regions.
+            zlo = min([x[0] for x in ranges])
+            zhi = max([x[1] for x in ranges])
+            slab = self.spectral_slab(zlo, zhi)
+            subcube = slab.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
 
         if any(dim == 0 for dim in subcube.shape):
             if allow_empty:
@@ -2015,6 +2020,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 raise ValueError("The derived subset is empty: the region does not"
                                  " overlap with the cube.")
 
+        # cropping the mask from top left corner so that it fits the subcube.
         maskarray = mask.data[:subcube.shape[1], :subcube.shape[2]].astype('bool')
 
         masked_subcube = subcube.with_mask(BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape))

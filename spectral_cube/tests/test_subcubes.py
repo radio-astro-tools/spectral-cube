@@ -105,8 +105,30 @@ def test_ds9region_255_new(regfile):
     assert_array_equal(subcube[0, :, :].value,
                            np.array([11, 12, 16, 17]).reshape((2, 2)))
 
+@pytest.mark.parametrize(('regfile', 'result'),
+                             (('fk5.reg', [slice(None), 1, 1]),
+                              ('image.reg', [slice(None), 1, slice(None)]),
+                              (
+                              'partial_overlap_image.reg', [slice(None), 1, 1]),
+                              ('no_overlap_image.reg', ValueError),
+                              ('partial_overlap_fk5.reg', [slice(None), 1, 1]),
+                              ('no_overlap_fk5.reg', ValueError),
+                              ))
+def test_ds9region_new(regfile, result):
+    cube, data = cube_and_raw('adv.fits')
 
+    regionlist = regions.read_ds9(path(regfile))
 
+    if isinstance(result, type) and issubclass(result, Exception):
+        with pytest.raises(result) as exc:
+            sc = cube.subcube_from_ds9region_new(regionlist)
+        # this assertion is redundant, I think...
+        assert exc.errisinstance(result)
+    else:
+        sc = cube.subcube_from_ds9region_new(regionlist)
+        scsum = sc.sum()
+        dsum = data[result].sum()
+        assert_allclose(scsum, dsum)
 
     #region = 'fk5\ncircle(29.9346557, 24.0623827, 0.11111)'
     #subcube = cube.subcube_from_ds9region(region)
