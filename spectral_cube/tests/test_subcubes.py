@@ -5,7 +5,6 @@ import pytest
 from astropy import units as u
 from astropy import wcs
 import numpy as np
-import regions
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
@@ -13,10 +12,17 @@ from .test_spectral_cube import cube_and_raw
 from ..spectral_cube import _compound_region
 
 try:
+    import regions
+    regionsOK = True
+except ImportError:
+    regionsOK = False
+
+try:
     import pyregion
     pyregionOK = True
 except ImportError:
     pyregionOK = False
+
 
 def test_subcube():
 
@@ -46,6 +52,7 @@ def test_subcube():
     assert sc5.wcs.wcs.compare(cube.wcs.wcs)
     assert np.all(sc5._data == cube._data)
 
+
 @pytest.mark.skipif('not pyregionOK', reason='Could not import pyregion')
 @pytest.mark.parametrize(('regfile','result'),
                          (('fk5.reg', [slice(None),1,slice(None)]),
@@ -71,6 +78,7 @@ def test_ds9region(regfile, result):
         dsum = data[result].sum()
         assert_allclose(scsum, dsum)
 
+
 @pytest.mark.skipif('not pyregionOK', reason='Could not import pyregion')
 @pytest.mark.parametrize('regfile',
                          ('255-fk5.reg', '255-pixel.reg'),
@@ -92,6 +100,7 @@ def test_ds9region_255(regfile):
     assert_array_equal(subcube[0,:,:].value, np.array([11,12,16,17]).reshape((2,2)))
 
 
+@pytest.mark.skipif('not regionsOK', reason='Could not import regions')
 @pytest.mark.parametrize('regfile',
                          ('255-fk5.reg', '255-pixel.reg'),
                         )
@@ -105,6 +114,8 @@ def test_ds9region_255_new(regfile):
     assert_array_equal(subcube[0, :, :].value,
                            np.array([11, 12, 16, 17]).reshape((2, 2)))
 
+
+@pytest.mark.skipif('not regionsOK', reason='Could not import regions')
 @pytest.mark.parametrize(('regfile', 'result'),
                              (('fk5.reg', [slice(None), 1, 1]),
                               ('image.reg', [slice(None), 1, slice(None)]),
