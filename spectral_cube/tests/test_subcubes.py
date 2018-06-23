@@ -150,3 +150,17 @@ def test_ds9region_new(regfile, result):
     #region = 'circle(2,2,2)'
     #subcube = cube.subcube_from_ds9region(region)
 
+
+@pytest.mark.skipif('not regionsOK', reason='Could not import regions')
+def test_regions():
+    cube, data = cube_and_raw('adv.fits')
+
+    # content of image.reg
+    regpix = regions.RectanglePixelRegion(regions.PixCoord(0.5, 1), width=4, height=2)
+
+    regpix.meta['range'] = [-318 * u.km/u.s, -320 * u.km/u.s]
+
+    sc = cube.subcube_from_regions([regpix])
+    scsum = sc.sum()
+    dsum = data[1:-1, 1, :].sum()
+    assert_allclose(scsum, dsum)
