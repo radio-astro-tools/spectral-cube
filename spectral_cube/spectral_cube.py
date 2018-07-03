@@ -2059,16 +2059,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     lambda x: si.c.to_value('km/s') * (1 - (x / restfreq) ** 2)
                             / (1 + (x / restfreq) ** 2),
                     lambda x: np.sqrt(
-                        (restfreq * ((x - si.c.to_value("km/s")) / (x + si.c.to_value("km/s")))))
+                        (restfreq * ((si.c.to_value("km/s") - x) / (x + si.c.to_value("km/s")))))
                      )]
 
         def doppler_gamma(restfreq):
             return [(u.GHz, u.km / u.s,
                         lambda x: si.c.to_value("km/s") * (1 + (x / restfreq)**2) /
-                                  (2 * x / restfreq),
-                        lambda x: restfreq * ((x +
-                                  np.sqrt(x ** 2 - si.c.to_value("km/s") ** 2))
-                                  / si.c.to_value("km/s"))
+                                   (2 * x / restfreq),
+                        lambda x: restfreq * ((x / si.c.to_value("km/s") +
+                                  np.sqrt((x / si.c.to_value("km/s")) ** 2 - 1)))
                      )]
 
         veltype_equivalencies = dict(RADIO=u.doppler_radio,
