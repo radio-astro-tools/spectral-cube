@@ -23,6 +23,7 @@ from astropy import log
 from astropy import wcs
 from astropy import convolution
 from astropy import stats
+from astropy.constants import si
 
 import numpy as np
 
@@ -1971,7 +1972,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         import regions
 
-        # Every region should be a `regions.PixelRegion` object.
+        # Convert every region to a `regions.PixelRegion` object.
         regs = []
         for x in region_list:
             if isinstance(x, regions.SkyRegion):
@@ -1987,8 +1988,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Compound mask of all the regions.
         mask = compound_region.to_mask()
 
-        # Checking for frequency/velocity range of each region.
+        # Collecting frequency/velocity range, type and rest frequency
+        # of each region.
         ranges = [x.meta.get('range', None) for x in regs]
+        veltypes = [x.meta.get('veltype', None) for x in regs]
+        restfreqs = [x.meta.get('restfreq', None) for x in regs]
 
         xlo, xhi, ylo, yhi = mask.bbox.ixmin, mask.bbox.ixmax, mask.bbox.iymin, mask.bbox.iymax
 
@@ -2007,6 +2011,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
         else:
             # reg.meta['ranges'] is str list but I am making them list of Quantity objects in regions.
+            ranges = self._velocity_freq_conversion(ranges, veltypes, restfreqs)
             zlo = min([x[0] for x in ranges])
             zhi = max([x[1] for x in ranges])
             slab = self.spectral_slab(zlo, zhi)
@@ -2027,6 +2032,77 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # by using ceil / floor above, we potentially introduced a NaN buffer
         # that we can now crop out
         return masked_subcube.minimal_subcube(spatial_only=True)
+
+    def _velocity_freq_conversion(self, ranges, veltypes, restfreqs):
+
+        header = self.wcs.to_header()
+
+        # Obtaining rest frequency of the cube in GHz.
+        restfreq_cube = header['restfrq'] * u.Hz
+
+        CTYPE3 = header['CTYPE3']
+
+        if 'RAD' in CTYPE3:
+            veltype_cube = 'RADIO'
+        elif 'OPT' in CTYPE3:
+            veltype_cube = 'OPTICAL'
+        else:
+            veltype_cube = 'RELATIVISTIC'
+
+        def doppler_z(restfreq):
+            return [(u.GHz, u.km / u.s,
+                        lambda x: (restfreq - x) / x,
+                        lambda x: restfreq / (1 + x))]
+
+        def doppler_beta(restfreq):
+            return [(u.GHz, u.km / u.s,
+                    lambda x: si.c.to_value('km/s') * (1 - (x / restfreq) ** 2)
+                            / (1 + (x / restfreq) ** 2),
+                    lambda x: np.sqrt(
+                        (restfreq * ((x - si.c.to_value("km/s")) / (x + si.c.to_value("km/s")))))
+                     )]
+
+        def doppler_gamma(restfreq):
+            return [(u.GHz, u.km / u.s,
+                        lambda x: si.c.to_value("km/s") * (1 + (x / restfreq)**2) /
+                                  (2 * x / restfreq),
+                        lambda x: restfreq * ((x +
+                                  np.sqrt(x ** 2 - si.c.to_value("km/s") ** 2))
+                                  / si.c.to_value("km/s"))
+                     )]
+
+        veltype_equivalencies = dict(RADIO=u.doppler_radio,
+                                     OPTICAL=u.doppler_optical,
+                                     Z=doppler_z,
+                                     BETA=doppler_beta,
+                                     GAMMA=doppler_gamma,
+                                     RELATIVISTIC=u.doppler_relativistic
+                                     )
+
+        final_ranges = []
+
+        for range, veltype, restfreq in zip(ranges, veltypes, restfreqs):
+
+            if restfreq is None:
+                restfreq = restfreq_cube
+
+            if veltype is None:
+                veltype = veltype_cube
+
+            if veltype not in veltype_equivalencies:
+                raise ValueError("Spectral Cube doesn't support {} this type of"
+                                 "velocity".format(veltype))
+
+            # Because there is chance that the veltype  and rest frequency
+            # of the region may not be the same as that of cube, we convert it
+            # to frequency and then convert to the spectral unit of the cube.
+            freq_range = (u.Quantity(range).to("GHz",
+                          equivalencies=veltype_equivalencies[veltype](restfreq)))
+
+            final_ranges.append(freq_range.to(header['CUNIT3'],
+                                equivalencies=veltype_equivalencies[veltype_cube](restfreq_cube)))
+
+        return final_ranges
 
     def _val_to_own_unit(self, value, operation='compare', tofrom='to',
                          keepunit=False):
