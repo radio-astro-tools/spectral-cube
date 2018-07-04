@@ -47,6 +47,7 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
                     BeamAverageWarning, NonFiniteBeamsWarning)
+from .spectral_axis import determine_vconv_from_ctype, get_rest_value_from_wcs
 
 from distutils.version import LooseVersion
 
@@ -2038,16 +2039,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         header = self.wcs.to_header()
 
         # Obtaining rest frequency of the cube in GHz.
-        restfreq_cube = header['restfrq'] * u.Hz
+        restfreq_cube = get_rest_value_from_wcs(self.wcs).to("GHz",
+                                                           equivalencies=u.spectral())
 
         CTYPE3 = header['CTYPE3']
 
-        if 'RAD' in CTYPE3:
-            veltype_cube = 'RADIO'
-        elif 'OPT' in CTYPE3:
-            veltype_cube = 'OPTICAL'
-        else:
-            veltype_cube = 'RELATIVISTIC'
+        veltype_cube = determine_vconv_from_ctype(CTYPE3)
 
         def doppler_z(restfreq):
             return [(u.GHz, u.km / u.s,
@@ -2085,21 +2082,22 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if restfreq is None:
                 restfreq = restfreq_cube
 
-            if veltype is None:
-                veltype = veltype_cube
+            restfreq = restfreq.to("GHz", equivalencies=u.spectral())
 
-            if veltype not in veltype_equivalencies:
+            if veltype not in veltype_equivalencies and veltype is not None:
                 raise ValueError("Spectral Cube doesn't support {} this type of"
                                  "velocity".format(veltype))
+
+            veltype = veltype_equivalencies.get(veltype, veltype_cube)
 
             # Because there is chance that the veltype  and rest frequency
             # of the region may not be the same as that of cube, we convert it
             # to frequency and then convert to the spectral unit of the cube.
             freq_range = (u.Quantity(range).to("GHz",
-                          equivalencies=veltype_equivalencies[veltype](restfreq)))
+                          equivalencies=veltype(restfreq)))
 
             final_ranges.append(freq_range.to(header['CUNIT3'],
-                                equivalencies=veltype_equivalencies[veltype_cube](restfreq_cube)))
+                                equivalencies=veltype_cube(restfreq_cube)))
 
         return final_ranges
 
