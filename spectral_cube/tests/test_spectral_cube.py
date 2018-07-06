@@ -35,17 +35,6 @@ warnings.simplefilter('error', utils.UnsupportedIterationStrategyWarning)
 warnings.simplefilter('error', utils.NotImplementedWarning)
 warnings.simplefilter('error', utils.WCSMismatchWarning)
 
-try:
-    import joblib
-    JOBLIB_INSTALLED = True
-except ImportError:
-    JOBLIB_INSTALLED = False
-
-try:
-    import scipy.ndimage
-    SCIPYOK = True
-except ImportError:
-    SCIPYOK = False
 
 try:
     import yt
@@ -54,12 +43,6 @@ try:
 except ImportError:
     YT_INSTALLED = False
     YT_LT_301 = False
-
-try:
-    import bottleneck
-    BOTTLENECK_INSTALLED = True
-except ImportError:
-    BOTTLENECK_INSTALLED = False
 
 from radio_beam import Beam
 
@@ -860,7 +843,6 @@ def test_preserve_spectral_unit():
     assert new_cube.spectral_axis.unit is u.GHz
 
 
-@pytest.mark.skipif('not BOTTLENECK_INSTALLED')
 def test_endians():
     """
     Test that the endianness checking returns something in Native form
@@ -872,6 +854,7 @@ def test_endians():
     little-endian to native in the dtype parameter; I need a workaround for
     this.
     """
+    pytest.importorskip('bottleneck')
     big = np.array([[[1],[2]]], dtype='>f4')
     lil = np.array([[[1],[2]]], dtype='<f4')
     mywcs = WCS(naxis=3)
@@ -1710,8 +1693,11 @@ def test_spatial_smooth_t2d():
 
     np.testing.assert_almost_equal(cube_t2d[2].value, result2)
 
-@pytest.mark.skipif('not SCIPYOK')
+
 def test_spatial_smooth_median():
+
+    pytest.importorskip('scipy.ndimage')
+
     cube, data = cube_and_raw('adv.fits')
 
     cube_median = cube.spatial_smooth_median(3)
@@ -1730,8 +1716,11 @@ def test_spatial_smooth_median():
 
     np.testing.assert_almost_equal(cube_median[2].value, result2)
 
-@pytest.mark.skipif('not SCIPYOK')
+
 def test_spectral_smooth_median():
+
+    pytest.importorskip('scipy.ndimage')
+
     cube, data = cube_and_raw('adv.fits')
 
     cube_spectral_median = cube.spectral_smooth_median(3)
@@ -1741,9 +1730,12 @@ def test_spectral_smooth_median():
 
     np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
 
-@pytest.mark.skipif('not SCIPYOK')
-@pytest.mark.skipif('not JOBLIB_INSTALLED')
+
 def test_spectral_smooth_median_4cores():
+
+    pytest.importorskip('joblib')
+    pytest.importorskip('scipy.ndimage')
+
     cube, data = cube_and_raw('adv.fits')
 
     cube_spectral_median = cube.spectral_smooth_median(3, num_cores=4)
@@ -1778,12 +1770,11 @@ def test_varyres_spectra():
     assert isinstance(sp, VaryingResolutionOneDSpectrum)
     assert hasattr(sp, 'beams')
 
+
 def test_median_2axis():
     """
-    As of this writing the bottleneck.nanmedian did not accept an axis that is a tuple/list so this test
-    is to make sure that is properly taken into account.
-
-    :return:
+    As of this writing the bottleneck.nanmedian did not accept an axis that is a
+    tuple/list so this test is to make sure that is properly taken into account.
     """
     cube, data = cube_and_raw('adv.fits')
 
