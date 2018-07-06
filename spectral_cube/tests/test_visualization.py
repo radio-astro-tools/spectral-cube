@@ -70,3 +70,9 @@ def test_mask_quicklook():
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
 
     cube.mask.quicklook(view=(0, slice(None), slice(None)), use_aplpy=True)
+
+
+def test_to_glue():
+    pytest.importorskip('glue')
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+    cube.to_glue(start_gui=False)
