@@ -153,6 +153,34 @@ def get_rest_value_from_wcs(mywcs):
         ref_value = mywcs.wcs.restwav*u.m
         return ref_value
 
+# Velocity/frequency equivalencies that are not present in astropy core.
+# Ref: https://casa.nrao.edu/casadocs/casa-5-1.2/reference-material/spectral-frames
+
+
+def doppler_z(restfreq):
+    return [(u.GHz, u.km / u.s,
+                lambda x: (restfreq - x) / x,
+                lambda x: restfreq / (1 + x))]
+
+
+def doppler_beta(restfreq):
+    return [(u.GHz, u.km / u.s,
+            lambda x: si.c.to_value('km/s') * (1 - (x / restfreq) ** 2)
+                    / (1 + (x / restfreq) ** 2),
+            lambda x: np.sqrt(
+                (restfreq * ((si.c.to_value("km/s") - x) / (x + si.c.to_value("km/s")))))
+            )]
+
+
+def doppler_gamma(restfreq):
+    return [(u.GHz, u.km / u.s,
+                lambda x: si.c.to_value("km/s") * (1 + (x / restfreq)**2) /
+                            (2 * x / restfreq),
+                lambda x: restfreq * ((x / si.c.to_value("km/s") +
+                            np.sqrt((x / si.c.to_value("km/s")) ** 2 - 1)))
+                )]
+
+
 def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     """
     Convert a spectral axis from its unit to a specified out unit with a given output
