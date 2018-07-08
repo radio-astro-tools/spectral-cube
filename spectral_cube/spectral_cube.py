@@ -47,7 +47,8 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
                     BeamAverageWarning, NonFiniteBeamsWarning)
-from .spectral_axis import determine_vconv_from_ctype, get_rest_value_from_wcs
+from .spectral_axis import determine_vconv_from_ctype, get_rest_value_from_wcs, \
+                    doppler_beta, doppler_gamma, doppler_z
 
 from distutils.version import LooseVersion
 
@@ -1680,7 +1681,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         return self[self.subcube_slices_from_mask(region_mask)]
 
-
     def subcube_slices_from_mask(self, region_mask, spatial_only=False):
         """
         Given a mask, return the slices corresponding to the minimum subcube
@@ -1802,120 +1802,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def subcube_from_ds9region(self, ds9region, allow_empty=False):
         """
-        Extract a masked subcube from a ds9 region or a pyregion Region object
-        (only functions on celestial dimensions)
-
-        Parameters
-        ----------
-        ds9region: str or `pyregion.Shape`
-            The region to extract
-        allow_empty: bool
-            If this is False, an exception will be raised if the region
-            contains no overlap with the cube
-        """
-        import pyregion
-
-        if isinstance(ds9region, six.string_types):
-            shapelist = pyregion.parse(ds9region)
-        else:
-            shapelist = ds9region
-
-        if shapelist[0].coord_format not in ('physical','image'):
-            # Requires astropy >0.4...
-            # pixel_regions = shapelist.as_imagecoord(self.wcs.celestial.to_header())
-            # convert the regions to image (pixel) coordinates
-            celhdr = self.wcs.sub([wcs.WCSSUB_CELESTIAL]).to_header()
-            celhdr['NAXIS1'] = self.shape[2]
-            celhdr['NAXIS2'] = self.shape[1]
-            pixel_regions = shapelist.as_imagecoord(celhdr)
-            recompute_shifted_mask = False
-        else:
-            pixel_regions = copy.deepcopy(shapelist)
-            # we need to change the reference pixel after cropping
-            recompute_shifted_mask = True
-
-        # This is a hack to use mpl to determine the outer bounds of the regions
-        # (but it's a legit hack - pyregion needs a major internal refactor
-        # before we can approach this any other way, I think -AG)
-        mpl_objs = pixel_regions.get_mpl_patches_texts(origin=0)[0]
-
-        # Find the minimal enclosing box containing all of the regions
-        # (this will speed up the mask creation below)
-        extent = mpl_objs[0].get_extents()
-        xlo, ylo = extent.min
-        xhi, yhi = extent.max
-        all_extents = [obj.get_extents() for obj in mpl_objs]
-        for ext in all_extents:
-            xlo = int(np.floor(xlo if xlo < ext.min[0] else ext.min[0]))
-            ylo = int(np.floor(ylo if ylo < ext.min[1] else ext.min[1]))
-            xhi = int(np.ceil(xhi if xhi > ext.max[0] else ext.max[0]))
-            yhi = int(np.ceil(yhi if yhi > ext.max[1] else ext.max[1]))
-
-        # Negative indices will do bad things, like wrap around the cube
-        # If xhi/yhi are negative, there is not overlap
-        if (xhi < 0) or (yhi < 0):
-            raise ValueError("Region is outside of cube.")
-
-        # if xlo/ylo are negative, we need to crop
-        if xlo < 0:
-            xlo = 0
-        if ylo < 0:
-            ylo = 0
-
-        log.debug("Region boundaries: ")
-        print("xlo={xlo}, ylo={ylo}, xhi={xhi}, yhi={yhi}".format(xlo=xlo,
-                                                                      ylo=ylo,
-                                                                      xhi=xhi,
-                                                                      yhi=yhi))
-
-        subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
-
-        if any(dim == 0 for dim in subcube.shape):
-            if allow_empty:
-                warnings.warn("The derived subset is empty: the region does not"
-                              " overlap with the cube (but allow_empty=True).")
-            else:
-                raise ValueError("The derived subset is empty: the region does not"
-                                 " overlap with the cube.")
-
-        if recompute_shifted_mask:
-            # for pixel-based regions (which we use in tests), we need to shift
-            # the coordinates for mask computation because we're cropping the
-            # cube
-            for reg in pixel_regions:
-                reg.params[0].v -= xlo
-                reg.params[1].v -= ylo
-                reg.params[0].text = str(reg.params[0].v)
-                reg.params[1].text = str(reg.params[1].v)
-                reg.coord_list[0] -= xlo
-                reg.coord_list[1] -= ylo
-
-            # use the pixel-based, shifted mask
-            mask = pixel_regions.get_mask(header=subcube.wcs.celestial.to_header(),
-                                          shape=subcube.shape[1:])
-        else:
-            # use the original, coordinate-based mask since the pixel mask has
-            # *not* been shfited to match the original coordinate system
-            celhdr = subcube.wcs.celestial.to_header()
-            celhdr['NAXIS1'] = self.shape[2]
-            celhdr['NAXIS2'] = self.shape[1]
-            mask = shapelist.get_mask(header=celhdr,
-                                      shape=subcube.shape[1:])
-
-        if not allow_empty and mask.sum() == 0:
-            raise ValueError("The derived subset is empty: the region does not"
-                             " overlap with the cube.  However, this is likely "
-                             "to be a bug, since at an earlier stage there was "
-                             "overlap.")
-
-        masked_subcube = subcube.with_mask(BooleanArrayMask(mask, subcube.wcs,
-                                                            shape=subcube.shape))
-        # by using ceil / floor above, we potentially introduced a NaN buffer
-        # that we can now crop out
-        return masked_subcube.minimal_subcube(spatial_only=True)
-
-    def subcube_from_ds9region_new(self, ds9region, allow_empty=False):
-        """
         Extract a masked subcube from a ds9 region
         (only functions on celestial dimensions)
 
@@ -1938,8 +1824,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def subcube_from_crtf(self, region, allow_empty=False):
         """
-        Extract a masked subcube from a CRTF region
-        (only functions on celestial dimensions)
+        Extract a masked subcube from a CRTF region.
 
         Parameters
         ----------
@@ -1967,9 +1852,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         ----------
         region_list: `regions.Region` list
             The region to extract
-        allow_empty: bool
+        allow_empty: bool, optional
             If this is False, an exception will be raised if the region
-            contains no overlap with the cube
+            contains no overlap with the cube. Default is False.
         """
         import regions
 
@@ -2012,7 +1897,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
         else:
             # reg.meta['ranges'] is str list but I am making them list of Quantity objects in regions.
-            ranges = self._velocity_freq_conversion(ranges, veltypes, restfreqs)
+            ranges = self._velocity_freq_conversion_regions(ranges, veltypes, restfreqs)
             zlo = min([x[0] for x in ranges])
             zhi = max([x[1] for x in ranges])
             slab = self.spectral_slab(zlo, zhi)
@@ -2034,8 +1919,23 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # that we can now crop out
         return masked_subcube.minimal_subcube(spatial_only=True)
 
-    def _velocity_freq_conversion(self, ranges, veltypes, restfreqs):
+    def _velocity_freq_conversion_regions(self, ranges, veltypes, restfreqs):
+        """
+        Converts the spectral range of the regions compatible with the spectral
+        convention of the cube.
 
+        ranges: `~astropy.units.Quantity` object
+            List of range(a list of max and min limits on the spectral axis) of
+            each ``regions.Region`` object.
+        veltypes: List of `str`
+            It contains list of velocity convention that each region is following
+            The string should be a combination of the following elements:
+            {'RADIO' | 'OPTICAL' | 'Z' | 'BETA' | 'GAMMA' | 'RELATIVISTIC' | None}
+            An element can be `None` if veltype of the region is unknown and is
+            assumed to take that of the cube.
+        restfreqs: List of `~astropy.units.Quantity
+            It contains the rest frequency of each region.`
+        """
         header = self.wcs.to_header()
 
         # Obtaining rest frequency of the cube in GHz.
@@ -2045,27 +1945,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         CTYPE3 = header['CTYPE3']
 
         veltype_cube = determine_vconv_from_ctype(CTYPE3)
-
-        def doppler_z(restfreq):
-            return [(u.GHz, u.km / u.s,
-                        lambda x: (restfreq - x) / x,
-                        lambda x: restfreq / (1 + x))]
-
-        def doppler_beta(restfreq):
-            return [(u.GHz, u.km / u.s,
-                    lambda x: si.c.to_value('km/s') * (1 - (x / restfreq) ** 2)
-                            / (1 + (x / restfreq) ** 2),
-                    lambda x: np.sqrt(
-                        (restfreq * ((si.c.to_value("km/s") - x) / (x + si.c.to_value("km/s")))))
-                     )]
-
-        def doppler_gamma(restfreq):
-            return [(u.GHz, u.km / u.s,
-                        lambda x: si.c.to_value("km/s") * (1 + (x / restfreq)**2) /
-                                   (2 * x / restfreq),
-                        lambda x: restfreq * ((x / si.c.to_value("km/s") +
-                                  np.sqrt((x / si.c.to_value("km/s")) ** 2 - 1)))
-                     )]
 
         veltype_equivalencies = dict(RADIO=u.doppler_radio,
                                      OPTICAL=u.doppler_optical,
