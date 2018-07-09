@@ -1921,7 +1921,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def _velocity_freq_conversion_regions(self, ranges, veltypes, restfreqs):
         """
-        Converts the spectral range of the regions compatible with the spectral
+        Makes the spectral range of the regions compatible with the spectral
         convention of the cube.
 
         ranges: `~astropy.units.Quantity` object
