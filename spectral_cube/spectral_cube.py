@@ -47,8 +47,8 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
                     BeamAverageWarning, NonFiniteBeamsWarning)
-from .spectral_axis import determine_vconv_from_ctype, get_rest_value_from_wcs, \
-                    doppler_beta, doppler_gamma, doppler_z
+from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
+                            doppler_beta, doppler_gamma, doppler_z)
 
 from distutils.version import LooseVersion
 
@@ -1800,58 +1800,58 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self[slices]
 
-    def subcube_from_ds9region(self, ds9region, allow_empty=False):
+    def subcube_from_ds9region(self, ds9_region, allow_empty=False):
         """
         Extract a masked subcube from a ds9 region
         (only functions on celestial dimensions)
 
         Parameters
         ----------
-        ds9region: str
-            The region to extract
+        ds9_region: str
+            The DS9 region(s) to extract
         allow_empty: bool
             If this is False, an exception will be raised if the region
             contains no overlap with the cube
         """
         import regions
 
-        if isinstance(ds9region, six.string_types):
-            ds9region = regions.DS9Parser(ds9region).shapes.to_regions()
+        if isinstance(ds9_region, six.string_types):
+            region_list = regions.DS9Parser(ds9_region).shapes.to_regions()
         else:
-            raise TypeError("{0} should be a DS9 string".format(ds9region))
+            raise TypeError("{0} should be a DS9 string".format(ds9_region))
 
-        return self.subcube_from_regions(ds9region, allow_empty)
+        return self.subcube_from_regions(region_list, allow_empty)
 
-    def subcube_from_crtf(self, region, allow_empty=False):
+    def subcube_from_crtf(self, crtf_region, allow_empty=False):
         """
         Extract a masked subcube from a CRTF region.
 
         Parameters
         ----------
-        region: str
-            The CRTF region string to extract
+        crtf_region: str
+            The CRTF region(s) string to extract
         allow_empty: bool
             If this is False, an exception will be raised if the region
             contains no overlap with the cube
         """
         import regions
 
-        if isinstance(region, six.string_types):
-            region = regions.CRTFParser(region).shapes.to_regions()
+        if isinstance(crtf_region, six.string_types):
+            region_list = regions.CRTFParser(crtf_region).shapes.to_regions()
         else:
-            raise TypeError("{0} should be a CRTF string".format(region))
+            raise TypeError("{0} should be a CRTF string".format(crtf_region))
 
-        return self.subcube_from_regions(region, allow_empty)
+        return self.subcube_from_regions(region_list, allow_empty)
 
     def subcube_from_regions(self, region_list, allow_empty=False):
         """
-        Extract a masked subcube from a list of `regions.Region` object
+        Extract a masked subcube from a list of ``regions.Region`` object
         (only functions on celestial dimensions)
 
         Parameters
         ----------
-        region_list: `regions.Region` list
-            The region to extract
+        region_list: ``regions.Region`` list
+            The region(s) to extract
         allow_empty: bool, optional
             If this is False, an exception will be raised if the region
             contains no overlap with the cube. Default is False.
@@ -1869,12 +1869,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 raise TypeError("'{}' should be `regions.Region` object".format(x))
 
         # List of regions are converted to a `regions.CompoundPixelRegion` object.
-        compound_region = _compound_region(regs)
+        compound_region = _regionlist_to_single_region(regs)
 
         # Compound mask of all the regions.
         mask = compound_region.to_mask()
 
-        # Collecting frequency/velocity range, type and rest frequency
+        # Collecting frequency/velocity range, velocity type and rest frequency
         # of each region.
         ranges = [x.meta.get('range', None) for x in regs]
         veltypes = [x.meta.get('veltype', None) for x in regs]
@@ -1896,7 +1896,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if None in ranges:
             subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
         else:
-            # reg.meta['ranges'] is str list but I am making them list of Quantity objects in regions.
             ranges = self._velocity_freq_conversion_regions(ranges, veltypes, restfreqs)
             zlo = min([x[0] for x in ranges])
             zhi = max([x[1] for x in ranges])
@@ -1928,13 +1927,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             List of range(a list of max and min limits on the spectral axis) of
             each ``regions.Region`` object.
         veltypes: List of `str`
-            It contains list of velocity convention that each region is following
+            It contains list of velocity convention that each region is following.
             The string should be a combination of the following elements:
             {'RADIO' | 'OPTICAL' | 'Z' | 'BETA' | 'GAMMA' | 'RELATIVISTIC' | None}
             An element can be `None` if veltype of the region is unknown and is
             assumed to take that of the cube.
-        restfreqs: List of `~astropy.units.Quantity
-            It contains the rest frequency of each region.`
+        restfreqs: List of `~astropy.units.Quantity`
+            It contains the rest frequency of each region.
         """
         header = self.wcs.to_header()
 
@@ -3711,10 +3710,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                    goodbeams_mask=goodchannels & self._goodbeams_mask)
 
 
-def _compound_region(region_list):
+def _regionlist_to_single_region(region_list):
     import regions
     if len(region_list) == 1:
         return region_list[0]
-    return regions.CompoundPixelRegion(_compound_region(region_list[:len(region_list)/2]),
-                                        _compound_region(region_list[len(region_list)/2:])
-                                        )
+    return regions.CompoundPixelRegion(_regionlist_to_single_region(region_list[:len(region_list)/2]),
+                                       _regionlist_to_single_region(region_list[len(region_list)/2:])
+                                       )

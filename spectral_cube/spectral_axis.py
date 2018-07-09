@@ -170,11 +170,10 @@ def doppler_z(restfreq):
 def doppler_beta(restfreq):
     restfreq = restfreq.to_value("GHz")
     return [(u.GHz, u.km / u.s,
-            lambda x: constants.si.c.to_value('km/s') * ((1 - ((x / restfreq) ** 2))
-                       / (1 + ((x / restfreq) ** 2))),
-            lambda x: restfreq * np.sqrt(
-                ((constants.si.c.to_value("km/s") - x)
-                             / (x + constants.si.c.to_value("km/s"))))
+            lambda x: constants.si.c.to_value('km/s') * ((1 - ((x / restfreq) ** 2)) /
+                                                         (1 + ((x / restfreq) ** 2))),
+            lambda x: restfreq * np.sqrt((constants.si.c.to_value("km/s") - x) /
+                                         (x + constants.si.c.to_value("km/s")))
              )]
 
 
@@ -182,9 +181,9 @@ def doppler_gamma(restfreq):
     restfreq = restfreq.to_value("GHz")
     return [(u.GHz, u.km / u.s,
             lambda x: constants.si.c.to_value("km/s") * ((1 + (x / restfreq) ** 2) /
-                    (2 * x / restfreq)),
+                                                         (2 * x / restfreq)),
             lambda x: restfreq * (x / constants.si.c.to_value("km/s") +
-                    np.sqrt((x / constants.si.c.to_value("km/s")) ** 2 - 1))
+                                  np.sqrt((x / constants.si.c.to_value("km/s")) ** 2 - 1))
              )]
 
 
