@@ -2153,7 +2153,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         from glue.app.qt import GlueApplication
         from glue.core import DataCollection, Data
         from glue.core.coordinates import coordinates_from_header
-        from glue.viewers.image.qt.viewer_widget import ImageWidget
+        try:
+            from glue.viewers.image.qt.data_viewer import ImageViewer
+        except ImportError:
+            from glue.viewers.image.qt.viewer_widget import ImageWidget as ImageViewer
 
         if dataset is not None:
             if name in [d.label for d in dataset.components]:
@@ -2177,7 +2180,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
                     #start Glue
                     ga = self._glue_app = GlueApplication(dc)
-                    self._glue_viewer = ga.new_data_viewer(ImageWidget,
+                    self._glue_viewer = ga.new_data_viewer(ImageViewer,
                                                            data=result)
 
                     if start_gui:
@@ -3571,7 +3574,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
-    
+
     @warn_slow
     def to(self, unit, equivalencies=()):
         """

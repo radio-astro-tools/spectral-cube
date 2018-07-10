@@ -2,71 +2,43 @@ from __future__ import print_function, absolute_import, division
 
 import pytest
 
-try:
-    import pvextractor
-    PVEXTRACTOR_INSTALLED = True
-except ImportError:
-    PVEXTRACTOR_INSTALLED = False
-
-try:
-    import matplotlib.pyplot as plt
-    MATPLOTLIB_INSTALLED = True
-except ImportError:
-    MATPLOTLIB_INSTALLED = False
-
-try:
-    import aplpy
-    APLPY_INSTALLED = True
-except ImportError:
-    APLPY_INSTALLED = False
-
-from .. import (SpectralCube, BooleanArrayMask, FunctionMask, LazyMask,
-                CompositeMask)
-from ..spectral_cube import OneDSpectrum, Projection
-from ..np_compat import allbadtonan
-from .. import spectral_axis
-
 from .test_spectral_cube import cube_and_raw
 
 
-@pytest.mark.skipif("not PVEXTRACTOR_INSTALLED")
 def test_to_pvextractor():
-
+    pytest.importorskip('pvextractor')
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+    cube.to_pvextractor()
 
-    pv = cube.to_pvextractor()
 
-
-@pytest.mark.skipif("not MATPLOTLIB_INSTALLED")
 def test_projvis():
-
+    pytest.importorskip('matplotlib')
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
-
     mom0 = cube.moment0()
     mom0.quicklook(use_aplpy=False)
 
-@pytest.mark.skipif("not MATPLOTLIB_INSTALLED")
+
 def test_proj_imshow():
-
+    plt = pytest.importorskip('matplotlib.pyplot')
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
-
     mom0 = cube.moment0()
-
-    import pylab as pl
-    pl.imshow(mom0)
+    plt.imshow(mom0)
 
 
-@pytest.mark.skipif("not APLPY_INSTALLED")
 def test_projvis_aplpy():
-
+    pytest.importorskip('aplpy')
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
-
     mom0 = cube.moment0()
     mom0.quicklook(use_aplpy=True)
 
-@pytest.mark.skipif("not APLPY_INSTALLED")
+
 def test_mask_quicklook():
-
+    pytest.importorskip('aplpy')
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
-
     cube.mask.quicklook(view=(0, slice(None), slice(None)), use_aplpy=True)
+
+
+def test_to_glue():
+    pytest.importorskip('glue')
+    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+    cube.to_glue(start_gui=False)

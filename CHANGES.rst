@@ -1,6 +1,7 @@
 0.4.4 (unreleased)
 ------------------
- - none yet
+ - Bugfix: fix compatibility of to_glue with latest versions of glue.
+   (https://github.com/radio-astro-tools/spectral-cube/pull/491)
 
 0.4.3 (2018-04-05)
 ------------------
