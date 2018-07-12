@@ -3040,7 +3040,7 @@ class SpectralCube(BaseSpectralCube):
 
             mask = np.any(stacked_array, axis=0)
         else:
-            def makeslice_local(startpoint,axis=axis,nsteps=factor):
+            def makeslice_local(startpoint, axis=axis, nsteps=factor):
                 # make empty slices
                 view = [slice(None) for ii in range(self.ndim)]
                 # then fill the appropriate slice
@@ -3048,7 +3048,7 @@ class SpectralCube(BaseSpectralCube):
                 return view
 
             newshape = list(self.shape)
-            newshape[axis] = (newshape[axis]//factor + (int(truncate)
+            newshape[axis] = (newshape[axis]//factor + ((1-int(truncate))
                                                         * (xs % int(factor) != 0)))
             newshape = tuple(newshape)
 
@@ -3056,6 +3056,10 @@ class SpectralCube(BaseSpectralCube):
                 progressbar = ProgressBar
             else:
                 progressbar = lambda x: x
+
+            # Create a view that will add a blank newaxis at the right spot
+            view_newaxis = [slice(None) for ii in range(self.ndim)]
+            view_newaxis[axis] = None
 
             ntf = tempfile.NamedTemporaryFile()
             dsarr = np.memmap(ntf, mode='w+', shape=newshape, dtype=np.float)
@@ -3068,8 +3072,8 @@ class SpectralCube(BaseSpectralCube):
                 to_average = self.filled_data[view_fulldata]
                 to_anyfy = self.mask[view_fulldata].include()
 
-                dsarr[view_newdata] = estimator(to_average, axis)
-                mask[view_newdata] = np.any(to_anyfy, axis).astype('bool')
+                dsarr[view_newdata] = estimator(to_average, axis)[view_newaxis]
+                mask[view_newdata] = np.any(to_anyfy, axis).astype('bool')[view_newaxis]
 
 
         view = makeslice(factor//2)

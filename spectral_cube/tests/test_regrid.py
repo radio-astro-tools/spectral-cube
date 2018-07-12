@@ -342,6 +342,7 @@ def test_downsample(use_memmap):
                          data[:,4:,:].mean(axis=1), # just data[:,4,:]
                         ]).swapaxes(0,1)
     assert expected.shape == (2,3,5)
+    assert dscube.shape == (2,3,5)
 
     np.testing.assert_almost_equal(expected,
                                    dscube.filled_data[:].value)
