@@ -27,8 +27,8 @@ env:
         - SETUP_CMD='test -a "--boxed"'
         - NUMPY_VERSION=1.13
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='sip<4.19 matplotlib aplpy pytest pytest-xdist astropy-helpers joblib'
-        - CONDA_CHANNELS='astropy-ci-extras astropy'
+        - CONDA_DEPENDENCIES='sip<4.19 matplotlib aplpy pytest pytest-xdist astropy-helpers joblib glue-core'
+        - CONDA_CHANNELS='astropy-ci-extras astropy glueviz'
         - PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - SETUP_XVFB=True
 
@@ -52,18 +52,10 @@ matrix:
         - python: 3.6
           env: SETUP_CMD='build_sphinx -w'
 
-        # Try older numpy versions
+        # test python2.7 with recent numpy version
         - python: 2.7
-          env: NUMPY_VERSION=1.9
-               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
-        #We need nanmedian.  <=1.8 deprecated
-        # - python: 2.7
-        #   env: NUMPY_VERSION=1.8
+          env: PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
 
-        # Test with bottleneck
-        - python: 2.7
-          env: NUMPY_VERSION=1.9 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist astropy-helpers'
-               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
         - python: 3.6
           env: NUMPY_VERSION=1.11 CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest pytest-xdist astropy-helpers'
 

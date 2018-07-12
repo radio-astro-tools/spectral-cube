@@ -15,18 +15,6 @@ from .test_spectral_cube import cube_and_raw
 from .test_projection import load_projection
 from . import path
 
-try:
-    import reproject
-    REPROJECT_INSTALLED = True
-except ImportError:
-    REPROJECT_INSTALLED = False
-
-try:
-    import joblib
-    JOBLIB_INSTALLED = True
-except ImportError:
-    JOBLIB_INSTALLED = False
-
 
 def test_convolution():
     cube, data = cube_and_raw('255_delta.fits')
@@ -63,7 +51,7 @@ def test_beams_convolution():
 
     pixscale = wcs.utils.proj_plane_pixel_area(cube.wcs.celestial)**0.5*u.deg
 
-    for ii,bm in enumerate(cube.beams):
+    for ii, bm in enumerate(cube.beams):
         expected = target_beam.deconvolve(bm).as_kernel(pixscale, x_size=5,
                                                         y_size=5)
         expected.normalize()
@@ -88,8 +76,10 @@ def test_beams_convolution_equal():
     np.testing.assert_almost_equal(cube.filled_data[0].value,
                                    conv_cube.filled_data[0].value)
 
-@pytest.mark.skipif('not REPROJECT_INSTALLED')
+
 def test_reproject():
+
+    pytest.importorskip('reproject')
 
     cube, data = cube_and_raw('adv.fits')
 
@@ -108,6 +98,7 @@ def test_reproject():
     result = cube.reproject(header_out)
 
     assert result.shape == (cube.shape[0], 5, 4)
+
 
 def test_spectral_smooth():
 
@@ -128,12 +119,11 @@ def test_spectral_smooth():
                                    4)
 
 
-# TODO: uncomment this when we figure out how to make it work
-@pytest.mark.skipif('not JOBLIB_INSTALLED')
 def test_spectral_smooth_4cores():
 
-    cube, data = cube_and_raw('522_delta.fits')
+    pytest.importorskip('joblib')
 
+    cube, data = cube_and_raw('522_delta.fits')
 
     result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=True)
 
@@ -158,7 +148,6 @@ def test_spectral_smooth_4cores():
                                    convolution.Gaussian1DKernel(1.0,
                                                                 x_size=5).array,
                                    4)
-
 
 
 def test_spectral_smooth_fail():
@@ -205,7 +194,6 @@ def test_spectral_interpolate_with_fillvalue():
                                    np.ones(4)*42)
 
 
-
 def test_spectral_interpolate_fail():
 
     cube, data = cube_and_raw('522_delta_beams.fits')
@@ -242,7 +230,7 @@ def test_spectral_interpolate_with_mask():
 
     # The output makes CDELT3 > 0 (reversed spectral axis) so the masked
     # portion are the final 2 channels.
-    np.testing.assert_almost_equal(result[:,0, 0].value,
+    np.testing.assert_almost_equal(result[:, 0, 0].value,
                                    [0.0, 0.5, np.NaN, np.NaN])
 
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
@@ -260,7 +248,6 @@ def test_spectral_interpolate_reversed():
     result = cube.spectral_interpolate(spectral_grid=sg)
 
     np.testing.assert_almost_equal(sg.value, result.spectral_axis.value)
-
 
 
 def test_convolution_2D():
@@ -300,8 +287,9 @@ def test_nocelestial_convolution_2D_fail():
     assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
 
 
-@pytest.mark.skipif('not REPROJECT_INSTALLED')
 def test_reproject_2D():
+
+    pytest.importorskip('reproject')
 
     proj, hdu = load_projection("55.fits")
 
@@ -322,8 +310,9 @@ def test_reproject_2D():
     assert result.beam == proj.beam
 
 
-@pytest.mark.skipif('not REPROJECT_INSTALLED')
 def test_nocelestial_reproject_2D_fail():
+
+    pytest.importorskip('reproject')
 
     cube, data = cube_and_raw('255_delta.fits')
 
