@@ -2971,11 +2971,10 @@ class SpectralCube(BaseSpectralCube):
         The WCS will be 'downsampled' by the specified factor as well.
         If the downsample factor is odd, there will be an offset in the WCS.
 
-        This implementation is in-memory only; it is therefore prohibitively
-        expensive for gigantic cubes.  There is an open TODO item to implement
-        a slice-iterative version.
-
-        (original code came from image_tools)
+        There is both an in-memory and a memory-mapped implementation; the
+        default is to use the memory-mapped version.  Technically, the 'large
+        data' warning doesn't apply when using the memory-mapped version, but
+        the warning is still there anyway.
 
         Parameters
         ----------
