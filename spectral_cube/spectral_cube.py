@@ -2961,6 +2961,133 @@ class SpectralCube(BaseSpectralCube):
         return self.with_mask(goodchannels[:,None,None])
 
 
+    @warn_slow
+    def downsample_axis(self, factor, axis, estimator=np.nanmean,
+                        truncate=False, use_memmap=True, progressbar=True):
+        """
+        Downsample the cube by averaging over *factor* pixels along an axis.
+        Crops right side if the shape is not a multiple of factor.
+
+        The WCS will be 'downsampled' by the specified factor as well.
+        If the downsample factor is odd, there will be an offset in the WCS.
+
+        There is both an in-memory and a memory-mapped implementation; the
+        default is to use the memory-mapped version.  Technically, the 'large
+        data' warning doesn't apply when using the memory-mapped version, but
+        the warning is still there anyway.
+
+        Parameters
+        ----------
+        myarr : `~numpy.ndarray`
+            The array to downsample
+        factor : int
+            The factor to downsample by
+        axis : int
+            The axis to downsample along
+        estimator : function
+            defaults to mean.  You can downsample by summing or
+            something else if you want a different estimator
+            (e.g., downsampling error: you want to sum & divide by sqrt(n))
+        truncate : bool
+            Whether to truncate the last chunk or average over a smaller number.
+            e.g., if you downsample [1,2,3,4] by a factor of 3, you could get either
+            [2] or [2,4] if truncate is True or False, respectively.
+        use_memmap : bool
+            Use a memory map on disk to avoid loading the whole cube into memory
+            (several times)?  If set, the warning about large cubes can be ignored
+            (though you still have to override the warning)
+        progressbar : bool
+            Include a progress bar?  Only works with ``use_memmap=True``
+        """
+        def makeslice(startpoint,axis=axis,step=factor):
+            # make empty slices
+            view = [slice(None) for ii in range(self.ndim)]
+            # then fill the appropriate slice
+            view[axis] = slice(startpoint,None,step)
+            return view
+
+        # size of the dimension of interest
+        xs = self.shape[axis]
+
+        if not use_memmap:
+            if xs % int(factor) != 0:
+                if truncate:
+                    view = [slice(None) for ii in range(self.ndim)]
+                    view[axis] = slice(None,xs-(xs % int(factor)))
+                    crarr = self.filled_data[view]
+                    mask = self.mask[view].include()
+                else:
+                    extension_shape = list(self.shape)
+                    extension_shape[axis] = (factor - xs % int(factor))
+                    extension = np.empty(extension_shape) * np.nan
+                    crarr = np.concatenate((self.filled_data[:], extension), axis=axis)
+                    extension[:] = 0
+                    mask = np.concatenate((self.mask.include(), extension), axis=axis)
+            else:
+                crarr = self.filled_data[:]
+                mask = self.mask[:]
+
+            # The extra braces here are crucial: We're adding an extra dimension so we
+            # can average across it
+            stacked_array = np.concatenate([[crarr[makeslice(ii)]] for ii in
+                                               range(factor)])
+
+            dsarr = estimator(stacked_array, axis=0)
+
+            stacked_mask = np.concatenate([[mask[makeslice(ii)]] for ii in
+                                           range(factor)])
+
+            mask = np.any(stacked_array, axis=0)
+        else:
+            def makeslice_local(startpoint, axis=axis, nsteps=factor):
+                # make empty slices
+                view = [slice(None) for ii in range(self.ndim)]
+                # then fill the appropriate slice
+                view[axis] = slice(startpoint,startpoint+nsteps,1)
+                return view
+
+            newshape = list(self.shape)
+            newshape[axis] = (newshape[axis]//factor + ((1-int(truncate))
+                                                        * (xs % int(factor) != 0)))
+            newshape = tuple(newshape)
+
+            if progressbar:
+                progressbar = ProgressBar
+            else:
+                progressbar = lambda x: x
+
+            # Create a view that will add a blank newaxis at the right spot
+            view_newaxis = [slice(None) for ii in range(self.ndim)]
+            view_newaxis[axis] = None
+
+            ntf = tempfile.NamedTemporaryFile()
+            dsarr = np.memmap(ntf, mode='w+', shape=newshape, dtype=np.float)
+            ntf2 = tempfile.NamedTemporaryFile()
+            mask = np.memmap(ntf2, mode='w+', shape=newshape, dtype=np.bool)
+            for ii in progressbar(range(newshape[axis])):
+                view_fulldata = makeslice_local(ii*factor)
+                view_newdata = makeslice_local(ii, nsteps=1)
+
+                to_average = self.filled_data[view_fulldata]
+                to_anyfy = self.mask[view_fulldata].include()
+
+                dsarr[view_newdata] = estimator(to_average, axis)[view_newaxis]
+                mask[view_newdata] = np.any(to_anyfy, axis).astype('bool')[view_newaxis]
+
+
+        view = makeslice(factor//2)
+        newwcs = wcs_utils.slice_wcs(self.wcs, view, shape=self.shape)
+        newwcs._naxis = list(self.shape)
+
+        # this is an assertion to ensure that the WCS produced is valid
+        # (this is basically a regression test for #442)
+        assert newwcs[:, slice(None), slice(None)]
+        assert len(newwcs._naxis) == 3
+
+
+        return self._new_cube_with(data=dsarr, wcs=newwcs,
+                                   mask=BooleanArrayMask(mask, wcs=newwcs))
+
 class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
     """
     A variant of the SpectralCube class that has PSF (beam) information on a
@@ -3142,6 +3269,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         # this is an assertion to ensure that the WCS produced is valid
         # (this is basically a regression test for #442)
         assert newwcs[:, slice(None), slice(None)]
+        assert len(newwcs._naxis) == 3
 
         return self._new_cube_with(data=self._data[view],
                                    wcs=newwcs,
