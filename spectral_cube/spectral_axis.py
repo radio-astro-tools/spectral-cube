@@ -1,5 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
+import numpy as np
+
 from astropy import wcs
 from astropy import units as u
 from astropy import constants
@@ -152,6 +154,38 @@ def get_rest_value_from_wcs(mywcs):
     elif mywcs.wcs.restwav:
         ref_value = mywcs.wcs.restwav*u.m
         return ref_value
+
+# Velocity/frequency equivalencies that are not present in astropy core.
+# Ref: https://casa.nrao.edu/casadocs/casa-5-1.2/reference-material/spectral-frames
+
+
+def doppler_z(restfreq):
+    restfreq = restfreq.to_value("GHz")
+    return [(u.GHz, u.km / u.s,
+            lambda x: (restfreq - x) / x,
+            lambda x: restfreq / (1 + x)
+             )]
+
+
+def doppler_beta(restfreq):
+    restfreq = restfreq.to_value("GHz")
+    return [(u.GHz, u.km / u.s,
+            lambda x: constants.si.c.to_value('km/s') * ((1 - ((x / restfreq) ** 2)) /
+                                                         (1 + ((x / restfreq) ** 2))),
+            lambda x: restfreq * np.sqrt((constants.si.c.to_value("km/s") - x) /
+                                         (x + constants.si.c.to_value("km/s")))
+             )]
+
+
+def doppler_gamma(restfreq):
+    restfreq = restfreq.to_value("GHz")
+    return [(u.GHz, u.km / u.s,
+            lambda x: constants.si.c.to_value("km/s") * ((1 + (x / restfreq) ** 2) /
+                                                         (2 * x / restfreq)),
+            lambda x: restfreq * (x / constants.si.c.to_value("km/s") +
+                                  np.sqrt((x / constants.si.c.to_value("km/s")) ** 2 - 1))
+             )]
+
 
 def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     """

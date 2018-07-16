@@ -4,7 +4,7 @@ from astropy import wcs
 from astropy.io import fits
 from astropy import units as u
 from astropy import constants
-from astropy.tests.helper import pytest
+from astropy.tests.helper import pytest, assert_quantity_allclose
 import warnings
 import os
 import numpy as np
@@ -14,7 +14,8 @@ from . import path as data_path
 from ..spectral_axis import (convert_spectral_axis, determine_ctype_from_vconv,
                              cdelt_derivative, determine_vconv_from_ctype,
                              get_rest_value_from_wcs, air_to_vac,
-                             air_to_vac_deriv, vac_to_air)
+                             air_to_vac_deriv, vac_to_air, doppler_z,
+                             doppler_gamma, doppler_beta)
 
 def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
@@ -578,3 +579,29 @@ class test_nir_sinfoni_base(object):
 
         np.testing.assert_almost_equal(worldpix_rad,
                                        velocities_rad.to(newwcs_rad.wcs.cunit[0]).value)
+
+
+def test_equivalencies():
+    """
+    Testing spectral equivalencies
+    """
+    # range in "RADIO" with "100 * u.GHz" as rest frequancy
+    range = u.Quantity([-318 * u.km / u.s, -320 * u.km / u.s])
+
+    # range in freq
+    r1 = range.to("GHz", equivalencies=u.doppler_radio(100 * u.GHz))
+
+    # round conversion for "doppler_z"
+    r2 = r1.to("km/s", equivalencies=doppler_z(100 * u.GHz))
+    r3 = r2.to("GHz", equivalencies=doppler_z(100*u.GHz))
+    assert_quantity_allclose(r1, r3)
+
+    # round conversion for "doppler_beta"
+    r2 = r1.to("km/s", equivalencies=doppler_beta(100 * u.GHz))
+    r3 = r2.to("GHz", equivalencies=doppler_beta(100 * u.GHz))
+    assert_quantity_allclose(r1, r3)
+
+    # round conversion for "doppler_gamma"
+    r2 = r1.to("km/s", equivalencies=doppler_gamma(100 * u.GHz))
+    r3 = r2.to("GHz", equivalencies=doppler_gamma(100 * u.GHz))
+    assert_quantity_allclose(r1, r3)
