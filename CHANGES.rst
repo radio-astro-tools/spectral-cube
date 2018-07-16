@@ -2,6 +2,10 @@
 ------------------
  - Bugfix: fix compatibility of to_glue with latest versions of glue.
    (https://github.com/radio-astro-tools/spectral-cube/pull/491)
+ - Refactor to use regions instead of pyregion.  Adds CRTF support
+   (https://github.com/radio-astro-tools/spectral-cube/pull/488)
+ - Direct downsampling tools added, both in-memory and memmap
+   (https://github.com/radio-astro-tools/spectral-cube/pull/486)
 
 0.4.3 (2018-04-05)
 ------------------
