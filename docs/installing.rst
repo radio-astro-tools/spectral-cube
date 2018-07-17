@@ -13,6 +13,9 @@ This package has the following dependencies:
   reading in spectral cubes that use the BMAJ/BMIN convention for specifying the beam size.
 * `Bottleneck <http://berkeleyanalytics.com/bottleneck/>`_, optional (speeds
   up median and percentile operations on cubes with missing data)
+* `Regions <https://astropy-regions.readthedocs.io/en/latest>`_ 0.3dev, optional
+    (Serialises/Deserialises DS9/CRTF region files and handles them. Used when
+    extracting a subcube from region)
 
 Installation
 ------------

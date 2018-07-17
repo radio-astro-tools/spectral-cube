@@ -70,6 +70,7 @@ rst_epilog += """
 """
 
 intersphinx_mapping['astroquery'] = ('http://astroquery.readthedocs.org/en/latest/', None)
+intersphinx_mapping['regions'] = ('http://astropy-regions.readthedocs.org/en/latest/', None)
 
 # -- Project information ------------------------------------------------------
 
