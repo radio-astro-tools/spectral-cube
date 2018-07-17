@@ -40,33 +40,35 @@ mask from scratch and apply it to the data.::
     >>> maskedsubcube = subcube.with_mask(mask)  # doctest: +SKIP
     >>> spectrum = maskedsubcube.mean(axis=(1,2))  # doctest: +SKIP
 
-Aperture extraction using regions
----------------------------------
+Aperture and spectral extraction using regions
+----------------------------------------------
 
 Spectral-cube supports ds9 and crtf regions, so you can use them to create a
 mask.  The ds9/crtf region support relies on `~regions` , which supports most shapes in
 ds9 and crtf, so you are not limited to circular apertures.
 
 In this example, we'll extract a subcube from ds9 region string using
-`~spectral_cube.spectral_cube.SpectralCube.subcube_from_ds9region`.::
+`~spectral_cube.spectral_cube.SpectralCube.subcube_from_ds9region`::
 
-    >>> ds9_str = "fk5; circle(19:23:43.907, +14:30:34.66, 3\")"  # doctest: +SKIP
+    >>> ds9_str = 'fk5; circle(19:23:43.907, +14:30:34.66, 3")'  # doctest: +SKIP
     >>> subcube = cube.subcube_from_ds9region(ds9_str)  # doctest: +SKIP
-    >>> spectrum = subcube.mean(axis=(1,2))  # doctest: +SKIP
+    >>> spectrum = subcube.mean(axis=(1, 2))  # doctest: +SKIP
 
 Similarly, we'll extract a subcube from crtf region string using
-`~spectral_cube.spectral_cube.SpectralCube.subcube_from_crtfregion`.::
+`~spectral_cube.spectral_cube.SpectralCube.subcube_from_crtfregion`::
 
-    >>> crtf_str = "circle[[19:23:43.907, +14:30:34.66], 3\"], coord=fk5"  # doctest: +SKIP
+    >>> crtf_str = 'circle[[19:23:43.907, +14:30:34.66], 3"], coord=fk5, range=[150km/s, 300km/s]'  # doctest: +SKIP
     >>> subcube = cube.subcube_from_crtfregion(crtf_str)  # doctest: +SKIP
-    >>> spectrum = subcube.mean(axis=(1,2))  # doctest: +SKIP
+    >>> spectrum = subcube.mean(axis=(1, 2))  # doctest: +SKIP
 
 We can also use a list of `~regions.Region` object to extract a subcube using
-`~spectral_cube.spectral_cube.SpectralCube.subcube_from_regions`.::
+`~spectral_cube.spectral_cube.SpectralCube.subcube_from_regions`.
 You can convert the ds9 string into `~regions.Region` object using
-`~regions.DS9Parser` or directly read from a file using `~regions.read_ds9`.::
+`~regions.DS9Parser` or directly read from a file using `~regions.read_ds9`::
 
     >>> import regions
     >>> regpix = regions.RectanglePixelRegion(regions.PixCoord(0.5, 1), width=4, height=2)  # doctest: +SKIP
     >>> subcube = cube.subcube_from_regions([regpix])  # doctest: +SKIP
-    >>> spectrum = subcube.mean(axis=(1,2))  # doctest: +SKIP
+    >>> spectrum = subcube.mean(axis=(1, 2))  # doctest: +SKIP
+
+To learn more, go to :ref:`reg`.

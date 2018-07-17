@@ -79,6 +79,8 @@ Numpy slicing notation::
 This returns a new :class:`~spectral_cube.SpectralCube` object
 with updated WCS information.
 
+.. _reg:
+
 Extracting a subcube from a DS9/CRTF region
 -------------------------------------------
 
@@ -115,12 +117,12 @@ region to a shape list due to limitations in pyregion::
 You can also directly use a ds9 region string.This extracts
 a 0.1 degree circle around the Galactic Center::
 
-    >>> region_str = "galactic; circle(0,0,0.1)"  # doctest: +SKIP
+    >>> region_str = "galactic; circle(0, 0, 0.1)"  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_ds9region(region_str)  # doctest: +SKIP
 
 Similarly, you can also use a CRTF region string::
 
-    >>> region_str = "circle[[0deg, 0deg] ,0.1deg], coord=galactic"  # doctest: +SKIP
+    >>> region_str = "circle[[0deg, 0deg], 0.1deg], coord=galactic, range=[150km/s, 300km/s]"  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_crtfregion(region_str)  # doctest: +SKIP
 
 Not only a `regions.Region` list extracts the cube in the spatial dimension
