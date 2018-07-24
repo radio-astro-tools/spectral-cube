@@ -226,13 +226,16 @@ def stack_spectra(cube, velocity_surface, v0=None,
     if not np.isclose(vdiff2.value, vdiff.value, rtol=vdiff_tol):
         raise ValueError("Cannot shift spectra on a non-linear axes")
 
-    if (np.any(velocity_surface > cube.spectral_axis.to(vel_unit).max()) or 
-        np.any(velocity_surface < cube.spectral_axis.to(vel_unit).min())):
+    vmax = cube.spectral_axis.to(vel_unit).max()
+    vmin = cube.spectral_axis.to(vel_unit).min()
+
+    if (np.any(velocity_surface > vmax) or 
+        np.any(velocity_surface < vmin)):
         log.warn("Some velocities are outside the allowed range and will be "
                  "masked out.")
         velocity_surface = u.Quantity(np.where(
-            (velocity_surface < cube.spectral_axis.to(vel_unit).max()) & 
-            (velocity_surface > cube.spectral_axis.to(vel_unit).min()),
+            (velocity_surface < vmax) & 
+            (velocity_surface > vmin),
             velocity_surface, np.nan), velocity_surface.unit)
 
     pix_shifts = vdiff_sign * ((velocity_surface.to(vel_unit) -
