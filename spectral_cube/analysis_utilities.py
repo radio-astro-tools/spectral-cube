@@ -5,6 +5,7 @@ from astropy.extern.six.moves import zip
 from astropy.extern.six.moves import range as xrange
 from astropy.wcs import WCS
 from astropy.utils.console import ProgressBar
+from astropy import log
 
 from .cube_utils import _map_context
 from .lower_dimensional_structures import OneDSpectrum
