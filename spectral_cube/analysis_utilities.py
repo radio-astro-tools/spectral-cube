@@ -5,7 +5,9 @@ from astropy.extern.six.moves import zip
 from astropy.extern.six.moves import range as xrange
 from astropy.wcs import WCS
 from astropy.utils.console import ProgressBar
+import warnings
 
+from .utils import BadVelocitiesWarning
 from .cube_utils import _map_context
 from .lower_dimensional_structures import OneDSpectrum
 from .spectral_cube import VaryingResolutionSpectralCube
@@ -224,6 +226,18 @@ def stack_spectra(cube, velocity_surface, v0=None,
     vdiff2 = np.abs(np.diff(cube.spectral_axis[-2:])[0])
     if not np.isclose(vdiff2.value, vdiff.value, rtol=vdiff_tol):
         raise ValueError("Cannot shift spectra on a non-linear axes")
+
+    vmax = cube.spectral_axis.to(vel_unit).max()
+    vmin = cube.spectral_axis.to(vel_unit).min()
+
+    if ((np.any(velocity_surface > vmax) or 
+         np.any(velocity_surface < vmin))):
+        warnings.warn("Some velocities are outside the allowed range and will be "
+                      "masked out.", BadVelocitiesWarning)
+        velocity_surface = u.Quantity(np.where(
+            (velocity_surface < vmax) & 
+            (velocity_surface > vmin),
+            velocity_surface, np.nan), velocity_surface.unit)
 
     pix_shifts = vdiff_sign * ((velocity_surface.to(vel_unit) -
                                 v0.to(vel_unit)) / vdiff).value[xy_posns]

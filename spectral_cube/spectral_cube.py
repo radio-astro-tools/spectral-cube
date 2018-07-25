@@ -660,6 +660,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                        unit=self.unit,
                                        projection=projection,
                                       )
+        elif how == 'slice':
+            raise NotImplementedError('Cannot run mad_std slicewise')
         else:
             return self.apply_numpy_function(stats.mad_std, fill=np.nan,
                                              axis=axis, unit=self.unit,

@@ -1,5 +1,6 @@
 
 import pytest
+import warnings
 import numpy as np
 import astropy.units as u
 # from astropy.modeling import models, fitting
@@ -83,6 +84,41 @@ def test_stacking():
     # The stacked spectrum should have the same spectral axis
     np.testing.assert_allclose(stacked.spectral_axis.value,
                                test_cube.spectral_axis.value)
+
+
+def test_stacking_badvels():
+    '''
+    Regression test for #493: don't include bad velocities when stacking
+    '''
+
+    amp = 1.
+    v0 = 0. * u.km / u.s
+    sigma = 8.
+    noise = None
+    shape = (100, 25, 25)
+
+    test_cube, test_vels = \
+        generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
+                               shape=shape)
+
+    true_spectrum = gaussian(test_cube.spectral_axis.value,
+                             amp, v0.value, sigma)
+
+    test_vels[12,11] = 500*u.km/u.s
+
+    with warnings.catch_warnings(record=True) as wrn:
+        # Stack the spectra in the cube
+        stacked = \
+            stack_spectra(test_cube, test_vels, v0=v0,
+                          stack_function=np.nanmean,
+                          xy_posns=None, num_cores=1,
+                          chunk_size=-1,
+                          progressbar=False, pad_edges=False)
+        assert 'Some velocities are outside the allowed range and will be' in str(wrn[-1].message)
+
+    # Calculate residuals (the one bad value shouldn't have caused a problem)
+    resid = np.abs(stacked.value - true_spectrum)
+    assert np.std(resid) <= 1e-3
 
 
 def test_stacking_reversed_specaxis():
