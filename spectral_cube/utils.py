@@ -90,5 +90,8 @@ class WCSWarning(SpectralCubeWarning):
 class FITSWarning(SpectralCubeWarning):
     pass
 
+class BadVelocitiesWarning(SpectralCubeWarning):
+    pass
+
 class FITSReadError(Exception):
     pass

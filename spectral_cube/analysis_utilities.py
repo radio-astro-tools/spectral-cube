@@ -5,8 +5,9 @@ from astropy.extern.six.moves import zip
 from astropy.extern.six.moves import range as xrange
 from astropy.wcs import WCS
 from astropy.utils.console import ProgressBar
-from astropy import log
+import warnings
 
+from .utils import BadVelocitiesWarning
 from .cube_utils import _map_context
 from .lower_dimensional_structures import OneDSpectrum
 from .spectral_cube import VaryingResolutionSpectralCube
@@ -229,10 +230,10 @@ def stack_spectra(cube, velocity_surface, v0=None,
     vmax = cube.spectral_axis.to(vel_unit).max()
     vmin = cube.spectral_axis.to(vel_unit).min()
 
-    if (np.any(velocity_surface > vmax) or 
-        np.any(velocity_surface < vmin)):
-        log.warn("Some velocities are outside the allowed range and will be "
-                 "masked out.")
+    if ((np.any(velocity_surface > vmax) or 
+         np.any(velocity_surface < vmin))):
+        warnings.warn("Some velocities are outside the allowed range and will be "
+                      "masked out.", BadVelocitiesWarning)
         velocity_surface = u.Quantity(np.where(
             (velocity_surface < vmax) & 
             (velocity_surface > vmin),
@@ -268,7 +269,6 @@ def stack_spectra(cube, velocity_surface, v0=None,
         new_header['CRPIX1'] += -max_neg_shift
 
         pad_size = (-max_neg_shift, max_pos_shift)
-        log.debug(pad_size)
 
     else:
         pad_size = None
