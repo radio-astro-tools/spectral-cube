@@ -280,6 +280,19 @@ class MaskableArrayMixinClass(object):
                               self.unit, copy=False)
         return self.filled_data[:]
 
+    @cube_utils.slice_syntax
+    def unitless_filled_data(self, view):
+        """
+        Return a portion of the data array, with excluded mask values
+        replaced by :meth:`fill_value`.
+
+        Returns
+        -------
+        data : numpy.array
+            The masked data.
+        """
+        return self._get_filled_data(view, fill=self._fill_value)
+
     @property
     def fill_value(self):
         """ The replacement value used by :meth:`filled_data`.
