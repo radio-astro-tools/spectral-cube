@@ -1,5 +1,6 @@
 
 import pytest
+import warnings
 import numpy as np
 import astropy.units as u
 # from astropy.modeling import models, fitting
