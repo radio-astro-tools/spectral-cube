@@ -66,7 +66,7 @@ We can also use a list of `~regions.Region` object to extract a subcube using
 You can convert the ds9 string into `~regions.Region` object using
 `~regions.DS9Parser` or directly read from a file using `~regions.read_ds9`::
 
-    >>> import regions
+    >>> import regions # doctest: +SKIP
     >>> regpix = regions.RectanglePixelRegion(regions.PixCoord(0.5, 1), width=4, height=2)  # doctest: +SKIP
     >>> subcube = cube.subcube_from_regions([regpix])  # doctest: +SKIP
     >>> spectrum = subcube.mean(axis=(1, 2))  # doctest: +SKIP

@@ -96,14 +96,14 @@ extract the cube in the spectral dimension as well.
 This extracts DS9 region(s) from ``file.reg`` file. The `~regions.read_ds9`
 parses the ds9 file and converts it to a list of `~regions.Region` object::
 
-    >>> import regions
+    >>> import regions # doctest: +SKIP
     >>> region_list = regions.read_ds9('file.reg')  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
 
 This extracts CRTF regions from ``file.crtf`` file. The `~regions.read_crtf`
 also returns a list of `~regions.Region` object::
 
-    >>> import regions
+    >>> import regions # doctest: +SKIP
     >>> region_list = regions.read_crtf('file.reg')  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
 
@@ -129,7 +129,7 @@ Not only a `regions.Region` list extracts the cube in the spatial dimension
 but also helps cut through the spectral dimension . The ``meta`` attribute
 of a `regions.Region` object contains spectral information for that region::
 
-    >>> import regions
+    >>> import regions # doctest: +SKIP
     >>> from astropy import units as u
 
     >>> regpix = regions.RectanglePixelRegion(regions.PixCoord(0.5, 1), width=4, height=2)  # doctest: +SKIP
