@@ -97,7 +97,8 @@ def load_casa_image(filename, skipdata=False,
     """
 
     try:
-        from taskinit import ia
+        from taskinit import iatool
+        ia = iatool()
     except ImportError:
         raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
 
