@@ -107,11 +107,11 @@ def load_casa_image(filename, skipdata=False,
 
     # read in the data
     if not skipdata:
-        data = ia.getchunk()
+        data = ia.getchunk().reshape(ia.shape())
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        valid = ia.getchunk(getmask=True)
+        valid = ia.getchunk(getmask=True).reshape(ia.shape())
 
     # transpose is dealt with within the cube object
 
