@@ -156,6 +156,9 @@ def load_casa_image(filename, skipdata=False,
     if wcs.naxis == 3:
         mask = BooleanArrayMask(np.logical_not(valid), wcs)
         cube = SpectralCube(data, wcs, mask, meta=meta)
+        # we've already loaded the cube into memory because of CASA
+        # limitations, so there's no reason to disallow operations
+        cube.allow_huge_operations = True
 
     elif wcs.naxis == 4:
         data, wcs = cube_utils._split_stokes(data.T, wcs)
@@ -167,6 +170,7 @@ def load_casa_image(filename, skipdata=False,
 
             data[component] = SpectralCube(data_, wcs_slice, mask[component],
                                            meta=meta)
+            data[component].allow_huge_operations = True
 
 
         cube = StokesSpectralCube(stokes_data=data)
