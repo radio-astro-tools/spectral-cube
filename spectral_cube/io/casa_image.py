@@ -161,11 +161,14 @@ def load_casa_image(filename, skipdata=False,
         data, wcs = cube_utils._split_stokes(data.T, wcs)
         mask = {}
         for component in data:
-            data[component], wcs_slice = cube_utils._orient(data[component],
-                                                            wcs)
+            data_, wcs_slice = cube_utils._orient(data[component], wcs)
             mask[component] = LazyMask(np.isfinite, data=data[component],
                                        wcs=wcs_slice)
 
-        cube = StokesSpectralCube(data, wcs_slice, mask, meta=meta)
+            data[component] = SpectralCube(data_, wcs_slice, mask[component],
+                                           meta=meta)
+
+
+        cube = StokesSpectralCube(stokes_data=data)
 
     return cube
