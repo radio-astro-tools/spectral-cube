@@ -97,7 +97,8 @@ def load_casa_image(filename, skipdata=False,
     """
 
     try:
-        from taskinit import ia
+        from taskinit import iatool
+        ia = iatool()
     except ImportError:
         raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
 
@@ -106,11 +107,11 @@ def load_casa_image(filename, skipdata=False,
 
     # read in the data
     if not skipdata:
-        data = ia.getchunk()
+        data = ia.getchunk().reshape(ia.shape())
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        valid = ia.getchunk(getmask=True)
+        valid = ia.getchunk(getmask=True).reshape(ia.shape())
 
     # transpose is dealt with within the cube object
 
@@ -155,16 +156,23 @@ def load_casa_image(filename, skipdata=False,
     if wcs.naxis == 3:
         mask = BooleanArrayMask(np.logical_not(valid), wcs)
         cube = SpectralCube(data, wcs, mask, meta=meta)
+        # we've already loaded the cube into memory because of CASA
+        # limitations, so there's no reason to disallow operations
+        cube.allow_huge_operations = True
 
     elif wcs.naxis == 4:
         data, wcs = cube_utils._split_stokes(data.T, wcs)
         mask = {}
         for component in data:
-            data[component], wcs_slice = cube_utils._orient(data[component],
-                                                            wcs)
+            data_, wcs_slice = cube_utils._orient(data[component], wcs)
             mask[component] = LazyMask(np.isfinite, data=data[component],
                                        wcs=wcs_slice)
 
-        cube = StokesSpectralCube(data, wcs_slice, mask, meta=meta)
+            data[component] = SpectralCube(data_, wcs_slice, mask[component],
+                                           meta=meta)
+            data[component].allow_huge_operations = True
+
+
+        cube = StokesSpectralCube(stokes_data=data)
 
     return cube
