@@ -1630,6 +1630,30 @@ def test_mad_std():
 
         np.testing.assert_almost_equal(mcube.mad_std(axis=0).value, result2)
 
+def test_mad_std_params():
+    cube, data = cube_and_raw('adv.fits')
+
+    # mad_std run manually on data
+    result = np.array([[0.15509701,  0.45763670],
+                       [0.55907956,  0.42932451],
+                       [0.48819454,  0.25499305]])
+
+    np.testing.assert_almost_equal(cube.mad_std(axis=0, how='cube').value, result)
+    np.testing.assert_almost_equal(cube.mad_std(axis=0, how='ray').value, result)
+
+    with pytest.raises(NotImplementedError) as exc:
+        cube.mad_std(axis=0, how='slice')
+
+    with pytest.raises(NotImplementedError) as exc:
+        cube.mad_std(axis=1, how='slice')
+
+    with pytest.raises(NotImplementedError) as exc:
+        cube.mad_std(axis=(1,2), how='ray')
+
+    # stats.mad_std(data, axis=(1,2))
+    np.testing.assert_almost_equal(cube.mad_std(axis=0, how='ray').value, result)
+
+
 def test_caching():
 
     cube, data = cube_and_raw('adv.fits')

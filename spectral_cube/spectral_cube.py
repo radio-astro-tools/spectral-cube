@@ -655,13 +655,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         projection = self._naxes_dropped(axis) in (1,2)
         if how == 'ray' and not hasattr(axis, '__len__'):
             # no need for fill here; masked-out data are simply not included
-            return self.apply_function(stats.mad_std,
-                                       axis=axis,
-                                       how='ray',
-                                       unit=self.unit,
-                                       projection=projection,
-                                       ignore_nan=True,
-                                      )
+            return self.apply_numpy_function(stats.mad_std,
+                                             axis=axis,
+                                             how='ray',
+                                             unit=self.unit,
+                                             projection=projection,
+                                             ignore_nan=True,
+                                            )
         elif how == 'slice' and hasattr(axis, '__len__') and len(axis) == 2:
             return self.apply_numpy_function(stats.mad_std,
                                              axis=axis,
