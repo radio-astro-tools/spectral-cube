@@ -41,7 +41,9 @@ from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                           )
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
-                         MaskableArrayMixinClass, MultiBeamMixinClass)
+                         MaskableArrayMixinClass, MultiBeamMixinClass,
+                         HeaderMixinClass
+                        )
 from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
@@ -112,7 +114,8 @@ def _apply_function(arguments, outcube, function, **kwargs):
 np2wcs = {2: 0, 1: 1, 0: 2}
 
 class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
-                       SpectralAxisMixinClass, SpatialCoordMixinClass):
+                       SpectralAxisMixinClass, SpatialCoordMixinClass,
+                       HeaderMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, wcs_tolerance=0.0):
@@ -2321,7 +2324,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def header(self):
         log.debug("Creating header")
 
-        header = super(SpectralCube, self).header()
+        header = super(BaseSpectralCube, self).header
 
         header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
         header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))

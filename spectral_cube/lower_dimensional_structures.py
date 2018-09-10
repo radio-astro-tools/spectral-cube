@@ -21,21 +21,21 @@ from .masks import BooleanArrayMask, MaskBase
 
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          SpatialCoordMixinClass, MaskableArrayMixinClass,
-                         MultiBeamMixinClass
+                         MultiBeamMixinClass, HeaderMixinClass
                         )
 from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
 
 
-class LowerDimensionalObject(u.Quantity, BaseNDClass):
+class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
     """
     Generic class for 1D and 2D objects.
     """
 
     @property
     def header(self):
-        header = super(LowerDimensionalObject, self).header()
+        header = super(LowerDimensionalObject, self).header
 
         header.insert(2, Card(keyword='NAXIS', value=self.ndim))
         for ind,sh in enumerate(self.shape[::-1]):
