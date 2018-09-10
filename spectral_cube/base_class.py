@@ -1,6 +1,9 @@
 from astropy import units as u
 from astropy import log
 import numpy as np
+import warnings
+
+from astropy.io.fits import Card
 
 from . import wcs_utils
 from . import cube_utils
@@ -80,6 +83,13 @@ class HeaderMixinClass(object):
 
         if 'beam' in self._meta:
             header = self._meta['beam'].attach_to_header(header)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            header.insert(2, Card(keyword='NAXIS', value=self.ndim))
+            for ind,sh in enumerate(self.shape[::-1]):
+                header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
+                                          value=sh))
 
         return header
 

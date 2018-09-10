@@ -2326,11 +2326,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         header = super(BaseSpectralCube, self).header
 
-        header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
-        header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
-        header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
-        header.insert(5, Card(keyword='NAXIS3', value=self.shape[0]))
-
         # Preserve the cube's spectral units
         # (if CUNIT3 is not in the header, it is whatever that type's default unit is)
         if 'CUNIT3' in header and self._spectral_unit != u.Unit(header['CUNIT3']):

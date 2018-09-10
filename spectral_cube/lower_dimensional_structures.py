@@ -9,7 +9,7 @@ from astropy import convolution
 from astropy import units as u
 from astropy import wcs
 #from astropy import log
-from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
+from astropy.io.fits import Header, HDUList, PrimaryHDU
 from radio_beam import Beam
 
 from .io.core import determine_format
@@ -32,17 +32,6 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
     """
     Generic class for 1D and 2D objects.
     """
-
-    @property
-    def header(self):
-        header = super(LowerDimensionalObject, self).header
-
-        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
-        for ind,sh in enumerate(self.shape[::-1]):
-            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
-                                      value=sh))
-
-        return header
 
     @property
     def hdu(self):
@@ -746,12 +735,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
     @property
     def header(self):
         header = super(OneDSpectrum, self).header
-
-        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
-
-        for ind,sh in enumerate(self.shape[::-1]):
-            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
-                                      value=sh))
 
         # Preserve the spectrum's spectral units
         if 'CUNIT1' in header and self._spectral_unit != u.Unit(header['CUNIT1']):
