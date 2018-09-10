@@ -2742,8 +2742,9 @@ class SpectralCube(BaseSpectralCube):
         function : function
             The function to apply in the spectral dimension.  It must take
             two arguments: an array representing a spectrum and a boolean array
-            representing the mask.  It may also accept **kwargs.  The function
-            must return an object with the same shape as the input spectrum.
+            representing the mask.  It may also accept ``**kwargs``.  The
+            function must return an object with the same shape as the input
+            spectrum.
         num_cores : int or None
             The number of cores to use if running in parallel
         verbose : int
@@ -2830,7 +2831,9 @@ class SpectralCube(BaseSpectralCube):
         """
         Run astropy's sigma clipper, converting all bad values to NaN
 
-        TODO: Come up with a more friendly masking approach
+        .. TODO::
+            Come up with a more friendly masking approach?  This comment has
+            been edited to say "I don't really know what this means."
         """
 
         return self.apply_function_parallel_spectral(stats.sigma_clip,
