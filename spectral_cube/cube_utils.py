@@ -84,8 +84,8 @@ def _split_stokes(array, wcs):
             if None in types:
                 stokes_index = types.index(None)
                 log.warning("FITS file has no STOKES axis, but it has a blank"
-                         " axis type at index {0} that is assumed to be "
-                         "stokes.".format(4-stokes_index))
+                            " axis type at index {0} that is assumed to be "
+                            "stokes.".format(4-stokes_index))
             else:
                 for ii,tp in enumerate(types):
                     if tp not in ('celestial', 'spectral'):
@@ -93,8 +93,8 @@ def _split_stokes(array, wcs):
                         stokes_type = tp
 
                 log.warning("FITS file has no STOKES axis, but it has an axis"
-                         " of type {1} at index {0} that is assumed to be "
-                         "stokes.".format(4-stokes_index, stokes_type))
+                            " of type {1} at index {0} that is assumed to be "
+                            "stokes.".format(4-stokes_index, stokes_type))
         else:
             raise IOError("There are 4 axes in the data cube but no STOKES "
                           "axis could be identified")
@@ -112,7 +112,7 @@ def _split_stokes(array, wcs):
             array_slice = [i_stokes if idim == stokes_index else slice(None)
                            for idim in range(array.ndim)]
 
-            stokes_arrays[stokes_names[i_stokes]] = array[array_slice]
+            stokes_arrays[stokes_names[i_stokes]] = array[tuple(array_slice)]
     else:
         # 3D array with STOKES as a 4th header parameter
         stokes_arrays['I'] = array
