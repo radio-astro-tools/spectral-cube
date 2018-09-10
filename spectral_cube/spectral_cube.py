@@ -2725,13 +2725,13 @@ class SpectralCube(BaseSpectralCube):
                                                      **kwargs)
 
     def apply_function_parallel_spectral(self,
-                                          function,
-                                          num_cores=None,
-                                          verbose=0,
-                                          use_memmap=True,
-                                          parallel=True,
-                                          **kwargs
-                                         ):
+                                         function,
+                                         num_cores=None,
+                                         verbose=0,
+                                         use_memmap=True,
+                                         parallel=True,
+                                         **kwargs
+                                        ):
         """
         Apply a function in parallel along the spectral dimension.  The
         function will be performed on data with masked values replaced with the
@@ -2872,7 +2872,6 @@ class SpectralCube(BaseSpectralCube):
         """
 
         return self.apply_function_parallel_spectral(convolve,
-                                                     data=self.filled_data,
                                                      kernel=kernel,
                                                      normalize_kernel=True,
                                                      num_cores=num_cores,
