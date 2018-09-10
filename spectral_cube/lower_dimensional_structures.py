@@ -35,22 +35,12 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
 
     @property
     def header(self):
-        header = self._header
-        # This inplace update is OK; it's not bad to overwrite WCS in this
-        # header
-        if self.wcs is not None:
-            header.update(self.wcs.to_header())
-        header['BUNIT'] = self.unit.to_string(format='fits')
-        for keyword in header:
-            if 'NAXIS' in keyword:
-                del header[keyword]
+        header = super(LowerDimensionalObject, self).header()
+
         header.insert(2, Card(keyword='NAXIS', value=self.ndim))
         for ind,sh in enumerate(self.shape[::-1]):
             header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                       value=sh))
-
-        if 'beam' in self.meta:
-            header.update(self.meta['beam'].to_header_keywords())
 
         return header
 
@@ -755,13 +745,10 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     @property
     def header(self):
-        header = self._header
-        # This inplace update is OK; it's not bad to overwrite WCS in this
-        # header
-        if self.wcs is not None:
-            header.update(self.wcs.to_header())
-        header['BUNIT'] = self.unit.to_string(format='fits')
+        header = super(OneDSpectrum, self).header()
+
         header.insert(2, Card(keyword='NAXIS', value=self.ndim))
+
         for ind,sh in enumerate(self.shape[::-1]):
             header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                       value=sh))

@@ -2321,25 +2321,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def header(self):
         log.debug("Creating header")
 
-        header = self._nowcs_header
+        header = super(SpectralCube, self).header()
 
-        # When preserving metadata, copy over keywords before doing the WCS
-        # keyword copying, since those have specific formatting requirements
-        # and will overwrite these in many cases (e.g., BMAJ)
-        for key in self.meta:
-            if isinstance(key, str) and len(key) <= 8:
-                header[key.upper()] = self.meta[key]
-            elif isinstance(key, str) and len(key) > 8:
-                header['COMMENT'] = "{0}={1}".format(key, self.meta[key])
-
-        # Preserve non-WCS information from previous header iteration
-        header.update(self.wcs.to_header())
-        if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
-            # preserve the BUNIT even though it's not technically valid
-            # (Jy/Beam)
-            header['BUNIT'] = self._meta['BUNIT']
-        else:
-            header['BUNIT'] = self.unit.to_string(format='FITS')
         header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
         header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
         header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
@@ -2352,10 +2335,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             header['CRVAL3'] *= self._spectral_scale
             header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
-        if 'beam' in self._meta:
-            header = self._meta['beam'].attach_to_header(header)
-
-        # TODO: incorporate other relevant metadata here
         return header
 
     @property
