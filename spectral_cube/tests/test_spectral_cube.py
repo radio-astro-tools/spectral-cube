@@ -1112,6 +1112,25 @@ def test_preserves_header_values():
     assert proj.header['OBJECT'] == 'TestName'
     assert proj.hdu.header['OBJECT'] == 'TestName'
 
+def test_preserves_header_meta_values():
+    # Check that additional parameters in meta are preserved
+
+    cube, data = cube_and_raw('advs.fits')
+
+    cube.meta['foo'] = 'bar'
+
+    assert cube.header['FOO'] == 'bar'
+
+    proj = cube.sum(axis=0, how='auto')
+    assert isinstance(proj, Projection)
+    assert proj.header['FOO'] == 'bar'
+    assert proj.hdu.header['FOO'] == 'bar'
+
+    cube.meta['too_long_keyword'] = 'too_long_information'
+
+    assert 'too_long_keyword=too_long_information' in cube.header.comments
+
+
 @pytest.mark.parametrize('func',('sum','std','max','min','mean'))
 def test_oned_numpy(func):
     # Check that a numpy function returns an appropriate spectrum

@@ -2320,8 +2320,19 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     @property
     def header(self):
         log.debug("Creating header")
-        # Preserve non-WCS information from previous header iteration
+
         header = self._nowcs_header
+
+        # When preserving metadata, copy over keywords before doing the WCS
+        # keyword copying, since those have specific formatting requirements
+        # and will overwrite these in many cases (e.g., BMAJ)
+        for key in self.meta:
+            if isinstance(key, str) and len(key) <= 8:
+                header[key.upper()] = self.meta[key]
+            elif isinstance(key, str) and len(key) > 8:
+                header['COMMENT'] = "{0}={1}".format(key, self.meta[key])
+
+        # Preserve non-WCS information from previous header iteration
         header.update(self.wcs.to_header())
         if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
             # preserve the BUNIT even though it's not technically valid
@@ -2343,10 +2354,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         if 'beam' in self._meta:
             header = self._meta['beam'].attach_to_header(header)
-
-        for key in self.meta:
-            if isinstance(key, str) and len(key) <= 8:
-                header[key] = self.meta[key]
 
         # TODO: incorporate other relevant metadata here
         return header
