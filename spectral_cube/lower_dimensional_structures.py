@@ -745,7 +745,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     @property
     def header(self):
-        header = super(OneDSpectrum, self).header()
+        header = super(OneDSpectrum, self).header
 
         header.insert(2, Card(keyword='NAXIS', value=self.ndim))
 

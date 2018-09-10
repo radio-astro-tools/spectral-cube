@@ -1128,7 +1128,7 @@ def test_preserves_header_meta_values():
 
     cube.meta['too_long_keyword'] = 'too_long_information'
 
-    assert 'too_long_keyword=too_long_information' in cube.header.comments
+    assert 'too_long_keyword=too_long_information' in cube.header['COMMENT']
 
 
 @pytest.mark.parametrize('func',('sum','std','max','min','mean'))
