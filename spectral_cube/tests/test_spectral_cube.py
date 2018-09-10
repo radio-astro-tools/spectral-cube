@@ -1121,11 +1121,17 @@ def test_preserves_header_meta_values():
 
     assert cube.header['FOO'] == 'bar'
 
+    # Checks that the header is preserved when passed to LDOs
     proj = cube.sum(axis=0, how='auto')
     assert isinstance(proj, Projection)
     assert proj.header['FOO'] == 'bar'
     assert proj.hdu.header['FOO'] == 'bar'
 
+    # make sure that the meta preservation works on the LDOs themselves too
+    proj.meta['bar'] = 'foo'
+    assert proj.header['BAR'] == 'foo'
+
+    # check that long keywords are also preserved
     cube.meta['too_long_keyword'] = 'too_long_information'
 
     assert 'too_long_keyword=too_long_information' in cube.header['COMMENT']
