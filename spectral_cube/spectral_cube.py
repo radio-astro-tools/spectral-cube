@@ -653,18 +653,32 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if int(astropy.__version__[0]) < 2:
             raise NotImplementedError("mad_std requires astropy >= 2")
         projection = self._naxes_dropped(axis) in (1,2)
-        if how == 'ray':
+        if how == 'ray' and not hasattr(axis, '__len__'):
             # no need for fill here; masked-out data are simply not included
-            return self.apply_function(stats.mad_std,
-                                       axis=axis,
-                                       unit=self.unit,
-                                       projection=projection,
-                                      )
-        elif how == 'slice':
-            raise NotImplementedError('Cannot run mad_std slicewise')
+            return self.apply_numpy_function(stats.mad_std,
+                                             axis=axis,
+                                             how='ray',
+                                             unit=self.unit,
+                                             projection=projection,
+                                             ignore_nan=True,
+                                            )
+        elif how == 'slice' and hasattr(axis, '__len__') and len(axis) == 2:
+            return self.apply_numpy_function(stats.mad_std,
+                                             axis=axis,
+                                             how='slice',
+                                             projection=projection,
+                                             unit=self.unit,
+                                             fill=np.nan,
+                                             ignore_nan=True,
+                                             **kwargs)
+        elif how in ('ray', 'slice'):
+            raise NotImplementedError('Cannot run mad_std slicewise or raywise '
+                                      'unless the dimensionality is also reduced in the same direction.')
         else:
-            return self.apply_numpy_function(stats.mad_std, fill=np.nan,
-                                             axis=axis, unit=self.unit,
+            return self.apply_numpy_function(stats.mad_std,
+                                             fill=np.nan,
+                                             axis=axis,
+                                             unit=self.unit,
                                              ignore_nan=True,
                                              how=how,
                                              projection=projection, **kwargs)
