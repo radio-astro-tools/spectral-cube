@@ -2829,11 +2829,21 @@ class SpectralCube(BaseSpectralCube):
     def sigma_clip(self, threshold, verbose=0, use_memmap=True,
                    num_cores=None, **kwargs):
         """
-        Run astropy's sigma clipper, converting all bad values to NaN
+        Run astropy's sigma clipper, converting all bad values to NaN.
 
-        .. TODO::
-            Come up with a more friendly masking approach?  This comment has
-            been edited to say "I don't really know what this means."
+        Parameters
+        ----------
+        threshold : float
+            The ``sigma`` parameter in `astropy.stats.sigma_clip`, which refers
+            to the number of sigma above which to cut.
+        verbose : int
+            Verbosity level to pass to joblib
+        num_cores : int or None
+            The number of cores to use when applying this function in parallel
+            across the cube.
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
         """
 
         return self.apply_function_parallel_spectral(stats.sigma_clip,
