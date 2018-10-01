@@ -83,10 +83,20 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         if format is None:
             format = determine_format(filename)
         if format == 'fits':
-            try:
-                self.hdu.writeto(filename, overwrite=overwrite)
-            except TypeError:
-                self.hdu.writeto(filename, clobber=overwrite)
+            # Spectra may have HDUList objects instead of HDUs because they
+            # have a beam table attached, so we want to try that first
+            # (a more elegant way to write this might be to do "self._hdu_general.write"
+            # and create a property `self._hdu_general` that selects the right one...)
+            if hasattr(self, 'hdulist'):
+                try:
+                    self.hdulist.writeto(filename, overwrite=overwrite)
+                except TypeError:
+                    self.hdulist.writeto(filename, clobber=overwrite)
+            elif hasattr(self, 'hdu'):
+                try:
+                    self.hdu.writeto(filename, overwrite=overwrite)
+                except TypeError:
+                    self.hdu.writeto(filename, clobber=overwrite)
         else:
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
@@ -939,7 +949,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     def _new_spectrum_with(self, data=None, wcs=None, mask=None, meta=None,
                            fill_value=None, spectral_unit=None, unit=None,
-                           header=None, wcs_tolerance=None, **kwargs):
+                           header=None, wcs_tolerance=None, beams=None,
+                           **kwargs):
 
         data = self._data if data is None else data
         if unit is None and hasattr(data, 'unit'):
@@ -976,10 +987,15 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
 
+        if beams is None:
+            if hasattr(self, 'beams'):
+                beams = self.beams
+
         spectrum = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
                                   unit=unit, fill_value=fill_value,
                                   header=header or self._header,
                                   wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                                  beams=beams,
                                   **kwargs)
         spectrum._spectral_unit = spectral_unit
 
