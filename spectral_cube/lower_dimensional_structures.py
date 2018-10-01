@@ -83,10 +83,20 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         if format is None:
             format = determine_format(filename)
         if format == 'fits':
-            try:
-                self.hdulist.writeto(filename, overwrite=overwrite)
-            except TypeError:
-                self.hdulist.writeto(filename, clobber=overwrite)
+            # Spectra may have HDUList objects instead of HDUs because they
+            # have a beam table attached, so we want to try that first
+            # (a more elegant way to write this might be to do "self._hdu_general.write"
+            # and create a property `self._hdu_general` that selects the right one...)
+            if hasattr(self, 'hdulist'):
+                try:
+                    self.hdulist.writeto(filename, overwrite=overwrite)
+                except TypeError:
+                    self.hdulist.writeto(filename, clobber=overwrite)
+            elif hasattr(self, 'hdu'):
+                try:
+                    self.hdu.writeto(filename, overwrite=overwrite)
+                except TypeError:
+                    self.hdu.writeto(filename, clobber=overwrite)
         else:
             raise ValueError("Unknown format '{0}' - the only available "
                              "format at this time is 'fits'")
