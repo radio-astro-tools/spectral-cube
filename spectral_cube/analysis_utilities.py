@@ -89,7 +89,7 @@ def _fourier_shifter(x, shift, axis):
     # m_shape = [1] * x.ndim
     # m_shape[axis] = m.shape[0]
     # m = m.reshape(m_shape)
-    slices = [slice(None) if ii == axis else None for ii in range(x.ndim)]
+    slices = tuple([slice(None) if ii == axis else None for ii in range(x.ndim)])
     m = m[slices]
     phase = np.exp(-2 * np.pi * m * 1j * shift)
     x2 = np.real(np.fft.ifft(ftx * phase, axis=axis))
@@ -230,12 +230,12 @@ def stack_spectra(cube, velocity_surface, v0=None,
     vmax = cube.spectral_axis.to(vel_unit).max()
     vmin = cube.spectral_axis.to(vel_unit).min()
 
-    if ((np.any(velocity_surface > vmax) or 
+    if ((np.any(velocity_surface > vmax) or
          np.any(velocity_surface < vmin))):
         warnings.warn("Some velocities are outside the allowed range and will be "
                       "masked out.", BadVelocitiesWarning)
         velocity_surface = u.Quantity(np.where(
-            (velocity_surface < vmax) & 
+            (velocity_surface < vmax) &
             (velocity_surface > vmin),
             velocity_surface, np.nan), velocity_surface.unit)
 
