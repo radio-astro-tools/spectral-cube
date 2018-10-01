@@ -987,11 +987,15 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
 
+        if beams is None:
+            if hasattr(self, 'beams'):
+                beams = self.beams
+
         spectrum = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
                                   unit=unit, fill_value=fill_value,
                                   header=header or self._header,
                                   wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
-                                  beams=beams or self.beams,
+                                  beams=beams,
                                   **kwargs)
         spectrum._spectral_unit = spectral_unit
 
