@@ -27,6 +27,16 @@ single-resolution :class:`~spectral_cube.SpectralCube` instances, but for a
 :class:`~spectral_cube.VaryingResolutionSpectralCube`, the convolution kernel
 will be different for each slice.
 
+Common Beam selection
+---------------------
+You may want to convolve your cube to the smallest beam that is still larger
+than all contained beams.  To do this, you can use the
+:func:`radio_beam.common_beam.commonbeam` tool.  For example::
+
+    common_beam = cube.beams.common_beam()
+    new_cube = cube.convolve_to(common_beam)
+
+
 Spectral Smoothing
 ==================
 
