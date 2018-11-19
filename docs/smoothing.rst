@@ -36,6 +36,12 @@ than all contained beams.  To do this, you can use the
     common_beam = cube.beams.common_beam()
     new_cube = cube.convolve_to(common_beam)
 
+Sometimes, you'll encounter the error "Could not find common beam to deconvolve
+all beams." This is a real issue, as the algorithms we have in hand so far do
+not always converge on a common containing beam.  You can try to change the
+tolerance used in the `~radio_beam.commonbeam.getMinVolEllipse` code by
+specifying ``tolerance=1e-5`` or a smaller number.  Doing so will slow down the
+code, but may result in convergence.
 
 Spectral Smoothing
 ==================
