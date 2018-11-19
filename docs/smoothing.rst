@@ -28,10 +28,10 @@ single-resolution :class:`~spectral_cube.SpectralCube` instances, but for a
 will be different for each slice.
 
 Common Beam selection
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 You may want to convolve your cube to the smallest beam that is still larger
 than all contained beams.  To do this, you can use the
-:func:`radio_beam.common_beam.commonbeam` tool.  For example::
+:func:`~radio_beam.common_beam.commonbeam` tool.  For example::
 
     common_beam = cube.beams.common_beam()
     new_cube = cube.convolve_to(common_beam)
@@ -39,7 +39,7 @@ than all contained beams.  To do this, you can use the
 Sometimes, you'll encounter the error "Could not find common beam to deconvolve
 all beams." This is a real issue, as the algorithms we have in hand so far do
 not always converge on a common containing beam.  You can try to change the
-tolerance used in the `~radio_beam.commonbeam.getMinVolEllipse` code by
+tolerance used in the :func:`~radio_beam.commonbeam.getMinVolEllipse` code by
 specifying ``tolerance=1e-5`` or a smaller number.  Doing so will slow down the
 code, but may result in convergence.
 
