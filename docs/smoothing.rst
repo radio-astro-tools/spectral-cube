@@ -31,7 +31,7 @@ Common Beam selection
 ^^^^^^^^^^^^^^^^^^^^^
 You may want to convolve your cube to the smallest beam that is still larger
 than all contained beams.  To do this, you can use the
-:func:`~radio_beam.common_beam.commonbeam` tool.  For example::
+`~radio_beam.Beams.common_beam` tool.  For example::
 
     common_beam = cube.beams.common_beam()
     new_cube = cube.convolve_to(common_beam)
@@ -42,7 +42,7 @@ not always converge on a common containing beam. There are two ways to get the
 algorithm to converge to a valid common beam:
 
 1. **Changing the tolerance.** - You can try to change the tolerance used in the
-:func:`~radio_beam.commonbeam.getMinVolEllipse` code by
+`~radio_beam.commonbeam.getMinVolEllipse` code by
 passing ``tolerance=1e-5`` to the common beam function::
 
     cube.beams.common_beam(tolerance=1e-5)
@@ -54,7 +54,7 @@ will require an order of magnitude more iterations for the algorithm to converge
 and will take longer to run.
 
 2. **Changing epsilon** - A second parameter `epsilon` controls the fraction
-to overestimate the beam size, ensuring that soltions that are marginally
+to overestimate the beam size, ensuring that solutions that are marginally
 smaller than the common beam will not be found by the algorithm::
 
     cube.beams.common_beam(epsilon=1e-3)
