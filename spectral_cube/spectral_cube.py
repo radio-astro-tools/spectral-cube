@@ -2446,8 +2446,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def reproject(self, header, order='bilinear'):
         """
-        Reproject the cube into a new header.  Fills the data with the cube's
-        ``fill_value`` to replace bad values before reprojection.
+        Spatially reproject the cube into a new header.  Fills the data with
+        the cube's ``fill_value`` to replace bad values before reprojection.
+
+        If you want to reproject a cube both spatially and spectrally, you need
+        to use `spectral_interpolate` as well.
 
         Parameters
         ----------
