@@ -1,0 +1,11 @@
+name: spectral-cube
+
+channels:
+    - astropy
+
+dependencies:
+    - python=>3
+    - astropy
+    - Cython
+    - matplotlib
+    - numpy
