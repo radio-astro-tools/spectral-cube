@@ -53,18 +53,18 @@ leading to the error. Note that decreasing the tolerance by an order of magnitud
 will require an order of magnitude more iterations for the algorithm to converge
 and will take longer to run.
 
-2. **Changing epsilon** - A second parameter `epsilon` controls the fraction
+2. **Changing epsilon** - A second parameter ``epsilon`` controls the fraction
 to overestimate the beam size, ensuring that solutions that are marginally
 smaller than the common beam will not be found by the algorithm::
 
     cube.beams.common_beam(epsilon=1e-3)
 
-The default value of `epsilon=1e-3` will sample points 0.1% larger than the
-edge of each beam in the set. Increasing `epsilon` ensures that a valid common
+The default value of ``epsilon=1e-3`` will sample points 0.1% larger than the
+edge of each beam in the set. Increasing ``epsilon`` ensures that a valid common
 beam can be found, avoiding the tolerance issue, but will result in
 overestimating the common beam area. For most radio data sets, where the beam
 is oversampled by :math:`\sim\3\mbox{--}5}` pixels, moderate increases in
-`epsilon` will increase the common beam area far less than a pixel area, making
+``epsilon`` will increase the common beam area far less than a pixel area, making
 the overestimation negligible.
 
 We recommend testing different values of tolerance to find convergence, and if
