@@ -3154,7 +3154,7 @@ class SpectralCube(BaseSpectralCube):
                     mask = np.concatenate((self.mask.include(), extension), axis=axis)
             else:
                 crarr = self.filled_data[:]
-                mask = self.mask[:]
+                mask = self.mask.include()
 
             # The extra braces here are crucial: We're adding an extra dimension so we
             # can average across it
@@ -3162,6 +3162,9 @@ class SpectralCube(BaseSpectralCube):
                                             for ii in range(factor)])
 
             dsarr = estimator(stacked_array, axis=0)
+
+            if not isinstance(mask, np.ndarray):
+                raise TypeError("Mask is of wrong data type")
 
             stacked_mask = np.concatenate([[mask[makeslice(ii)]] for ii in
                                            range(factor)])

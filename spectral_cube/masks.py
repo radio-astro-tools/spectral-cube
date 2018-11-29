@@ -1,6 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import abc
+import warnings
 
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
@@ -10,6 +11,7 @@ from astropy.io import fits
 from astropy.extern.six.moves import zip
 
 from . import wcs_utils
+from .utils import WCSWarning
 
 
 __all__ = ['MaskBase', 'InvertedMask', 'CompositeMask', 'BooleanArrayMask',
@@ -485,11 +487,19 @@ class BooleanArrayMask(MaskBase):
             raise ValueError("data shape cannot be broadcast to match mask shape")
         if new_wcs is not None:
             if new_wcs not in self._wcs_whitelist:
-                if not wcs_utils.check_equality(new_wcs, self._wcs,
-                                                warn_missing=True,
-                                                **kwargs):
-                    raise ValueError("WCS does not match mask WCS")
-                else:
+                try:
+                    if not wcs_utils.check_equality(new_wcs, self._wcs,
+                                                    warn_missing=True,
+                                                    **kwargs):
+                        raise ValueError("WCS does not match mask WCS")
+                    else:
+                        self._wcs_whitelist.add(new_wcs)
+                except InconsistentAxisTypesError:
+                    warnings.warn("Inconsistent axis type encountered; WCS is "
+                                  "invalid and therefore will not be checked "
+                                  "against other WCSes.",
+                                  WCSWarning
+                                  )
                     self._wcs_whitelist.add(new_wcs)
 
     def _include(self, data=None, wcs=None, view=()):
