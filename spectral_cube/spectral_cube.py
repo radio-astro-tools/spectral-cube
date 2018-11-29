@@ -2452,6 +2452,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         If you want to reproject a cube both spatially and spectrally, you need
         to use `spectral_interpolate` as well.
 
+        .. note:: The current implementation of ``reproject`` requires that the
+        whole cube be loaded into memory.  Issue #506 notes that this is a
+        problem, and it is on our to-do list to fix.
+
         Parameters
         ----------
         header : `astropy.io.fits.Header`
