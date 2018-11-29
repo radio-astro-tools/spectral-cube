@@ -157,13 +157,14 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         return new
 
     def __array_finalize__(self, obj):
-        #log.debug("Finalizing self={0}{1} obj={2}{3}"
-        #          .format(self, type(self), obj, type(obj)))
         self._wcs = getattr(obj, '_wcs', None)
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
         self._header = getattr(obj, '_header', None)
         self._spectral_unit = getattr(obj, '_spectral_unit', None)
+        self._fill_value = getattr(obj, '_fill_value', np.nan)
+        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
+
         super(LowerDimensionalObject, self).__array_finalize__(obj)
 
     @property
@@ -1031,15 +1032,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             return getattr(self.quantity, attrname)
         else:
             return super(OneDSpectrum, self).__getattribute__(attrname)
-
-    def __array_finalize__(self, obj):
-        #from astropy import log
-        #log.debug("in OneDSpectrum, Finalizing self={0}{1} obj={2}{3}"
-        #          .format(self, type(self), obj, type(obj)))
-        self._fill_value = getattr(obj, '_fill_value', np.nan)
-        self._data = self.view(np.ndarray)
-        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
-        super(OneDSpectrum, self).__array_finalize__(obj)
 
 class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
     pass
