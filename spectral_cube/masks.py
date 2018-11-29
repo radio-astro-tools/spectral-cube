@@ -116,18 +116,18 @@ class MaskBase(object):
 
     # Commented out, but left as a possibility, because including this didn't fix any
     # of the problems we encountered with matplotlib plotting
-    #def view(self, view=()):
-    #    """
-    #    Compatibility tool: if a numpy.ma.ufunc is run on the mask, it will try
-    #    to grab a view of the mask, which needs to appear to numpy as a true
-    #    array.  This can be important for, e.g., plotting.
+    def view(self, view=()):
+        """
+        Compatibility tool: if a numpy.ma.ufunc is run on the mask, it will try
+        to grab a view of the mask, which needs to appear to numpy as a true
+        array.  This can be important for, e.g., plotting.
 
-    #    Numpy's convention is that masked=True means "masked out"
+        Numpy's convention is that masked=True means "masked out"
 
-    #    .. note:: I don't know if there are broader concerns or consequences
-    #    from including this 'view' tool here.
-    #    """
-    #    return self.exclude(view=view)
+        .. note:: I don't know if there are broader concerns or consequences
+        from including this 'view' tool here.
+        """
+        return self.exclude(view=view)
 
     def _validate_wcs(self, new_data=None, new_wcs=None, **kwargs):
         """

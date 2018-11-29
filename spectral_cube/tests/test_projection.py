@@ -564,3 +564,28 @@ def test_beam_jtok_2D():
     Kplane = plane.to(u.K, freq=freq)
     np.testing.assert_almost_equal(Kplane.value,
                                    (plane.value * jtok).value)
+
+def test_basic_arrayness():
+    cube, data = cube_and_raw('adv.fits')
+
+    assert cube.shape == data.shape
+
+    spec = cube[:,0,0]
+
+    assert np.all(np.asanyarray(spec).value == data[:,0,0])
+    assert np.all(np.array(spec) == data[:,0,0])
+    assert np.all(np.asarray(spec) == data[:,0,0])
+    # These are commented out because it is presently not possible to convert
+    # projections to masked arrays
+    # assert np.all(np.ma.asanyarray(spec).value == data[:,0,0])
+    # assert np.all(np.ma.asarray(spec) == data[:,0,0])
+    # assert np.all(np.ma.array(spec) == data[:,0,0])
+
+    slc = cube[0,:,:]
+
+    assert np.all(np.asanyarray(slc).value == data[0,:,:])
+    assert np.all(np.array(slc) == data[0,:,:])
+    assert np.all(np.asarray(slc) == data[0,:,:])
+    # assert np.all(np.ma.asanyarray(slc).value == data[0,:,:])
+    # assert np.all(np.ma.asarray(slc) == data[0,:,:])
+    # assert np.all(np.ma.array(slc) == data[0,:,:])
