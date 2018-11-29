@@ -283,7 +283,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, beam=None,
-                read_beam=False):
+                fill_value=np.nan, read_beam=False):
 
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -296,6 +296,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         self._wcs = wcs
         self._meta = {} if meta is None else meta
         self._mask = mask
+        self._fill_value = fill_value
         if header is not None:
             self._header = header
         else:
