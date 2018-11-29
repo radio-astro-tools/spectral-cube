@@ -3090,7 +3090,7 @@ class SpectralCube(BaseSpectralCube):
         return self.with_mask(goodchannels[:,None,None])
 
 
-    @warn_slow(memmap=True)
+    @warn_slow
     def downsample_axis(self, factor, axis, estimator=np.nanmean,
                         truncate=False, use_memmap=True, progressbar=True):
         """
