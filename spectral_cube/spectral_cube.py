@@ -2718,22 +2718,20 @@ class SpectralCube(BaseSpectralCube):
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        return self._apply_function_parallel_spectral(ndimage.filters.median_filter,
-                                                      data=self.filled_data,
-                                                      size=ksize,
-                                                      num_cores=num_cores,
-                                                      use_memmap=use_memmap,
-                                                      **kwargs)
+        return self.apply_function_parallel_spectral(ndimage.filters.median_filter,
+                                                     size=ksize,
+                                                     num_cores=num_cores,
+                                                     use_memmap=use_memmap,
+                                                     **kwargs)
 
-    def _apply_function_parallel_spectral(self,
-                                          function,
-                                          data,
-                                          num_cores=None,
-                                          verbose=0,
-                                          use_memmap=True,
-                                          parallel=True,
-                                          **kwargs
-                                         ):
+    def apply_function_parallel_spectral(self,
+                                         function,
+                                         num_cores=None,
+                                         verbose=0,
+                                         use_memmap=True,
+                                         parallel=True,
+                                         **kwargs
+                                        ):
         """
         Apply a function in parallel along the spectral dimension.  The
         function will be performed on data with masked values replaced with the
@@ -2744,15 +2742,16 @@ class SpectralCube(BaseSpectralCube):
         function : function
             The function to apply in the spectral dimension.  It must take
             two arguments: an array representing a spectrum and a boolean array
-            representing the mask.  It may also accept **kwargs.  The function
-            must return an object with the same shape as the input spectrum.
+            representing the mask.  It may also accept ``**kwargs``.  The
+            function must return an object with the same shape as the input
+            spectrum.
+        num_cores : int or None
+            The number of cores to use if running in parallel
         verbose : int
             Verbosity level to pass to joblib
         use_memmap : bool
             If specified, a memory mapped temporary file on disk will be
             written to rather than storing the intermediate spectra in memory.
-        num_cores : int or None
-            The number of cores to use if running in parallel
         parallel : bool
             If set to ``False``, will force the use of a single core without
             using ``joblib``.
@@ -2760,6 +2759,8 @@ class SpectralCube(BaseSpectralCube):
             Passed to ``function``
         """
         shape = self.shape
+
+        data = self.unitless_filled_data
 
         # 'spectra' is a generator
         # the boolean check will skip the function for bad spectra
@@ -2825,6 +2826,34 @@ class SpectralCube(BaseSpectralCube):
         return newcube
 
 
+    def sigma_clip(self, threshold, verbose=0, use_memmap=True,
+                   num_cores=None, **kwargs):
+        """
+        Run astropy's sigma clipper, converting all bad values to NaN.
+
+        Parameters
+        ----------
+        threshold : float
+            The ``sigma`` parameter in `astropy.stats.sigma_clip`, which refers
+            to the number of sigma above which to cut.
+        verbose : int
+            Verbosity level to pass to joblib
+        num_cores : int or None
+            The number of cores to use when applying this function in parallel
+            across the cube.
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        """
+
+        return self.apply_function_parallel_spectral(stats.sigma_clip,
+                                                     sigma=threshold,
+                                                     axis=0, # changes behavior of sigmaclip
+                                                     num_cores=num_cores,
+                                                     use_memmap=use_memmap,
+                                                     verbose=verbose,
+                                                     **kwargs)
+
     def spectral_smooth(self, kernel,
                         convolve=convolution.convolve,
                         verbose=0,
@@ -2855,14 +2884,13 @@ class SpectralCube(BaseSpectralCube):
             Passed to the convolve function
         """
 
-        return self._apply_function_parallel_spectral(convolve,
-                                                      data=self.filled_data,
-                                                      kernel=kernel,
-                                                      normalize_kernel=True,
-                                                      num_cores=num_cores,
-                                                      use_memmap=use_memmap,
-                                                      verbose=verbose,
-                                                      **kwargs)
+        return self.apply_function_parallel_spectral(convolve,
+                                                     kernel=kernel,
+                                                     normalize_kernel=True,
+                                                     num_cores=num_cores,
+                                                     use_memmap=use_memmap,
+                                                     verbose=verbose,
+                                                     **kwargs)
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
