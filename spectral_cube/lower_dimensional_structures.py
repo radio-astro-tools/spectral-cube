@@ -179,6 +179,12 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         return np.asarray(self)
 
     @property
+    def _data(self):
+        # the _data property is required by several other mixins
+        # (which probably means defining it here is a bad design)
+        return self.array
+
+    @property
     def quantity(self):
         """
         Get a pure `~astropy.units.Quantity` representation of the LDO.
@@ -278,12 +284,40 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             self._mask = nomask
         return self
 
+    def _initial_set_mask(self, mask):
+        """
+        Helper tool to validate mask when originally setting it in __new__
+
+        Note that because this is intended to be used in __new__, order
+        matters: ``self`` must have ``_wcs``, for example.
+        """
+        if mask is None:
+            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
+                                    self._wcs, shape=self.value.shape)
+        elif isinstance(mask, np.ndarray):
+            if mask.shape != self.value.shape:
+                raise ValueError("Mask shape must match the {0} shape."
+                                 .format(self.__class__.__name__)
+                                )
+            mask = BooleanArrayMask(mask, self._wcs, shape=self.value.shape)
+        elif isinstance(mask, MaskBase):
+            pass
+        else:
+            raise TypeError("mask of type {} is not a supported mask "
+                            "type.".format(type(mask)))
+
+        # Validate the mask before setting
+        mask._validate_wcs(new_data=self.value, new_wcs=self._wcs,
+                           wcs_tolerance=self._wcs_tolerance)
+
+        self._mask = mask
+
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                  MaskableArrayMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, beam=None,
-                fill_value=np.nan, read_beam=False):
+                fill_value=np.nan, read_beam=False, wcs_tolerance=0.0):
 
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -295,7 +329,10 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                                   copy=copy).view(cls)
         self._wcs = wcs
         self._meta = {} if meta is None else meta
-        self._mask = mask
+        self._wcs_tolerance = wcs_tolerance
+
+        self._initial_set_mask(mask)
+
         self._fill_value = fill_value
         if header is not None:
             self._header = header
@@ -597,24 +634,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         self._meta = {} if meta is None else meta
         self._wcs_tolerance = wcs_tolerance
 
-        if mask is None:
-            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
-                                    self._wcs, shape=self.value.shape)
-        elif isinstance(mask, np.ndarray):
-            if mask.shape != self.value.shape:
-                raise ValueError("Mask shape must match the spectrum shape.")
-            mask = BooleanArrayMask(mask, self._wcs, shape=self.value.shape)
-        elif isinstance(mask, MaskBase):
-            pass
-        else:
-            raise TypeError("mask of type {} is not a supported mask "
-                            "type.".format(type(mask)))
+        self._initial_set_mask(mask)
 
-        # Validate the mask before setting
-        mask._validate_wcs(new_data=self.value, new_wcs=self._wcs,
-                           wcs_tolerance=self._wcs_tolerance)
-
-        self._mask = mask
         self._fill_value = fill_value
         if header is not None:
             self._header = header
@@ -631,10 +652,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
         if beams is not None:
             self.beams = beams
-
-        # HACK: OneDSpectrum should eventually become not-a-quantity
-        # Maybe it should be a u.Quantity(np.ma)?
-        self._data = self.value
 
         return self
 
