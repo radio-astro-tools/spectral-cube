@@ -278,7 +278,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             self._mask = nomask
         return self
 
-class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
+class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
+                 MaskableArrayMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, beam=None,

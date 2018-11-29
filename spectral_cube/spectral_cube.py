@@ -3039,7 +3039,12 @@ class SpectralCube(BaseSpectralCube):
             update_function = pb.update
 
         newdata = np.empty(self.shape)
-        for ii,img in enumerate(self.filled_data[:]):
+        for ii in range(self.shape[0]):
+
+            # load each image from a slice to avoid loading whole cube into
+            # memory
+            img = self[ii,:,:].filled_data[:]
+
             newdata[ii,:,:] = convolve(img, convolution_kernel,
                                        normalize_kernel=True, **kwargs)
             update_function()
@@ -3143,15 +3148,15 @@ class SpectralCube(BaseSpectralCube):
 
             # The extra braces here are crucial: We're adding an extra dimension so we
             # can average across it
-            stacked_array = np.concatenate([[crarr[makeslice(ii)]] for ii in
-                                               range(factor)])
+            stacked_array = np.concatenate([[crarr[makeslice(ii)]]
+                                            for ii in range(factor)])
 
             dsarr = estimator(stacked_array, axis=0)
 
             stacked_mask = np.concatenate([[mask[makeslice(ii)]] for ii in
                                            range(factor)])
 
-            mask = np.any(stacked_array, axis=0)
+            mask = np.any(stacked_mask, axis=0)
         else:
             def makeslice_local(startpoint, axis=axis, nsteps=factor):
                 # make empty slices
@@ -3161,8 +3166,8 @@ class SpectralCube(BaseSpectralCube):
                 return view
 
             newshape = list(self.shape)
-            newshape[axis] = (newshape[axis]//factor + ((1-int(truncate))
-                                                        * (xs % int(factor) != 0)))
+            newshape[axis] = (newshape[axis]//factor +
+                              ((1-int(truncate)) * (xs % int(factor) != 0)))
             newshape = tuple(newshape)
 
             if progressbar:
@@ -3785,8 +3790,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             update_function = pb.update
 
         newdata = np.empty(self.shape)
-        for ii,(img,kernel) in enumerate(zip(self.filled_data[:],
-                                             convolution_kernels)):
+        for ii,kernel in enumerate(convolution_kernels):
+
+            # load each image from a slice to avoid loading whole cube into
+            # memory
+            img = self[ii,:,:].filled_data[:]
+
             # Kernel can only be None when `allow_smaller` is True,
             # or if the beams are equal. Only the latter is really valid.
             if kernel is None:
