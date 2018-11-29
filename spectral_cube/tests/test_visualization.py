@@ -22,7 +22,11 @@ def test_proj_imshow():
     plt = pytest.importorskip('matplotlib.pyplot')
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
     mom0 = cube.moment0()
-    plt.imshow(mom0)
+    if int(plt.matplotlib.__version__[0]) < 2:
+        # imshow is now only compatible with more recent versions of matplotlib
+        plt.imshow(mom0.value)
+    else:
+        plt.imshow(mom0)
 
 
 def test_projvis_aplpy():
