@@ -20,7 +20,7 @@ def cached(func):
 
     return wrapper
 
-def warn_slow(function):
+def warn_slow(function, memmap=False):
 
     @wraps(function)
     def wrapper(self, *args, **kwargs):
@@ -31,8 +31,14 @@ def warn_slow(function):
                              "cube into memory, and the cube is large ({1} "
                              "pixels), so by default we disable this operation. "
                              "To enable the operation, set "
-                             "`cube.allow_huge_operations=True` and try again."
-                             .format(str(function), self.size))
+                             "`cube.allow_huge_operations=True` and try again.{2}"
+                             .format(str(function), self.size,
+                                     "  Note that specifying ``use_memmap=True`` "
+                                     "(which is set by default) "
+                                     "for this function may help prevent "
+                                     "MemoryErrors."
+                                     if memmap else ""
+                                    ))
         elif warn_how and not self._is_huge:
             # TODO: add check for whether cube has been loaded into memory
             warnings.warn("This function ({0}) requires loading the entire cube into "

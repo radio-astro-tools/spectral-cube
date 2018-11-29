@@ -2453,7 +2453,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         If you want to reproject a cube both spatially and spectrally, you need
         to use `spectral_interpolate` as well.
 
-        .. note:: The current implementation of ``reproject`` requires that the
+        .. warning:: The current implementation of ``reproject`` requires that the
         whole cube be loaded into memory.  Issue #506 notes that this is a
         problem, and it is on our to-do list to fix.
 
@@ -3011,9 +3011,14 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
+    @warn_slow
     def convolve_to(self, beam, convolve=convolution.convolve_fft, update_function=None, **kwargs):
         """
         Convolve each channel in the cube to a specified beam
+
+        .. warning:: The current implementation of ``convolve_to`` creates an
+        in-memory copy of the whole cube to store the convolved data.  Issue
+        #506 notes that this is a problem, and it is on our to-do list to fix.
 
         Parameters
         ----------
@@ -3085,7 +3090,7 @@ class SpectralCube(BaseSpectralCube):
         return self.with_mask(goodchannels[:,None,None])
 
 
-    @warn_slow
+    @warn_slow(memmap=True)
     def downsample_axis(self, factor, axis, estimator=np.nanmean,
                         truncate=False, use_memmap=True, progressbar=True):
         """
@@ -3724,11 +3729,16 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         return HDUList([hdu, bmhdu])
 
+    @warn_slow
     def convolve_to(self, beam, allow_smaller=False,
                     convolve=convolution.convolve_fft,
                     update_function=None):
         """
         Convolve each channel in the cube to a specified beam
+
+        .. warning:: The current implementation of ``convolve_to`` creates an
+        in-memory copy of the whole cube to store the convolved data.  Issue
+        #506 notes that this is a problem, and it is on our to-do list to fix.
 
         .. warning::
             Note that if there is any misaligment between the cube's spatial
