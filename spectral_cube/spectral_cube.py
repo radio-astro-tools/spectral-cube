@@ -2444,6 +2444,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return result
 
+    @warn_slow
     def reproject(self, header, order='bilinear'):
         """
         Spatially reproject the cube into a new header.  Fills the data with
