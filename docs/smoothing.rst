@@ -27,6 +27,51 @@ single-resolution :class:`~spectral_cube.SpectralCube` instances, but for a
 :class:`~spectral_cube.VaryingResolutionSpectralCube`, the convolution kernel
 will be different for each slice.
 
+Common Beam selection
+^^^^^^^^^^^^^^^^^^^^^
+You may want to convolve your cube to the smallest beam that is still larger
+than all contained beams.  To do this, you can use the
+`~radio_beam.Beams.common_beam` tool.  For example::
+
+    common_beam = cube.beams.common_beam()
+    new_cube = cube.convolve_to(common_beam)
+
+Sometimes, you'll encounter the error "Could not find common beam to deconvolve
+all beams." This is a real issue, as the algorithms we have in hand so far do
+not always converge on a common containing beam. There are two ways to get the
+algorithm to converge to a valid common beam:
+
+1. **Changing the tolerance.** - You can try to change the tolerance used in the
+`~radio_beam.commonbeam.getMinVolEllipse` code by
+passing ``tolerance=1e-5`` to the common beam function::
+
+    cube.beams.common_beam(tolerance=1e-5)
+
+Convergence may be met by either increasing or decreasing the tolerance; it
+depends on having the algorithm not step within the minimum enclosing ellipse,
+leading to the error. Note that decreasing the tolerance by an order of magnitude
+will require an order of magnitude more iterations for the algorithm to converge
+and will take longer to run.
+
+2. **Changing epsilon** - A second parameter ``epsilon`` controls the fraction
+to overestimate the beam size, ensuring that solutions that are marginally
+smaller than the common beam will not be found by the algorithm::
+
+    cube.beams.common_beam(epsilon=1e-3)
+
+The default value of ``epsilon=1e-3`` will sample points 0.1% larger than the
+edge of each beam in the set. Increasing ``epsilon`` ensures that a valid common
+beam can be found, avoiding the tolerance issue, but will result in
+overestimating the common beam area. For most radio data sets, where the beam
+is oversampled by :math:`\sim\3\mbox{--}5}` pixels, moderate increases in
+``epsilon`` will increase the common beam area far less than a pixel area, making
+the overestimation negligible.
+
+We recommend testing different values of tolerance to find convergence, and if
+the error persists, to then slowly increase epsilon until a valid common beam is
+found. More information can be found in the
+`radio-beam documentation <https://radio-beam.readthedocs.io/en/latest/>`_.
+
 Spectral Smoothing
 ==================
 
