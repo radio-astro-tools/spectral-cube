@@ -46,7 +46,7 @@ matrix:
         - python: 3.6 # (travis doesn't support py3.7 natively) use py3.7 because it may not have this bug? https://github.com/pytest-dev/pytest/issues/2854
           env: SETUP_CMD='test --coverage'
                PYTHON_VERSION=3.7
-               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest=3.9.3 pytest-xdist astropy-helpers joblib'
+               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers joblib'
                # pytest 3.9.3 suggested by @e-koch, @astrofrog.  3.10.1 doesn't work, 4.x doesn't work
                # overrode python version too, per bsipocz
 
