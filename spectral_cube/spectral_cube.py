@@ -93,7 +93,7 @@ def aggregation_docstring(func):
     wrapper.__doc__ += _NP_DOC
     return wrapper
 
-def _apply_function(arguments, outcube, function, **kwargs):
+def _apply_spectral_function(arguments, outcube, function, **kwargs):
     """
     Helper function to apply a function to a spectrum.
     Needs to be declared toward the top of the code to allow pickling by
@@ -105,6 +105,19 @@ def _apply_function(arguments, outcube, function, **kwargs):
         outcube[:,jj,ii] = function(spec, **kwargs)
     else:
         outcube[:,jj,ii] = spec
+
+def _apply_spatial_function(arguments, outcube, function, **kwargs):
+    """
+    Helper function to apply a function to a spectrum.
+    Needs to be declared toward the top of the code to allow pickling by
+    joblib.
+    """
+    (img, includemask, ii) = arguments
+
+    if any(includemask):
+        outcube[ii, :, :] = function(img, **kwargs)
+    else:
+        outcube[ii, :, :] = img
 
 
 # convenience structures to keep track of the reversed index
@@ -2734,6 +2747,150 @@ class SpectralCube(BaseSpectralCube):
                                                      use_memmap=use_memmap,
                                                      **kwargs)
 
+    def _apply_function_parallel_base(self,
+                                      iteration_data,
+                                      function,
+                                      applicator,
+                                      num_cores=None,
+                                      verbose=0,
+                                      use_memmap=True,
+                                      parallel=True,
+                                      **kwargs
+                                     ):
+        """
+        Apply a function in parallel using the ``applicator`` function.  The
+        function will be performed on data with masked values replaced with the
+        cube's fill value.
+
+        Parameters
+        ----------
+        iteration_data : generator
+            The data to be iterated over in the format expected by ``applicator``
+        function : function
+            The function to apply in the spectral dimension.  It must take
+            two arguments: an array representing a spectrum and a boolean array
+            representing the mask.  It may also accept ``**kwargs``.  The
+            function must return an object with the same shape as the input
+            spectrum.
+        applicator : function
+            Either ``_apply_spatial_function`` or ``_apply_spectral_function``,
+            a tool to handle the iteration data and send it to the ``function``
+            appropriately.
+        num_cores : int or None
+            The number of cores to use if running in parallel
+        verbose : int
+            Verbosity level to pass to joblib
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        parallel : bool
+            If set to ``False``, will force the use of a single core without
+            using ``joblib``.
+        kwargs : dict
+            Passed to ``function``
+        """
+
+        if use_memmap:
+            ntf = tempfile.NamedTemporaryFile()
+            outcube = np.memmap(ntf, mode='w+', shape=shape, dtype=np.float)
+        else:
+            if self._is_huge and not self.allow_huge_operations:
+                raise ValueError("Applying a function without ``use_memmap`` "
+                                 "requires loading the whole array into "
+                                 "memory *twice*, which can overload the "
+                                 "machine's memory for large cubes.  Either "
+                                 "set ``use_memmap=True`` or set "
+                                 "``cube.allow_huge_operations=True`` to "
+                                 "override this restriction.")
+            outcube = np.empty(shape=shape, dtype=np.float)
+
+        if parallel and use_memmap:
+            # it is not possible to run joblib parallelization without memmap
+            try:
+                from joblib import Parallel, delayed
+
+                Parallel(n_jobs=num_cores,
+                         verbose=verbose,
+                         max_nbytes=None)(delayed(applicator)(arg, outcube,
+                                                              function,
+                                                              **kwargs)
+                                          for arg in iteration_data)
+            except ImportError:
+                if num_cores is not None and num_cores > 1:
+                    warnings.warn("Could not import joblib.  Will run in serial.",
+                                  warnings.ImportWarning)
+                parallel = False
+
+        # this isn't an else statement because we want to catch the case where
+        # the above clause fails on ImportError
+        if not parallel or not use_memmap:
+            if verbose > 0:
+                progressbar = ProgressBar(self.shape[1]*self.shape[2])
+                pbu = progressbar.update
+            else:
+                pbu = object
+
+            for arg in iteration_data:
+                applicator(arg, outcube, function, **kwargs)
+                pbu()
+
+
+        # TODO: do something about the mask?
+        newcube = self._new_cube_with(data=outcube, wcs=self.wcs,
+                                      mask=self.mask, meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
+
+    def apply_function_parallel_spatial(self,
+                                        function,
+                                        num_cores=None,
+                                        verbose=0,
+                                        use_memmap=True,
+                                        parallel=True,
+                                        **kwargs
+                                       ):
+        """
+        Apply a function in parallel along the spatial dimension.  The
+        function will be performed on data with masked values replaced with the
+        cube's fill value.
+
+        Parameters
+        ----------
+        function : function
+            The function to apply in the spatial dimension.  It must take
+            two arguments: an array representing an image and a boolean array
+            representing the mask.  It may also accept ``**kwargs``.  The
+            function must return an object with the same shape as the input
+            spectrum.
+        num_cores : int or None
+            The number of cores to use if running in parallel
+        verbose : int
+            Verbosity level to pass to joblib
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        parallel : bool
+            If set to ``False``, will force the use of a single core without
+            using ``joblib``.
+        kwargs : dict
+            Passed to ``function``
+        """
+        shape = self.shape
+
+        data = self.unitless_filled_data
+
+        # 'images' is a generator
+        # the boolean check will skip the function for bad spectra
+        images = ((data[ii,:,:],
+                   self.mask.include(view=(ii, slice(None), slice(None))),
+                   ii,
+                   )
+                  for ii in range(shape[0]))
+
+        return self._apply_function_parallel_base(images, function,
+                                                  applicator=_apply_spatial_function)
+
     def apply_function_parallel_spectral(self,
                                          function,
                                          num_cores=None,
@@ -2782,59 +2939,9 @@ class SpectralCube(BaseSpectralCube):
                    for jj in range(shape[1])
                    for ii in range(shape[2]))
 
-        if use_memmap:
-            ntf = tempfile.NamedTemporaryFile()
-            outcube = np.memmap(ntf, mode='w+', shape=shape, dtype=np.float)
-        else:
-            if self._is_huge and not self.allow_huge_operations:
-                raise ValueError("Applying a function without ``use_memmap`` "
-                                 "requires loading the whole array into "
-                                 "memory *twice*, which can overload the "
-                                 "machine's memory for large cubes.  Either "
-                                 "set ``use_memmap=True`` or set "
-                                 "``cube.allow_huge_operations=True`` to "
-                                 "override this restriction.")
-            outcube = np.empty(shape=shape, dtype=np.float)
-
-        if parallel and use_memmap:
-            # it is not possible to run joblib parallelization without memmap
-            try:
-                from joblib import Parallel, delayed
-
-                Parallel(n_jobs=num_cores,
-                         verbose=verbose,
-                         max_nbytes=None)(delayed(_apply_function)(arg,
-                                                                   outcube,
-                                                                   function,
-                                                                   **kwargs)
-                                          for arg in spectra)
-            except ImportError:
-                if num_cores is not None and num_cores > 1:
-                    warnings.warn("Could not import joblib.  Will run in serial.",
-                                  warnings.ImportWarning)
-                parallel = False
-
-        # this isn't an else statement because we want to catch the case where
-        # the above clause fails on ImportError
-        if not parallel or not use_memmap:
-            if verbose > 0:
-                progressbar = ProgressBar(self.shape[1]*self.shape[2])
-                pbu = progressbar.update
-            else:
-                pbu = object
-
-            for arg in spectra:
-                _apply_function(arg, outcube, function, **kwargs)
-                pbu()
-
-
-        # TODO: do something about the mask?
-        newcube = self._new_cube_with(data=outcube, wcs=self.wcs,
-                                      mask=self.mask, meta=self.meta,
-                                      fill_value=self.fill_value)
-
-        return newcube
-
+        return self._apply_function_parallel_base(iteration_data=spectra,
+                                                  function=function,
+                                                  applicator=_apply_spectral_function)
 
     def sigma_clip(self, threshold, verbose=0, use_memmap=True,
                    num_cores=None, **kwargs):
