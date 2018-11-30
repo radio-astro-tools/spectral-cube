@@ -170,9 +170,21 @@ def test_wcs_slice_unmatched_celestial():
     wcs = WCS(naxis=3)
     wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
     wcs.wcs.crpix = [50., 45., 30.]
+
+    # drop RA
     with warnings.catch_warnings(record=True) as wrn:
-        warnings.simplefilter('default')
-        wcs_new = slice_wcs(wcs, (slice(10,20), slice(None), slice(20,30)))
+        wcs_new = drop_axis(wcs, 0)
 
     assert 'is being removed' in str(wrn[-1].message)
-    np.testing.assert_allclose(wcs_new.wcs.crpix, [30., 45., 20.])
+
+    # drop Dec
+    with warnings.catch_warnings(record=True) as wrn:
+        wcs_new = drop_axis(wcs, 1)
+
+    assert 'is being removed' in str(wrn[-1].message)
+
+    with warnings.catch_warnings(record=True) as wrn:
+        wcs_new = slice_wcs(wcs, (slice(10,20), 0, slice(20,30)),
+                            drop_degenerate=True)
+
+    assert 'is being removed' in str(wrn[-1].message)
