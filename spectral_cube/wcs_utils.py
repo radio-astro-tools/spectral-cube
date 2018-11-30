@@ -214,6 +214,7 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True,
             keeps = [mywcs.naxis-ii
                      for ii,ind in enumerate(view)
                      if isinstance(ind, slice)]
+            keeps.sort()
             mywcs = mywcs.sub(keeps)
             view = [x for x in view if isinstance(x, slice)]
         else:
