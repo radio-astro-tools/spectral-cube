@@ -2453,9 +2453,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         If you want to reproject a cube both spatially and spectrally, you need
         to use `spectral_interpolate` as well.
 
-        .. warning:: The current implementation of ``reproject`` requires that the
-        whole cube be loaded into memory.  Issue #506 notes that this is a
-        problem, and it is on our to-do list to fix.
+        .. warning::
+            The current implementation of ``reproject`` requires that the whole
+            cube be loaded into memory.  Issue #506 notes that this is a
+            problem, and it is on our to-do list to fix.
 
         Parameters
         ----------
@@ -3016,9 +3017,10 @@ class SpectralCube(BaseSpectralCube):
         """
         Convolve each channel in the cube to a specified beam
 
-        .. warning:: The current implementation of ``convolve_to`` creates an
-        in-memory copy of the whole cube to store the convolved data.  Issue
-        #506 notes that this is a problem, and it is on our to-do list to fix.
+        .. warning::
+            The current implementation of ``convolve_to`` creates an in-memory
+            copy of the whole cube to store the convolved data.  Issue #506
+            notes that this is a problem, and it is on our to-do list to fix.
 
         Parameters
         ----------
@@ -3739,9 +3741,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         """
         Convolve each channel in the cube to a specified beam
 
-        .. warning:: The current implementation of ``convolve_to`` creates an
-        in-memory copy of the whole cube to store the convolved data.  Issue
-        #506 notes that this is a problem, and it is on our to-do list to fix.
+        .. warning::
+            The current implementation of ``convolve_to`` creates an in-memory
+            copy of the whole cube to store the convolved data.  Issue #506
+            notes that this is a problem, and it is on our to-do list to fix.
 
         .. warning::
             Note that if there is any misaligment between the cube's spatial
