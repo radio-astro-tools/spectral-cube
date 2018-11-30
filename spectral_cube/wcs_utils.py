@@ -242,18 +242,20 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True,
             keeps.sort()
             try:
                 mywcs = mywcs.sub(keeps)
-            except InconsistentAxisTypesError:
-                for ct in mywcs.celestial.wcs.ctype:
-                    match = list(mywcs.wcs.ctype).index(ct)
-                    prj =mywcs.wcs.ctype[match].split("-")[-1]
-                    mywcs.wcs.ctype[match] = mywcs.wcs.ctype[match].split("-")[0]
+            except InconsistentAxisTypesError as ex:
+                # make a copy of the WCS because we need to modify it inplace
+                wcscp = mywcs.deepcopy()
+                for ct in wcscp.celestial.wcs.ctype:
+                    match = list(wcscp.wcs.ctype).index(ct)
+                    prj = wcscp.wcs.ctype[match].split("-")[-1]
+                    wcscp.wcs.ctype[match] = wcscp.wcs.ctype[match].split("-")[0]
                     warnings.warn("Slicing across a celestial axis results "
                                   "in an invalid WCS, so the celestial "
                                   "projection ({0}) is being removed.  "
                                   "The view used was {1}."
                                   .format(prj, view),
                                   WCSWarning)
-                mywcs = mywcs.sub(keeps)
+                mywcs = wcscp.sub(keeps)
             view = [x for x in view if isinstance(x, slice)]
         else:
             raise ValueError("Cannot downsample a WCS with indexing.  Use "
