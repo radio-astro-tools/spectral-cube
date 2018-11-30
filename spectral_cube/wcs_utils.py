@@ -5,6 +5,7 @@ from astropy.wcs import WCS
 import warnings
 from astropy import units as u
 from astropy import log
+from astropy.wcs import InconsistentAxisTypesError
 
 from .utils import WCSWarning
 
@@ -13,6 +14,12 @@ wcs_parameters_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
                               'obsgeo', 'phi0', 'radesys', 'restfrq',
                               'restwav', 'specsys', 'ssysobs', 'ssyssrc',
                               'theta0', 'velangl', 'velosys', 'zsource']
+
+wcs_projections = {"AZP", "SZP", "TAN", "STG", "SIN", "ARC", "ZPN", "ZEA",
+                   "AIR", "CYP", "CEA", "CAR", "MER", "COP", "COE", "COD",
+                   "COO", "SFL", "PAR", "MOL", "AIT", "BON", "PCO", "TSC",
+                   "CSC", "QSC", "HPX", "XPH"}
+
 # not writable:
 # 'lat', 'lng', 'lattyp', 'lngtyp',
 
@@ -138,6 +145,21 @@ def reindex_wcs(wcs, inds):
     outwcs.wcs.cname = [wcs.wcs.cname[i] for i in inds]
     outwcs.wcs.pc = pc[inds[:, None], inds[None, :]]
 
+
+    matched_projections = [prj for prj in wcs_projections if any(prj in x for x in outwcs.wcs.ctype)]
+    matchproj_count = [sum(prj in x for x in outwcs.wcs.ctype) for prj in matched_projections]
+    if any(n == 1 for n in matchproj_count):
+        # unmatched celestial axes = there is only one of them
+        for prj in matched_projections:
+            match = [prj in ct for ct in outwcs.wcs.ctype].index(True)
+            outwcs.wcs.ctype[match] = outwcs.wcs.ctype[match].split("-")[0]
+            warnings.warn("Slicing across a celestial axis results "
+                          "in an invalid WCS, so the celestial "
+                          "projection ({0}) is being removed.  "
+                          "The WCS indices being kept were {1}."
+                          .format(prj, inds),
+                          WCSWarning)
+
     pv_cards = []
     for i, j in enumerate(inds):
         for k, m, v in wcs.wcs.get_pv():
@@ -151,6 +173,9 @@ def reindex_wcs(wcs, inds):
             if k == j:
                 ps_cards.append((i, m, v))
     outwcs.wcs.set_ps(ps_cards)
+
+
+    outwcs.wcs.set()
 
     return outwcs
 
@@ -215,7 +240,20 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True,
                      for ii,ind in enumerate(view)
                      if isinstance(ind, slice)]
             keeps.sort()
-            mywcs = mywcs.sub(keeps)
+            try:
+                mywcs = mywcs.sub(keeps)
+            except InconsistentAxisTypesError:
+                for ct in mywcs.celestial.wcs.ctype:
+                    match = list(mywcs.wcs.ctype).index(ct)
+                    prj =mywcs.wcs.ctype[match].split("-")[-1]
+                    mywcs.wcs.ctype[match] = mywcs.wcs.ctype[match].split("-")[0]
+                    warnings.warn("Slicing across a celestial axis results "
+                                  "in an invalid WCS, so the celestial "
+                                  "projection ({0}) is being removed.  "
+                                  "The view used was {1}."
+                                  .format(prj, view),
+                                  WCSWarning)
+                mywcs = mywcs.sub(keeps)
             view = [x for x in view if isinstance(x, slice)]
         else:
             raise ValueError("Cannot downsample a WCS with indexing.  Use "
