@@ -2792,7 +2792,7 @@ class SpectralCube(BaseSpectralCube):
 
         if use_memmap:
             ntf = tempfile.NamedTemporaryFile()
-            outcube = np.memmap(ntf, mode='w+', shape=shape, dtype=np.float)
+            outcube = np.memmap(ntf, mode='w+', shape=self.shape, dtype=np.float)
         else:
             if self._is_huge and not self.allow_huge_operations:
                 raise ValueError("Applying a function without ``use_memmap`` "
@@ -2802,7 +2802,7 @@ class SpectralCube(BaseSpectralCube):
                                  "set ``use_memmap=True`` or set "
                                  "``cube.allow_huge_operations=True`` to "
                                  "override this restriction.")
-            outcube = np.empty(shape=shape, dtype=np.float)
+            outcube = np.empty(shape=self.shape, dtype=np.float)
 
         if parallel and use_memmap:
             # it is not possible to run joblib parallelization without memmap
