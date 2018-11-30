@@ -43,7 +43,7 @@ matrix:
 
         # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
-        - python: 3.6
+        - python: 3.7
           env: SETUP_CMD='test --coverage'
                CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers joblib'
 
