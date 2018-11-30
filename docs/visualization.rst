@@ -27,7 +27,6 @@ you could do::
 
 to plot a spectrum sliced out of the cube or::
 
-
     >>> plt.imshow(cube[0,:,:]) # doctest: +SKIP
 
 to plot an image slice. 
