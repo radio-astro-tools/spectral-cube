@@ -34,7 +34,7 @@ to plot an image slice.
 .. warning:: 
 
    There are known incompatibilities with the above plotting approach:
-   matplotlib versions ``<2`` will crash, and you will have to clear the plot
+   matplotlib versions ``<2.1`` will crash, and you will have to clear the plot
    window to reset it.
 
 
