@@ -378,6 +378,65 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
         return self
 
+    def with_fill_value(self, fill_value):
+        """
+        Create a new :class:`Projection` or :class:`Slice` with a different
+        ``fill_value``.
+        """
+        return self._new_projection_with(fill_value=fill_value)
+
+    def _new_projection_with(self, data=None, wcs=None, mask=None, meta=None,
+                             fill_value=None, spectral_unit=None, unit=None,
+                             header=None, wcs_tolerance=None, beam=None,
+                             **kwargs):
+
+        data = self._data if data is None else data
+        if unit is None and hasattr(data, 'unit'):
+            if data.unit != self.unit:
+                raise u.UnitsError("New data unit '{0}' does not"
+                                   " match unit '{1}'.  You can"
+                                   " override this by specifying the"
+                                   " `unit` keyword."
+                                   .format(data.unit, self.unit))
+            unit = data.unit
+        elif unit is None:
+            unit = self.unit
+        elif unit is not None:
+            # convert string units to Units
+            if not isinstance(unit, u.Unit):
+                unit = u.Unit(unit)
+
+            if hasattr(data, 'unit'):
+                if u.Unit(unit) != data.unit:
+                    raise u.UnitsError("The specified new cube unit '{0}' "
+                                       "does not match the input unit '{1}'."
+                                       .format(unit, data.unit))
+            else:
+                data = u.Quantity(data, unit=unit, copy=False)
+
+        wcs = self._wcs if wcs is None else wcs
+        mask = self._mask if mask is None else mask
+        if meta is None:
+            meta = {}
+            meta.update(self._meta)
+        if unit is not None:
+            meta['BUNIT'] = unit.to_string(format='FITS')
+
+        fill_value = self._fill_value if fill_value is None else fill_value
+
+        if beam is None:
+            if hasattr(self, 'beam'):
+                beam = self.beam
+
+        newproj = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
+                                 unit=unit, fill_value=fill_value,
+                                 header=header or self._header,
+                                 wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                                 beams=beam,
+                                 **kwargs)
+
+        return newproj
+
     @property
     def beam(self):
         return self._beam

@@ -23,12 +23,12 @@ latest used plot window.
 In principle, one can also simply plot the data.  For example, if you have a cube,
 you could do::
 
-    >>> plt.plot(cube[:,0,0])
+    >>> plt.plot(cube[:,0,0]) # doctest: +SKIP
 
 to plot a spectrum sliced out of the cube or::
 
 
-    >>> plt.imshow(cube[0,:,:])
+    >>> plt.imshow(cube[0,:,:]) # doctest: +SKIP
 
 to plot an image slice. 
 
