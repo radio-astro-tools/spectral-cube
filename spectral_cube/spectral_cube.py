@@ -1170,6 +1170,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
             return Slice(value=self.filled_data[view],
+                         mask=self.mask[view],
                          wcs=newwcs,
                          copy=False,
                          unit=self.unit,
