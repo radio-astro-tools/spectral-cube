@@ -2889,7 +2889,8 @@ class SpectralCube(BaseSpectralCube):
                   for ii in range(shape[0]))
 
         return self._apply_function_parallel_base(images, function,
-                                                  applicator=_apply_spatial_function)
+                                                  applicator=_apply_spatial_function,
+                                                  **kwargs)
 
     def apply_function_parallel_spectral(self,
                                          function,
@@ -2941,7 +2942,9 @@ class SpectralCube(BaseSpectralCube):
 
         return self._apply_function_parallel_base(iteration_data=spectra,
                                                   function=function,
-                                                  applicator=_apply_spectral_function)
+                                                  applicator=_apply_spectral_function,
+                                                  **kwargs
+                                                 )
 
     def sigma_clip(self, threshold, verbose=0, use_memmap=True,
                    num_cores=None, **kwargs):
