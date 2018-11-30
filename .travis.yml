@@ -43,9 +43,13 @@ matrix:
 
         # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
-        - python: 3.6
-          env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers joblib'
+        ## COVERAGE TESTS DISABLED: they don't work any more.  I have found no combination of anything that fixes this.
+        #- python: 3.6 # (travis doesn't support py3.7 natively) use py3.7 because it may not have this bug? https://github.com/pytest-dev/pytest/issues/2854
+        #  env: SETUP_CMD='test --coverage'
+        #       PYTHON_VERSION=3.7
+        #       CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers joblib'
+        #       # pytest 3.9.3 suggested by @e-koch, @astrofrog.  3.10.1 doesn't work, 4.x doesn't work
+        #       # overrode python version too, per bsipocz
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time

@@ -69,6 +69,7 @@ Getting started
    spectral_extraction.rst
    continuum_subtraction.rst
    examples.rst
+   visualization.rst
 
 Advanced
 ^^^^^^^^

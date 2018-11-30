@@ -367,6 +367,37 @@ def test_projection_subimage_nocelestial_fail():
 
     assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
 
+
+@pytest.mark.parametrize('LDO', LDOs_2d)
+def test_twod_input_mask_type(LDO):
+
+    test_wcs = WCS(naxis=2)
+    test_wcs.wcs.cunit = ["deg", "deg"]
+    test_wcs.wcs.ctype = ["RA---SIN", 'DEC--SIN']
+
+    np_mask = np.ones(twelve_qty_2d.shape, dtype=bool)
+    np_mask[1] = False
+    bool_mask = BooleanArrayMask(np_mask, wcs=test_wcs,
+                                 shape=np_mask.shape)
+
+    # numpy array
+    p = LDO(twelve_qty_2d, wcs=test_wcs,
+            mask=np_mask)
+    assert (p.mask.include() == bool_mask.include()).all()
+
+    # MaskBase
+    p = LDO(twelve_qty_2d, wcs=test_wcs,
+            mask=bool_mask)
+    assert (p.mask.include() == bool_mask.include()).all()
+
+    # No mask
+    ones_mask = BooleanArrayMask(np.ones(twelve_qty_2d.shape, dtype=bool),
+                                 wcs=test_wcs, shape=np_mask.shape)
+    p = LDO(twelve_qty_2d, wcs=test_wcs,
+            mask=None)
+    assert (p.mask.include() == ones_mask.include()).all()
+
+
 @pytest.mark.xfail
 def test_mask_convolve():
     # Numpy is fundamentally incompatible with the objects we have created.
@@ -564,3 +595,28 @@ def test_beam_jtok_2D():
     Kplane = plane.to(u.K, freq=freq)
     np.testing.assert_almost_equal(Kplane.value,
                                    (plane.value * jtok).value)
+
+def test_basic_arrayness():
+    cube, data = cube_and_raw('adv.fits')
+
+    assert cube.shape == data.shape
+
+    spec = cube[:,0,0]
+
+    assert np.all(np.asanyarray(spec).value == data[:,0,0])
+    assert np.all(np.array(spec) == data[:,0,0])
+    assert np.all(np.asarray(spec) == data[:,0,0])
+    # These are commented out because it is presently not possible to convert
+    # projections to masked arrays
+    # assert np.all(np.ma.asanyarray(spec).value == data[:,0,0])
+    # assert np.all(np.ma.asarray(spec) == data[:,0,0])
+    # assert np.all(np.ma.array(spec) == data[:,0,0])
+
+    slc = cube[0,:,:]
+
+    assert np.all(np.asanyarray(slc).value == data[0,:,:])
+    assert np.all(np.array(slc) == data[0,:,:])
+    assert np.all(np.asarray(slc) == data[0,:,:])
+    # assert np.all(np.ma.asanyarray(slc).value == data[0,:,:])
+    # assert np.all(np.ma.asarray(slc) == data[0,:,:])
+    # assert np.all(np.ma.array(slc) == data[0,:,:])

@@ -32,7 +32,7 @@ def warn_slow(function):
                              "pixels), so by default we disable this operation. "
                              "To enable the operation, set "
                              "`cube.allow_huge_operations=True` and try again."
-                             .format(str(function), self.size))
+                             .format(str(function), self.size,))
         elif warn_how and not self._is_huge:
             # TODO: add check for whether cube has been loaded into memory
             warnings.warn("This function ({0}) requires loading the entire cube into "

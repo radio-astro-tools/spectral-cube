@@ -1170,6 +1170,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
             return Slice(value=self.filled_data[view],
+                         mask=self.mask[view],
                          wcs=newwcs,
                          copy=False,
                          unit=self.unit,
@@ -2444,6 +2445,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return result
 
+    @warn_slow
     def reproject(self, header, order='bilinear'):
         """
         Spatially reproject the cube into a new header.  Fills the data with
@@ -2451,6 +2453,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         If you want to reproject a cube both spatially and spectrally, you need
         to use `spectral_interpolate` as well.
+
+        .. warning::
+            The current implementation of ``reproject`` requires that the whole
+            cube be loaded into memory.  Issue #506 notes that this is a
+            problem, and it is on our to-do list to fix.
 
         Parameters
         ----------
@@ -3006,9 +3013,15 @@ class SpectralCube(BaseSpectralCube):
 
         return newcube
 
+    @warn_slow
     def convolve_to(self, beam, convolve=convolution.convolve_fft, update_function=None, **kwargs):
         """
         Convolve each channel in the cube to a specified beam
+
+        .. warning::
+            The current implementation of ``convolve_to`` creates an in-memory
+            copy of the whole cube to store the convolved data.  Issue #506
+            notes that this is a problem, and it is on our to-do list to fix.
 
         Parameters
         ----------
@@ -3039,7 +3052,12 @@ class SpectralCube(BaseSpectralCube):
             update_function = pb.update
 
         newdata = np.empty(self.shape)
-        for ii,img in enumerate(self.filled_data[:]):
+        for ii in range(self.shape[0]):
+
+            # load each image from a slice to avoid loading whole cube into
+            # memory
+            img = self[ii,:,:].filled_data[:]
+
             newdata[ii,:,:] = convolve(img, convolution_kernel,
                                        normalize_kernel=True, **kwargs)
             update_function()
@@ -3139,19 +3157,22 @@ class SpectralCube(BaseSpectralCube):
                     mask = np.concatenate((self.mask.include(), extension), axis=axis)
             else:
                 crarr = self.filled_data[:]
-                mask = self.mask[:]
+                mask = self.mask.include()
 
             # The extra braces here are crucial: We're adding an extra dimension so we
             # can average across it
-            stacked_array = np.concatenate([[crarr[makeslice(ii)]] for ii in
-                                               range(factor)])
+            stacked_array = np.concatenate([[crarr[makeslice(ii)]]
+                                            for ii in range(factor)])
 
             dsarr = estimator(stacked_array, axis=0)
+
+            if not isinstance(mask, np.ndarray):
+                raise TypeError("Mask is of wrong data type")
 
             stacked_mask = np.concatenate([[mask[makeslice(ii)]] for ii in
                                            range(factor)])
 
-            mask = np.any(stacked_array, axis=0)
+            mask = np.any(stacked_mask, axis=0)
         else:
             def makeslice_local(startpoint, axis=axis, nsteps=factor):
                 # make empty slices
@@ -3161,8 +3182,8 @@ class SpectralCube(BaseSpectralCube):
                 return view
 
             newshape = list(self.shape)
-            newshape[axis] = (newshape[axis]//factor + ((1-int(truncate))
-                                                        * (xs % int(factor) != 0)))
+            newshape[axis] = (newshape[axis]//factor +
+                              ((1-int(truncate)) * (xs % int(factor) != 0)))
             newshape = tuple(newshape)
 
             if progressbar:
@@ -3714,11 +3735,17 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         return HDUList([hdu, bmhdu])
 
+    @warn_slow
     def convolve_to(self, beam, allow_smaller=False,
                     convolve=convolution.convolve_fft,
                     update_function=None):
         """
         Convolve each channel in the cube to a specified beam
+
+        .. warning::
+            The current implementation of ``convolve_to`` creates an in-memory
+            copy of the whole cube to store the convolved data.  Issue #506
+            notes that this is a problem, and it is on our to-do list to fix.
 
         .. warning::
             Note that if there is any misaligment between the cube's spatial
@@ -3785,8 +3812,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             update_function = pb.update
 
         newdata = np.empty(self.shape)
-        for ii,(img,kernel) in enumerate(zip(self.filled_data[:],
-                                             convolution_kernels)):
+        for ii,kernel in enumerate(convolution_kernels):
+
+            # load each image from a slice to avoid loading whole cube into
+            # memory
+            img = self[ii,:,:].filled_data[:]
+
             # Kernel can only be None when `allow_smaller` is True,
             # or if the beams are equal. Only the latter is really valid.
             if kernel is None:

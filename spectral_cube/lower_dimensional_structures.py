@@ -157,13 +157,14 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         return new
 
     def __array_finalize__(self, obj):
-        #log.debug("Finalizing self={0}{1} obj={2}{3}"
-        #          .format(self, type(self), obj, type(obj)))
         self._wcs = getattr(obj, '_wcs', None)
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
         self._header = getattr(obj, '_header', None)
         self._spectral_unit = getattr(obj, '_spectral_unit', None)
+        self._fill_value = getattr(obj, '_fill_value', np.nan)
+        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
+
         super(LowerDimensionalObject, self).__array_finalize__(obj)
 
     @property
@@ -177,6 +178,12 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
         and using numpy indexing tricks.
         """
         return np.asarray(self)
+
+    @property
+    def _data(self):
+        # the _data property is required by several other mixins
+        # (which probably means defining it here is a bad design)
+        return self.array
 
     @property
     def quantity(self):
@@ -278,11 +285,40 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass):
             self._mask = nomask
         return self
 
-class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
+    def _initial_set_mask(self, mask):
+        """
+        Helper tool to validate mask when originally setting it in __new__
+
+        Note that because this is intended to be used in __new__, order
+        matters: ``self`` must have ``_wcs``, for example.
+        """
+        if mask is None:
+            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
+                                    self._wcs, shape=self.value.shape)
+        elif isinstance(mask, np.ndarray):
+            if mask.shape != self.value.shape:
+                raise ValueError("Mask shape must match the {0} shape."
+                                 .format(self.__class__.__name__)
+                                )
+            mask = BooleanArrayMask(mask, self._wcs, shape=self.value.shape)
+        elif isinstance(mask, MaskBase):
+            pass
+        else:
+            raise TypeError("mask of type {} is not a supported mask "
+                            "type.".format(type(mask)))
+
+        # Validate the mask before setting
+        mask._validate_wcs(new_data=self.value, new_wcs=self._wcs,
+                           wcs_tolerance=self._wcs_tolerance)
+
+        self._mask = mask
+
+class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
+                 MaskableArrayMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, beam=None,
-                read_beam=False):
+                fill_value=np.nan, read_beam=False, wcs_tolerance=0.0):
 
         if np.asarray(value).ndim != 2:
             raise ValueError("value should be a 2-d array")
@@ -294,7 +330,11 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
                                   copy=copy).view(cls)
         self._wcs = wcs
         self._meta = {} if meta is None else meta
-        self._mask = mask
+        self._wcs_tolerance = wcs_tolerance
+
+        self._initial_set_mask(mask)
+
+        self._fill_value = fill_value
         if header is not None:
             self._header = header
         else:
@@ -337,6 +377,65 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass):
                           beam=beam)
 
         return self
+
+    def with_fill_value(self, fill_value):
+        """
+        Create a new :class:`Projection` or :class:`Slice` with a different
+        ``fill_value``.
+        """
+        return self._new_projection_with(fill_value=fill_value)
+
+    def _new_projection_with(self, data=None, wcs=None, mask=None, meta=None,
+                             fill_value=None, spectral_unit=None, unit=None,
+                             header=None, wcs_tolerance=None, beam=None,
+                             **kwargs):
+
+        data = self._data if data is None else data
+        if unit is None and hasattr(data, 'unit'):
+            if data.unit != self.unit:
+                raise u.UnitsError("New data unit '{0}' does not"
+                                   " match unit '{1}'.  You can"
+                                   " override this by specifying the"
+                                   " `unit` keyword."
+                                   .format(data.unit, self.unit))
+            unit = data.unit
+        elif unit is None:
+            unit = self.unit
+        elif unit is not None:
+            # convert string units to Units
+            if not isinstance(unit, u.Unit):
+                unit = u.Unit(unit)
+
+            if hasattr(data, 'unit'):
+                if u.Unit(unit) != data.unit:
+                    raise u.UnitsError("The specified new cube unit '{0}' "
+                                       "does not match the input unit '{1}'."
+                                       .format(unit, data.unit))
+            else:
+                data = u.Quantity(data, unit=unit, copy=False)
+
+        wcs = self._wcs if wcs is None else wcs
+        mask = self._mask if mask is None else mask
+        if meta is None:
+            meta = {}
+            meta.update(self._meta)
+        if unit is not None:
+            meta['BUNIT'] = unit.to_string(format='FITS')
+
+        fill_value = self._fill_value if fill_value is None else fill_value
+
+        if beam is None:
+            if hasattr(self, 'beam'):
+                beam = self.beam
+
+        newproj = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
+                                 unit=unit, fill_value=fill_value,
+                                 header=header or self._header,
+                                 wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                                 beams=beam,
+                                 **kwargs)
+
+        return newproj
 
     @property
     def beam(self):
@@ -595,24 +694,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         self._meta = {} if meta is None else meta
         self._wcs_tolerance = wcs_tolerance
 
-        if mask is None:
-            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
-                                    self._wcs, shape=self.value.shape)
-        elif isinstance(mask, np.ndarray):
-            if mask.shape != self.value.shape:
-                raise ValueError("Mask shape must match the spectrum shape.")
-            mask = BooleanArrayMask(mask, self._wcs, shape=self.value.shape)
-        elif isinstance(mask, MaskBase):
-            pass
-        else:
-            raise TypeError("mask of type {} is not a supported mask "
-                            "type.".format(type(mask)))
+        self._initial_set_mask(mask)
 
-        # Validate the mask before setting
-        mask._validate_wcs(new_data=self.value, new_wcs=self._wcs,
-                           wcs_tolerance=self._wcs_tolerance)
-
-        self._mask = mask
         self._fill_value = fill_value
         if header is not None:
             self._header = header
@@ -629,10 +712,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
         if beams is not None:
             self.beams = beams
-
-        # HACK: OneDSpectrum should eventually become not-a-quantity
-        # Maybe it should be a u.Quantity(np.ma)?
-        self._data = self.value
 
         return self
 
@@ -1012,15 +1091,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             return getattr(self.quantity, attrname)
         else:
             return super(OneDSpectrum, self).__getattribute__(attrname)
-
-    def __array_finalize__(self, obj):
-        #from astropy import log
-        #log.debug("in OneDSpectrum, Finalizing self={0}{1} obj={2}{3}"
-        #          .format(self, type(self), obj, type(obj)))
-        self._fill_value = getattr(obj, '_fill_value', np.nan)
-        self._data = self.view(np.ndarray)
-        self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
-        super(OneDSpectrum, self).__array_finalize__(obj)
 
 class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
     pass
