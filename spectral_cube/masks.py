@@ -124,8 +124,9 @@ class MaskBase(object):
 
         Numpy's convention is that masked=True means "masked out"
 
-        .. note:: I don't know if there are broader concerns or consequences
-        from including this 'view' tool here.
+        .. note::
+            I don't know if there are broader concerns or consequences from
+            including this 'view' tool here.
         """
         return self.exclude(view=view)
 
