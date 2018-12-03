@@ -107,15 +107,16 @@ also returns a list of `~regions.Region` object::
     >>> region_list = regions.read_crtf('file.reg')  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
 
-If you want to loop over individual regions with a single region file, you need to convert the individual
-region to a shape list due to limitations in pyregion::
+If you want to loop over individual regions with a single region file, you need
+to convert the individual region to a shape list due to limitations in
+pyregion::
 
     >>> region_list = regions.read_ds9('file.reg')  #doctest: +SKIP
     >>> for region in region_list: #doctest: +SKIP
     >>>     sub_cube = cube.subcube_regions([region]) #doctest: +SKIP
     
-You can also directly use a ds9 region string.This extracts
-a 0.1 degree circle around the Galactic Center::
+You can also directly use a ds9 region string.  This example extracts a 0.1
+degree circle around the Galactic Center::
 
     >>> region_str = "galactic; circle(0, 0, 0.1)"  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_ds9region(region_str)  # doctest: +SKIP
@@ -125,9 +126,10 @@ Similarly, you can also use a CRTF region string::
     >>> region_str = "circle[[0deg, 0deg], 0.1deg], coord=galactic, range=[150km/s, 300km/s]"  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_crtfregion(region_str)  # doctest: +SKIP
 
-Not only a `regions.Region` list extracts the cube in the spatial dimension
-but also helps cut through the spectral dimension . The ``meta`` attribute
-of a `regions.Region` object contains spectral information for that region::
+CRTF regions that specify a subset in the spectral dimension can be used to
+produce full 3D cutouts.  The ``meta`` attribute of a `regions.Region` object
+contains the spectral information for that region in the three special keywords
+``range``, ``restfreq``, and ``veltype``::
 
     >>> import regions # doctest: +SKIP
     >>> from astropy import units as u
@@ -137,6 +139,9 @@ of a `regions.Region` object contains spectral information for that region::
     >>> regpix.meta['restfreq'] = [100 * u.GHz] # rest frequency # doctest: +SKIP
     >>> regpix.meta['veltype'] = 'OPTICAL' # velocity convention # doctest: +SKIP
     >>> subcube = cube.subcube_from_regions([regpix])  # doctest: +SKIP
+
+If ``range`` is specified, but the other two keywords are not, the code will
+likely crash.
 
 Extract the minimal valid subcube
 ---------------------------------
