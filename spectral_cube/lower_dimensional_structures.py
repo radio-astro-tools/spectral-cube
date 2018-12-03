@@ -9,7 +9,7 @@ from astropy import convolution
 from astropy import units as u
 from astropy import wcs
 #from astropy import log
-from astropy.io.fits import Header, Card, HDUList, PrimaryHDU
+from astropy.io.fits import Header, HDUList, PrimaryHDU
 from radio_beam import Beam
 
 from .io.core import determine_format
@@ -21,38 +21,17 @@ from .masks import BooleanArrayMask, MaskBase
 
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          SpatialCoordMixinClass, MaskableArrayMixinClass,
-                         MultiBeamMixinClass
+                         MultiBeamMixinClass, HeaderMixinClass
                         )
 from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
 
 
-class LowerDimensionalObject(u.Quantity, BaseNDClass):
+class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
     """
     Generic class for 1D and 2D objects.
     """
-
-    @property
-    def header(self):
-        header = self._header
-        # This inplace update is OK; it's not bad to overwrite WCS in this
-        # header
-        if self.wcs is not None:
-            header.update(self.wcs.to_header())
-        header['BUNIT'] = self.unit.to_string(format='fits')
-        for keyword in header:
-            if 'NAXIS' in keyword:
-                del header[keyword]
-        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
-        for ind,sh in enumerate(self.shape[::-1]):
-            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
-                                      value=sh))
-
-        if 'beam' in self.meta:
-            header.update(self.meta['beam'].to_header_keywords())
-
-        return header
 
     @property
     def hdu(self):
@@ -755,16 +734,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     @property
     def header(self):
-        header = self._header
-        # This inplace update is OK; it's not bad to overwrite WCS in this
-        # header
-        if self.wcs is not None:
-            header.update(self.wcs.to_header())
-        header['BUNIT'] = self.unit.to_string(format='fits')
-        header.insert(2, Card(keyword='NAXIS', value=self.ndim))
-        for ind,sh in enumerate(self.shape[::-1]):
-            header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
-                                      value=sh))
+        header = super(OneDSpectrum, self).header
 
         # Preserve the spectrum's spectral units
         if 'CUNIT1' in header and self._spectral_unit != u.Unit(header['CUNIT1']):

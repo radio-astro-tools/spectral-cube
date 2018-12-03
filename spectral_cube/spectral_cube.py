@@ -41,7 +41,9 @@ from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                           )
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
-                         MaskableArrayMixinClass, MultiBeamMixinClass)
+                         MaskableArrayMixinClass, MultiBeamMixinClass,
+                         HeaderMixinClass
+                        )
 from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
@@ -112,7 +114,8 @@ def _apply_function(arguments, outcube, function, **kwargs):
 np2wcs = {2: 0, 1: 1, 0: 2}
 
 class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
-                       SpectralAxisMixinClass, SpatialCoordMixinClass):
+                       SpectralAxisMixinClass, SpatialCoordMixinClass,
+                       HeaderMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, wcs_tolerance=0.0):
@@ -2320,19 +2323,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     @property
     def header(self):
         log.debug("Creating header")
-        # Preserve non-WCS information from previous header iteration
-        header = self._nowcs_header
-        header.update(self.wcs.to_header())
-        if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
-            # preserve the BUNIT even though it's not technically valid
-            # (Jy/Beam)
-            header['BUNIT'] = self._meta['BUNIT']
-        else:
-            header['BUNIT'] = self.unit.to_string(format='FITS')
-        header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
-        header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
-        header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
-        header.insert(5, Card(keyword='NAXIS3', value=self.shape[0]))
+
+        header = super(BaseSpectralCube, self).header
 
         # Preserve the cube's spectral units
         # (if CUNIT3 is not in the header, it is whatever that type's default unit is)
@@ -2341,10 +2333,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             header['CRVAL3'] *= self._spectral_scale
             header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
-        if 'beam' in self._meta:
-            header = self._meta['beam'].attach_to_header(header)
-
-        # TODO: incorporate other relevant metadata here
         return header
 
     @property
