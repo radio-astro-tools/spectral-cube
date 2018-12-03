@@ -79,31 +79,65 @@ Numpy slicing notation::
 This returns a new :class:`~spectral_cube.SpectralCube` object
 with updated WCS information.
 
-Extracting a subcube from a ds9 region
---------------------------------------
+.. _reg:
 
-Starting with spectral_cube v0.2, you can use ds9 regions to extract subcubes.
-The minimal enclosing subcube will be extracted with a two-dimensional mask
-corresponding to the ds9 region.  `pyregion
-<http://leejjoon.github.io/pyregion/>`_ is required for region parsing::
+Extracting a subcube from a DS9/CRTF region
+-------------------------------------------
 
-    >>> region_list = pyregion.open('file.reg')  # doctest: +SKIP
-    >>> sub_cube = cube.subcube_from_ds9region(region_list)  # doctest: +SKIP
+Starting with spectral_cube v0.2, you can use `DS9
+<http://ds9.si.edu/doc/ref/region.html>`_/`CRTF
+<https://casaguides.nrao.edu/index.php/CASA_Region_Format>`_ regions to extract
+subcubes. The minimal enclosing subcube will be extracted with a two-dimensional
+mask corresponding to the DS9/CRTF region.  `Regions
+<https://astropy-regions.readthedocs.io/en/latest/>`_ is required for region
+parsing. The CRTF region may also contain spectral information which helps to
+extract the cube in the spectral dimension as well.
+
+This extracts DS9 region(s) from ``file.reg`` file. The `~regions.read_ds9`
+parses the ds9 file and converts it to a list of `~regions.Region` object::
+
+    >>> import regions # doctest: +SKIP
+    >>> region_list = regions.read_ds9('file.reg')  # doctest: +SKIP
+    >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
+
+This extracts CRTF regions from ``file.crtf`` file. The `~regions.read_crtf`
+also returns a list of `~regions.Region` object::
+
+    >>> import regions # doctest: +SKIP
+    >>> region_list = regions.read_crtf('file.reg')  # doctest: +SKIP
+    >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
 
 If you want to loop over individual regions with a single region file, you need to convert the individual
 region to a shape list due to limitations in pyregion::
 
-  >>> region_list = pyregion.open('file.reg')  #doctest: +SKIP
-  >>> for region in region_list: #doctest: +SKIP
-  >>>     sub_cube = cube.subcube_from_ds9region(pyregion.ShapeList([region])) #doctest: +SKIP
+    >>> region_list = regions.read_ds9('file.reg')  #doctest: +SKIP
+    >>> for region in region_list: #doctest: +SKIP
+    >>>     sub_cube = cube.subcube_regions([region]) #doctest: +SKIP
     
-You can also create a region on the fly using ds9 region syntax.  This extracts
+You can also directly use a ds9 region string.This extracts
 a 0.1 degree circle around the Galactic Center::
 
-    >>> region_list = pyregion.parse("galactic; circle(0,0,0.1)")  # doctest: +SKIP
-    >>> sub_cube = cube.subcube_from_ds9region(region_list)  # doctest: +SKIP
+    >>> region_str = "galactic; circle(0, 0, 0.1)"  # doctest: +SKIP
+    >>> sub_cube = cube.subcube_from_ds9region(region_str)  # doctest: +SKIP
 
-    
+Similarly, you can also use a CRTF region string::
+
+    >>> region_str = "circle[[0deg, 0deg], 0.1deg], coord=galactic, range=[150km/s, 300km/s]"  # doctest: +SKIP
+    >>> sub_cube = cube.subcube_from_crtfregion(region_str)  # doctest: +SKIP
+
+Not only a `regions.Region` list extracts the cube in the spatial dimension
+but also helps cut through the spectral dimension . The ``meta`` attribute
+of a `regions.Region` object contains spectral information for that region::
+
+    >>> import regions # doctest: +SKIP
+    >>> from astropy import units as u
+
+    >>> regpix = regions.RectanglePixelRegion(regions.PixCoord(0.5, 1), width=4, height=2)  # doctest: +SKIP
+    >>> regpix.meta['range'] = [150 * u.km/u.s, 300 * u.km/u.s] # spectral range # doctest: +SKIP
+    >>> regpix.meta['restfreq'] = [100 * u.GHz] # rest frequency # doctest: +SKIP
+    >>> regpix.meta['veltype'] = 'OPTICAL' # velocity convention # doctest: +SKIP
+    >>> subcube = cube.subcube_from_regions([regpix])  # doctest: +SKIP
+
 Extract the minimal valid subcube
 ---------------------------------
 

@@ -1839,7 +1839,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.subcube_from_regions(region_list, allow_empty)
 
-    def subcube_from_crtf(self, crtf_region, allow_empty=False):
+    def subcube_from_crtfregion(self, crtf_region, allow_empty=False):
         """
         Extract a masked subcube from a CRTF region.
 
