@@ -291,7 +291,8 @@ class MaskableArrayMixinClass(object):
     Mixin class for maskable arrays
     """
 
-    def _get_filled_data(self, view=(), fill=np.nan, check_endian=False):
+    def _get_filled_data(self, view=(), fill=np.nan, check_endian=False,
+                         use_memmap=True):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -313,7 +314,9 @@ class MaskableArrayMixinClass(object):
             return data[view]
 
         return self._mask._filled(data=data, wcs=self._wcs, fill=fill,
-                                  view=view, wcs_tolerance=self._wcs_tolerance)
+                                  view=view, wcs_tolerance=self._wcs_tolerance,
+                                  use_memmap=use_memmap
+                                 )
 
     @cube_utils.slice_syntax
     def filled_data(self, view):

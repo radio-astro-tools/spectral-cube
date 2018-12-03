@@ -2,6 +2,7 @@ from __future__ import print_function, absolute_import, division
 
 import abc
 import warnings
+import tempfile
 
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
@@ -183,7 +184,8 @@ class MaskBase(object):
         """
         return data[view][self.include(data=data, wcs=wcs, view=view)]
 
-    def _filled(self, data, wcs=None, fill=np.nan, view=(), **kwargs):
+    def _filled(self, data, wcs=None, fill=np.nan, view=(), use_memmap=True,
+                **kwargs):
         """
         Replace the excluded elements of *array* with *fill*.
 
@@ -195,6 +197,8 @@ class MaskBase(object):
             Replacement value
         view : tuple, optional
             Any slicing to apply to the data before flattening
+        use_memmap : bool
+            Use a memory map to store the output data?
 
         Returns
         -------
@@ -209,7 +213,14 @@ class MaskBase(object):
         # Must convert to floating point, but should not change from inherited
         # type otherwise
         dt = np.find_common_type([data.dtype], [np.float])
-        sliced_data = data[view].astype(dt)
+
+        if use_memmap:
+            ntf = tempfile.NamedTemporaryFile()
+            sliced_data = np.memmap(ntf, mode='w+', shape=data[view].shape,
+                                    dtype=dt)
+        else:
+            sliced_data = data[view].astype(dt)
+
         ex = self.exclude(data=data, wcs=wcs, view=view, **kwargs)
         sliced_data[ex] = fill
         return sliced_data
