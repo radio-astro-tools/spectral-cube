@@ -31,6 +31,7 @@ env:
         - CONDA_CHANNELS='astropy-ci-extras astropy glueviz'
         - PIP_DEPENDENCIES='matplotlib<2 Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip'
         - SETUP_XVFB=True
+        - MPLBACKEND="Agg"
 
     matrix:
         - SETUP_CMD='egg_info'
