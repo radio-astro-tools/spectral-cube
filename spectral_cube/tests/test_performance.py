@@ -5,6 +5,8 @@ Performance-related tests to make sure we don't use more memory than we should
 from __future__ import print_function, absolute_import, division
 
 import pytest
+import tracemalloc
+import tempfile
 
 from .test_moments import moment_cube
 from .helpers import assert_allclose
@@ -107,3 +109,30 @@ def test_parallel_performance_smoothing():
             print()
             print("memmap=True shape={0}".format(shape))
             print(rslt)
+
+def test_memory_usage():
+
+
+    ntf = tempfile.NamedTemporaryFile()
+
+    tracemalloc.start()
+
+    snap1 = tracemalloc.take_snapshot()
+    cube,_ = utilities.generate_gaussian_cube(shape=[100,100,100])
+    del _
+    snap2 = tracemalloc.take_snapshot()
+    cube.write(ntf.name, format='fits')
+    snap3 = tracemalloc.take_snapshot()
+    del cube
+    snap4 = tracemalloc.take_snapshot()
+    cube = SpectralCube.read(ntf.name, format='fits')
+    snap5 = tracemalloc.take_snapshot()
+
+    for row in snap3.compare_to(snap1, 'lineno')[:10]:
+        print(row)
+    print()
+    for row in snap4.compare_to(snap1, 'lineno')[:10]:
+        print(row)
+    print()
+    for row in snap5.compare_to(snap1, 'lineno')[:10]:
+        print(row)

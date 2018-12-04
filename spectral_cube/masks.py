@@ -218,6 +218,7 @@ class MaskBase(object):
             ntf = tempfile.NamedTemporaryFile()
             sliced_data = np.memmap(ntf, mode='w+', shape=data[view].shape,
                                     dtype=dt)
+            sliced_data[view] = data[view]
         else:
             sliced_data = data[view].astype(dt)
 
