@@ -657,7 +657,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, spectral_unit=None,
-                fill_value=np.nan, beams=None, wcs_tolerance=0.0):
+                fill_value=np.nan, beams=None, wcs_tolerance=0.0,
+                beam=None, read_beam=False):
 
         #log.debug("Creating a OneDSpectrum with __new__")
 
@@ -691,6 +692,23 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
         if beams is not None:
             self.beams = beams
+
+        if beam is None:
+            if "beam" in self.meta:
+                beam = self.meta['beam']
+            elif read_beam:
+                beam = cube_utils.try_load_beam(header)
+                if beam is None:
+                    warnings.warn("Cannot load beam from header.",
+                                  BeamWarning
+                                 )
+
+        if beam is not None:
+            if beams is not None:
+                raise ValueError("Both 'beam' and 'beams' specified when "
+                                 "creating 1dspec")
+            self.beam = beam
+            self.meta['beam'] = beam
 
         return self
 
@@ -857,9 +875,12 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             warnings.simplefilter("ignore")
             hdu = self.hdu
 
-        beamhdu = cube_utils.beams_to_bintable(self.beams)
+        if hasattr(self, 'beams'):
+            beamhdu = cube_utils.beams_to_bintable(self.beams)
 
-        return HDUList([hdu, beamhdu])
+            return HDUList([hdu, beamhdu])
+        else:
+            return HDUList([hdu])
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
