@@ -44,8 +44,9 @@ Aperture and spectral extraction using regions
 ----------------------------------------------
 
 Spectral-cube supports ds9 and crtf regions, so you can use them to create a
-mask.  The ds9/crtf region support relies on `~regions` , which supports most shapes in
-ds9 and crtf, so you are not limited to circular apertures.
+mask.  The ds9/crtf region support relies on `regions
+<https://astropy-regions.readthedocs.io/en/latest/>`, which supports most
+shapes in ds9 and crtf, so you are not limited to circular apertures.
 
 In this example, we'll extract a subcube from ds9 region string using
 `~spectral_cube.spectral_cube.SpectralCube.subcube_from_ds9region`::
@@ -54,14 +55,14 @@ In this example, we'll extract a subcube from ds9 region string using
     >>> subcube = cube.subcube_from_ds9region(ds9_str)  # doctest: +SKIP
     >>> spectrum = subcube.mean(axis=(1, 2))  # doctest: +SKIP
 
-Similarly, we'll extract a subcube from crtf region string using
+Similarly, one can extract a subcube from a crtf region string using
 `~spectral_cube.spectral_cube.SpectralCube.subcube_from_crtfregion`::
 
     >>> crtf_str = 'circle[[19:23:43.907, +14:30:34.66], 3"], coord=fk5, range=[150km/s, 300km/s]'  # doctest: +SKIP
     >>> subcube = cube.subcube_from_crtfregion(crtf_str)  # doctest: +SKIP
     >>> spectrum = subcube.mean(axis=(1, 2))  # doctest: +SKIP
 
-We can also use a list of `~regions.Region` object to extract a subcube using
+You can also use a _list_ of `~regions.Region` objects to extract a subcube using
 `~spectral_cube.spectral_cube.SpectralCube.subcube_from_regions`::
 
     >>> import regions # doctest: +SKIP

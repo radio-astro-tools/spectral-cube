@@ -84,36 +84,35 @@ with updated WCS information.
 Extracting a subcube from a DS9/CRTF region
 -------------------------------------------
 
-Starting with spectral_cube v0.2, you can use `DS9
+You can use `DS9
 <http://ds9.si.edu/doc/ref/region.html>`_/`CRTF
 <https://casaguides.nrao.edu/index.php/CASA_Region_Format>`_ regions to extract
 subcubes. The minimal enclosing subcube will be extracted with a two-dimensional
 mask corresponding to the DS9/CRTF region.  `Regions
 <https://astropy-regions.readthedocs.io/en/latest/>`_ is required for region
-parsing. The CRTF region may also contain spectral information which helps to
-extract the cube in the spectral dimension as well.
+parsing.  CRTF regions may also contain spectral cutout information.
 
-This extracts DS9 region(s) from ``file.reg`` file. The `~regions.read_ds9`
-parses the ds9 file and converts it to a list of `~regions.Region` object::
+This example shows extraction of a subcube from a ds9 region file ``file.reg``.
+`~regions.read_ds9` parses the ds9 file and converts it to a list of
+`~regions.Region` objects::
 
     >>> import regions # doctest: +SKIP
     >>> region_list = regions.read_ds9('file.reg')  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
 
-This extracts CRTF regions from ``file.crtf`` file. The `~regions.read_crtf`
-also returns a list of `~regions.Region` object::
+This one shows extraction of a subcube from a CRTF region file ``file.crtf``,
+parsed using `~regions.read_crtf`::
 
     >>> import regions # doctest: +SKIP
     >>> region_list = regions.read_crtf('file.reg')  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
 
 If you want to loop over individual regions with a single region file, you need
-to convert the individual region to a shape list due to limitations in
-pyregion::
+to convert the individual regions to lists of that region::
 
     >>> region_list = regions.read_ds9('file.reg')  #doctest: +SKIP
     >>> for region in region_list: #doctest: +SKIP
-    >>>     sub_cube = cube.subcube_regions([region]) #doctest: +SKIP
+    >>>     sub_cube = cube.subcube_from_regions([region]) #doctest: +SKIP
     
 You can also directly use a ds9 region string.  This example extracts a 0.1
 degree circle around the Galactic Center::
