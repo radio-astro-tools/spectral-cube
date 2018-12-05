@@ -47,7 +47,6 @@ matrix:
         ## COVERAGE TESTS DISABLED: they don't work any more.  I have found no combination of anything that fixes this.
         - python: 3.6
           env: SETUP_CMD='test --coverage'
-               PYTHON_VERSION=3.7
                PYTEST_VERSION="<3.10"
                CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers joblib'
                # pytest 3.9.3 suggested by @e-koch, @astrofrog.  3.10.1 doesn't work, 4.x doesn't work
