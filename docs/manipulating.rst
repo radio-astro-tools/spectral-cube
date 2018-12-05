@@ -79,31 +79,69 @@ Numpy slicing notation::
 This returns a new :class:`~spectral_cube.SpectralCube` object
 with updated WCS information.
 
-Extracting a subcube from a ds9 region
---------------------------------------
+.. _reg:
 
-Starting with spectral_cube v0.2, you can use ds9 regions to extract subcubes.
-The minimal enclosing subcube will be extracted with a two-dimensional mask
-corresponding to the ds9 region.  `pyregion
-<http://leejjoon.github.io/pyregion/>`_ is required for region parsing::
+Extracting a subcube from a DS9/CRTF region
+-------------------------------------------
 
-    >>> region_list = pyregion.open('file.reg')  # doctest: +SKIP
-    >>> sub_cube = cube.subcube_from_ds9region(region_list)  # doctest: +SKIP
+You can use `DS9
+<http://ds9.si.edu/doc/ref/region.html>`_/`CRTF
+<https://casaguides.nrao.edu/index.php/CASA_Region_Format>`_ regions to extract
+subcubes. The minimal enclosing subcube will be extracted with a two-dimensional
+mask corresponding to the DS9/CRTF region.  `Regions
+<https://astropy-regions.readthedocs.io/en/latest/>`_ is required for region
+parsing.  CRTF regions may also contain spectral cutout information.
 
-If you want to loop over individual regions with a single region file, you need to convert the individual
-region to a shape list due to limitations in pyregion::
+This example shows extraction of a subcube from a ds9 region file ``file.reg``.
+`~regions.read_ds9` parses the ds9 file and converts it to a list of
+`~regions.Region` objects::
 
-  >>> region_list = pyregion.open('file.reg')  #doctest: +SKIP
-  >>> for region in region_list: #doctest: +SKIP
-  >>>     sub_cube = cube.subcube_from_ds9region(pyregion.ShapeList([region])) #doctest: +SKIP
+    >>> import regions # doctest: +SKIP
+    >>> region_list = regions.read_ds9('file.reg')  # doctest: +SKIP
+    >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
+
+This one shows extraction of a subcube from a CRTF region file ``file.crtf``,
+parsed using `~regions.read_crtf`::
+
+    >>> import regions # doctest: +SKIP
+    >>> region_list = regions.read_crtf('file.reg')  # doctest: +SKIP
+    >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
+
+If you want to loop over individual regions with a single region file, you need
+to convert the individual regions to lists of that region::
+
+    >>> region_list = regions.read_ds9('file.reg')  #doctest: +SKIP
+    >>> for region in region_list: #doctest: +SKIP
+    >>>     sub_cube = cube.subcube_from_regions([region]) #doctest: +SKIP
     
-You can also create a region on the fly using ds9 region syntax.  This extracts
-a 0.1 degree circle around the Galactic Center::
+You can also directly use a ds9 region string.  This example extracts a 0.1
+degree circle around the Galactic Center::
 
-    >>> region_list = pyregion.parse("galactic; circle(0,0,0.1)")  # doctest: +SKIP
-    >>> sub_cube = cube.subcube_from_ds9region(region_list)  # doctest: +SKIP
+    >>> region_str = "galactic; circle(0, 0, 0.1)"  # doctest: +SKIP
+    >>> sub_cube = cube.subcube_from_ds9region(region_str)  # doctest: +SKIP
 
-    
+Similarly, you can also use a CRTF region string::
+
+    >>> region_str = "circle[[0deg, 0deg], 0.1deg], coord=galactic, range=[150km/s, 300km/s]"  # doctest: +SKIP
+    >>> sub_cube = cube.subcube_from_crtfregion(region_str)  # doctest: +SKIP
+
+CRTF regions that specify a subset in the spectral dimension can be used to
+produce full 3D cutouts.  The ``meta`` attribute of a `regions.Region` object
+contains the spectral information for that region in the three special keywords
+``range``, ``restfreq``, and ``veltype``::
+
+    >>> import regions # doctest: +SKIP
+    >>> from astropy import units as u
+
+    >>> regpix = regions.RectanglePixelRegion(regions.PixCoord(0.5, 1), width=4, height=2)  # doctest: +SKIP
+    >>> regpix.meta['range'] = [150 * u.km/u.s, 300 * u.km/u.s] # spectral range # doctest: +SKIP
+    >>> regpix.meta['restfreq'] = [100 * u.GHz] # rest frequency # doctest: +SKIP
+    >>> regpix.meta['veltype'] = 'OPTICAL' # velocity convention # doctest: +SKIP
+    >>> subcube = cube.subcube_from_regions([regpix])  # doctest: +SKIP
+
+If ``range`` is specified, but the other two keywords are not, the code will
+likely crash.
+
 Extract the minimal valid subcube
 ---------------------------------
 
