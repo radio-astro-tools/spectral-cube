@@ -1883,3 +1883,22 @@ def test_median_2axis():
     result0 = np.array([0.83498009, 0.2606566 , 0.37271531, 0.48548023])
 
     np.testing.assert_almost_equal(cube_median.value, result0)
+
+
+def test_varyres_mask():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    # mask out two beams
+    goodbeams = cube.identify_bad_beams(0.5)
+    assert all(goodbeams == np.array([False, True, True, False]))
+
+    mcube = cube.mask_out_bad_beams(0.5)
+    assert hasattr(mcube, '_goodbeams_mask')
+    assert all(mcube.goodbeams_mask == goodbeams)
+    assert len(mcube.beams) == 2
+
+    sp_masked = mcube[:,0,0]
+
+    assert hasattr(sp_masked, '_goodbeams_mask')
+    assert all(sp_masked.goodbeams_mask == goodbeams)
+    assert len(sp_masked.beams) == 2

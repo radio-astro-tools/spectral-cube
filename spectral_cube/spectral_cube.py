@@ -3349,7 +3349,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             goodbeams = beams.isfinite
 
             # track which, if any, beams are masked for later use
-            self._goodbeams_mask = goodbeams
+            self.goodbeams_mask = goodbeams
 
             if not all(goodbeams):
                 warnings.warn("There were {0} non-finite beams; layers with "
@@ -3381,14 +3381,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         self.beams = beams
         self.beam_threshold = beam_threshold
-
-    @property
-    def beams(self):
-        return self._beams[self._goodbeams_mask]
-
-    @property
-    def unmasked_beams(self):
-        return self._beams
 
     def __getitem__(self, view):
 
@@ -3440,6 +3432,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                            spectral_unit=self._spectral_unit,
                                            mask=self.mask[view],
                                            meta=meta,
+                                           goodbeams_mask=self.goodbeams_mask
+                                           if hasattr(self, '_goodbeams_mask')
+                                           else None,
                                            **bmarg
                                           )
 
@@ -3540,9 +3535,11 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                                    beam_threshold=beam_threshold,
                                                    **kwargs)
         if goodbeams_mask is not None:
-            newcube._goodbeams_mask = goodbeams_mask
+            newcube.goodbeams_mask = goodbeams_mask
+            assert hasattr(newcube, '_goodbeams_mask')
         else:
-            newcube._goodbeams_mask = np.isfinite(newcube.beams)
+            newcube.goodbeams_mask = np.isfinite(newcube.beams)
+            assert hasattr(newcube, '_goodbeams_mask')
 
         return newcube
 
@@ -3865,7 +3862,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
-        for bm,valid in zip(self._beams, self._goodbeams_mask):
+        for bm,valid in zip(self._beams, self.goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
                 convolution_kernels.append(None)
@@ -3978,7 +3975,35 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                 shape=self._data.shape)
 
         return self._new_cube_with(mask=mask,
-                                   goodbeams_mask=goodchannels & self._goodbeams_mask)
+                                   goodbeams_mask=goodchannels & self.goodbeams_mask)
+
+    def mask_out_bad_beams(self, threshold, reference_beam=None,
+                           criteria=['sr','major','minor'],
+                           mid_value=np.nanmedian):
+        """
+        See `identify_bad_beams`.  This function returns a masked cube
+
+        Returns
+        -------
+        newcube : VaryingResolutionSpectralCube
+            The cube with bad beams masked out
+        """
+
+        goodbeams = self.identify_bad_beams(threshold=threshold,
+                                            reference_beam=reference_beam,
+                                            criteria=criteria,
+                                            mid_value=mid_value)
+
+        includemask = BooleanArrayMask(goodbeams[:,None,None],
+                                       self._wcs,
+                                       shape=self._data.shape)
+
+        return self._new_cube_with(mask=self.mask & includemask,
+                                   beam_threshold=threshold,
+                                   goodbeams_mask=self.goodbeams_mask & goodbeams,
+                                  )
+
+
 
     def spectral_interpolate(self, *args, **kwargs):
         raise AttributeError("VaryingResolutionSpectralCubes can't be "

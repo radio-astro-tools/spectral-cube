@@ -1093,7 +1093,7 @@ class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
 
 class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
-    def __new__(cls, value, beams=None, read_beam=False, **kwargs):
+    def __new__(cls, value, beams=None, read_beam=False, goodbeams_mask=None, **kwargs):
         self = super(VaryingResolutionOneDSpectrum, cls).__new__(cls, value, **kwargs)
 
         if beams is None:
@@ -1109,6 +1109,9 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
         if beams is not None:
             self.beams = beams
             self.meta['beams'] = beams
+
+        if goodbeams_mask is not None:
+            self.goodbeams_mask = goodbeams_mask
 
         return self
 
@@ -1154,3 +1157,5 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
         out = super(VRODS, self)._new_spectrum_with(beams=beams,
                                                     **kwargs)
         return out
+
+
