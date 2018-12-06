@@ -701,9 +701,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                                  )
 
         if beam is not None:
-            if beams is not None:
-                raise ValueError("Both 'beam' and 'beams' specified when "
-                                 "creating 1dspec")
             self.beam = beam
             self.meta['beam'] = beam
 
@@ -1063,7 +1060,10 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
         if beams is None:
             if hasattr(self, 'beams'):
-                beams = self.beams
+                kwargs['beams'] = beams
+        elif beam is None:
+            if hasattr(self, 'beam'):
+                kwargs['beam'] = beam
 
         if beams is not None:
             cls = VaryingResolutionOneDSpectrum
@@ -1074,7 +1074,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         spectrum = cls(value=data, wcs=wcs, mask=mask, meta=meta, unit=unit,
                        fill_value=fill_value, header=header or self._header,
                        wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
-                       beams=beams, beam=beam, **kwargs)
+                       **kwargs)
         spectrum._spectral_unit = spectral_unit
 
         return spectrum
@@ -1095,5 +1095,4 @@ class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
     def __new__(cls, value, beams=None, **kwargs):
         if beams is not None:
             cls.beams = beams
-        return super(OneDSpectrum, cls).__new__(value, **kwargs)
-
+        return super(VaryingResolutionOneDSpectrum, cls).__new__(cls, value, **kwargs)
