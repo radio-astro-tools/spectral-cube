@@ -1,5 +1,9 @@
 0.4.4 (unreleased)
 ------------------
+ - Refactor OneDSpectrum objects to include a single beam if they
+   were produced from a cube with a single beam to enable K<->Jy
+   conversions
+   (https://github.com/radio-astro-tools/spectral-cube/pull/510)
  - Bugfix: fix compatibility of to_glue with latest versions of glue.
    (https://github.com/radio-astro-tools/spectral-cube/pull/491)
  - Refactor to use regions instead of pyregion.  Adds CRTF support
