@@ -45,7 +45,7 @@ Aperture and spectral extraction using regions
 
 Spectral-cube supports ds9 and crtf regions, so you can use them to create a
 mask.  The ds9/crtf region support relies on `regions
-<https://astropy-regions.readthedocs.io/en/latest/>`, which supports most
+<https://astropy-regions.readthedocs.io/en/latest/>`_, which supports most
 shapes in ds9 and crtf, so you are not limited to circular apertures.
 
 In this example, we'll extract a subcube from ds9 region string using

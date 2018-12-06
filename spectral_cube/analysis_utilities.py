@@ -9,7 +9,7 @@ import warnings
 
 from .utils import BadVelocitiesWarning
 from .cube_utils import _map_context
-from .lower_dimensional_structures import OneDSpectrum
+from .lower_dimensional_structures import VaryingResolutionOneDSpectrum, OneDSpectrum
 from .spectral_cube import VaryingResolutionSpectralCube
 
 
@@ -302,11 +302,17 @@ def stack_spectra(cube, velocity_surface, v0=None,
 
     stacked = stack_function(shifted_spectra_array, axis=0)
 
-    stack_spec = \
-        OneDSpectrum(stacked, unit=cube.unit, wcs=WCS(new_header),
-                     header=new_header,
-                     meta=cube.meta, spectral_unit=vel_unit,
-                     beams=cube.beams if hasattr(cube, "beams") else None)
+    if hasattr(cube, 'beams'):
+        stack_spec = VaryingResolutionOneDSpectrum(stacked, unit=cube.unit,
+                                                   wcs=WCS(new_header),
+                                                   header=new_header,
+                                                   meta=cube.meta,
+                                                   spectral_unit=vel_unit,
+                                                   beams=cube.beams)
+    else:
+        stack_spec = OneDSpectrum(stacked, unit=cube.unit, wcs=WCS(new_header),
+                                  header=new_header, meta=cube.meta,
+                                  spectral_unit=vel_unit, beam=cube.beam)
 
     return stack_spec
 
