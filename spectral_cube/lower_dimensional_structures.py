@@ -657,7 +657,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, spectral_unit=None,
-                fill_value=np.nan, beams=None, wcs_tolerance=0.0,
+                fill_value=np.nan, wcs_tolerance=0.0,
                 beam=None, read_beam=False):
 
         #log.debug("Creating a OneDSpectrum with __new__")
@@ -689,9 +689,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                 self._spectral_unit = u.Unit(self._header['CUNIT1'])
             elif self._wcs is not None:
                 self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
-
-        if beams is not None:
-            self.beams = beams
 
         if beam is None:
             if "beam" in self.meta:
@@ -744,9 +741,16 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             unit = None
 
         beams = cube_utils.try_load_beams(hdul)
+        beam = cube_utils.try_load_beam(hdu.header)
 
-        self = OneDSpectrum(hdu.data, unit=unit, wcs=mywcs, meta=meta,
-                            header=hdu.header, beams=beams)
+        if beams is not None:
+            self = VaryingResolutionOneDSpectrum(hdu.data, unit=unit,
+                                                 wcs=mywcs, meta=meta,
+                                                 header=hdu.header,
+                                                 beams=beams)
+        else:
+            self = OneDSpectrum(hdu.data, unit=unit, wcs=mywcs, meta=meta,
+                                header=hdu.header, beam=beam)
 
         return self
 
@@ -1084,4 +1088,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             return super(OneDSpectrum, self).__getattribute__(attrname)
 
 class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
-    pass
+    def __new__(cls, value, beams=None, **kwargs):
+        if beams is not None:
+            cls.beams = beams
+        return super(OneDSpectrum, cls).__new__(value, **kwargs)
+
