@@ -411,7 +411,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                                  unit=unit, fill_value=fill_value,
                                  header=header or self._header,
                                  wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
-                                 beams=beam,
+                                 beam=beam,
                                  **kwargs)
 
         return newproj
