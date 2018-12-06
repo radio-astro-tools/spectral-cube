@@ -44,7 +44,7 @@ from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          MaskableArrayMixinClass, MultiBeamMixinClass,
                          HeaderMixinClass, BeamMixinClass
                         )
-from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
+from .utils import (cached, warn_slow, VarianceWarning, BeamWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
@@ -411,7 +411,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     if hasattr(self, 'beam'):
                         bmarg = {'beam': self.beam}
                     elif hasattr(self, 'beams'):
-                        bmarg = {'beams': self.beams}
+                        bmarg = {'beams': self.unmasked_beams}
                     else:
                         bmarg = {}
                     return self._oned_spectrum(value=out,
@@ -564,7 +564,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     if hasattr(self, 'beam'):
                         bmarg = {'beam': self.beam}
                     elif hasattr(self, 'beams'):
-                        bmarg = {'beams': self.beams}
+                        bmarg = {'beams': self.unmasked_beams}
                     else:
                         bmarg = {}
                     return self._oned_spectrum(value=out,
@@ -3382,6 +3382,14 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         self.beams = beams
         self.beam_threshold = beam_threshold
 
+    @property
+    def beams(self):
+        return self._beams[self._goodbeams_mask]
+
+    @property
+    def unmasked_beams(self):
+        return self._beams
+
     def __getitem__(self, view):
 
         # Need to allow self[:], self[:,:]
@@ -3422,7 +3430,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                 if hasattr(self, 'beam'):
                     bmarg = {'beam': self.beam}
                 elif hasattr(self, 'beams'):
-                    bmarg = {'beams': self.beams[specslice]}
+                    bmarg = {'beams': self.unmasked_beams[specslice]}
                 else:
                     bmarg = {}
                 return self._oned_spectrum(value=self._data[view],
@@ -3443,7 +3451,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             # metadata
             # A 2D slice with a VRSC should not be allowed along a
             # position-spectral axis
-            if not isinstance(self.beams[specslice], Beam):
+            if not isinstance(self.unmasked_beams[specslice], Beam):
                 raise AttributeError("2D slices along a spectral axis are not "
                                      "allowed for "
                                      "VaryingResolutionSpectralCubes. Convolve"
@@ -3451,7 +3459,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                      "`convolve_to` before attempting "
                                      "position-spectral slicing.")
 
-            meta['beam'] = self.beams[specslice]
+            meta['beam'] = self.unmasked_beams[specslice]
             return Slice(value=self.filled_data[view],
                          wcs=newwcs,
                          copy=False,
@@ -3472,7 +3480,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         return self._new_cube_with(data=self._data[view],
                                    wcs=newwcs,
                                    mask=newmask,
-                                   beams=self.beams[specslice],
+                                   beams=self.unmasked_beams[specslice],
                                    meta=meta)
 
     def spectral_slab(self, lo, hi):
@@ -3518,13 +3526,13 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         # Create new spectral cube
         slab = self._new_cube_with(data=self._data[ilo:ihi], wcs=wcs_slab,
-                                   beams=self.beams[ilo:ihi],
+                                   beams=self.unmasked_beams[ilo:ihi],
                                    mask=mask_slab)
 
         return slab
 
     def _new_cube_with(self, goodbeams_mask=None, **kwargs):
-        beams = kwargs.pop('beams', self.beams)
+        beams = kwargs.pop('beams', self.unmasked_beams)
         beam_threshold = kwargs.pop('beam_threshold', self.beam_threshold)
 
         VRSC = VaryingResolutionSpectralCube
@@ -3546,16 +3554,16 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         """
 
         if mask is not None:
-            assert len(mask) == len(self.beams)
+            assert len(mask) == len(self.unmasked_beams)
             mask = np.array(mask, dtype='bool')
         else:
-            mask = np.ones(len(self.beams), dtype='bool')
+            mask = np.ones(len(self.unmasked_beams), dtype='bool')
 
-        qtys = dict(sr=self.beams.sr,
-                    major=self.beams.major.to(u.deg),
-                    minor=self.beams.minor.to(u.deg),
+        qtys = dict(sr=self.unmasked_beams.sr,
+                    major=self.unmasked_beams.major.to(u.deg),
+                    minor=self.unmasked_beams.minor.to(u.deg),
                     # position angles are not really comparable
-                    #pa=u.Quantity([bm.pa for bm in self.beams], u.deg),
+                    #pa=u.Quantity([bm.pa for bm in self.unmasked_beams], u.deg),
                    )
 
         errormessage = ""
@@ -3608,14 +3616,14 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             A boolean array where ``True`` indicates the good beams
         """
 
-        includemask = np.ones(self.beams.size, dtype='bool')
+        includemask = np.ones(self.unmasked_beams.size, dtype='bool')
 
         all_criteria = ['sr','major','minor','pa']
         if not set.issubset(set(criteria), set(all_criteria)):
             raise ValueError("Criteria must be one of the allowed options: "
                              "{0}".format(all_criteria))
 
-        props = {prop: u.Quantity([getattr(beam, prop) for beam in self.beams])
+        props = {prop: u.Quantity([getattr(beam, prop) for beam in self.unmasked_beams])
                  for prop in all_criteria}
 
         if reference_beam is None:
@@ -3697,7 +3705,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             else:
                 beam_mask = mask & self._goodbeams_mask
 
-        new_beam = self.beams.average_beam(includemask=beam_mask)
+        # use private _beams here because the public one excludes the bad beams
+        # by default
+        new_beam = self._beams.average_beam(includemask=beam_mask)
 
         if np.isnan(new_beam):
             raise ValueError("Beam was not finite after averaging.  "
@@ -3796,7 +3806,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
 
         from .cube_utils import beams_to_bintable
-        bmhdu = beams_to_bintable(self.beams)
+        # use unmasked beams because, even if the beam is masked out, we should
+        # write it
+        bmhdu = beams_to_bintable(self._beams)
 
         return HDUList([hdu, bmhdu])
 
@@ -3853,7 +3865,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
-        for bm,valid in zip(self.beams, self._goodbeams_mask):
+        for bm,valid in zip(self._beams, self._goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
                 convolution_kernels.append(None)
