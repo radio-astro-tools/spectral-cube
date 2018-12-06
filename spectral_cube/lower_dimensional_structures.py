@@ -1024,7 +1024,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
     def _new_spectrum_with(self, data=None, wcs=None, mask=None, meta=None,
                            fill_value=None, spectral_unit=None, unit=None,
                            header=None, wcs_tolerance=None, beams=None,
-                           **kwargs):
+                           beam=None, **kwargs):
 
         data = self._data if data is None else data
         if unit is None and hasattr(data, 'unit'):
@@ -1065,12 +1065,16 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             if hasattr(self, 'beams'):
                 beams = self.beams
 
-        spectrum = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
-                                  unit=unit, fill_value=fill_value,
-                                  header=header or self._header,
-                                  wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
-                                  beams=beams,
-                                  **kwargs)
+        if beams is not None:
+            cls = VaryingResolutionOneDSpectrum
+        else:
+            cls = OneDSpectrum
+            
+
+        spectrum = cls(value=data, wcs=wcs, mask=mask, meta=meta, unit=unit,
+                       fill_value=fill_value, header=header or self._header,
+                       wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                       beams=beams, beam=beam, **kwargs)
         spectrum._spectral_unit = spectral_unit
 
         return spectrum
