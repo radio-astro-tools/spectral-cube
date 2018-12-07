@@ -9,12 +9,12 @@ from astropy import convolution
 from astropy import units as u
 from astropy import wcs
 #from astropy import log
-from astropy.io.fits import Header, HDUList, PrimaryHDU
+from astropy.io.fits import Header, HDUList, PrimaryHDU, BinTableHDU, FITS_rec
 from radio_beam import Beam, Beams
 
 from .io.core import determine_format
 from . import spectral_axis
-from .utils import SliceWarning, BeamWarning, SmoothingWarning
+from .utils import SliceWarning, BeamWarning, SmoothingWarning, FITSWarning
 from .cube_utils import convert_bunit
 from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
@@ -716,9 +716,20 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         else:
             unit = None
 
-        beams_table = cube_utils.try_load_beams(hdul)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=FITSWarning)
+            beam = cube_utils.try_load_beams(hdul)
+            if hasattr(beam, '__len__'):
+                beams = beam
+            else:
+                beams = None
 
-        if beams_table is not None:
+        if beams is not None:
+            self = VaryingResolutionOneDSpectrum(hdu.data, unit=unit,
+                                                 wcs=mywcs, meta=meta,
+                                                 header=hdu.header,
+                                                 beams=beams)
+        elif beams_table is not None:
             # Convert to a beams object from the table
             beams = Beams(major=u.Quantity(beams_table['BMAJ'], u.arcsec),
                           minor=u.Quantity(beams_table['BMIN'], u.arcsec),
@@ -1091,6 +1102,10 @@ class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
         return self._new_spectrum_with(beam=beam, meta=meta)
 
 
+class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
+    def __new__(cls, value, beams, goodbeams_mask=None, **kwargs):
+        rslt = super(VaryingResolutionOneDSpectrum, cls).__new__(cls, value, **kwargs)
+
 class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
     def __new__(cls, value, beams=None, read_beam=False, goodbeams_mask=None, **kwargs):
@@ -1107,6 +1122,20 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
                                   )
 
         if beams is not None:
+            if isinstance(beams, BinTableHDU):
+                beam_data_table = beams.data
+            elif isinstance(beams, FITS_rec):
+                beam_data_table = beams
+            else:
+                beam_data_table = None
+
+            if beam_data_table is not None:
+                beams = Beams(major=u.Quantity(beam_data_table['BMAJ'], u.arcsec),
+                              minor=u.Quantity(beam_data_table['BMIN'], u.arcsec),
+                              pa=u.Quantity(beam_data_table['BPA'], u.deg),
+                              meta=[{key: row[key] for key in beam_data_table.names
+                                     if key not in ('BMAJ','BPA', 'BMIN')}
+                                    for row in beam_data_table],)
             self.beams = beams
             self.meta['beams'] = beams
 
@@ -1158,4 +1187,8 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
                                                     **kwargs)
         return out
 
+    def __array_finalize__(self, obj):
+        self._beams = getattr(obj, '_beams', None)
+        if getattr(obj, 'goodbeams_mask', None) is not None:
+            self.goodbeams_mask = getattr(obj, 'goodbeams_mask', None)
 

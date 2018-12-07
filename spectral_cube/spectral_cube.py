@@ -3342,7 +3342,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             beams = Beams(major=u.Quantity(beam_data_table['BMAJ'], u.arcsec),
                           minor=u.Quantity(beam_data_table['BMIN'], u.arcsec),
                           pa=u.Quantity(beam_data_table['BPA'], u.deg),
-                          meta=[{key: row[key] for key in beam_table.names
+                          meta=[{key: row[key] for key in beam_data_table.names
                                  if key not in ('BMAJ','BPA', 'BMIN')}
                                 for row in beam_data_table],
                          )
