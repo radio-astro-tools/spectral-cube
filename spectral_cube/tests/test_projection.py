@@ -511,10 +511,10 @@ def test_repr_1d():
     sp = cube[:,0,0]
 
     print(sp)
-    print(sp[0:-1])
+    print(sp[1:-1])
 
     assert 'OneDSpectrum' in sp.__repr__()
-    assert 'OneDSpectrum' in sp[0:-1].__repr__()
+    assert 'OneDSpectrum' in sp[1:-1].__repr__()
 
 def test_1d_slices():
 

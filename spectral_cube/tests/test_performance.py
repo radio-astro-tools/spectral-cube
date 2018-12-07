@@ -163,12 +163,20 @@ def test_memory_usage():
     diff = snap6.compare_to(snap5, 'lineno')
     assert diff[0].size_diff*u.B >= mask.size*u.B
 
-    filled_data = cube.filled_data[:]
+    filled_data = cube._get_filled_data(use_memmap=True)
     snap7 = tracemalloc.take_snapshot()
     diff = snap7.compare_to(snap6, 'lineno')
     assert diff[0].size_diff*u.B < 100*u.kB
 
     filled_data = cube._get_filled_data(use_memmap=False)
     snap8 = tracemalloc.take_snapshot()
-    diff = snap8.compare_to(snap6, 'lineno')
+    diff = snap8.compare_to(snap7, 'lineno')
+    assert diff[0].size_diff*u.B > 10*u.MB
+
+    del filled_data
+
+    # cube is <1e8 bytes, so this is use_memmap=False
+    filled_data = cube.filled_data[:]
+    snap9 = tracemalloc.take_snapshot()
+    diff = snap9.compare_to(snap6, 'lineno')
     assert diff[0].size_diff*u.B > 10*u.MB

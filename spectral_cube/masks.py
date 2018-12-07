@@ -184,7 +184,7 @@ class MaskBase(object):
         """
         return data[view][self.include(data=data, wcs=wcs, view=view)]
 
-    def _filled(self, data, wcs=None, fill=np.nan, view=(), use_memmap=True,
+    def _filled(self, data, wcs=None, fill=np.nan, view=(), use_memmap=False,
                 **kwargs):
         """
         Replace the excluded elements of *array* with *fill*.
@@ -214,7 +214,7 @@ class MaskBase(object):
         # type otherwise
         dt = np.find_common_type([data.dtype], [np.float])
 
-        if use_memmap:
+        if use_memmap and data.size > 0:
             ntf = tempfile.NamedTemporaryFile()
             sliced_data = np.memmap(ntf, mode='w+', shape=data[view].shape,
                                     dtype=dt)

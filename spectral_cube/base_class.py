@@ -292,7 +292,7 @@ class MaskableArrayMixinClass(object):
     """
 
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=False,
-                         use_memmap=True):
+                         use_memmap=None):
         """
         Return the underlying data as a numpy array.
         Always returns the spectral axis as the 0th axis
@@ -312,6 +312,9 @@ class MaskableArrayMixinClass(object):
 
         if self._mask is None:
             return data[view]
+
+        if use_memmap is None and hasattr(self, '_is_huge'):
+            use_memmap = self._is_huge
 
         return self._mask._filled(data=data, wcs=self._wcs, fill=fill,
                                   view=view, wcs_tolerance=self._wcs_tolerance,
