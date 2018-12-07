@@ -108,7 +108,7 @@ def _apply_spectral_function(arguments, outcube, function, **kwargs):
 
 def _apply_spatial_function(arguments, outcube, function, **kwargs):
     """
-    Helper function to apply a function to a spectrum.
+    Helper function to apply a function to an image.
     Needs to be declared toward the top of the code to allow pickling by
     joblib.
     """
