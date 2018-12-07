@@ -130,7 +130,6 @@ def test_memory_usage():
     # at this point, the generated cube should still exist in memory
     assert diff[0].size_diff*u.B >= 64*u.MB
 
-
     del _
     snap2 = tracemalloc.take_snapshot()
     diff = snap2.compare_to(snap1b, 'lineno')
