@@ -124,11 +124,12 @@ def test_memory_usage():
 
     # create a 64 MB cube
     cube,_ = utilities.generate_gaussian_cube(shape=[200,200,200])
+    sz = _.dtype.itemsize
 
     snap1b = tracemalloc.take_snapshot()
     diff = snap1b.compare_to(snap1, 'lineno')
     # at this point, the generated cube should still exist in memory
-    assert diff[0].size_diff*u.B >= 64*u.MB
+    assert diff[0].size_diff*u.B >= 200**3*sz*u.B
 
     del _
     snap2 = tracemalloc.take_snapshot()
@@ -147,7 +148,7 @@ def test_memory_usage():
     # deleting the cube should remove the 64 MB from memory
     snap4 = tracemalloc.take_snapshot()
     diff = snap4.compare_to(snap3, 'lineno')
-    assert diff[0].size_diff*u.B < -64*u.MB
+    assert diff[0].size_diff*u.B < -200**3*sz*u.B
 
     cube = SpectralCube.read(ntf.name, format='fits')
 
