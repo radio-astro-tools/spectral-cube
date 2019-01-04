@@ -4,6 +4,8 @@ Performance-related tests to make sure we don't use more memory than we should
 
 from __future__ import print_function, absolute_import, division
 
+import numpy as np
+
 import pytest
 import tracemalloc
 import tempfile
@@ -128,8 +130,13 @@ def test_memory_usage():
 
     snap1b = tracemalloc.take_snapshot()
     diff = snap1b.compare_to(snap1, 'lineno')
+    diffvals = np.array([dd.size_diff for dd in diff])
+    if diffvals.argmax() != 0:
+        # debugging for travis: are failures coming because the diff is in a
+        # different index?
+        print(f"max: {diffvals.max()} sum: {diffvals.sum()} arg: {diffvals.argmax()}")
     # at this point, the generated cube should still exist in memory
-    assert diff[0].size_diff*u.B >= 200**3*sz*u.B
+    assert diffvals.max()*u.B >= 200**3*sz*u.B
 
     del _
     snap2 = tracemalloc.take_snapshot()
