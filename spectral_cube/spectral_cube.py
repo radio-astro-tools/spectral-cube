@@ -3787,6 +3787,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         if beam_threshold is None:
             beam_threshold = self.beam_threshold
 
+        @wraps(function)
         def newfunc(*args, **kwargs):
             """ Wrapper function around the standard operations to handle beams
             when creating projections """
