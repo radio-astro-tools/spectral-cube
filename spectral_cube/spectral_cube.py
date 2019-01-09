@@ -2692,6 +2692,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       verbose=0,
                                       use_memmap=True,
                                       parallel=True,
+                                      memmap_dir=None,
                                       **kwargs
                                      ):
         """
@@ -2728,7 +2729,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
 
         if use_memmap:
-            ntf = tempfile.NamedTemporaryFile()
+            ntf = tempfile.NamedTemporaryFile(dir=memmap_dir)
             outcube = np.memmap(ntf, mode='w+', shape=self.shape, dtype=np.float)
         else:
             if self._is_huge and not self.allow_huge_operations:
