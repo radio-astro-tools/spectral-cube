@@ -60,6 +60,7 @@ Getting started
    masking.rst
    arithmetic.rst
    manipulating.rst
+   metadata.rst
    smoothing.rst
    writing.rst
    moments.rst

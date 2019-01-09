@@ -41,7 +41,9 @@ from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                           )
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
-                         MaskableArrayMixinClass, MultiBeamMixinClass)
+                         MaskableArrayMixinClass, MultiBeamMixinClass,
+                         HeaderMixinClass
+                        )
 from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
@@ -125,7 +127,8 @@ def _apply_spatial_function(arguments, outcube, function, **kwargs):
 np2wcs = {2: 0, 1: 1, 0: 2}
 
 class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
-                       SpectralAxisMixinClass, SpatialCoordMixinClass):
+                       SpectralAxisMixinClass, SpatialCoordMixinClass,
+                       HeaderMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, wcs_tolerance=0.0):
@@ -405,6 +408,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 if set(axis) == set((1,2)):
                     new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
                     header = self._nowcs_header
+                    if hasattr(self, 'beam'):
+                        bmarg = {'beam': self.beam}
+                    elif hasattr(self, 'beams'):
+                        bmarg = {'beams': self.beams}
+                    else:
+                        bmarg = {}
                     return self._oned_spectrum(value=out,
                                                wcs=new_wcs,
                                                copy=False,
@@ -412,9 +421,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                header=header,
                                                meta=meta,
                                                spectral_unit=self._spectral_unit,
-                                               beams=(self.beams
-                                                      if hasattr(self,'beams')
-                                                      else None),
+                                               **bmarg
                                               )
                 else:
                     warnings.warn("Averaging over a spatial and a spectral "
@@ -554,15 +561,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       unit=self.unit, header=self._nowcs_header)
                 elif axis == (1,2):
                     newwcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
+                    if hasattr(self, 'beam'):
+                        bmarg = {'beam': self.beam}
+                    elif hasattr(self, 'beams'):
+                        bmarg = {'beams': self.beams}
+                    else:
+                        bmarg = {}
                     return self._oned_spectrum(value=out,
                                                wcs=newwcs,
                                                copy=False,
                                                unit=self.unit,
                                                spectral_unit=self._spectral_unit,
-                                               beams=(self.beams
-                                                      if hasattr(self, 'beams')
-                                                      else None),
-                                               meta=self.meta)
+                                               meta=self.meta,
+                                               **bmarg
+                                              )
                 else:
                     # this is a weird case, but even if projection is
                     # specified, we can't return a Quantity here because of WCS
@@ -1163,6 +1175,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
+                if hasattr(self, 'beam'):
+                    bmarg = {'beam': self.beam}
+                elif hasattr(self, 'beams'):
+                    bmarg = {'beams': self.beams}
+                else:
+                    bmarg = {}
                 return self._oned_spectrum(value=self._data[view],
                                            wcs=newwcs,
                                            copy=False,
@@ -1170,6 +1188,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                            spectral_unit=self._spectral_unit,
                                            mask=self.mask[view],
                                            meta=meta,
+                                           **bmarg
                                           )
 
             # only one element, so drop an axis
@@ -1852,7 +1871,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.subcube_from_regions(region_list, allow_empty)
 
-    def subcube_from_crtf(self, crtf_region, allow_empty=False):
+    def subcube_from_crtfregion(self, crtf_region, allow_empty=False):
         """
         Extract a masked subcube from a CRTF region.
 
@@ -2333,19 +2352,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     @property
     def header(self):
         log.debug("Creating header")
-        # Preserve non-WCS information from previous header iteration
-        header = self._nowcs_header
-        header.update(self.wcs.to_header())
-        if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
-            # preserve the BUNIT even though it's not technically valid
-            # (Jy/Beam)
-            header['BUNIT'] = self._meta['BUNIT']
-        else:
-            header['BUNIT'] = self.unit.to_string(format='FITS')
-        header.insert(2, Card(keyword='NAXIS', value=self._data.ndim))
-        header.insert(3, Card(keyword='NAXIS1', value=self.shape[2]))
-        header.insert(4, Card(keyword='NAXIS2', value=self.shape[1]))
-        header.insert(5, Card(keyword='NAXIS3', value=self.shape[0]))
+
+        header = super(BaseSpectralCube, self).header
 
         # Preserve the cube's spectral units
         # (if CUNIT3 is not in the header, it is whatever that type's default unit is)
@@ -2354,10 +2362,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             header['CRVAL3'] *= self._spectral_scale
             header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
-        if 'beam' in self._meta:
-            header = self._meta['beam'].attach_to_header(header)
-
-        # TODO: incorporate other relevant metadata here
         return header
 
     @property
@@ -3473,14 +3477,21 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
+                if hasattr(self, 'beam'):
+                    bmarg = {'beam': self.beam}
+                elif hasattr(self, 'beams'):
+                    bmarg = {'beams': self.beams[specslice]}
+                else:
+                    bmarg = {}
                 return self._oned_spectrum(value=self._data[view],
                                            wcs=newwcs,
                                            copy=False,
                                            unit=self.unit,
                                            spectral_unit=self._spectral_unit,
                                            mask=self.mask[view],
-                                           beams=self.beams[specslice],
-                                           meta=meta)
+                                           meta=meta,
+                                           **bmarg
+                                          )
 
             # only one element, so drop an axis
             newwcs = wcs_utils.drop_axis(self._wcs, intslices[0])

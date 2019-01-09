@@ -1,6 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import pytest
+from distutils.version import LooseVersion
 
 from astropy import units as u
 from astropy import wcs
@@ -14,8 +15,9 @@ from ..spectral_axis import doppler_gamma, doppler_beta, doppler_z, get_rest_val
 try:
     import regions
     regionsOK = True
+    REGIONS_GT_03 = LooseVersion(regions.__version__) >= LooseVersion('0.3')
 except ImportError:
-    regionsOK = False
+    regionsOK = REGIONS_GT_03 = False
 
 try:
     import scipy
@@ -55,6 +57,7 @@ def test_subcube():
 
 @pytest.mark.skipif('not scipyOK', reason='Could not import scipy')
 @pytest.mark.skipif('not regionsOK', reason='Could not import regions')
+@pytest.mark.skipif('not REGIONS_GT_03', reason='regions version should be >= 0.3')
 @pytest.mark.parametrize('regfile',
                          ('255-fk5.reg', '255-pixel.reg'),
                         )
@@ -71,6 +74,7 @@ def test_ds9region_255(regfile):
 
 @pytest.mark.skipif('not scipyOK', reason='Could not import scipy')
 @pytest.mark.skipif('not regionsOK', reason='Could not import regions')
+@pytest.mark.skipif('not REGIONS_GT_03', reason='regions version should be >= 0.3')
 @pytest.mark.parametrize(('regfile', 'result'),
                              (('fk5.reg', [slice(None), 1, 1]),
                               ('image.reg', [slice(None), 1, slice(None)]),
@@ -108,6 +112,7 @@ def test_ds9region_new(regfile, result):
 
 @pytest.mark.skipif('not scipyOK', reason='Could not import scipy')
 @pytest.mark.skipif('not regionsOK', reason='Could not import regions')
+@pytest.mark.skipif('not REGIONS_GT_03', reason='regions version should be >= 0.3')
 def test_regions_spectral():
     cube, data = cube_and_raw('adv.fits')
     rf_cube = get_rest_value_from_wcs(cube.wcs).to("GHz",

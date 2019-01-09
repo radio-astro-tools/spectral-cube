@@ -20,7 +20,9 @@ import numpy as np
 
 from .. import (SpectralCube, VaryingResolutionSpectralCube, BooleanArrayMask,
                 FunctionMask, LazyMask, CompositeMask)
-from ..spectral_cube import OneDSpectrum, Projection, VaryingResolutionOneDSpectrum
+from ..spectral_cube import (OneDSpectrum, Projection,
+                             VaryingResolutionOneDSpectrum,
+                             LowerDimensionalObject)
 from ..np_compat import allbadtonan
 from .. import spectral_axis
 from .. import base_class
@@ -1111,6 +1113,34 @@ def test_preserves_header_values():
     assert isinstance(proj, Projection)
     assert proj.header['OBJECT'] == 'TestName'
     assert proj.hdu.header['OBJECT'] == 'TestName'
+
+def test_preserves_header_meta_values():
+    # Check that additional parameters in meta are preserved
+
+    cube, data = cube_and_raw('advs.fits')
+
+    cube.meta['foo'] = 'bar'
+
+    assert cube.header['FOO'] == 'bar'
+
+    # check that long keywords are also preserved
+    cube.meta['too_long_keyword'] = 'too_long_information'
+
+    assert 'too_long_keyword=too_long_information' in cube.header['COMMENT']
+
+    # Checks that the header is preserved when passed to LDOs
+    for ldo in (cube.sum(axis=0, how='auto'), cube[:,0,0]):
+        assert isinstance(ldo, LowerDimensionalObject)
+        assert ldo.header['FOO'] == 'bar'
+        assert ldo.hdu.header['FOO'] == 'bar'
+
+        # make sure that the meta preservation works on the LDOs themselves too
+        ldo.meta['bar'] = 'foo'
+        assert ldo.header['BAR'] == 'foo'
+
+        assert 'too_long_keyword=too_long_information' in ldo.header['COMMENT']
+
+
 
 @pytest.mark.parametrize('func',('sum','std','max','min','mean'))
 def test_oned_numpy(func):

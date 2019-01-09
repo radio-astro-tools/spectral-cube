@@ -1,6 +1,9 @@
 from astropy import units as u
 from astropy import log
 import numpy as np
+import warnings
+
+from astropy.io.fits import Card
 
 from . import wcs_utils
 from . import cube_utils
@@ -37,6 +40,58 @@ class BaseNDClass(object):
     @property
     def mask(self):
         return self._mask
+
+class HeaderMixinClass(object):
+    """
+    A mixin class to provide header updating from WCS objects.
+    The parent object must have a WCS.
+    """
+
+    def wcs(self):
+        raise TypeError("Classes inheriting from HeaderMixin must define a "
+                        "wcs method")
+
+    @property
+    def header(self):
+        header = self._nowcs_header
+
+        wcsheader = self.wcs.to_header() if self.wcs is not None else {}
+
+        # When preserving metadata, copy over keywords before doing the WCS
+        # keyword copying, since those have specific formatting requirements
+        # and will overwrite these in many cases (e.g., BMAJ)
+        for key in self.meta:
+            if key.upper() not in wcsheader:
+                if isinstance(key, str) and len(key) <= 8:
+                    try:
+                        header[key.upper()] = str(self.meta[key])
+                    except ValueError as ex:
+                        # need a silenced-by-default warning here?
+                        # log.warn("Skipped key {0} because {1}".format(key, ex))
+                        pass
+                elif isinstance(key, str) and len(key) > 8:
+                    header['COMMENT'] = "{0}={1}".format(key, self.meta[key])
+
+        # Preserve non-WCS information from previous header iteration
+        header.update(wcsheader)
+        if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
+            # preserve the BUNIT even though it's not technically valid
+            # (Jy/Beam)
+            header['BUNIT'] = self._meta['BUNIT']
+        else:
+            header['BUNIT'] = self.unit.to_string(format='FITS')
+
+        if 'beam' in self._meta:
+            header = self._meta['beam'].attach_to_header(header)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            header.insert(2, Card(keyword='NAXIS', value=self.ndim))
+            for ind,sh in enumerate(self.shape[::-1]):
+                header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
+                                          value=sh))
+
+        return header
 
 
 class SpatialCoordMixinClass(object):
