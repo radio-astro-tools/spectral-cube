@@ -48,7 +48,7 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
-                    BeamAverageWarning, NonFiniteBeamsWarning)
+                    BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning)
 from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
                             doppler_beta, doppler_gamma, doppler_z)
 
@@ -3833,7 +3833,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         # what about apply_numpy_function, apply_function?  since they're
         # called by some of these, maybe *only* those should be wrapped to
         # avoid redundant calls
-        if attrname in ('moment', 'apply_numpy_function', 'apply_function'):
+        if attrname in ('moment', 'apply_numpy_function', 'apply_function',
+                        'apply_function_parallel_spectral'):
             origfunc = super(VRSC, self).__getattribute__(attrname)
             return self._handle_beam_areas_wrapper(origfunc)
         else:
