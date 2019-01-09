@@ -2529,73 +2529,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                   )
 
 
-class SpectralCube(BaseSpectralCube):
-
-    __name__ = "SpectralCube"
-
-    _oned_spectrum = OneDSpectrum
-
-    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, beam=None,
-                 wcs_tolerance=0.0, **kwargs):
-
-        super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
-                                           meta=meta, fill_value=fill_value,
-                                           header=header,
-                                           allow_huge_operations=allow_huge_operations,
-                                           wcs_tolerance=wcs_tolerance,
-                                           **kwargs)
-
-        # Beam loading must happen *after* WCS is read
-
-        if beam is None:
-            beam = cube_utils.try_load_beam(self.header)
-        else:
-            if not isinstance(beam, Beam):
-                raise TypeError("beam must be a radio_beam.Beam object.")
-
-        if beam is not None:
-            self.beam = beam
-            self._meta['beam'] = beam
-            self._header.update(beam.to_header_keywords())
-
-            self.pixels_per_beam = (self.beam.sr /
-                                    (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
-                                     u.deg**2)).to(u.dimensionless_unscaled).value
-
-    def _new_cube_with(self, **kwargs):
-        beam = kwargs.pop('beam', None)
-        if 'beam' in self._meta and beam is None:
-            beam = self.beam
-        newcube = super(SpectralCube, self)._new_cube_with(beam=beam, **kwargs)
-        return newcube
-
-    _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
-
-    def with_beam(self, beam):
-        '''
-        Attach a beam object to the `~SpectralCube`.
-
-        Parameters
-        ----------
-        beam : `~radio_beam.Beam`
-            `Beam` object defining the resolution element of the
-            `~SpectralCube`.
-        '''
-
-        if not isinstance(beam, Beam):
-            raise TypeError("beam must be a radio_beam.Beam object.")
-
-        meta = self._meta.copy()
-        meta['beam'] = beam
-
-        header = self._header.copy()
-        header.update(beam.to_header_keywords())
-
-        newcube = self._new_cube_with(meta=self.meta, beam=beam)
-
-        return newcube
-
     def spatial_smooth_median(self, ksize, update_function=None, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
@@ -3337,6 +3270,73 @@ class SpectralCube(BaseSpectralCube):
         return self._new_cube_with(data=dsarr, wcs=newwcs,
                                    mask=BooleanArrayMask(mask, wcs=newwcs))
 
+class SpectralCube(BaseSpectralCube):
+
+    __name__ = "SpectralCube"
+
+    _oned_spectrum = OneDSpectrum
+
+    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
+                 header=None, allow_huge_operations=False, beam=None,
+                 wcs_tolerance=0.0, **kwargs):
+
+        super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
+                                           meta=meta, fill_value=fill_value,
+                                           header=header,
+                                           allow_huge_operations=allow_huge_operations,
+                                           wcs_tolerance=wcs_tolerance,
+                                           **kwargs)
+
+        # Beam loading must happen *after* WCS is read
+
+        if beam is None:
+            beam = cube_utils.try_load_beam(self.header)
+        else:
+            if not isinstance(beam, Beam):
+                raise TypeError("beam must be a radio_beam.Beam object.")
+
+        if beam is not None:
+            self.beam = beam
+            self._meta['beam'] = beam
+            self._header.update(beam.to_header_keywords())
+
+            self.pixels_per_beam = (self.beam.sr /
+                                    (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
+                                     u.deg**2)).to(u.dimensionless_unscaled).value
+
+    def _new_cube_with(self, **kwargs):
+        beam = kwargs.pop('beam', None)
+        if 'beam' in self._meta and beam is None:
+            beam = self.beam
+        newcube = super(SpectralCube, self)._new_cube_with(beam=beam, **kwargs)
+        return newcube
+
+    _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
+
+    def with_beam(self, beam):
+        '''
+        Attach a beam object to the `~SpectralCube`.
+
+        Parameters
+        ----------
+        beam : `~radio_beam.Beam`
+            `Beam` object defining the resolution element of the
+            `~SpectralCube`.
+        '''
+
+        if not isinstance(beam, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        meta = self._meta.copy()
+        meta['beam'] = beam
+
+        header = self._header.copy()
+        header.update(beam.to_header_keywords())
+
+        newcube = self._new_cube_with(meta=self.meta, beam=beam)
+
+        return newcube
+
 class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
     """
     A variant of the SpectralCube class that has PSF (beam) information on a
@@ -3957,18 +3957,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         return newcube
 
-    def spectral_interpolate(self, *args, **kwargs):
-        raise AttributeError("VaryingResolutionSpectralCubes can't be "
-                             "spectrally interpolated.  Convolve to a "
-                             "common resolution with `convolve_to` before "
-                             "attempting spectral interpolation.")
-
-    def spectral_smooth(self, *args, **kwargs):
-        raise AttributeError("VaryingResolutionSpectralCubes can't be "
-                             "spectrally smoothed.  Convolve to a "
-                             "common resolution with `convolve_to` before "
-                             "attempting spectral smoothed.")
-
     @warn_slow
     def to(self, unit, equivalencies=()):
         """
@@ -4035,6 +4023,18 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         return self._new_cube_with(mask=mask,
                                    goodbeams_mask=goodchannels & self._goodbeams_mask)
+
+    def spectral_interpolate(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally interpolated.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral interpolation.")
+
+    def spectral_smooth(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally smoothed.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral smoothed.")
 
 
 def _regionlist_to_single_region(region_list):
