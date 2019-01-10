@@ -2546,51 +2546,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        shape = self.shape
+        def _msmooth_image(im, **kwargs):
+            return ndimage.filters.median_filter(im, size=ksize, **kwargs)
 
-        # "imagelist" is a generator
-        # the boolean check will skip smoothing for bad spectra
-        # TODO: should spatial good/bad be cached?
-        imagelist = ((self.filled_data[ii],
-                      self.mask.include(view=(ii, slice(None), slice(None))))
-                      for ii in range(self.shape[0]))
-
-        if update_function is None:
-            pb = ProgressBar(shape[0])
-            update_function = pb.update
-
-        def _gsmooth_image(args):
-            """
-            Helper function to smooth a spectrum
-            """
-            (im, includemask),kwargs = args
-            update_function()
-
-            if includemask.any():
-                return ndimage.filters.median_filter(im, size=ksize)
-            else:
-                return im
-
-        # could be numcores, except _gsmooth_spectrum is unpicklable
-        with cube_utils._map_context(1) as map:
-            smoothcube_ = np.array([x for x in
-                                    map(_gsmooth_image, zip(imagelist,
-                                                            itertools.cycle([kwargs]),
-                                                           )
-                                       )
-                                  ])
-
-        # TODO: do something about the mask?
-        newcube = self._new_cube_with(data=smoothcube_, wcs=self.wcs,
-                                      mask=self.mask, meta=self.meta,
-                                      fill_value=self.fill_value)
+        newcube = self.apply_function_parallel_spatial(_msmooth_image,
+                                                       **kwargs)
 
         return newcube
 
     def spatial_smooth(self, kernel,
-                       #numcores=None,
                        convolve=convolution.convolve,
-                       update_function=None,
                        **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
@@ -2603,52 +2568,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
             Passed to the convolve function
         """
 
-        shape = self.shape
-
-        # "imagelist" is a generator
-        # the boolean check will skip smoothing for bad spectra
-        # TODO: should spatial good/bad be cached?
-        imagelist = ((self.filled_data[ii],
-                     self.mask.include(view=(ii, slice(None), slice(None))))
-                     for ii in range(self.shape[0]))
-
-        if update_function is None:
-            pb = ProgressBar(shape[0])
-            update_function = pb.update
-
-        def _gsmooth_image(args):
+        def _gsmooth_image(img, **kwargs):
             """
             Helper function to smooth an image
             """
-            (im, includemask),kernel,kwargs = args
-            update_function()
+            return convolve(img, kernel, normalize_kernel=True, **kwargs)
 
-            if includemask.any():
-                return convolve(im, kernel, normalize_kernel=True, **kwargs)
-            else:
-                return im
-
-        # could be numcores, except _gsmooth_spectrum is unpicklable
-        with cube_utils._map_context(1) as map:
-            smoothcube_ = np.array([x for x in
-                                    map(_gsmooth_image, zip(imagelist,
-                                                            itertools.cycle([kernel]),
-                                                            itertools.cycle([kwargs]),
-                                                           )
-                                       )
-                                  ])
-
-        # TODO: do something about the mask?
-        newcube = self._new_cube_with(data=smoothcube_, wcs=self.wcs,
-                                      mask=self.mask, meta=self.meta,
-                                      fill_value=self.fill_value)
+        newcube = self.apply_function_parallel_spatial(_gsmooth_image,
+                                                       **kwargs)
 
         return newcube
 
