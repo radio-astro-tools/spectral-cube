@@ -7,8 +7,13 @@ from __future__ import print_function, absolute_import, division
 import numpy as np
 
 import pytest
-import tracemalloc
 import tempfile
+
+try:
+    import tracemalloc
+    tracemallocOK = True
+except ImportErorr:
+    tracemallocOK = False
 
 from .test_moments import moment_cube
 from .helpers import assert_allclose
@@ -112,6 +117,8 @@ def test_parallel_performance_smoothing():
             print("memmap=True shape={0}".format(shape))
             print(rslt)
 
+# python 2.7 doesn't have tracemalloc
+@pytest.mark.skipif('not tracemallocOK')
 def test_memory_usage():
     """
     Make sure that using memmaps happens where expected, for the most part, and
