@@ -103,7 +103,7 @@ def _apply_spectral_function(arguments, outcube, function, **kwargs):
     """
     (spec, includemask, ii, jj) = arguments
 
-    if any(includemask):
+    if np.any(includemask):
         outcube[:,jj,ii] = function(spec, **kwargs)
     else:
         outcube[:,jj,ii] = spec
@@ -116,7 +116,7 @@ def _apply_spatial_function(arguments, outcube, function, **kwargs):
     """
     (img, includemask, ii) = arguments
 
-    if any(includemask):
+    if np.any(includemask):
         outcube[ii, :, :] = function(img, **kwargs)
     else:
         outcube[ii, :, :] = img
