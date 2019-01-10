@@ -3104,22 +3104,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
 
-        if update_function is None:
-            pb = ProgressBar(self.shape[0])
-            update_function = pb.update
+        def convfunc(img):
+            return convolve(img, convolution_kernel, normalize_kernel=True,
+                            **kwargs)
 
-        newdata = np.empty(self.shape)
-        for ii in range(self.shape[0]):
-
-            # load each image from a slice to avoid loading whole cube into
-            # memory
-            img = self[ii,:,:].filled_data[:]
-
-            newdata[ii,:,:] = convolve(img, convolution_kernel,
-                                       normalize_kernel=True, **kwargs)
-            update_function()
-
-        newcube = self._new_cube_with(data=newdata, beam=beam)
+        newcube = self.apply_function_parallel_spatial(convfunc,
+                                                       **kwargs).with_beam(beam)
 
         return newcube
 
