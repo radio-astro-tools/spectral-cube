@@ -2680,6 +2680,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.apply_function_parallel_spectral(ndimage.filters.median_filter,
                                                      size=ksize,
+                                                     verbose=verbose,
                                                      num_cores=num_cores,
                                                      use_memmap=use_memmap,
                                                      **kwargs)
@@ -2828,6 +2829,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self._apply_function_parallel_base(images, function,
                                                   applicator=_apply_spatial_function,
+                                                  verbose=verbose,
+                                                  parallel=parallel,
+                                                  num_cores=num_cores,
+                                                  use_memmap=use_memmap,
                                                   **kwargs)
 
     def apply_function_parallel_spectral(self,
@@ -2881,6 +2886,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self._apply_function_parallel_base(iteration_data=spectra,
                                                   function=function,
                                                   applicator=_apply_spectral_function,
+                                                  use_memmap=use_memmap,
+                                                  parallel=parallel,
+                                                  verbose=verbose,
+                                                  num_cores=num_cores,
                                                   **kwargs
                                                  )
 
