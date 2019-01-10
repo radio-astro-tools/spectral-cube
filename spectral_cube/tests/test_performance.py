@@ -8,11 +8,12 @@ import numpy as np
 
 import pytest
 import tempfile
+import sys
 
 try:
     import tracemalloc
     tracemallocOK = True
-except ImportErorr:
+except ImportError:
     tracemallocOK = False
 
 from .test_moments import moment_cube
@@ -118,7 +119,7 @@ def test_parallel_performance_smoothing():
             print(rslt)
 
 # python 2.7 doesn't have tracemalloc
-@pytest.mark.skipif('not tracemallocOK')
+@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6)')
 def test_memory_usage():
     """
     Make sure that using memmaps happens where expected, for the most part, and
