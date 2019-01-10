@@ -77,7 +77,7 @@ def test_beams_convolution_equal():
                                    conv_cube.filled_data[0].value)
 
 
-@pytest.mark.parametrize('use_memmap', (True, False)
+@pytest.mark.parametrize('use_memmap', (True, False))
 def test_reproject(use_memmap):
 
     pytest.importorskip('reproject')

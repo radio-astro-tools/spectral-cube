@@ -2502,12 +2502,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # (see FITS_tools.regrid_cube for a guide on how to do this)
 
         newwcs = wcs.WCS(header)
-        shape_out = [header['NAXIS{0}'.format(i + 1)] for i in range(header['NAXIS'])][::-1]
+        shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
+                           range(header['NAXIS'])][::-1])
 
         if use_memmap:
             # note: requires reproject from December 2018 or later
             outarray = np.memmap(filename='output.np', mode='w+',
-                                 shape=shape_out, dtype='float32')
+                                 shape=tuple(shape_out), dtype='float32')
         else:
             outarray = None
 
