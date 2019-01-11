@@ -48,7 +48,7 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
-                    BeamAverageWarning, NonFiniteBeamsWarning)
+                    BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning)
 from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
                             doppler_beta, doppler_gamma, doppler_z)
 
@@ -95,7 +95,7 @@ def aggregation_docstring(func):
     wrapper.__doc__ += _NP_DOC
     return wrapper
 
-def _apply_function(arguments, outcube, function, **kwargs):
+def _apply_spectral_function(arguments, outcube, function, **kwargs):
     """
     Helper function to apply a function to a spectrum.
     Needs to be declared toward the top of the code to allow pickling by
@@ -103,10 +103,23 @@ def _apply_function(arguments, outcube, function, **kwargs):
     """
     (spec, includemask, ii, jj) = arguments
 
-    if any(includemask):
+    if np.any(includemask):
         outcube[:,jj,ii] = function(spec, **kwargs)
     else:
         outcube[:,jj,ii] = spec
+
+def _apply_spatial_function(arguments, outcube, function, **kwargs):
+    """
+    Helper function to apply a function to an image.
+    Needs to be declared toward the top of the code to allow pickling by
+    joblib.
+    """
+    (img, includemask, ii) = arguments
+
+    if np.any(includemask):
+        outcube[ii, :, :] = function(img, **kwargs)
+    else:
+        outcube[ii, :, :] = img
 
 
 # convenience structures to keep track of the reversed index
@@ -2516,73 +2529,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                   )
 
 
-class SpectralCube(BaseSpectralCube):
-
-    __name__ = "SpectralCube"
-
-    _oned_spectrum = OneDSpectrum
-
-    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, beam=None,
-                 wcs_tolerance=0.0, **kwargs):
-
-        super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
-                                           meta=meta, fill_value=fill_value,
-                                           header=header,
-                                           allow_huge_operations=allow_huge_operations,
-                                           wcs_tolerance=wcs_tolerance,
-                                           **kwargs)
-
-        # Beam loading must happen *after* WCS is read
-
-        if beam is None:
-            beam = cube_utils.try_load_beam(self.header)
-        else:
-            if not isinstance(beam, Beam):
-                raise TypeError("beam must be a radio_beam.Beam object.")
-
-        if beam is not None:
-            self.beam = beam
-            self._meta['beam'] = beam
-            self._header.update(beam.to_header_keywords())
-
-            self.pixels_per_beam = (self.beam.sr /
-                                    (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
-                                     u.deg**2)).to(u.dimensionless_unscaled).value
-
-    def _new_cube_with(self, **kwargs):
-        beam = kwargs.pop('beam', None)
-        if 'beam' in self._meta and beam is None:
-            beam = self.beam
-        newcube = super(SpectralCube, self)._new_cube_with(beam=beam, **kwargs)
-        return newcube
-
-    _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
-
-    def with_beam(self, beam):
-        '''
-        Attach a beam object to the `~SpectralCube`.
-
-        Parameters
-        ----------
-        beam : `~radio_beam.Beam`
-            `Beam` object defining the resolution element of the
-            `~SpectralCube`.
-        '''
-
-        if not isinstance(beam, Beam):
-            raise TypeError("beam must be a radio_beam.Beam object.")
-
-        meta = self._meta.copy()
-        meta['beam'] = beam
-
-        header = self._header.copy()
-        header.update(beam.to_header_keywords())
-
-        newcube = self._new_cube_with(meta=self.meta, beam=beam)
-
-        return newcube
-
     def spatial_smooth_median(self, ksize, update_function=None, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
@@ -2600,51 +2546,16 @@ class SpectralCube(BaseSpectralCube):
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        shape = self.shape
+        def _msmooth_image(im, **kwargs):
+            return ndimage.filters.median_filter(im, size=ksize, **kwargs)
 
-        # "imagelist" is a generator
-        # the boolean check will skip smoothing for bad spectra
-        # TODO: should spatial good/bad be cached?
-        imagelist = ((self.filled_data[ii],
-                      self.mask.include(view=(ii, slice(None), slice(None))))
-                      for ii in range(self.shape[0]))
-
-        if update_function is None:
-            pb = ProgressBar(shape[0])
-            update_function = pb.update
-
-        def _gsmooth_image(args):
-            """
-            Helper function to smooth a spectrum
-            """
-            (im, includemask),kwargs = args
-            update_function()
-
-            if includemask.any():
-                return ndimage.filters.median_filter(im, size=ksize)
-            else:
-                return im
-
-        # could be numcores, except _gsmooth_spectrum is unpicklable
-        with cube_utils._map_context(1) as map:
-            smoothcube_ = np.array([x for x in
-                                    map(_gsmooth_image, zip(imagelist,
-                                                            itertools.cycle([kwargs]),
-                                                           )
-                                       )
-                                  ])
-
-        # TODO: do something about the mask?
-        newcube = self._new_cube_with(data=smoothcube_, wcs=self.wcs,
-                                      mask=self.mask, meta=self.meta,
-                                      fill_value=self.fill_value)
+        newcube = self.apply_function_parallel_spatial(_msmooth_image,
+                                                       **kwargs)
 
         return newcube
 
     def spatial_smooth(self, kernel,
-                       #numcores=None,
                        convolve=convolution.convolve,
-                       update_function=None,
                        **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
@@ -2657,52 +2568,18 @@ class SpectralCube(BaseSpectralCube):
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
             Passed to the convolve function
         """
 
-        shape = self.shape
-
-        # "imagelist" is a generator
-        # the boolean check will skip smoothing for bad spectra
-        # TODO: should spatial good/bad be cached?
-        imagelist = ((self.filled_data[ii],
-                     self.mask.include(view=(ii, slice(None), slice(None))))
-                     for ii in range(self.shape[0]))
-
-        if update_function is None:
-            pb = ProgressBar(shape[0])
-            update_function = pb.update
-
-        def _gsmooth_image(args):
+        def _gsmooth_image(img, **kwargs):
             """
             Helper function to smooth an image
             """
-            (im, includemask),kernel,kwargs = args
-            update_function()
+            return convolve(img, kernel, normalize_kernel=True, **kwargs)
 
-            if includemask.any():
-                return convolve(im, kernel, normalize_kernel=True, **kwargs)
-            else:
-                return im
-
-        # could be numcores, except _gsmooth_spectrum is unpicklable
-        with cube_utils._map_context(1) as map:
-            smoothcube_ = np.array([x for x in
-                                    map(_gsmooth_image, zip(imagelist,
-                                                            itertools.cycle([kernel]),
-                                                            itertools.cycle([kwargs]),
-                                                           )
-                                       )
-                                  ])
-
-        # TODO: do something about the mask?
-        newcube = self._new_cube_with(data=smoothcube_, wcs=self.wcs,
-                                      mask=self.mask, meta=self.meta,
-                                      fill_value=self.fill_value)
+        newcube = self.apply_function_parallel_spatial(_gsmooth_image,
+                                                       **kwargs)
 
         return newcube
 
@@ -2734,9 +2611,160 @@ class SpectralCube(BaseSpectralCube):
 
         return self.apply_function_parallel_spectral(ndimage.filters.median_filter,
                                                      size=ksize,
+                                                     verbose=verbose,
                                                      num_cores=num_cores,
                                                      use_memmap=use_memmap,
                                                      **kwargs)
+
+    def _apply_function_parallel_base(self,
+                                      iteration_data,
+                                      function,
+                                      applicator,
+                                      num_cores=None,
+                                      verbose=0,
+                                      use_memmap=True,
+                                      parallel=True,
+                                      memmap_dir=None,
+                                      **kwargs
+                                     ):
+        """
+        Apply a function in parallel using the ``applicator`` function.  The
+        function will be performed on data with masked values replaced with the
+        cube's fill value.
+
+        Parameters
+        ----------
+        iteration_data : generator
+            The data to be iterated over in the format expected by ``applicator``
+        function : function
+            The function to apply in the spectral dimension.  It must take
+            two arguments: an array representing a spectrum and a boolean array
+            representing the mask.  It may also accept ``**kwargs``.  The
+            function must return an object with the same shape as the input
+            spectrum.
+        applicator : function
+            Either ``_apply_spatial_function`` or ``_apply_spectral_function``,
+            a tool to handle the iteration data and send it to the ``function``
+            appropriately.
+        num_cores : int or None
+            The number of cores to use if running in parallel
+        verbose : int
+            Verbosity level to pass to joblib
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        parallel : bool
+            If set to ``False``, will force the use of a single core without
+            using ``joblib``.
+        kwargs : dict
+            Passed to ``function``
+        """
+
+        if use_memmap:
+            ntf = tempfile.NamedTemporaryFile(dir=memmap_dir)
+            outcube = np.memmap(ntf, mode='w+', shape=self.shape, dtype=np.float)
+        else:
+            if self._is_huge and not self.allow_huge_operations:
+                raise ValueError("Applying a function without ``use_memmap`` "
+                                 "requires loading the whole array into "
+                                 "memory *twice*, which can overload the "
+                                 "machine's memory for large cubes.  Either "
+                                 "set ``use_memmap=True`` or set "
+                                 "``cube.allow_huge_operations=True`` to "
+                                 "override this restriction.")
+            outcube = np.empty(shape=self.shape, dtype=np.float)
+
+        if parallel and use_memmap:
+            # it is not possible to run joblib parallelization without memmap
+            try:
+                from joblib import Parallel, delayed
+
+                Parallel(n_jobs=num_cores,
+                         verbose=verbose,
+                         max_nbytes=None)(delayed(applicator)(arg, outcube,
+                                                              function,
+                                                              **kwargs)
+                                          for arg in iteration_data)
+            except ImportError:
+                if num_cores is not None and num_cores > 1:
+                    warnings.warn("Could not import joblib.  Will run in serial.",
+                                  warnings.ImportWarning)
+                parallel = False
+
+        # this isn't an else statement because we want to catch the case where
+        # the above clause fails on ImportError
+        if not parallel or not use_memmap:
+            if verbose > 0:
+                progressbar = ProgressBar(self.shape[1]*self.shape[2])
+                pbu = progressbar.update
+            else:
+                pbu = object
+
+            for arg in iteration_data:
+                applicator(arg, outcube, function, **kwargs)
+                pbu()
+
+
+        # TODO: do something about the mask?
+        newcube = self._new_cube_with(data=outcube, wcs=self.wcs,
+                                      mask=self.mask, meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
+
+    def apply_function_parallel_spatial(self,
+                                        function,
+                                        num_cores=None,
+                                        verbose=0,
+                                        use_memmap=True,
+                                        parallel=True,
+                                        **kwargs
+                                       ):
+        """
+        Apply a function in parallel along the spatial dimension.  The
+        function will be performed on data with masked values replaced with the
+        cube's fill value.
+
+        Parameters
+        ----------
+        function : function
+            The function to apply in the spatial dimension.  It must take
+            two arguments: an array representing an image and a boolean array
+            representing the mask.  It may also accept ``**kwargs``.  The
+            function must return an object with the same shape as the input
+            spectrum.
+        num_cores : int or None
+            The number of cores to use if running in parallel
+        verbose : int
+            Verbosity level to pass to joblib
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        parallel : bool
+            If set to ``False``, will force the use of a single core without
+            using ``joblib``.
+        kwargs : dict
+            Passed to ``function``
+        """
+        shape = self.shape
+
+        data = self.unitless_filled_data
+
+        # 'images' is a generator
+        # the boolean check will skip the function for bad spectra
+        images = ((data[ii,:,:],
+                   self.mask.include(view=(ii, slice(None), slice(None))),
+                   ii,
+                   )
+                  for ii in range(shape[0]))
+
+        return self._apply_function_parallel_base(images, function,
+                                                  applicator=_apply_spatial_function,
+                                                  verbose=verbose,
+                                                  parallel=parallel,
+                                                  num_cores=num_cores,
+                                                  use_memmap=use_memmap,
+                                                  **kwargs)
 
     def apply_function_parallel_spectral(self,
                                          function,
@@ -2786,59 +2814,15 @@ class SpectralCube(BaseSpectralCube):
                    for jj in range(shape[1])
                    for ii in range(shape[2]))
 
-        if use_memmap:
-            ntf = tempfile.NamedTemporaryFile()
-            outcube = np.memmap(ntf, mode='w+', shape=shape, dtype=np.float)
-        else:
-            if self._is_huge and not self.allow_huge_operations:
-                raise ValueError("Applying a function without ``use_memmap`` "
-                                 "requires loading the whole array into "
-                                 "memory *twice*, which can overload the "
-                                 "machine's memory for large cubes.  Either "
-                                 "set ``use_memmap=True`` or set "
-                                 "``cube.allow_huge_operations=True`` to "
-                                 "override this restriction.")
-            outcube = np.empty(shape=shape, dtype=np.float)
-
-        if parallel and use_memmap:
-            # it is not possible to run joblib parallelization without memmap
-            try:
-                from joblib import Parallel, delayed
-
-                Parallel(n_jobs=num_cores,
-                         verbose=verbose,
-                         max_nbytes=None)(delayed(_apply_function)(arg,
-                                                                   outcube,
-                                                                   function,
-                                                                   **kwargs)
-                                          for arg in spectra)
-            except ImportError:
-                if num_cores is not None and num_cores > 1:
-                    warnings.warn("Could not import joblib.  Will run in serial.",
-                                  warnings.ImportWarning)
-                parallel = False
-
-        # this isn't an else statement because we want to catch the case where
-        # the above clause fails on ImportError
-        if not parallel or not use_memmap:
-            if verbose > 0:
-                progressbar = ProgressBar(self.shape[1]*self.shape[2])
-                pbu = progressbar.update
-            else:
-                pbu = object
-
-            for arg in spectra:
-                _apply_function(arg, outcube, function, **kwargs)
-                pbu()
-
-
-        # TODO: do something about the mask?
-        newcube = self._new_cube_with(data=outcube, wcs=self.wcs,
-                                      mask=self.mask, meta=self.meta,
-                                      fill_value=self.fill_value)
-
-        return newcube
-
+        return self._apply_function_parallel_base(iteration_data=spectra,
+                                                  function=function,
+                                                  applicator=_apply_spectral_function,
+                                                  use_memmap=use_memmap,
+                                                  parallel=parallel,
+                                                  verbose=verbose,
+                                                  num_cores=num_cores,
+                                                  **kwargs
+                                                 )
 
     def sigma_clip(self, threshold, verbose=0, use_memmap=True,
                    num_cores=None, **kwargs):
@@ -3051,22 +3035,12 @@ class SpectralCube(BaseSpectralCube):
 
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
 
-        if update_function is None:
-            pb = ProgressBar(self.shape[0])
-            update_function = pb.update
+        def convfunc(img):
+            return convolve(img, convolution_kernel, normalize_kernel=True,
+                            **kwargs)
 
-        newdata = np.empty(self.shape)
-        for ii in range(self.shape[0]):
-
-            # load each image from a slice to avoid loading whole cube into
-            # memory
-            img = self[ii,:,:].filled_data[:]
-
-            newdata[ii,:,:] = convolve(img, convolution_kernel,
-                                       normalize_kernel=True, **kwargs)
-            update_function()
-
-        newcube = self._new_cube_with(data=newdata, beam=beam)
+        newcube = self.apply_function_parallel_spatial(convfunc,
+                                                       **kwargs).with_beam(beam)
 
         return newcube
 
@@ -3226,6 +3200,73 @@ class SpectralCube(BaseSpectralCube):
 
         return self._new_cube_with(data=dsarr, wcs=newwcs,
                                    mask=BooleanArrayMask(mask, wcs=newwcs))
+
+class SpectralCube(BaseSpectralCube):
+
+    __name__ = "SpectralCube"
+
+    _oned_spectrum = OneDSpectrum
+
+    def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
+                 header=None, allow_huge_operations=False, beam=None,
+                 wcs_tolerance=0.0, **kwargs):
+
+        super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
+                                           meta=meta, fill_value=fill_value,
+                                           header=header,
+                                           allow_huge_operations=allow_huge_operations,
+                                           wcs_tolerance=wcs_tolerance,
+                                           **kwargs)
+
+        # Beam loading must happen *after* WCS is read
+
+        if beam is None:
+            beam = cube_utils.try_load_beam(self.header)
+        else:
+            if not isinstance(beam, Beam):
+                raise TypeError("beam must be a radio_beam.Beam object.")
+
+        if beam is not None:
+            self.beam = beam
+            self._meta['beam'] = beam
+            self._header.update(beam.to_header_keywords())
+
+            self.pixels_per_beam = (self.beam.sr /
+                                    (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
+                                     u.deg**2)).to(u.dimensionless_unscaled).value
+
+    def _new_cube_with(self, **kwargs):
+        beam = kwargs.pop('beam', None)
+        if 'beam' in self._meta and beam is None:
+            beam = self.beam
+        newcube = super(SpectralCube, self)._new_cube_with(beam=beam, **kwargs)
+        return newcube
+
+    _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
+
+    def with_beam(self, beam):
+        '''
+        Attach a beam object to the `~SpectralCube`.
+
+        Parameters
+        ----------
+        beam : `~radio_beam.Beam`
+            `Beam` object defining the resolution element of the
+            `~SpectralCube`.
+        '''
+
+        if not isinstance(beam, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        meta = self._meta.copy()
+        meta['beam'] = beam
+
+        header = self._header.copy()
+        header.update(beam.to_header_keywords())
+
+        newcube = self._new_cube_with(meta=self.meta, beam=beam)
+
+        return newcube
 
 class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
     """
@@ -3677,6 +3718,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         if beam_threshold is None:
             beam_threshold = self.beam_threshold
 
+        @wraps(function)
         def newfunc(*args, **kwargs):
             """ Wrapper function around the standard operations to handle beams
             when creating projections """
@@ -3723,7 +3765,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         # what about apply_numpy_function, apply_function?  since they're
         # called by some of these, maybe *only* those should be wrapped to
         # avoid redundant calls
-        if attrname in ('moment', 'apply_numpy_function', 'apply_function'):
+        if attrname in ('moment', 'apply_numpy_function', 'apply_function',
+                        'apply_function_parallel_spectral'):
             origfunc = super(VRSC, self).__getattribute__(attrname)
             return self._handle_beam_areas_wrapper(origfunc)
         else:
@@ -3847,18 +3890,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         return newcube
 
-    def spectral_interpolate(self, *args, **kwargs):
-        raise AttributeError("VaryingResolutionSpectralCubes can't be "
-                             "spectrally interpolated.  Convolve to a "
-                             "common resolution with `convolve_to` before "
-                             "attempting spectral interpolation.")
-
-    def spectral_smooth(self, *args, **kwargs):
-        raise AttributeError("VaryingResolutionSpectralCubes can't be "
-                             "spectrally smoothed.  Convolve to a "
-                             "common resolution with `convolve_to` before "
-                             "attempting spectral smoothed.")
-
     @warn_slow
     def to(self, unit, equivalencies=()):
         """
@@ -3925,6 +3956,18 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         return self._new_cube_with(mask=mask,
                                    goodbeams_mask=goodchannels & self._goodbeams_mask)
+
+    def spectral_interpolate(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally interpolated.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral interpolation.")
+
+    def spectral_smooth(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally smoothed.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral smoothed.")
 
 
 def _regionlist_to_single_region(region_list):
