@@ -77,7 +77,8 @@ def test_beams_convolution_equal():
                                    conv_cube.filled_data[0].value)
 
 
-def test_reproject():
+@pytest.mark.parametrize('use_memmap', (True, False))
+def test_reproject(use_memmap):
 
     pytest.importorskip('reproject')
 
@@ -95,7 +96,7 @@ def test_reproject():
     header_out['NAXIS3'] = cube.shape[0]
     header_out.update(wcs_out.to_header())
 
-    result = cube.reproject(header_out)
+    result = cube.reproject(header_out, use_memmap=use_memmap)
 
     assert result.shape == (cube.shape[0], 5, 4)
 

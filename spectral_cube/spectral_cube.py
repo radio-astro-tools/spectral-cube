@@ -2463,7 +2463,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return result
 
     @warn_slow
-    def reproject(self, header, order='bilinear'):
+    def reproject(self, header, order='bilinear', use_memmap=False):
         """
         Spatially reproject the cube into a new header.  Fills the data with
         the cube's ``fill_value`` to replace bad values before reprojection.
@@ -2492,6 +2492,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
             or an integer. A value of ``0`` indicates nearest neighbor
             interpolation.
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
         """
 
         try:
@@ -2500,10 +2503,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             raise ImportError("Requires the reproject package to be"
                               " installed.")
 
-        # Need version > 0.2 to work with cubes
+        # Need version > 0.2 to work with cubes, >= 0.5 for memmap
         from distutils.version import LooseVersion
-        if LooseVersion(version) < "0.3":
-            raise Warning("Requires version >=0.3 of reproject. The current "
+        if LooseVersion(version) < "0.5":
+            raise Warning("Requires version >=0.5 of reproject. The current "
                           "version is: {}".format(version))
 
         from reproject import reproject_interp
@@ -2512,11 +2515,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # (see FITS_tools.regrid_cube for a guide on how to do this)
 
         newwcs = wcs.WCS(header)
-        shape_out = [header['NAXIS{0}'.format(i + 1)] for i in range(header['NAXIS'])][::-1]
+        shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
+                           range(header['NAXIS'])][::-1])
+
+        if use_memmap:
+            # note: requires reproject from December 2018 or later
+            outarray = np.memmap(filename='output.np', mode='w+',
+                                 shape=tuple(shape_out), dtype='float32')
+        else:
+            outarray = None
 
         newcube, newcube_valid = reproject_interp((self.filled_data[:],
                                                    self.header),
                                                   newwcs,
+                                                  output_array=outarray,
                                                   shape_out=shape_out,
                                                   order=order,
                                                   independent_celestial_slices=True)
