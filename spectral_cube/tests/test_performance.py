@@ -4,14 +4,24 @@ Performance-related tests to make sure we don't use more memory than we should
 
 from __future__ import print_function, absolute_import, division
 
+import numpy as np
+
 import pytest
+import tempfile
+import sys
+
+try:
+    import tracemalloc
+    tracemallocOK = True
+except ImportError:
+    tracemallocOK = False
 
 from .test_moments import moment_cube
 from .helpers import assert_allclose
 from ..spectral_cube import SpectralCube
 from . import utilities
 
-from astropy import convolution
+from astropy import convolution, units as u
 
 def find_base_nbytes(obj):
     # from http://stackoverflow.com/questions/34637875/size-of-numpy-strided-array-broadcast-array-in-memory
@@ -107,3 +117,78 @@ def test_parallel_performance_smoothing():
             print()
             print("memmap=True shape={0}".format(shape))
             print(rslt)
+
+# python 2.7 doesn't have tracemalloc
+@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6)')
+def test_memory_usage():
+    """
+    Make sure that using memmaps happens where expected, for the most part, and
+    that memory doesn't get overused.
+    """
+
+    ntf = tempfile.NamedTemporaryFile()
+
+    tracemalloc.start()
+
+    snap1 = tracemalloc.take_snapshot()
+
+    # create a 64 MB cube
+    cube,_ = utilities.generate_gaussian_cube(shape=[200,200,200])
+    sz = _.dtype.itemsize
+
+    snap1b = tracemalloc.take_snapshot()
+    diff = snap1b.compare_to(snap1, 'lineno')
+    diffvals = np.array([dd.size_diff for dd in diff])
+    # at this point, the generated cube should still exist in memory
+    assert diffvals.max()*u.B >= 200**3*sz*u.B
+
+    del _
+    snap2 = tracemalloc.take_snapshot()
+    diff = snap2.compare_to(snap1b, 'lineno')
+    assert diff[0].size_diff*u.B < -0.3*u.MB
+
+    cube.write(ntf.name, format='fits')
+
+    # writing the cube should not occupy any more memory
+    snap3 = tracemalloc.take_snapshot()
+    diff = snap3.compare_to(snap2, 'lineno')
+    assert sum([dd.size_diff for dd in diff])*u.B < 100*u.kB
+
+    del cube
+
+    # deleting the cube should remove the 64 MB from memory
+    snap4 = tracemalloc.take_snapshot()
+    diff = snap4.compare_to(snap3, 'lineno')
+    assert diff[0].size_diff*u.B < -200**3*sz*u.B
+
+    cube = SpectralCube.read(ntf.name, format='fits')
+
+    # reading the cube from filename on disk should result in no increase in
+    # memory use
+    snap5 = tracemalloc.take_snapshot()
+    diff = snap5.compare_to(snap4, 'lineno')
+    assert diff[0].size_diff*u.B < 1*u.MB
+
+    mask = cube.mask.include()
+
+    snap6 = tracemalloc.take_snapshot()
+    diff = snap6.compare_to(snap5, 'lineno')
+    assert diff[0].size_diff*u.B >= mask.size*u.B
+
+    filled_data = cube._get_filled_data(use_memmap=True)
+    snap7 = tracemalloc.take_snapshot()
+    diff = snap7.compare_to(snap6, 'lineno')
+    assert diff[0].size_diff*u.B < 100*u.kB
+
+    filled_data = cube._get_filled_data(use_memmap=False)
+    snap8 = tracemalloc.take_snapshot()
+    diff = snap8.compare_to(snap7, 'lineno')
+    assert diff[0].size_diff*u.B > 10*u.MB
+
+    del filled_data
+
+    # cube is <1e8 bytes, so this is use_memmap=False
+    filled_data = cube.filled_data[:]
+    snap9 = tracemalloc.take_snapshot()
+    diff = snap9.compare_to(snap6, 'lineno')
+    assert diff[0].size_diff*u.B > 10*u.MB
