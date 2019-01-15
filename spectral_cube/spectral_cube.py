@@ -2463,7 +2463,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return result
 
     @warn_slow
-    def reproject(self, header, order='bilinear', use_memmap=False):
+    def reproject(self, header, order='bilinear', use_memmap=False,
+                  filled=True):
         """
         Spatially reproject the cube into a new header.  Fills the data with
         the cube's ``fill_value`` to replace bad values before reprojection.
@@ -2495,6 +2496,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         use_memmap : bool
             If specified, a memory mapped temporary file on disk will be
             written to rather than storing the intermediate spectra in memory.
+        filled : bool
+            Fill the masked values with the cube's fill value before
+            reprojection?  Note that setting ``filled=False`` will use the raw
+            data array, which can be a workaround that prevents loading large
+            data into memory.
         """
 
         try:
@@ -2525,7 +2531,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         else:
             outarray = None
 
-        newcube, newcube_valid = reproject_interp((self.filled_data[:],
+        if filled:
+            data = self.filled_data[:]
+        else:
+            data = self._data
+
+        newcube, newcube_valid = reproject_interp((data,
                                                    self.header),
                                                   newwcs,
                                                   output_array=outarray,
