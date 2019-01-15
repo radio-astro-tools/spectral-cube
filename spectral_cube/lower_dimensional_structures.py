@@ -10,7 +10,7 @@ from astropy import units as u
 from astropy import wcs
 #from astropy import log
 from astropy.io.fits import Header, HDUList, PrimaryHDU
-from radio_beam import Beam
+from radio_beam import Beam, Beams
 
 from .io.core import determine_format
 from . import spectral_axis
@@ -140,6 +140,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
         self._header = getattr(obj, '_header', None)
+        self._beam = getattr(obj, '_beam', None)
         self._spectral_unit = getattr(obj, '_spectral_unit', None)
         self._fill_value = getattr(obj, '_fill_value', np.nan)
         self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
@@ -292,6 +293,18 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
 
         self._mask = mask
 
+    @property
+    def beam(self):
+        return self._beam
+
+    @beam.setter
+    def beam(self, obj):
+
+        if not isinstance(obj, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        self._beam = obj
+
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                  MaskableArrayMixinClass):
 
@@ -351,11 +364,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         meta = self.meta.copy()
         meta['beam'] = beam
 
-        self = Projection(self.value, unit=self.unit, wcs=self.wcs,
-                          meta=meta, header=self.header,
-                          beam=beam)
-
-        return self
+        return self._new_projection_with(beam=beam, meta=meta)
 
     def with_fill_value(self, fill_value):
         """
@@ -415,18 +424,6 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                                  **kwargs)
 
         return newproj
-
-    @property
-    def beam(self):
-        return self._beam
-
-    @beam.setter
-    def beam(self, obj):
-
-        if not isinstance(obj, Beam):
-            raise TypeError("beam must be a radio_beam.Beam object.")
-
-        self._beam = obj
 
     @staticmethod
     def from_hdu(hdu):
@@ -1018,6 +1015,21 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         """
         return self._new_spectrum_with(fill_value=fill_value)
 
+    def with_beam(self, beam):
+        '''
+        Attach a new beam object to the OneDSpectrum.
+
+        Parameters
+        ----------
+        beams : `~radio_beam.Beam`
+            A new beam or beams object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beam'] = beam
+
+        return self._new_spectrum_with(beam=beam, meta=meta)
+
     def _new_spectrum_with(self, data=None, wcs=None, mask=None, meta=None,
                            fill_value=None, spectral_unit=None, unit=None,
                            header=None, wcs_tolerance=None, beams=None,
@@ -1069,7 +1081,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             cls = VaryingResolutionOneDSpectrum
         else:
             cls = OneDSpectrum
-            
+
 
         spectrum = cls(value=data, wcs=wcs, mask=mask, meta=meta, unit=unit,
                        fill_value=fill_value, header=header or self._header,
