@@ -329,7 +329,8 @@ def test_ondespectrum_with_beam():
     exp_beam = Beam(2.0 * u.arcsec)
     header = hdu.header.copy()
     header = exp_beam.attach_to_header(header)
-    new_spec = OneDSpectrum(hdu.data, wcs=spec.wcs, header=header)
+    new_spec = OneDSpectrum(hdu.data, wcs=spec.wcs, header=header,
+                            read_beam=True)
 
     assert new_spec.beam == exp_beam
     assert new_spec.meta['beam'] == exp_beam
@@ -337,7 +338,6 @@ def test_ondespectrum_with_beam():
     # load beam from beam object
     exp_beam = Beam(3.0 * u.arcsec)
     header = hdu.header.copy()
-    del header["BMAJ"], header["BMIN"], header["BPA"]
     new_spec = OneDSpectrum(hdu.data, wcs=spec.wcs, header=header,
                             beam=exp_beam)
 
