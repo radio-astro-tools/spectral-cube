@@ -187,8 +187,10 @@ def test_VRODS_with_beams():
     p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False, beams=exp_beams)
     assert (p.beams == exp_beams).all()
 
-    p = p.with_beams(exp_beams * 2)
-    assert(p.beams == (exp_beams * 2)).all()
+    new_beams = Beams(np.arange(2, twelve_qty_1d.size + 2) * u.arcsec)
+
+    p = p.with_beams(new_beams)
+    assert np.all(p.beams == new_beams)
 
 
 def test_VRODS_slice_with_beams():
