@@ -147,10 +147,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         self._fill_value = getattr(obj, '_fill_value', np.nan)
         self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
 
-        # if isinstance(obj, VaryingResolutionOneDSpectrum):
-        #     self._beams = getattr(obj, '_beams', None)
-        # else:
-        self._beam = getattr(obj, '_beam', None)
+        if isinstance(obj, VaryingResolutionOneDSpectrum):
+            self._beams = getattr(obj, '_beams', None)
+        else:
+            self._beam = getattr(obj, '_beam', None)
 
 
         super(LowerDimensionalObject, self).__array_finalize__(obj)
