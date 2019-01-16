@@ -133,6 +133,9 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         new._mask=(self._mask[key] if self._mask is not nomask else nomask)
         new._header = self._header
 
+        if hasattr(self, 'beams'):
+            new.beams = self.beams[key]
+
         return new
 
     def __array_finalize__(self, obj):
@@ -140,10 +143,15 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         self._meta = getattr(obj, '_meta', None)
         self._mask = getattr(obj, '_mask', None)
         self._header = getattr(obj, '_header', None)
-        self._beam = getattr(obj, '_beam', None)
         self._spectral_unit = getattr(obj, '_spectral_unit', None)
         self._fill_value = getattr(obj, '_fill_value', np.nan)
         self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
+
+        # if isinstance(obj, VaryingResolutionOneDSpectrum):
+        #     self._beams = getattr(obj, '_beams', None)
+        # else:
+        self._beam = getattr(obj, '_beam', None)
+
 
         super(LowerDimensionalObject, self).__array_finalize__(obj)
 
@@ -735,7 +743,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             unit = None
 
         beams = cube_utils.try_load_beams(hdul)
-        beam = cube_utils.try_load_beam(hdu.header)
 
         if beams is not None:
             self = VaryingResolutionOneDSpectrum(hdu.data, unit=unit,
@@ -743,6 +750,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                                                  header=hdu.header,
                                                  beams=beams)
         else:
+            beam = cube_utils.try_load_beam(hdu.header)
             self = OneDSpectrum(hdu.data, unit=unit, wcs=mywcs, meta=meta,
                                 header=hdu.header, beam=beam)
 
@@ -1021,8 +1029,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
         Parameters
         ----------
-        beams : `~radio_beam.Beam`
-            A new beam or beams object.
+        beam : `~radio_beam.Beam`
+            A new beam object.
         '''
 
         meta = self.meta.copy()
@@ -1070,23 +1078,26 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
 
-        if beams is None:
-            if hasattr(self, 'beams'):
-                kwargs['beams'] = beams
-        elif beam is None:
-            if hasattr(self, 'beam'):
-                kwargs['beam'] = beam
-
-        if beams is not None:
-            cls = VaryingResolutionOneDSpectrum
-        else:
+        if beams is None and not hasattr(self, 'beams'):
             cls = OneDSpectrum
+            if beam is None and hasattr(self, 'beam'):
+                kwargs['beam'] = beam
+            spectrum = cls(value=data, wcs=wcs, mask=mask, meta=meta, unit=unit,
+                           fill_value=fill_value, header=header or self._header,
+                           wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                           **kwargs)
+        else:
 
+            cls = VaryingResolutionOneDSpectrum
+            if beams is None:
+                kwargs['beams'] = beams
 
-        spectrum = cls(value=data, wcs=wcs, mask=mask, meta=meta, unit=unit,
-                       fill_value=fill_value, header=header or self._header,
-                       wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
-                       **kwargs)
+            spectrum = cls(value=data, wcs=wcs, mask=mask, meta=meta, unit=unit,
+                           fill_value=fill_value, header=header or self._header,
+                           wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                           **kwargs)
+            spectrum.beams = beams if beams is not None else self.beams
+
         spectrum._spectral_unit = spectral_unit
 
         return spectrum
@@ -1105,6 +1116,51 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
 class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
     def __new__(cls, value, beams=None, **kwargs):
+        out = super(VaryingResolutionOneDSpectrum, cls).__new__(cls, value, **kwargs)
         if beams is not None:
-            cls.beams = beams
-        return super(VaryingResolutionOneDSpectrum, cls).__new__(cls, value, **kwargs)
+            out.beams = beams
+        return out
+
+    def with_beams(self, beams):
+        '''
+        Attach a new beam object to the OneDSpectrum.
+
+        Parameters
+        ----------
+        beams : `~radio_beam.Beams`
+            A new beams object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beams'] = beams
+
+        return self._new_spectrum_with(beams=beams, meta=meta)
+
+    def with_beam(self, beam):
+        '''
+        Re-define here so a single Beam cannot be passed.
+        '''
+        raise ValueError("For VaryingResolutionOneDSpectrum's, use with_beams "
+                         "instead of with_beam.")
+
+    @property
+    def beams(self):
+        return self._beams
+
+    @beams.setter
+    def beams(self, obj):
+
+        if not isinstance(obj, Beams):
+            raise TypeError("beam must be a radio_beam.Beams object.")
+
+        if not obj.size == self.size:
+            raise ValueError("The Beams object must have the same size as the "
+                             "data. Found a size of {0} and the data have a "
+                             "size of {1}".format(obj.size, self.size))
+
+        self._beams = obj
+
+    @property
+    def beam(self):
+        raise ValueError("For VaryingResolutionOneDSpectrum's, use beams "
+                         "instead of beam.")
