@@ -133,9 +133,6 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         new._mask=(self._mask[key] if self._mask is not nomask else nomask)
         new._header = self._header
 
-        if hasattr(self, 'beams'):
-            new.beams = self.beams[key]
-
         return new
 
     def __array_finalize__(self, obj):
@@ -151,7 +148,6 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
             self._beams = getattr(obj, '_beams', None)
         else:
             self._beam = getattr(obj, '_beam', None)
-
 
         super(LowerDimensionalObject, self).__array_finalize__(obj)
 
@@ -844,11 +840,11 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     def __getitem__(self, key, **kwargs):
         try:
-            beams = self.beams[key]
+            kwargs['beams'] = self.beams[key]
         except (AttributeError,TypeError):
-            beams = None
+            pass
 
-        new_qty = super(OneDSpectrum, self).__getitem__(key, beams=beams)
+        new_qty = super(OneDSpectrum, self).__getitem__(key)
 
         if isinstance(key, slice):
 
