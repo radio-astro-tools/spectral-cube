@@ -8,13 +8,14 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.io import fits
 
-from radio_beam import Beam
+from radio_beam import Beam, Beams
 
 from .helpers import assert_allclose
 from .test_spectral_cube import cube_and_raw
 from ..spectral_cube import SpectralCube
 from ..masks import BooleanArrayMask
-from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
+from ..lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
+                                            VaryingResolutionOneDSpectrum)
 from ..utils import SliceWarning, WCSCelestialError
 from . import path
 
@@ -165,6 +166,52 @@ def test_self_arith_with_beam(LDO, data):
     assert p2.wcs == p.wcs
     assert np.all(p2.value==0)
     assert p2.beam == exp_beam
+
+
+@pytest.mark.xfail(raises=ValueError, strict=True)
+def test_VRODS_wrong_beams_shape():
+    '''
+    Check that passing Beams with a different shape than the data
+    is caught.
+    '''
+    exp_beams = Beams(np.arange(3) * u.arcsec)
+
+    p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False,
+                                      beams=exp_beams)
+
+
+def test_VRODS_slice_with_beams():
+
+    exp_beams = Beams(np.arange(twelve_qty_1d.size) * u.arcsec)
+
+    p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False,
+                                      wcs=WCS(naxis=1),
+                                      beams=exp_beams)
+
+    assert np.all(p[:5].beams == exp_beams[:5])
+
+
+def test_VRODS_arith_with_beams():
+
+    exp_beams = Beams(np.arange(twelve_qty_1d.size) * u.arcsec)
+
+    p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False, beams=exp_beams)
+    p = p.with_beams(exp_beams)
+
+    p2 = p + p
+
+    assert hasattr(p2, '_wcs')
+    assert p2.wcs == p.wcs
+    assert np.all(p2.value==2)
+    assert p2.beams == exp_beams
+
+    p2 = p - p
+
+    assert hasattr(p2, '_wcs')
+    assert p2.wcs == p.wcs
+    assert np.all(p2.value==0)
+    assert p2.beams == exp_beams
+
 
 def test_onedspectrum_specaxis_units():
 
