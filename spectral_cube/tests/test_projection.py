@@ -180,6 +180,17 @@ def test_VRODS_wrong_beams_shape():
                                       beams=exp_beams)
 
 
+def test_VRODS_with_beams():
+
+    exp_beams = Beams(np.arange(twelve_qty_1d.size) * u.arcsec)
+
+    p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False, beams=exp_beams)
+    assert (p.beams == exp_beams).all()
+
+    p = p.with_beams(exp_beams * 2)
+    assert(p.beams == (exp_beams * 2)).all()
+
+
 def test_VRODS_slice_with_beams():
 
     exp_beams = Beams(np.arange(twelve_qty_1d.size) * u.arcsec)
