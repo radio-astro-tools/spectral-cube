@@ -174,7 +174,7 @@ def test_VRODS_wrong_beams_shape():
     Check that passing Beams with a different shape than the data
     is caught.
     '''
-    exp_beams = Beams(np.arange(3) * u.arcsec)
+    exp_beams = Beams(np.arange(1, 4) * u.arcsec)
 
     p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False,
                                       beams=exp_beams)
@@ -182,7 +182,7 @@ def test_VRODS_wrong_beams_shape():
 
 def test_VRODS_with_beams():
 
-    exp_beams = Beams(np.arange(twelve_qty_1d.size) * u.arcsec)
+    exp_beams = Beams(np.arange(1, twelve_qty_1d.size + 1) * u.arcsec)
 
     p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False, beams=exp_beams)
     assert (p.beams == exp_beams).all()
@@ -193,7 +193,7 @@ def test_VRODS_with_beams():
 
 def test_VRODS_slice_with_beams():
 
-    exp_beams = Beams(np.arange(twelve_qty_1d.size) * u.arcsec)
+    exp_beams = Beams(np.arange(1, twelve_qty_1d.size + 1) * u.arcsec)
 
     p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False,
                                       wcs=WCS(naxis=1),
@@ -204,10 +204,9 @@ def test_VRODS_slice_with_beams():
 
 def test_VRODS_arith_with_beams():
 
-    exp_beams = Beams(np.arange(twelve_qty_1d.size) * u.arcsec)
+    exp_beams = Beams(np.arange(1, twelve_qty_1d.size + 1) * u.arcsec)
 
     p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False, beams=exp_beams)
-    p = p.with_beams(exp_beams)
 
     p2 = p + p
 
