@@ -3531,7 +3531,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         if goodbeams_mask is not None:
             newcube._goodbeams_mask = goodbeams_mask
         else:
-            newcube._goodbeams_mask = newcube.beams.isfinite
+            newcube._goodbeams_mask = np.isfinite(newcube.beams)
 
         return newcube
 
@@ -3976,6 +3976,21 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
+
+    def with_beams(self, beams, goodbeams_mask=None,):
+        '''
+        Attach a new beams object to the VaryingResolutionSpectralCube.
+
+        Parameters
+        ----------
+        beams : `~radio_beam.Beams`
+            A new beams object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beams'] = beams
+
+        return self._new_cube_with(beams=beams, meta=meta)
 
 
 def _regionlist_to_single_region(region_list):

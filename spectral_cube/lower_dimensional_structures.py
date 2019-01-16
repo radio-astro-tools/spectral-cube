@@ -1109,7 +1109,7 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
     def with_beams(self, beams):
         '''
-        Attach a new beam object to the OneDSpectrum.
+        Attach a new beams object to the VaryingResolutionOneDSpectrum.
 
         Parameters
         ----------

@@ -46,7 +46,7 @@ except ImportError:
     YT_INSTALLED = False
     YT_LT_301 = False
 
-from radio_beam import Beam
+from radio_beam import Beam, Beams
 
 NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
 
@@ -1196,6 +1196,9 @@ def test_subcube_slab_beams():
 
     assert all(slcube.hdulist[1].data['CHAN'] == np.arange(slcube.shape[0]))
 
+    # Make sure Beams has been sliced correctly
+    assert all(cube.beams[1:] == slcube.beams)
+
 # collapsing to one dimension raywise doesn't make sense and is therefore
 # not supported.
 @pytest.mark.parametrize('how', ('auto', 'cube', 'slice'))
@@ -1314,6 +1317,31 @@ def test_beam_custom():
 
     # Should be in meta too
     assert newcube2.meta['beam'] == newbeam
+
+
+def test_multibeam_custom():
+
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    # Make a new set of beams that differs from the original.
+    new_beams = Beams([1.] * cube.shape[0] * u.deg)
+
+    # Attach the beam
+    newcube = cube.with_beams(new_beams)
+
+    assert all(new_beams == newcube.beams)
+
+
+@pytest.mark.xfail(raises=ValueError, strict=True)
+def test_multibeam_custom_wrongshape():
+
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    # Make a new set of beams that differs from the original.
+    new_beams = Beams([1.] * cube.shape[0] * u.deg)
+
+    # Attach the beam
+    cube.with_beams(new_beams[:1])
 
 
 def test_multibeam_slice():
