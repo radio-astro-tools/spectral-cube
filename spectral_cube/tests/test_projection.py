@@ -214,14 +214,14 @@ def test_VRODS_arith_with_beams():
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
     assert np.all(p2.value==2)
-    assert p2.beams == exp_beams
+    assert np.all(p2.beams == exp_beams)
 
     p2 = p - p
 
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
     assert np.all(p2.value==0)
-    assert p2.beams == exp_beams
+    assert np.all(p2.beams == exp_beams)
 
 
 def test_onedspectrum_specaxis_units():
