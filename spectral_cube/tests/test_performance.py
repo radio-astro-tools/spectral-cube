@@ -16,6 +16,12 @@ try:
 except ImportError:
     tracemallocOK = False
 
+# The comparison of Quantities in test_memory_usage
+# fail with older versions of numpy
+from distutils.version import LooseVersion
+
+NPY_VERSION_CHECK = LooseVersion(np.version.version) >= "1.13"
+
 from .test_moments import moment_cube
 from .helpers import assert_allclose
 from ..spectral_cube import SpectralCube
@@ -119,7 +125,7 @@ def test_parallel_performance_smoothing():
             print(rslt)
 
 # python 2.7 doesn't have tracemalloc
-@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6)')
+@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK')
 def test_memory_usage():
     """
     Make sure that using memmaps happens where expected, for the most part, and
