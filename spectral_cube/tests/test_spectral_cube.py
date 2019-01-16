@@ -1180,7 +1180,7 @@ def test_oned_slice_beams():
     cube._unit = u.K
 
     spec = cube[:,0,0]
-    assert isinstance(spec, OneDSpectrum)
+    assert isinstance(spec, VaryingResolutionOneDSpectrum)
     # data has a redundant 1st axis
     np.testing.assert_equal(spec.value, data[:,0,0,0])
     assert cube.unit == spec.unit
@@ -1224,7 +1224,7 @@ def test_oned_collapse_beams():
     cube._unit = u.K
 
     spec = cube.mean(axis=(1,2))
-    assert isinstance(spec, OneDSpectrum)
+    assert isinstance(spec, VaryingResolutionOneDSpectrum)
     # data has a redundant 1st axis
     np.testing.assert_equal(spec.value, data.mean(axis=(1,2,3)))
     assert cube.unit == spec.unit
