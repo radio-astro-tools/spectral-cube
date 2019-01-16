@@ -21,7 +21,8 @@ from .masks import BooleanArrayMask, MaskBase
 
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          SpatialCoordMixinClass, MaskableArrayMixinClass,
-                         MultiBeamMixinClass, HeaderMixinClass
+                         MultiBeamMixinClass, BeamMixinClass,
+                         HeaderMixinClass
                         )
 from . import cube_utils
 
@@ -297,20 +298,9 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
 
         self._mask = mask
 
-    @property
-    def beam(self):
-        return self._beam
-
-    @beam.setter
-    def beam(self, obj):
-
-        if not isinstance(obj, Beam):
-            raise TypeError("beam must be a radio_beam.Beam object.")
-
-        self._beam = obj
 
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
-                 MaskableArrayMixinClass):
+                 MaskableArrayMixinClass, BeamMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, beam=None,
@@ -654,7 +644,7 @@ class Slice(Projection):
 
 
 class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
-                   SpectralAxisMixinClass):
+                   SpectralAxisMixinClass, BeamMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, spectral_unit=None,
@@ -1140,31 +1130,14 @@ class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
 
         return self._new_spectrum_with(beams=beams, meta=meta)
 
-    def with_beam(self, beam):
-        '''
-        Re-define here so a single Beam cannot be passed.
-        '''
-        raise ValueError("For VaryingResolutionOneDSpectrum's, use with_beams "
-                         "instead of with_beam.")
+    # def with_beam(self, beam):
+    #     '''
+    #     Re-define here so a single Beam cannot be passed.
+    #     '''
+    #     raise ValueError("For VaryingResolutionOneDSpectrum's, use with_beams "
+    #                      "instead of with_beam.")
 
-    @property
-    def beams(self):
-        return self._beams
-
-    @beams.setter
-    def beams(self, obj):
-
-        if not isinstance(obj, Beams):
-            raise TypeError("beam must be a radio_beam.Beams object.")
-
-        if not obj.size == self.size:
-            raise ValueError("The Beams object must have the same size as the "
-                             "data. Found a size of {0} and the data have a "
-                             "size of {1}".format(obj.size, self.size))
-
-        self._beams = obj
-
-    @property
-    def beam(self):
-        raise ValueError("For VaryingResolutionOneDSpectrum's, use beams "
-                         "instead of beam.")
+    # @property
+    # def beam(self):
+    #     raise ValueError("For VaryingResolutionOneDSpectrum's, use beams "
+    #                      "instead of beam.")
