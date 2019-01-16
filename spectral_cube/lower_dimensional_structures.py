@@ -742,9 +742,17 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         else:
             unit = None
 
-        beams = cube_utils.try_load_beams(hdul)
+        beams_table = cube_utils.try_load_beams(hdul)
 
-        if beams is not None:
+        if beams_table is not None:
+            # Convert to a beams object from the table
+            beams = Beams(major=u.Quantity(beams_table['BMAJ'], u.arcsec),
+                          minor=u.Quantity(beams_table['BMIN'], u.arcsec),
+                          pa=u.Quantity(beams_table['BPA'], u.deg),
+                          meta=[{key: row[key] for key in beams_table.names
+                                 if key not in ('BMAJ', 'BPA', 'BMIN')}
+                                for row in beams_table],
+                         )
             self = VaryingResolutionOneDSpectrum(hdu.data, unit=unit,
                                                  wcs=mywcs, meta=meta,
                                                  header=hdu.header,
