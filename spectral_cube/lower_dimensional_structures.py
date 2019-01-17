@@ -10,7 +10,7 @@ from astropy import units as u
 from astropy import wcs
 #from astropy import log
 from astropy.io.fits import Header, HDUList, PrimaryHDU
-from radio_beam import Beam
+from radio_beam import Beam, Beams
 
 from .io.core import determine_format
 from . import spectral_axis
@@ -21,7 +21,8 @@ from .masks import BooleanArrayMask, MaskBase
 
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          SpatialCoordMixinClass, MaskableArrayMixinClass,
-                         MultiBeamMixinClass, HeaderMixinClass
+                         MultiBeamMixinClass, BeamMixinClass,
+                         HeaderMixinClass
                         )
 from . import cube_utils
 
@@ -143,6 +144,11 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         self._spectral_unit = getattr(obj, '_spectral_unit', None)
         self._fill_value = getattr(obj, '_fill_value', np.nan)
         self._wcs_tolerance = getattr(obj, '_wcs_tolerance', 0.0)
+
+        if isinstance(obj, VaryingResolutionOneDSpectrum):
+            self._beams = getattr(obj, '_beams', None)
+        else:
+            self._beam = getattr(obj, '_beam', None)
 
         super(LowerDimensionalObject, self).__array_finalize__(obj)
 
@@ -292,8 +298,9 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
 
         self._mask = mask
 
+
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
-                 MaskableArrayMixinClass):
+                 MaskableArrayMixinClass, BeamMixinClass):
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, beam=None,
@@ -351,11 +358,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         meta = self.meta.copy()
         meta['beam'] = beam
 
-        self = Projection(self.value, unit=self.unit, wcs=self.wcs,
-                          meta=meta, header=self.header,
-                          beam=beam)
-
-        return self
+        return self._new_projection_with(beam=beam, meta=meta)
 
     def with_fill_value(self, fill_value):
         """
@@ -415,18 +418,6 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                                  **kwargs)
 
         return newproj
-
-    @property
-    def beam(self):
-        return self._beam
-
-    @beam.setter
-    def beam(self, obj):
-
-        if not isinstance(obj, Beam):
-            raise TypeError("beam must be a radio_beam.Beam object.")
-
-        self._beam = obj
 
     @staticmethod
     def from_hdu(hdu):
@@ -652,13 +643,15 @@ class Slice(Projection):
     pass
 
 
-class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
-                   SpectralAxisMixinClass):
+class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
+                       SpectralAxisMixinClass):
+    """
+    Properties shared between OneDSpectrum and VaryingResolutionOneDSpectrum.
+    """
 
     def __new__(cls, value, unit=None, dtype=None, copy=True, wcs=None,
                 meta=None, mask=None, header=None, spectral_unit=None,
-                fill_value=np.nan, wcs_tolerance=0.0,
-                beam=None, read_beam=False):
+                fill_value=np.nan, wcs_tolerance=0.0):
 
         #log.debug("Creating a OneDSpectrum with __new__")
 
@@ -689,20 +682,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                 self._spectral_unit = u.Unit(self._header['CUNIT1'])
             elif self._wcs is not None:
                 self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
-
-        if beam is None:
-            if "beam" in self.meta:
-                beam = self.meta['beam']
-            elif read_beam:
-                beam = cube_utils.try_load_beam(header)
-                if beam is None:
-                    warnings.warn("Cannot load beam from header.",
-                                  BeamWarning
-                                 )
-
-        if beam is not None:
-            self.beam = beam
-            self.meta['beam'] = beam
 
         return self
 
@@ -737,15 +716,23 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         else:
             unit = None
 
-        beams = cube_utils.try_load_beams(hdul)
-        beam = cube_utils.try_load_beam(hdu.header)
+        beams_table = cube_utils.try_load_beams(hdul)
 
-        if beams is not None:
+        if beams_table is not None:
+            # Convert to a beams object from the table
+            beams = Beams(major=u.Quantity(beams_table['BMAJ'], u.arcsec),
+                          minor=u.Quantity(beams_table['BMIN'], u.arcsec),
+                          pa=u.Quantity(beams_table['BPA'], u.deg),
+                          meta=[{key: row[key] for key in beams_table.names
+                                 if key not in ('BMAJ', 'BPA', 'BMIN')}
+                                for row in beams_table],
+                         )
             self = VaryingResolutionOneDSpectrum(hdu.data, unit=unit,
                                                  wcs=mywcs, meta=meta,
                                                  header=hdu.header,
                                                  beams=beams)
         else:
+            beam = cube_utils.try_load_beam(hdu.header)
             self = OneDSpectrum(hdu.data, unit=unit, wcs=mywcs, meta=meta,
                                 header=hdu.header, beam=beam)
 
@@ -753,7 +740,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     @property
     def header(self):
-        header = super(OneDSpectrum, self).header
+        header = super(BaseOneDSpectrum, self).header
 
         # Preserve the spectrum's spectral units
         if 'CUNIT1' in header and self._spectral_unit != u.Unit(header['CUNIT1']):
@@ -763,7 +750,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             header['CUNIT1'] = self.spectral_axis.unit.to_string(format='FITS')
 
         return header
-
 
     @property
     def spectral_axis(self):
@@ -803,7 +789,6 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         if filename is not None:
             pyplot.gcf().savefig(filename)
 
-
     def with_spectral_unit(self, unit, velocity_convention=None,
                            rest_value=None):
 
@@ -830,12 +815,15 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                                        header=newheader)
 
     def __getitem__(self, key, **kwargs):
+        # Ideally, this could just be in VaryingResolutionOneDSpectrum,
+        # but it's about the code is about the same length by just
+        # keeping it here.
         try:
-            beams = self.beams[key]
-        except (AttributeError,TypeError):
-            beams = None
+            kwargs['beams'] = self.beams[key]
+        except (AttributeError, TypeError):
+            pass
 
-        new_qty = super(OneDSpectrum, self).__getitem__(key, beams=beams)
+        new_qty = super(BaseOneDSpectrum, self).__getitem__(key)
 
         if isinstance(key, slice):
 
@@ -861,27 +849,17 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                 new_qty[bad] = np.nan
             return new_qty
 
-    @property
-    def hdu(self):
-        if hasattr(self, 'beams'):
-            warnings.warn("There are multiple beams for this spectrum that "
-                          "are being ignored when creating the HDU.",
-                          BeamWarning
-                         )
-        return super(OneDSpectrum, self).hdu
-
-    @property
-    def hdulist(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            hdu = self.hdu
-
-        if hasattr(self, 'beams'):
-            beamhdu = cube_utils.beams_to_bintable(self.beams)
-
-            return HDUList([hdu, beamhdu])
+    def __getattribute__(self, attrname):
+        # This is a hack to handle dimensionality-reducing functions
+        # We want spectrum.max() to return a Quantity, not a spectrum
+        # Long-term, we really want `OneDSpectrum` to not inherit from
+        # `Quantity`, but for now this approach works.... we just have
+        # to add more functions to this list.
+        if attrname in ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
+                        'nansum', 'ptp', 'var'):
+            return getattr(self.quantity, attrname)
         else:
-            return HDUList([hdu])
+            return super(BaseOneDSpectrum, self).__getattribute__(attrname)
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
@@ -1010,7 +988,7 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         See `astropy.units.Quantity.to` for further details.
         """
 
-        return super(OneDSpectrum, self).to(unit, equivalencies, freq=None)
+        return super(BaseOneDSpectrum, self).to(unit, equivalencies, freq=None)
 
     def with_fill_value(self, fill_value):
         """
@@ -1020,8 +998,8 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
 
     def _new_spectrum_with(self, data=None, wcs=None, mask=None, meta=None,
                            fill_value=None, spectral_unit=None, unit=None,
-                           header=None, wcs_tolerance=None, beams=None,
-                           beam=None, **kwargs):
+                           header=None, wcs_tolerance=None,
+                           **kwargs):
 
         data = self._data if data is None else data
         if unit is None and hasattr(data, 'unit'):
@@ -1058,41 +1036,121 @@ class OneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
 
-        if beams is None:
-            if hasattr(self, 'beams'):
-                kwargs['beams'] = beams
-        elif beam is None:
-            if hasattr(self, 'beam'):
-                kwargs['beam'] = beam
+        spectrum = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
+                                  unit=unit, fill_value=fill_value,
+                                  header=header or self._header,
+                                  wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                                  **kwargs)
 
-        if beams is not None:
-            cls = VaryingResolutionOneDSpectrum
-        else:
-            cls = OneDSpectrum
-            
-
-        spectrum = cls(value=data, wcs=wcs, mask=mask, meta=meta, unit=unit,
-                       fill_value=fill_value, header=header or self._header,
-                       wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
-                       **kwargs)
         spectrum._spectral_unit = spectral_unit
 
         return spectrum
 
-    def __getattribute__(self, attrname):
-        # This is a hack to handle dimensionality-reducing functions
-        # We want spectrum.max() to return a Quantity, not a spectrum
-        # Long-term, we really want `OneDSpectrum` to not inherit from
-        # `Quantity`, but for now this approach works.... we just have
-        # to add more functions to this list.
-        if attrname in ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
-                        'nansum', 'ptp', 'var'):
-            return getattr(self.quantity, attrname)
-        else:
-            return super(OneDSpectrum, self).__getattribute__(attrname)
 
-class VaryingResolutionOneDSpectrum(OneDSpectrum, MultiBeamMixinClass):
-    def __new__(cls, value, beams=None, **kwargs):
+class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
+
+    def __new__(cls, value, beam=None, read_beam=False, **kwargs):
+        self = super(OneDSpectrum, cls).__new__(cls, value, **kwargs)
+
+        if beam is None:
+            if "beam" in self.meta:
+                beam = self.meta['beam']
+            elif read_beam:
+                beam = cube_utils.try_load_beam(self.header)
+                if beam is None:
+                    warnings.warn("Cannot load beam from header.",
+                                  BeamWarning
+                                  )
+
+        if beam is not None:
+            self.beam = beam
+            self.meta['beam'] = beam
+
+        return self
+
+    def _new_spectrum_with(self, **kwargs):
+        beam = kwargs.pop('beam', None)
+        if 'beam' in self._meta and beam is None:
+            beam = self.beam
+        out = super(OneDSpectrum, self)._new_spectrum_with(beam=beam, **kwargs)
+        return out
+
+    def with_beam(self, beam):
+        '''
+        Attach a new beam object to the OneDSpectrum.
+
+        Parameters
+        ----------
+        beam : `~radio_beam.Beam`
+            A new beam object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beam'] = beam
+
+        return self._new_spectrum_with(beam=beam, meta=meta)
+
+
+class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
+
+    def __new__(cls, value, beams=None, read_beam=False, **kwargs):
+        self = super(VaryingResolutionOneDSpectrum, cls).__new__(cls, value, **kwargs)
+
+        if beams is None:
+            if "beams" in self.meta:
+                beams = self.meta['beams']
+            elif read_beam:
+                beams = cube_utils.try_load_beams(self.header)
+                if beams is None:
+                    warnings.warn("Cannot load beams table from header.",
+                                  BeamWarning
+                                  )
+
         if beams is not None:
-            cls.beams = beams
-        return super(VaryingResolutionOneDSpectrum, cls).__new__(cls, value, **kwargs)
+            self.beams = beams
+            self.meta['beams'] = beams
+
+        return self
+
+    def with_beams(self, beams):
+        '''
+        Attach a new beams object to the VaryingResolutionOneDSpectrum.
+
+        Parameters
+        ----------
+        beams : `~radio_beam.Beams`
+            A new beams object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beams'] = beams
+
+        return self._new_spectrum_with(beams=beams, meta=meta)
+
+    @property
+    def hdu(self):
+        warnings.warn("There are multiple beams for this spectrum that "
+                      "are being ignored when creating the HDU.",
+                      BeamWarning
+                     )
+        return super(VaryingResolutionOneDSpectrum, self).hdu
+
+    @property
+    def hdulist(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            hdu = self.hdu
+
+        beamhdu = cube_utils.beams_to_bintable(self.beams)
+
+        return HDUList([hdu, beamhdu])
+
+    def _new_spectrum_with(self, **kwargs):
+        beams = kwargs.pop('beams', self.beams)
+        if beams is None:
+            beams = self.beams
+
+        VRODS = VaryingResolutionOneDSpectrum
+        out = super(VRODS, self)._new_spectrum_with(beams=beams,
+                                                    **kwargs)
+        return out

@@ -7,7 +7,10 @@ py:class spectral_cube.base_class.SpectralAxisMixinClass
 py:class spectral_cube.base_class.SpatialCoordMixinClass
 py:class spectral_cube.base_class.MaskableArrayMixinClass
 py:class spectral_cube.base_class.MultiBeamMixinClass
+py:class spectral_cube.base_class.BeamMixinClass
 py:class spectral_cube.base_class.HeaderMixinClass
+py:class spectral_cube.lower_dimensional_structures.BaseOneDSpectrum
+py:obj spectral_cube.lower_dimensional_structures.OneDSpectrum.quicklook
 
 # yt references
 py:obj yt.surface.export_sketchfab

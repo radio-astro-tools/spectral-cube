@@ -42,7 +42,7 @@ from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
                          MaskableArrayMixinClass, MultiBeamMixinClass,
-                         HeaderMixinClass
+                         HeaderMixinClass, BeamMixinClass
                         )
 from .utils import (cached, warn_slow, VarianceWarning, BeamAverageWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
@@ -3213,7 +3213,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self._new_cube_with(data=dsarr, wcs=newwcs,
                                    mask=BooleanArrayMask(mask, wcs=newwcs))
 
-class SpectralCube(BaseSpectralCube):
+class SpectralCube(BaseSpectralCube, BeamMixinClass):
 
     __name__ = "SpectralCube"
 
@@ -3376,12 +3376,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             raise ValueError("Beam list must have same size as spectral "
                              "dimension")
 
-        self._beams = beams
+        self.beams = beams
         self.beam_threshold = beam_threshold
-
-    @property
-    def beams(self):
-        return self._beams
 
     def __getitem__(self, view):
 
@@ -3535,7 +3531,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         if goodbeams_mask is not None:
             newcube._goodbeams_mask = goodbeams_mask
         else:
-            newcube._goodbeams_mask = newcube.beams.isfinite
+            newcube._goodbeams_mask = np.isfinite(newcube.beams)
 
         return newcube
 
@@ -3980,6 +3976,21 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
+
+    def with_beams(self, beams, goodbeams_mask=None,):
+        '''
+        Attach a new beams object to the VaryingResolutionSpectralCube.
+
+        Parameters
+        ----------
+        beams : `~radio_beam.Beams`
+            A new beams object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beams'] = beams
+
+        return self._new_cube_with(beams=beams, meta=meta)
 
 
 def _regionlist_to_single_region(region_list):

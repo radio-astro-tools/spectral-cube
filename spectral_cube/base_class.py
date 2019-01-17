@@ -9,6 +9,8 @@ from . import wcs_utils
 from . import cube_utils
 from .utils import cached, WCSCelestialError
 
+from radio_beam import Beam, Beams
+
 __doctest_skip__ = ['SpatialCoordMixinClass.world']
 
 DOPPLER_CONVENTIONS = {}
@@ -385,3 +387,41 @@ class MultiBeamMixinClass(object):
         factor = np.array(factors)
 
         return factor
+
+    @property
+    def beams(self):
+        return self._beams
+
+    @beams.setter
+    def beams(self, obj):
+
+        if not isinstance(obj, Beams):
+            raise TypeError("beam must be a radio_beam.Beams object.")
+
+        if not obj.size == self.shape[0]:
+            raise ValueError("The Beams object must have the same size as the "
+                             "data. Found a size of {0} and the data have a "
+                             "size of {1}".format(obj.size, self.size))
+
+        self._beams = obj
+
+
+class BeamMixinClass(object):
+    """
+    Functionality for objects with a single beam.
+
+    Specific objects (cubes, LDOs) still need to define their own `with_beam`
+    methods.
+    """
+
+    @property
+    def beam(self):
+        return self._beam
+
+    @beam.setter
+    def beam(self, obj):
+
+        if not isinstance(obj, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        self._beam = obj

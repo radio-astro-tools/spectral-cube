@@ -8,13 +8,14 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.io import fits
 
-from radio_beam import Beam
+from radio_beam import Beam, Beams
 
 from .helpers import assert_allclose
 from .test_spectral_cube import cube_and_raw
 from ..spectral_cube import SpectralCube
 from ..masks import BooleanArrayMask
-from ..lower_dimensional_structures import Projection, Slice, OneDSpectrum
+from ..lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
+                                            VaryingResolutionOneDSpectrum)
 from ..utils import SliceWarning, WCSCelestialError
 from . import path
 
@@ -140,6 +141,89 @@ def test_self_arith(LDO, data):
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
     assert np.all(p2.value==0)
+
+
+@pytest.mark.parametrize(('LDO', 'data'),
+                         zip(LDOs, data_twelve))
+def test_self_arith_with_beam(LDO, data):
+
+    exp_beam = Beam(1.0 * u.arcsec)
+
+    image = data
+    p = LDO(image, copy=False)
+    p = p.with_beam(exp_beam)
+
+    p2 = p + p
+
+    assert hasattr(p2, '_wcs')
+    assert p2.wcs == p.wcs
+    assert np.all(p2.value==2)
+    assert p2.beam == exp_beam
+
+    p2 = p - p
+
+    assert hasattr(p2, '_wcs')
+    assert p2.wcs == p.wcs
+    assert np.all(p2.value==0)
+    assert p2.beam == exp_beam
+
+
+@pytest.mark.xfail(raises=ValueError, strict=True)
+def test_VRODS_wrong_beams_shape():
+    '''
+    Check that passing Beams with a different shape than the data
+    is caught.
+    '''
+    exp_beams = Beams(np.arange(1, 4) * u.arcsec)
+
+    p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False,
+                                      beams=exp_beams)
+
+
+def test_VRODS_with_beams():
+
+    exp_beams = Beams(np.arange(1, twelve_qty_1d.size + 1) * u.arcsec)
+
+    p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False, beams=exp_beams)
+    assert (p.beams == exp_beams).all()
+
+    new_beams = Beams(np.arange(2, twelve_qty_1d.size + 2) * u.arcsec)
+
+    p = p.with_beams(new_beams)
+    assert np.all(p.beams == new_beams)
+
+
+def test_VRODS_slice_with_beams():
+
+    exp_beams = Beams(np.arange(1, twelve_qty_1d.size + 1) * u.arcsec)
+
+    p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False,
+                                      wcs=WCS(naxis=1),
+                                      beams=exp_beams)
+
+    assert np.all(p[:5].beams == exp_beams[:5])
+
+
+def test_VRODS_arith_with_beams():
+
+    exp_beams = Beams(np.arange(1, twelve_qty_1d.size + 1) * u.arcsec)
+
+    p = VaryingResolutionOneDSpectrum(twelve_qty_1d, copy=False, beams=exp_beams)
+
+    p2 = p + p
+
+    assert hasattr(p2, '_wcs')
+    assert p2.wcs == p.wcs
+    assert np.all(p2.value==2)
+    assert np.all(p2.beams == exp_beams)
+
+    p2 = p - p
+
+    assert hasattr(p2, '_wcs')
+    assert p2.wcs == p.wcs
+    assert np.all(p2.value==0)
+    assert np.all(p2.beams == exp_beams)
+
 
 def test_onedspectrum_specaxis_units():
 
@@ -281,21 +365,64 @@ def test_projection_with_beam():
     assert new_proj.beam == exp_beam
     assert new_proj.meta['beam'] == exp_beam
 
+    # Slice the projection with a beam and check it's still there
+    assert new_proj[:1, :1].beam == exp_beam
 
-def test_projection_attach_beam():
+
+def test_ondespectrum_with_beam():
+
+    exp_beam = Beam(1.0 * u.arcsec)
+
+    test_wcs_1 = WCS(naxis=1)
+    spec = OneDSpectrum(twelve_qty_1d, wcs=test_wcs_1)
+
+    # load beam from meta
+    meta = {"beam": exp_beam}
+    new_spec = OneDSpectrum(spec.data, wcs=spec.wcs, meta=meta)
+
+    assert new_spec.beam == exp_beam
+    assert new_spec.meta['beam'] == exp_beam
+
+    # load beam from given header
+    hdu = spec.hdu
+    exp_beam = Beam(2.0 * u.arcsec)
+    header = hdu.header.copy()
+    header = exp_beam.attach_to_header(header)
+    new_spec = OneDSpectrum(hdu.data, wcs=spec.wcs, header=header,
+                            read_beam=True)
+
+    assert new_spec.beam == exp_beam
+    assert new_spec.meta['beam'] == exp_beam
+
+    # load beam from beam object
+    exp_beam = Beam(3.0 * u.arcsec)
+    header = hdu.header.copy()
+    new_spec = OneDSpectrum(hdu.data, wcs=spec.wcs, header=header,
+                            beam=exp_beam)
+
+    assert new_spec.beam == exp_beam
+    assert new_spec.meta['beam'] == exp_beam
+
+    # Slice the spectrum with a beam and check it's still there
+    assert new_spec[:1].beam == exp_beam
+
+
+@pytest.mark.parametrize(('LDO', 'data'),
+                         zip(LDOs, data_twelve))
+def test_ldo_attach_beam(LDO, data):
 
     exp_beam = Beam(1.0 * u.arcsec)
     newbeam = Beam(2.0 * u.arcsec)
 
-    proj, hdu = load_projection("55.fits")
+    p = LDO(data, copy=False, beam=exp_beam)
 
-    new_proj = proj.with_beam(newbeam)
+    new_p = p.with_beam(newbeam)
 
-    assert proj.beam == exp_beam
-    assert proj.meta['beam'] == exp_beam
+    assert p.beam == exp_beam
+    assert p.meta['beam'] == exp_beam
 
-    assert new_proj.beam == newbeam
-    assert new_proj.meta['beam'] == newbeam
+    assert new_p.beam == newbeam
+    assert new_p.meta['beam'] == newbeam
 
 
 @pytest.mark.parametrize(('LDO', 'data'),
@@ -311,24 +438,6 @@ def test_projection_from_hdu(LDO, data):
     assert (p == p_new).all()
 
 
-@pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs_2d, data_two_2d))
-def test_projection_from_hdu_with_beam(LDO, data):
-
-    p = LDO(data, copy=False)
-
-    hdu = p.hdu
-
-    beam = Beam(1 * u.arcsec)
-    hdu.header = beam.attach_to_header(hdu.header)
-
-    p_new = LDO.from_hdu(hdu)
-
-    assert (p == p_new).all()
-    assert beam == p_new.meta['beam']
-    assert beam == p_new.beam
-
-
 def test_projection_subimage():
 
     proj, hdu = load_projection("55.fits")
@@ -340,6 +449,8 @@ def test_projection_subimage():
     assert proj1.shape == (5, 2)
     assert proj2.shape == (5, 2)
     assert proj1.wcs.wcs.compare(proj2.wcs.wcs)
+    assert proj.beam == proj1.beam
+    assert proj.beam == proj2.beam
 
     proj3 = proj.subimage(ylo=1, yhi=3)
     proj4 = proj.subimage(ylo=29.93464 * u.deg,
