@@ -996,32 +996,10 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         """
         return self._new_spectrum_with(fill_value=fill_value)
 
-
-class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
-
-    def __new__(cls, value, beam=None, read_beam=False, **kwargs):
-        self = super(OneDSpectrum, cls).__new__(cls, value, **kwargs)
-
-        if beam is None:
-            if "beam" in self.meta:
-                beam = self.meta['beam']
-            elif read_beam:
-                beam = cube_utils.try_load_beam(self.header)
-                if beam is None:
-                    warnings.warn("Cannot load beam from header.",
-                                  BeamWarning
-                                  )
-
-        if beam is not None:
-            self.beam = beam
-            self.meta['beam'] = beam
-
-        return self
-
     def _new_spectrum_with(self, data=None, wcs=None, mask=None, meta=None,
                            fill_value=None, spectral_unit=None, unit=None,
                            header=None, wcs_tolerance=None,
-                           beam=None, **kwargs):
+                           **kwargs):
 
         data = self._data if data is None else data
         if unit is None and hasattr(data, 'unit'):
@@ -1058,17 +1036,44 @@ class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
         fill_value = self._fill_value if fill_value is None else fill_value
         spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
 
-        if beam is None and hasattr(self, 'beam'):
-            kwargs['beam'] = beam
-        spectrum = OneDSpectrum(value=data, wcs=wcs, mask=mask, meta=meta,
-                                unit=unit, fill_value=fill_value,
-                                header=header or self._header,
-                                wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
-                                **kwargs)
+        spectrum = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
+                                  unit=unit, fill_value=fill_value,
+                                  header=header or self._header,
+                                  wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                                  **kwargs)
 
         spectrum._spectral_unit = spectral_unit
 
         return spectrum
+
+
+class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
+
+    def __new__(cls, value, beam=None, read_beam=False, **kwargs):
+        self = super(OneDSpectrum, cls).__new__(cls, value, **kwargs)
+
+        if beam is None:
+            if "beam" in self.meta:
+                beam = self.meta['beam']
+            elif read_beam:
+                beam = cube_utils.try_load_beam(self.header)
+                if beam is None:
+                    warnings.warn("Cannot load beam from header.",
+                                  BeamWarning
+                                  )
+
+        if beam is not None:
+            self.beam = beam
+            self.meta['beam'] = beam
+
+        return self
+
+    def _new_spectrum_with(self, **kwargs):
+        beam = kwargs.pop('beam', None)
+        if 'beam' in self._meta and beam is None:
+            beam = self.beam
+        out = super(OneDSpectrum, self)._new_spectrum_with(beam=beam, **kwargs)
+        return out
 
     def with_beam(self, beam):
         '''
@@ -1140,54 +1145,12 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
         return HDUList([hdu, beamhdu])
 
-    def _new_spectrum_with(self, data=None, wcs=None, mask=None, meta=None,
-                           fill_value=None, spectral_unit=None, unit=None,
-                           header=None, wcs_tolerance=None, beams=None,
-                           **kwargs):
+    def _new_spectrum_with(self, **kwargs):
+        beams = kwargs.pop('beams', self.beams)
+        if beams is None:
+            beams = self.beams
 
-        data = self._data if data is None else data
-        if unit is None and hasattr(data, 'unit'):
-            if data.unit != self.unit:
-                raise u.UnitsError("New data unit '{0}' does not"
-                                   " match unit '{1}'.  You can"
-                                   " override this by specifying the"
-                                   " `unit` keyword."
-                                   .format(data.unit, self.unit))
-            unit = data.unit
-        elif unit is None:
-            unit = self.unit
-        elif unit is not None:
-            # convert string units to Units
-            if not isinstance(unit, u.Unit):
-                unit = u.Unit(unit)
-
-            if hasattr(data, 'unit'):
-                if u.Unit(unit) != data.unit:
-                    raise u.UnitsError("The specified new cube unit '{0}' "
-                                       "does not match the input unit '{1}'."
-                                       .format(unit, data.unit))
-            else:
-                data = u.Quantity(data, unit=unit, copy=False)
-
-        wcs = self._wcs if wcs is None else wcs
-        mask = self._mask if mask is None else mask
-        if meta is None:
-            meta = {}
-            meta.update(self._meta)
-        if unit is not None:
-            meta['BUNIT'] = unit.to_string(format='FITS')
-
-        fill_value = self._fill_value if fill_value is None else fill_value
-        spectral_unit = self._spectral_unit if spectral_unit is None else u.Unit(spectral_unit)
-
-        cls = VaryingResolutionOneDSpectrum
-
-        spectrum = cls(value=data, wcs=wcs, mask=mask, meta=meta, unit=unit,
-                       fill_value=fill_value, header=header or self._header,
-                       wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
-                       **kwargs)
-        spectrum.beams = beams if beams is not None else self.beams
-
-        spectrum._spectral_unit = spectral_unit
-
-        return spectrum
+        VRODS = VaryingResolutionOneDSpectrum
+        out = super(VRODS, self)._new_spectrum_with(beams=beams,
+                                                    **kwargs)
+        return out
