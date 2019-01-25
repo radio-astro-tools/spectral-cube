@@ -4,13 +4,13 @@ import numpy as np
 import warnings
 
 from astropy.io.fits import Card
-from radio_beam import Beam
+from radio_beam import Beam, Beams
 
 from . import wcs_utils
 from . import cube_utils
 from .utils import cached, WCSCelestialError, BeamAverageWarning
+from .masks import BooleanArrayMask
 
-from radio_beam import Beam, Beams
 
 __doctest_skip__ = ['SpatialCoordMixinClass.world']
 
@@ -626,6 +626,49 @@ class MultiBeamMixinClass(object):
                                                                    ))
         if errormessage != "":
             raise ValueError(errormessage)
+
+    def mask_out_bad_beams(self, threshold, reference_beam=None,
+                           criteria=['sr','major','minor'],
+                           mid_value=np.nanmedian):
+        """
+        See `identify_bad_beams`.  This function returns a masked cube
+
+        Returns
+        -------
+        newcube : VaryingResolutionSpectralCube
+            The cube with bad beams masked out
+        """
+
+        goodbeams = self.identify_bad_beams(threshold=threshold,
+                                            reference_beam=reference_beam,
+                                            criteria=criteria,
+                                            mid_value=mid_value)
+
+        includemask = BooleanArrayMask(goodbeams[:,None,None],
+                                       self._wcs,
+                                       shape=self._data.shape)
+
+        return self._new_cube_with(mask=self.mask & includemask,
+                                   beam_threshold=threshold,
+                                   goodbeams_mask=self.goodbeams_mask & goodbeams,
+                                  )
+
+    def with_beams(self, beams, goodbeams_mask=None,):
+        '''
+        Attach a new beams object to the VaryingResolutionSpectralCube.
+
+        Parameters
+        ----------
+        beams : `~radio_beam.Beams`
+            A new beams object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beams'] = beams
+
+        return self._new_cube_with(beams=beams, meta=meta)
+
+
 
 
 class BeamMixinClass(object):
