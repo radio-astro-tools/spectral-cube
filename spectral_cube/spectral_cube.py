@@ -3200,8 +3200,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 mask[view_newdata] = np.any(to_anyfy, axis).astype('bool')[view_newaxis]
 
 
-        # we certainly must have a good reason to be starting from the center
-        # of the first new pixel... I suspect this should be zero, though.
+        # the slice should just start at zero; we had factor//2 here earlier,
+        # and that was an error that probably half-compensated for an error in
+        # wcs_utils
         view = makeslice(0)
         newwcs = wcs_utils.slice_wcs(self.wcs, view, shape=self.shape)
         newwcs._naxis = list(self.shape)
