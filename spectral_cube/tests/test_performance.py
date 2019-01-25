@@ -198,3 +198,42 @@ def test_memory_usage():
     snap9 = tracemalloc.take_snapshot()
     diff = snap9.compare_to(snap6, 'lineno')
     assert diff[0].size_diff*u.B > 10*u.MB
+
+
+
+# python 2.7 doesn't have tracemalloc
+@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK')
+def test_memory_usage_coordinates():
+    """
+    Watch out for high memory usage on huge spatial files
+    """
+
+    ntf = tempfile.NamedTemporaryFile()
+
+    tracemalloc.start()
+
+    snap1 = tracemalloc.take_snapshot()
+
+    # create a "flat" cube
+    cube,_ = utilities.generate_gaussian_cube(shape=[1,2000,2000])
+    sz = _.dtype.itemsize
+
+    snap1b = tracemalloc.take_snapshot()
+    diff = snap1b.compare_to(snap1, 'lineno')
+    diffvals = np.array([dd.size_diff for dd in diff])
+    # at this point, the generated cube should still exist in memory
+    assert diffvals.max()*u.B >= 2000**2*sz*u.B
+
+    del _
+    snap2 = tracemalloc.take_snapshot()
+    diff = snap2.compare_to(snap1b, 'lineno')
+    assert diff[0].size_diff*u.B < -0.3*u.MB
+
+    print(cube)
+
+    # printing the cube should not occupy any more memory
+    # (it will allocate a few bytes for the cache, but should *not*
+    # load the full 2000x2000 coordinate arrays for RA, Dec
+    snap3 = tracemalloc.take_snapshot()
+    diff = snap3.compare_to(snap2, 'lineno')
+    assert sum([dd.size_diff for dd in diff])*u.B < 100*u.kB

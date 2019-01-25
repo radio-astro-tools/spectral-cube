@@ -1196,8 +1196,13 @@ def test_subcube_slab_beams():
 
     assert all(slcube.hdulist[1].data['CHAN'] == np.arange(slcube.shape[0]))
 
-    # Make sure Beams has been sliced correctly
-    assert all(cube.beams[1:] == slcube.beams)
+    try:
+        # Make sure Beams has been sliced correctly
+        assert all(cube.beams[1:] == slcube.beams)
+    except TypeError:
+        # in 69eac9241220d3552c06b173944cb7cdebeb47ef, radio_beam switched to
+        # returning a single value
+        assert cube.beams[1:] == slcube.beams
 
 # collapsing to one dimension raywise doesn't make sense and is therefore
 # not supported.
@@ -1329,7 +1334,12 @@ def test_multibeam_custom():
     # Attach the beam
     newcube = cube.with_beams(new_beams)
 
-    assert all(new_beams == newcube.beams)
+    try:
+        assert all(new_beams == newcube.beams)
+    except TypeError:
+        # in 69eac9241220d3552c06b173944cb7cdebeb47ef, radio_beam switched to
+        # returning a single value
+        assert new_beams == newcube.beams
 
 
 @pytest.mark.xfail(raises=ValueError, strict=True)
