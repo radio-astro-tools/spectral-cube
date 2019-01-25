@@ -357,3 +357,27 @@ def test_downsample(use_memmap):
 
     np.testing.assert_almost_equal(expected,
                                    dscube.filled_data[:].value)
+
+
+
+@pytest.mark.parametrize('use_memmap', (True,False))
+def test_downsample_wcs(use_memmap):
+    cube, data = cube_and_raw('255.fits')
+
+    dscube = (cube
+              .downsample_axis(factor=2, axis=1, use_memmap=use_memmap)
+              .downsample_axis(factor=2, axis=2, use_memmap=use_memmap))
+
+    # pixel [0,0] in the new cube should have coordinate [1,1] in the old cube
+
+    lonnew, latnew = dscube.wcs.celestial.wcs_pix2world(0, 0, 0)
+    xpixold_ypixold = np.array(cube.wcs.celestial.wcs_world2pix(lonnew, latnew, 0))
+
+    np.testing.assert_almost_equal(xpixold_ypixold, (0.5, 0.5))
+
+    # the center of the bottom-left pixel, in FITS coordinates, in the
+    # original frame will now be at -0.25, -0.25 in the new frame
+    lonold, latold = cube.wcs.celestial.wcs_pix2world(1, 1, 1)
+    xpixnew_ypixnew = np.array(dscube.wcs.celestial.wcs_world2pix(lonold, latold, 1))
+
+    np.testing.assert_almost_equal(xpixnew_ypixnew, (0.75, 0.75))

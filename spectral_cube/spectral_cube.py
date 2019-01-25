@@ -3200,7 +3200,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 mask[view_newdata] = np.any(to_anyfy, axis).astype('bool')[view_newaxis]
 
 
-        view = makeslice(factor//2)
+        # the slice should just start at zero; we had factor//2 here earlier,
+        # and that was an error that probably half-compensated for an error in
+        # wcs_utils
+        view = makeslice(0)
         newwcs = wcs_utils.slice_wcs(self.wcs, view, shape=self.shape)
         newwcs._naxis = list(self.shape)
 
