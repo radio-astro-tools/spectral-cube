@@ -86,6 +86,8 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
     with NumpyRNGContext(seed):
 
         spec_inds = np.mgrid[-spec_middle:spec_middle] * spec_scale.value
+        if len(spec_inds) == 0:
+            spec_inds = np.array([0])
         spat_inds = np.indices(shape[1:])
         for y, x in zip(spat_inds[0].flatten(), spat_inds[1].flatten()):
             # Lock the mean to within 25% from the centre

@@ -193,7 +193,14 @@ class SpatialCoordMixinClass(object):
     @property
     @cached
     def world_extrema(self):
-        lat, lon = self.spatial_coordinate_map
+        corners = [(0, self.shape[2]-1),
+                   (self.shape[1]-1, 0),
+                   (self.shape[1]-1, self.shape[2]-1),
+                   (0,0)]
+        latlon_corners = [self.world[0, y, x] for y,x in corners]
+        lon = u.Quantity([x for z,y,x in latlon_corners])
+        lat = u.Quantity([y for z,y,x in latlon_corners])
+
         _lon_min = lon.min()
         _lon_max = lon.max()
         _lat_min = lat.min()
