@@ -377,7 +377,7 @@ def test_downsample_wcs(use_memmap):
 
     # the center of the bottom-left pixel, in FITS coordinates, in the
     # original frame will now be at -0.25, -0.25 in the new frame
-    lonold, latold = cube.wcs.celestial.wcs_pix2world(0, 0, 0)
-    xpixnew_ypixnew = dscube.wcs.celestial.wcs_world2pix(lonnew, latnew, 0)
+    lonold, latold = cube.wcs.celestial.wcs_pix2world(1, 1, 1)
+    xpixnew_ypixnew = np.array(dscube.wcs.celestial.wcs_world2pix(lonold, latold, 1))
 
-    np.testing.assert_almost_equal(xpixnew_ypixnew, (-0.25, -0.25))
+    np.testing.assert_almost_equal(xpixnew_ypixnew, (0.75, 0.75))
