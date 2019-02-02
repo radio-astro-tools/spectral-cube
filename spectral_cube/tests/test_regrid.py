@@ -424,25 +424,59 @@ def test_reproject_3D_memory():
 
     header_out = (wcs_out.to_header())
     header_out['NAXIS'] = 3
-    header_out['NAXIS1'] = cube.shape[2]
-    header_out['NAXIS2'] = cube.shape[1]
+    header_out['NAXIS1'] = int(cube.shape[2]/2)
+    header_out['NAXIS2'] = int(cube.shape[1]/2)
     header_out['NAXIS3'] = cube.shape[0]
 
+    # First the unfilled reprojection test: new memory is allocated for
+    # `result`, but nowhere else
     result = cube.reproject(header_out, filled=False)
 
     snap3 = tracemalloc.take_snapshot()
     diff = snap3.compare_to(snap2, 'lineno')
     diffvals = np.array([dd.size_diff for dd in diff])
-    # No additional memory should have been allocated in the above step
-    assert diffvals.max()*u.B <= 1000*u.B
+    # result should have the same size as the input data, except smaller in two dims
+    # make sure that's all that's allocated
+    assert diffvals.max()*u.B >= 200*100**2*sz*u.B
+    assert diffvals.max()*u.B < 200*110**2*sz*u.B
 
-    result = cube.reproject(header_out, filled=False)
+    # without masking the cube, nothing should change
+    result = cube.reproject(header_out, filled=True)
 
     snap4 = tracemalloc.take_snapshot()
     diff = snap4.compare_to(snap3, 'lineno')
     diffvals = np.array([dd.size_diff for dd in diff])
+    assert diffvals.max()*u.B <= 1*u.MB
+
+    assert result.wcs.wcs.crval[0] == 0.001
+    assert result.wcs.wcs.crpix[0] == 2.
+
+
+    # masking the cube will force the fill to create a new in-memory copy
+    mcube = cube.with_mask(cube > 0.1*cube.unit)
+    # `_is_huge` would trigger a use_memmap
+    assert not mcube._is_huge
+    assert mcube.mask.any()
+
+    # take a new snapshot because we're not testing the mask creation
+    snap5 = tracemalloc.take_snapshot()
+    tracemalloc.stop()
+    tracemalloc.start() # stop/start so we can check peak mem use from here
+    current_b4, peak_b4 = tracemalloc.get_traced_memory()
+    result = mcube.reproject(header_out, filled=True)
+    current_aftr, peak_aftr = tracemalloc.get_traced_memory()
+
+
+    snap6 = tracemalloc.take_snapshot()
+    diff = snap6.compare_to(snap5, 'lineno')
+    diffvals = np.array([dd.size_diff for dd in diff])
     # a duplicate of the cube should have been created by filling masked vals
-    assert diffvals.max()*u.B >= 200**3*sz*u.B
+    # (this should be near-exact since 'result' should occupy exactly the
+    # same amount of memory)
+    assert diffvals.max()*u.B <= 1*u.MB #>= 200**3*sz*u.B
+    # the peak memory usage *during* reprojection will have that duplicate,
+    # but the memory gets cleaned up afterward
+    assert (peak_aftr-peak_b4)*u.B >= (200**3*sz*u.B + 200*100**2*sz*u.B)
 
     assert result.wcs.wcs.crval[0] == 0.001
     assert result.wcs.wcs.crpix[0] == 2.
