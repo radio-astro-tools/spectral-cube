@@ -31,7 +31,7 @@ apply the :class:`~spectral_cube.SpectralCube.with_spectral_unit` method from th
 
     >>> nii_cube = cube.with_spectral_unit(u.km/u.s, velocity_convention='optical', rest_value=6584*u.AA)  # doctest: +SKIP
 
-Note that the `rest_value` in the above code refers to the wavelength of the targeted line 
+Note that the ``rest_value`` in the above code refers to the wavelength of the targeted line 
 in the 1D spectrum corresponding to the 3rd dimension. Also, since not all velocity values are relevant, 
 next we will use the :class:`~spectral_cube.SpectralCube.spectral_slab` method to slice out the chunk of 
 the cube that actually contains the line::
