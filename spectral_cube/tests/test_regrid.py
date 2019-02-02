@@ -1,4 +1,6 @@
+import sys
 import pytest
+import tempfile
 import numpy as np
 
 from astropy import units as u
@@ -7,13 +9,25 @@ from astropy.wcs import WCS
 from astropy import wcs
 from astropy.io import fits
 
+try:
+    import tracemalloc
+    tracemallocOK = True
+except ImportError:
+    tracemallocOK = False
+
+# The comparison of Quantities in test_memory_usage
+# fail with older versions of numpy
+from distutils.version import LooseVersion
+
+NPY_VERSION_CHECK = LooseVersion(np.version.version) >= "1.13"
+
 from radio_beam import beam, Beam
 
 from .. import SpectralCube
 from ..utils import WCSCelestialError
 from .test_spectral_cube import cube_and_raw
 from .test_projection import load_projection
-from . import path
+from . import path, utilities
 
 
 def test_convolution():
@@ -381,3 +395,54 @@ def test_downsample_wcs(use_memmap):
     xpixnew_ypixnew = np.array(dscube.wcs.celestial.wcs_world2pix(lonold, latold, 1))
 
     np.testing.assert_almost_equal(xpixnew_ypixnew, (0.75, 0.75))
+
+@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK')
+def test_reproject_3D_memory():
+
+    pytest.importorskip('reproject')
+
+    tracemalloc.start()
+
+    snap1 = tracemalloc.take_snapshot()
+
+    # create a 64 MB cube
+    cube,_ = utilities.generate_gaussian_cube(shape=[200,200,200])
+    sz = _.dtype.itemsize
+
+    # check that cube is loaded into memory
+    snap2 = tracemalloc.take_snapshot()
+    diff = snap2.compare_to(snap1, 'lineno')
+    diffvals = np.array([dd.size_diff for dd in diff])
+    # at this point, the generated cube should still exist in memory
+    assert diffvals.max()*u.B >= 200**3*sz*u.B
+
+    wcs_in = cube.wcs
+    wcs_out = wcs_in.deepcopy()
+    wcs_out.wcs.ctype = ['GLON-SIN', 'GLAT-SIN', cube.wcs.wcs.ctype[2]]
+    wcs_out.wcs.crval = [0.001, 0.001, cube.wcs.wcs.crval[2]]
+    wcs_out.wcs.crpix = [2., 2., cube.wcs.wcs.crpix[2]]
+
+    header_out = (wcs_out.to_header())
+    header_out['NAXIS'] = 3
+    header_out['NAXIS1'] = cube.shape[2]
+    header_out['NAXIS2'] = cube.shape[1]
+    header_out['NAXIS3'] = cube.shape[0]
+
+    result = cube.reproject(header_out, filled=False)
+
+    snap3 = tracemalloc.take_snapshot()
+    diff = snap3.compare_to(snap2, 'lineno')
+    diffvals = np.array([dd.size_diff for dd in diff])
+    # No additional memory should have been allocated in the above step
+    assert diffvals.max()*u.B <= 1000*u.B
+
+    result = cube.reproject(header_out, filled=False)
+
+    snap4 = tracemalloc.take_snapshot()
+    diff = snap4.compare_to(snap3, 'lineno')
+    diffvals = np.array([dd.size_diff for dd in diff])
+    # a duplicate of the cube should have been created by filling masked vals
+    assert diffvals.max()*u.B >= 200**3*sz*u.B
+
+    assert result.wcs.wcs.crval[0] == 0.001
+    assert result.wcs.wcs.crpix[0] == 2.
