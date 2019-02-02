@@ -216,6 +216,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                        .format(unit, data.unit))
             else:
                 data = u.Quantity(data, unit=unit, copy=False)
+        elif self._unit is not None:
+            unit = self.unit
 
         wcs = self._wcs if wcs is None else wcs
         mask = self._mask if mask is None else mask
