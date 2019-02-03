@@ -1769,6 +1769,21 @@ def test_spatial_smooth_g2d():
 
     np.testing.assert_almost_equal(cube_g2d[2].value, result2)
 
+def test_spatial_smooth_preserves_unit():
+    """
+    Regression test for issue527
+    """
+    cube, data = cube_and_raw('adv.fits')
+    cube._unit = u.K
+
+    #
+    # Guassian 2D smoothing test
+    #
+    g2d = Gaussian2DKernel(3)
+    cube_g2d = cube.spatial_smooth(g2d)
+
+    assert cube_g2d.unit == u.K
+
 def test_spatial_smooth_t2d():
     cube, data = cube_and_raw('adv.fits')
 
