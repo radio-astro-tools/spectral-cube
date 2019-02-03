@@ -74,6 +74,12 @@ matrix:
               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
               ASTROPY_VERSION='development'
 
+        - python: 3.6
+          env:
+              CONDA_DEPENDENCIES='matplotlib=3 aplpy yt bottleneck pytest pytest-xdist astropy-helpers joblib'
+              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
+              ASTROPY_VERSION='development'
+
 install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda.sh
