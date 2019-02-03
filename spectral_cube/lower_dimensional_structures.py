@@ -1101,6 +1101,7 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
     def __new__(cls, value, beams=None, read_beam=False, goodbeams_mask=None, **kwargs):
         self = super(VaryingResolutionOneDSpectrum, cls).__new__(cls, value, **kwargs)
+        assert hasattr(self, '_fill_value')
 
         if beams is None:
             if "beams" in self.meta:
@@ -1179,7 +1180,8 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
         return out
 
     def __array_finalize__(self, obj):
+        super(VaryingResolutionOneDSpectrum, self).__array_finalize__(obj)
+
         self._beams = getattr(obj, '_beams', None)
         if getattr(obj, 'goodbeams_mask', None) is not None:
             self.goodbeams_mask = getattr(obj, 'goodbeams_mask', None)
-
