@@ -27,9 +27,9 @@ env:
         - SETUP_CMD='test -a "--boxed"'
         - NUMPY_VERSION=1.13
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='sip<4.19 aplpy pytest=3.9.3 pytest-xdist astropy-helpers joblib glue-core scipy reproject'
+        - CONDA_DEPENDENCIES='sip<4.19 aplpy pytest=3.9.3 pytest-xdist astropy-helpers joblib glue-core scipy'
         - CONDA_CHANNELS='astropy-ci-extras astropy glueviz'
-        - PIP_DEPENDENCIES='matplotlib<2 Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip'
+        - PIP_DEPENDENCIES='matplotlib<2 Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
         - SETUP_XVFB=True
 
     matrix:
@@ -47,7 +47,7 @@ matrix:
         - python: 3.6
           env: SETUP_CMD='test --coverage'
                PYTEST_VERSION="<3.10"
-               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck pytest pytest-xdist astropy-helpers joblib reproject'
+               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck sip<4.19 aplpy pytest=3.9.3 pytest-xdist astropy-helpers joblib glue-core scipy'
                # pytest 3.9.3 suggested by @e-koch, @astrofrog.  3.10.1 doesn't work, 4.x doesn't work
                # overrode python version too, per bsipocz
 
