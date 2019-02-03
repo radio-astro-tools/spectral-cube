@@ -2,6 +2,7 @@ from astropy import units as u
 from astropy import log
 import numpy as np
 import warnings
+import abc
 
 from astropy.io.fits import Card
 from radio_beam import Beam, Beams
@@ -372,6 +373,21 @@ class MaskableArrayMixinClass(object):
         to create a new cube with a different fill value.
         """
         return self._fill_value
+
+    def with_fill_value(self, fill_value):
+        """
+        Create a new object with a different `fill_value`.
+
+        Notes
+        -----
+        This method is fast (it does not copy any data)
+        """
+        return self._new_thing_with(fill_value=fill_value)
+
+    @abc.abstractmethod
+    def _new_thing_with(self):
+        raise NotImplementedError
+
 
 class MultiBeamMixinClass(object):
     """

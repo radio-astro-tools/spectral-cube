@@ -191,6 +191,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def _is_huge(self):
         return cube_utils.is_huge(self)
 
+    @property
+    def _new_thing_with(self, *args, **kwargs):
+        return self._new_cube_with(*args, **kwargs)
+
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None, unit=None,
                        wcs_tolerance=None, **kwargs):
@@ -1226,16 +1230,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         newcube = self._new_cube_with()
         newcube._unit = None
         return newcube
-
-    def with_fill_value(self, fill_value):
-        """
-        Create a new :class:`SpectralCube` with a different `fill_value`.
-
-        Notes
-        -----
-        This method is fast (it does not copy any data)
-        """
-        return self._new_cube_with(fill_value=fill_value)
 
     def with_spectral_unit(self, unit, velocity_convention=None,
                            rest_value=None):
