@@ -1920,3 +1920,6 @@ def test_varyres_mask():
 
     # do I need to assert all?
     assert mcube.unmasked_beams == cube.beams
+
+    # check that slicing works too
+    assert mcube[:5].unmasked_beams == cube[:5].beams
