@@ -1917,3 +1917,6 @@ def test_varyres_mask():
     assert hasattr(sp_masked, '_goodbeams_mask')
     assert all(sp_masked.goodbeams_mask == goodbeams)
     assert len(sp_masked.beams) == 2
+
+    # do I need to assert all?
+    assert mcube.unmasked_beams == cube.beams

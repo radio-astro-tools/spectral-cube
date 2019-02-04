@@ -3617,7 +3617,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         from .cube_utils import beams_to_bintable
         # use unmasked beams because, even if the beam is masked out, we should
         # write it
-        bmhdu = beams_to_bintable(self._beams)
+        bmhdu = beams_to_bintable(self.unmasked_beams)
 
         return HDUList([hdu, bmhdu])
 
@@ -3674,7 +3674,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
-        for bm,valid in zip(self._beams, self.goodbeams_mask):
+        for bm,valid in zip(self.unmasked_beams, self.goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
                 convolution_kernels.append(None)

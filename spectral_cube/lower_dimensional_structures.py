@@ -1136,21 +1136,6 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
         return self
 
-    def with_beams(self, beams):
-        '''
-        Attach a new beams object to the VaryingResolutionOneDSpectrum.
-
-        Parameters
-        ----------
-        beams : `~radio_beam.Beams`
-            A new beams object.
-        '''
-
-        meta = self.meta.copy()
-        meta['beams'] = beams
-
-        return self._new_spectrum_with(beams=beams, meta=meta)
-
     @property
     def hdu(self):
         warnings.warn("There are multiple beams for this spectrum that "
