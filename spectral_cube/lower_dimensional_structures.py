@@ -1169,4 +1169,16 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
         self._beams = getattr(obj, '_beams', None)
         if getattr(obj, 'goodbeams_mask', None) is not None:
-            self.goodbeams_mask = getattr(obj, 'goodbeams_mask', None)
+            # do NOT use the setter here, because we sometimes need to write
+            # intermediate size-mismatch things that later get fixed, e.g., in
+            # __getitem__ below
+            self._goodbeams_mask = getattr(obj, 'goodbeams_mask', None)
+
+    def __getitem__(self, key):
+        new_qty = super(VaryingResolutionOneDSpectrum, self).__getitem__(key)
+
+        # use the goodbeams_mask setter here because it checks size
+        new_qty.goodbeams_mask = self.goodbeams_mask[key]
+        new_qty.beams = self.unmasked_beams[key]
+
+        return new_qty
