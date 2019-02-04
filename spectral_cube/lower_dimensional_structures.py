@@ -368,8 +368,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         return self._new_projection_with(fill_value=fill_value)
 
     @property
-    def _new_thing_with(self, *args, **kwargs):
-        return self._new_projection_with(*args, **kwargs)
+    def _new_thing_with(self):
+        return self._new_projection_with
 
     def _new_projection_with(self, data=None, wcs=None, mask=None, meta=None,
                              fill_value=None, spectral_unit=None, unit=None,
@@ -999,8 +999,8 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         return self._new_spectrum_with(fill_value=fill_value)
 
     @property
-    def _new_thing_with(self, *args, **kwargs):
-        return self._new_spectrum_with(*args, **kwargs)
+    def _new_thing_with(self):
+        return self._new_spectrum_with
 
     def _new_spectrum_with(self, data=None, wcs=None, mask=None, meta=None,
                            fill_value=None, spectral_unit=None, unit=None,

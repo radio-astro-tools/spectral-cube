@@ -192,8 +192,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return cube_utils.is_huge(self)
 
     @property
-    def _new_thing_with(self, *args, **kwargs):
-        return self._new_cube_with(*args, **kwargs)
+    def _new_thing_with(self):
+        return self._new_cube_with
 
     def _new_cube_with(self, data=None, wcs=None, mask=None, meta=None,
                        fill_value=None, spectral_unit=None, unit=None,
