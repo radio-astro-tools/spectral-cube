@@ -477,7 +477,7 @@ class MultiBeamMixinClass(object):
 
         includemask = np.ones(self.unmasked_beams.size, dtype='bool')
 
-        all_criteria = ['sr','major','minor','pa']
+        all_criteria = {'sr','major','minor','pa'}
         if not set.issubset(set(criteria), set(all_criteria)):
             raise ValueError("Criteria must be one of the allowed options: "
                              "{0}".format(all_criteria))
