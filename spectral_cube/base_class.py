@@ -668,10 +668,10 @@ class MultiBeamMixinClass(object):
                                        self._wcs,
                                        shape=self._data.shape)
 
-        return self._new_cube_with(mask=self.mask & includemask,
-                                   beam_threshold=threshold,
-                                   goodbeams_mask=self.goodbeams_mask & goodbeams,
-                                  )
+        return self._new_thing_with(mask=self.mask & includemask,
+                                    beam_threshold=threshold,
+                                    goodbeams_mask=self.goodbeams_mask & goodbeams,
+                                   )
 
     def with_beams(self, beams, goodbeams_mask=None,):
         '''
@@ -688,6 +688,11 @@ class MultiBeamMixinClass(object):
 
         return self._new_thing_with(beams=beams, meta=meta)
 
+    @abc.abstractmethod
+    def _new_thing_with(self):
+        # since the above two methods require this method, it's an ABC of this
+        # mixin as well
+        raise NotImplementedError
 
 
 
