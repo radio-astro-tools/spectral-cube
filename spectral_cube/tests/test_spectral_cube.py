@@ -1924,5 +1924,8 @@ def test_varyres_mask():
         # older versions of beams
         assert np.all(mcube.unmasked_beams == cube.beams)
 
-    # check that slicing works too
-    assert mcube[:5].unmasked_beams == cube[:5].beams
+    try:
+        # check that slicing works too
+        assert mcube[:5].unmasked_beams == cube[:5].beams
+    except ValueError:
+        assert np.all(mcube[:5].unmasked_beams == cube[:5].beams)
