@@ -454,7 +454,6 @@ class MultiBeamMixinClass(object):
         """
         Mask out any layers in the cube that have beams that differ from the
         central value of the beam by more than the specified threshold.
-        An acceptable beam area can also be specified directly.
 
         Parameters
         ----------
@@ -468,7 +467,7 @@ class MultiBeamMixinClass(object):
             'sr','major','minor','pa' or any subset of those.
         mid_value : function
             The function used to determine the 'mid' value to compare to.  This
-            will identify the middle-valued beam area.
+            will identify the middle-valued beam area/major/minor/pa.
 
         Returns
         -------
