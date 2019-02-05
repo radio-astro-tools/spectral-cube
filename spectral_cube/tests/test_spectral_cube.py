@@ -650,7 +650,6 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
         """.strip()
 
 
-@pytest.mark.xfail
 @pytest.mark.skipif('not YT_INSTALLED')
 class TestYt():
     def setup_method(self, method):
@@ -677,9 +676,7 @@ class TestYt():
                         ds2.domain_width.value*np.array([1,1,1.0/self.spectral_factor]))
         assert_allclose(ds1.domain_width.value, ds3.domain_width.value)
         assert self.nprocs == len(ds3.index.grids)
-        assert ds1.spec_cube
-        assert ds2.spec_cube
-        assert ds3.spec_cube
+
         ds1.index
         ds2.index
         ds3.index
