@@ -650,7 +650,6 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
         """.strip()
 
 
-@pytest.mark.xfail
 @pytest.mark.skipif('not YT_INSTALLED')
 class TestYt():
     def setup_method(self, method):

@@ -2195,7 +2195,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if (('dev' in yt.__version__) or
             (LooseVersion(yt.__version__) >= LooseVersion('3.0'))):
 
-            from yt.frontends.fits.api import FITSDataset
+            # yt has updated their FITS data set so that only the SpectralCube
+            # variant takes spectral_factor
+            try:
+                from yt.frontends.fits.api import SpectralCubeFITSDataset as FITSDataset
+            except ImportError:
+                from yt.frontends.fits.api import FITSDataset
             from yt.units.unit_object import UnitParseError
 
             hdu = PrimaryHDU(self._get_filled_data(fill=0.),
