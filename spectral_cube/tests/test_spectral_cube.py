@@ -1616,9 +1616,9 @@ def test_mask_bad_beams():
     cube, data = cube_and_raw('vda_beams.fits')
 
     # make sure all of the beams are initially good (finite)
-    assert np.all(cube._goodbeams_mask)
+    assert np.all(cube.goodbeams_mask)
     # make sure cropping the cube maintains the mask
-    assert np.all(cube[:3]._goodbeams_mask)
+    assert np.all(cube[:3].goodbeams_mask)
 
     # middle two beams have same area
     masked_cube = cube.mask_out_bad_beams(0.01,
@@ -1627,7 +1627,7 @@ def test_mask_bad_beams():
                                                               60*u.deg))
 
     assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])
-    assert np.all(masked_cube._goodbeams_mask == [False,False,True,False])
+    assert np.all(masked_cube.goodbeams_mask == [False,False,True,False])
 
     mean = masked_cube.mean(axis=0)
     assert np.all(mean == cube[2,:,:])
@@ -1637,7 +1637,7 @@ def test_mask_bad_beams():
 
     mean2 = masked_cube2.mean(axis=0)
     assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
-    assert np.all(masked_cube2._goodbeams_mask == [False,True,True,False])
+    assert np.all(masked_cube2.goodbeams_mask == [False,True,True,False])
 
 
 def test_convolve_to():
@@ -1898,3 +1898,34 @@ def test_median_2axis():
     result0 = np.array([0.83498009, 0.2606566 , 0.37271531, 0.48548023])
 
     np.testing.assert_almost_equal(cube_median.value, result0)
+
+
+def test_varyres_mask():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    # mask out two beams
+    goodbeams = cube.identify_bad_beams(0.5)
+    assert all(goodbeams == np.array([False, True, True, False]))
+
+    mcube = cube.mask_out_bad_beams(0.5)
+    assert hasattr(mcube, '_goodbeams_mask')
+    assert all(mcube.goodbeams_mask == goodbeams)
+    assert len(mcube.beams) == 2
+
+    sp_masked = mcube[:,0,0]
+
+    assert hasattr(sp_masked, '_goodbeams_mask')
+    assert all(sp_masked.goodbeams_mask == goodbeams)
+    assert len(sp_masked.beams) == 2
+
+    try:
+        assert mcube.unmasked_beams == cube.beams
+    except ValueError:
+        # older versions of beams
+        assert np.all(mcube.unmasked_beams == cube.beams)
+
+    try:
+        # check that slicing works too
+        assert mcube[:5].unmasked_beams == cube[:5].beams
+    except ValueError:
+        assert np.all(mcube[:5].unmasked_beams == cube[:5].beams)
