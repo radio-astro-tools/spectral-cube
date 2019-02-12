@@ -1369,6 +1369,18 @@ def test_multibeam_slice():
     np.testing.assert_almost_equal(flatslice.header['BMAJ'],
                                    (0.1/3600.))
 
+    # Test returning a VRODS
+
+    spec = cube[:, 0, 0]
+
+    assert (cube.beams == spec.beams).all()
+
+    # And make sure that Beams gets slice for part of a spectrum
+
+    spec_part = cube[:1, 0, 0]
+
+    assert cube.beams[0] == spec.beams[0]
+
 def test_basic_unit_conversion():
 
     cube, data = cube_and_raw('advs.fits')
