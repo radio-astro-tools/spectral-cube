@@ -1,4 +1,4 @@
-0.4.4 (unreleased)
+0.4.4 (2019-02-20)
 ------------------
  - Refactor all beam parameters into mix-in classes; added BaseOneDSpectrum
    for common functionality between OneDSpectrum and VaryingResolutionOneDSpectrum.
