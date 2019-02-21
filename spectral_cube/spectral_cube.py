@@ -2672,19 +2672,21 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             a tool to handle the iteration data and send it to the ``function``
             appropriately.
         num_cores : int or None
-            The number of cores to use if running in parallel
+            The number of cores to use if running in parallel.  Should be >1 if
+            ``parallel==True`` and cannot be >1 if ``parallel==False``
         verbose : int
             Verbosity level to pass to joblib
         use_memmap : bool
             If specified, a memory mapped temporary file on disk will be
             written to rather than storing the intermediate spectra in memory.
         parallel : bool
-            If set to ``False``, will force the use of a single core without
-            using ``joblib``.
+            If set to ``False``, will force the use of a single thread instead
+            of using ``joblib``.
         update_function : function
             A callback function to call on each iteration of the application.
             It should not accept any arguments.  For example, this can be
-            ``Progressbar.update``,
+            ``Progressbar.update`` or some function that prints a status
+            report.  The function *must* be picklable if ``parallel==True``.
         kwargs : dict
             Passed to ``function``
         """
