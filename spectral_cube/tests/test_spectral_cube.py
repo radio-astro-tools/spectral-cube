@@ -6,6 +6,7 @@ import itertools
 import warnings
 import mmap
 from distutils.version import LooseVersion
+import sys
 
 import pytest
 
@@ -1867,6 +1868,64 @@ def test_spectral_smooth_median_4cores():
     result = np.array([0.77513282,  0.35675333,  0.35675333,  0.98688694])
 
     np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
+
+def update_function():
+    print("Update Function Call")
+
+def test_smooth_update_function_parallel(capsys):
+
+    pytest.importorskip('joblib')
+    pytest.importorskip('scipy.ndimage')
+
+    cube, data = cube_and_raw('adv.fits')
+
+    # this is potentially a major disaster: if update_function can't be
+    # pickled, it won't work, which is why update_function is (very badly)
+    # defined outside of this function
+    cube_spectral_median = cube.spectral_smooth_median(3, num_cores=4,
+                                                       update_function=update_function)
+
+    sys.stdout.flush()
+    captured = capsys.readouterr()
+    assert captured.out == "Update Function Call\n"*6
+
+
+def test_smooth_update_function_serial(capsys):
+
+    pytest.importorskip('scipy.ndimage')
+
+    cube, data = cube_and_raw('adv.fits')
+
+    def update_function():
+        print("Update Function Call")
+
+    cube_spectral_median = cube.spectral_smooth_median(3, num_cores=1, parallel=False,
+                                                       update_function=update_function)
+
+    captured = capsys.readouterr()
+    assert captured.out == "Update Function Call\n"*6
+
+def test_parallel_bad_params():
+
+    cube, data = cube_and_raw('adv.fits')
+
+    with pytest.raises(ValueError) as exc:
+        cube.spectral_smooth_median(3, num_cores=2, parallel=False,
+                                    update_function=update_function)
+    assert exc.value.args[0] == ("parallel execution was not requested, but "
+                                 "multiple cores were: these are incompatible "
+                                 "options.  Either specify num_cores=1 or "
+                                 "parallel=True")
+
+    with warnings.catch_warnings(record=True) as wrn:
+        cube.spectral_smooth_median(3, num_cores=1, parallel=True,
+                                    update_function=update_function)
+
+    assert ("parallel=True was specified but num_cores=1. "
+            "Joblib will be used to run the task with a "
+            "single thread.") in str(wrn[-1].message)
+
+
 
 def test_initialization_from_units():
     """

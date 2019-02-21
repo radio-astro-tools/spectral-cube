@@ -107,6 +107,7 @@ def _apply_spectral_function(arguments, outcube, function, **kwargs):
     else:
         outcube[:,jj,ii] = spec
 
+
 def _apply_spatial_function(arguments, outcube, function, **kwargs):
     """
     Helper function to apply a function to an image.
@@ -2646,8 +2647,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       num_cores=None,
                                       verbose=0,
                                       use_memmap=True,
-                                      parallel=True,
+                                      parallel=False,
                                       memmap_dir=None,
+                                      update_function=None,
                                       **kwargs
                                      ):
         """
@@ -2679,6 +2681,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         parallel : bool
             If set to ``False``, will force the use of a single core without
             using ``joblib``.
+        update_function : function
+            A callback function to call on each iteration of the application.
+            It should not accept any arguments.  For example, this can be
+            ``Progressbar.update``,
         kwargs : dict
             Passed to ``function``
         """
@@ -2697,10 +2703,38 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                  "override this restriction.")
             outcube = np.empty(shape=self.shape, dtype=np.float)
 
+        if num_cores == 1 and parallel:
+            warnings.warn("parallel=True was specified but num_cores=1. "
+                          "Joblib will be used to run the task with a "
+                          "single thread.")
+        elif num_cores > 1 and not parallel:
+            raise ValueError("parallel execution was not requested, but "
+                             "multiple cores were: these are incompatible "
+                             "options.  Either specify num_cores=1 or "
+                             "parallel=True")
+
         if parallel and use_memmap:
+
             # it is not possible to run joblib parallelization without memmap
             try:
+                import joblib
+                from joblib._parallel_backends import MultiprocessingBackend
                 from joblib import Parallel, delayed
+
+                if update_function is not None:
+                    class Callback_Backend(MultiprocessingBackend):
+                        def callback(self, result):
+                            update_function()
+
+                        # Overload apply_async and set callback=self.callback
+                        def apply_async(self, func, callback=None):
+                            applyResult = super().apply_async(func, self.callback)
+                            return applyResult
+
+                    joblib.register_parallel_backend('custom',
+                                                     Callback_Backend,
+                                                     make_default=True)
+
 
                 Parallel(n_jobs=num_cores,
                          verbose=verbose,
@@ -2717,7 +2751,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # this isn't an else statement because we want to catch the case where
         # the above clause fails on ImportError
         if not parallel or not use_memmap:
-            if verbose > 0:
+            if update_function is not None:
+                pbu = update_function
+            elif verbose > 0:
                 progressbar = ProgressBar(self.shape[1]*self.shape[2])
                 pbu = progressbar.update
             else:
