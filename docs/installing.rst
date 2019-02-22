@@ -58,6 +58,6 @@ installed. Start up CASA as normal, and type::
 
 Now, quit CASA and re-open it, then type the following to install ``spectral-cube``::
 
-    CASA <1>: import pip
+    CASA <1>: import subprocess, sys
 
-    CASA <2>: pip.main(['install', 'spectral-cube', '--user'])
+    CASA <2>: subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--user', 'spectral-cube'])
