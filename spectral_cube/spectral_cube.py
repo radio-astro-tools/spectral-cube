@@ -3444,7 +3444,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                            spectral_unit=self._spectral_unit,
                                            mask=self.mask[view],
                                            meta=meta,
-                                           goodbeams_mask=self.goodbeams_mask
+                                           goodbeams_mask=self.goodbeams_mask[specslice]
                                            if hasattr(self, '_goodbeams_mask')
                                            else None,
                                            **bmarg
