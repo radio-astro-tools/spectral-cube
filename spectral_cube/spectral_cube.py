@@ -2698,6 +2698,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                  "override this restriction.")
             outcube = np.empty(shape=self.shape, dtype=np.float)
 
+        if num_cores == 1 and parallel:
+            warnings.warn("parallel=True was specified but num_cores=1. "
+                          "Joblib will be used to run the task with a "
+                          "single thread.")
+        elif num_cores is not None and num_cores > 1 and not parallel:
+            raise ValueError("parallel execution was not requested, but "
+                             "multiple cores were: these are incompatible "
+                             "options.  Either specify num_cores=1 or "
+                             "parallel=True")
+
         if parallel and use_memmap:
             # it is not possible to run joblib parallelization without memmap
             try:
