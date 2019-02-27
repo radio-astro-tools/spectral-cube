@@ -2709,7 +2709,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             warnings.warn("parallel=True was specified but num_cores=1. "
                           "Joblib will be used to run the task with a "
                           "single thread.")
-        elif num_cores > 1 and not parallel:
+        elif num_cores is not None and num_cores > 1 and not parallel:
             raise ValueError("parallel execution was not requested, but "
                              "multiple cores were: these are incompatible "
                              "options.  Either specify num_cores=1 or "

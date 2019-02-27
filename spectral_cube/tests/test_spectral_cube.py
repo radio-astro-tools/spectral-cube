@@ -1841,13 +1841,14 @@ def test_spatial_smooth_median():
     np.testing.assert_almost_equal(cube_median[2].value, result2)
 
 
-def test_spectral_smooth_median():
+@pytest.mark.parametrize('num_cores', (None, 1))
+def test_spectral_smooth_median(num_cores):
 
     pytest.importorskip('scipy.ndimage')
 
     cube, data = cube_and_raw('adv.fits')
 
-    cube_spectral_median = cube.spectral_smooth_median(3)
+    cube_spectral_median = cube.spectral_smooth_median(3, num_cores=num_cores)
 
     # Check first slice
     result = np.array([0.77513282,  0.35675333,  0.35675333,  0.98688694])
