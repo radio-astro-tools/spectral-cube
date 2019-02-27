@@ -155,9 +155,15 @@ def test_spectral_smooth_4cores():
                                                                 x_size=5).array,
                                    4)
 
-    # num_cores = 4 is a contradiction with parallel=False, but we want to make
-    # sure it does the same thing
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, parallel=False)
+    # num_cores = 4 is a contradiction with parallel=False, so we want to make
+    # sure it fails
+    with pytest.raises(ValueError) as exc:
+        result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0),
+                                      num_cores=4, parallel=False)
+    assert exc.value.args[0] == ("parallel execution was not requested, but "
+                                 "multiple cores were: these are incompatible "
+                                 "options.  Either specify num_cores=1 or "
+                                 "parallel=True")
 
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    convolution.Gaussian1DKernel(1.0,
