@@ -77,7 +77,8 @@ matrix:
         - python: 3.6
           env:
               CONDA_DEPENDENCIES='matplotlib=3 aplpy yt bottleneck pytest pytest-xdist astropy-helpers joblib'
-              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
+              # installing aplpy via conda will install reproject, so we need to get an appropriate reproject version
+              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
               ASTROPY_VERSION='development'
 
 install:
