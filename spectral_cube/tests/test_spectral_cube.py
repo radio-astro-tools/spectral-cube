@@ -47,6 +47,12 @@ except ImportError:
     YT_INSTALLED = False
     YT_LT_301 = False
 
+try:
+    import scipy
+    scipyOK = True
+except ImportError:
+    scipyOK = False
+
 from radio_beam import Beam, Beams
 
 NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
@@ -1906,6 +1912,7 @@ def test_smooth_update_function_serial(capsys):
     captured = capsys.readouterr()
     assert captured.out == "Update Function Call\n"*6
 
+@pytest.mark.skipif('not scipyOK')
 def test_parallel_bad_params():
 
     cube, data = cube_and_raw('adv.fits')
