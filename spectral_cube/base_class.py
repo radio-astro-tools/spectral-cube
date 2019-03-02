@@ -2,14 +2,16 @@ from astropy import units as u
 from astropy import log
 import numpy as np
 import warnings
+import abc
 
 from astropy.io.fits import Card
+from radio_beam import Beam, Beams
 
 from . import wcs_utils
 from . import cube_utils
-from .utils import cached, WCSCelestialError
+from .utils import cached, WCSCelestialError, BeamAverageWarning
+from .masks import BooleanArrayMask
 
-from radio_beam import Beam, Beams
 
 __doctest_skip__ = ['SpatialCoordMixinClass.world']
 
@@ -372,6 +374,21 @@ class MaskableArrayMixinClass(object):
         """
         return self._fill_value
 
+    def with_fill_value(self, fill_value):
+        """
+        Create a new object with a different `fill_value`.
+
+        Notes
+        -----
+        This method is fast (it does not copy any data)
+        """
+        return self._new_thing_with(fill_value=fill_value)
+
+    @abc.abstractmethod
+    def _new_thing_with(self):
+        raise NotImplementedError
+
+
 class MultiBeamMixinClass(object):
     """
     A mixin class to handle multibeam objects.  To be used by
@@ -397,7 +414,7 @@ class MultiBeamMixinClass(object):
 
     @property
     def beams(self):
-        return self._beams
+        return self._beams[self.goodbeams_mask]
 
     @beams.setter
     def beams(self, obj):
@@ -411,6 +428,271 @@ class MultiBeamMixinClass(object):
                              "size of {1}".format(obj.size, self.size))
 
         self._beams = obj
+
+    @property
+    def unmasked_beams(self):
+        return self._beams
+
+    @property
+    def goodbeams_mask(self):
+        if hasattr(self, '_goodbeams_mask'):
+            return self._goodbeams_mask
+        else:
+            return self.unmasked_beams.isfinite
+
+    @goodbeams_mask.setter
+    def goodbeams_mask(self, value):
+        if value.size != self.shape[0]:
+            raise ValueError("The 'good beams' mask must have the same size "
+                             "as the cube's spectral dimension")
+                             
+        self._goodbeams_mask = value
+
+    def identify_bad_beams(self, threshold, reference_beam=None,
+                           criteria=['sr','major','minor'],
+                           mid_value=np.nanmedian):
+        """
+        Mask out any layers in the cube that have beams that differ from the
+        central value of the beam by more than the specified threshold.
+
+        Parameters
+        ----------
+        threshold : float
+            Fractional threshold
+        reference_beam : Beam
+            A beam to use as the reference.  If unspecified, ``mid_value`` will
+            be used to select a middle beam
+        criteria : list
+            A list of criteria to compare.  Can include
+            'sr','major','minor','pa' or any subset of those.
+        mid_value : function
+            The function used to determine the 'mid' value to compare to.  This
+            will identify the middle-valued beam area/major/minor/pa.
+
+        Returns
+        -------
+        includemask : np.array
+            A boolean array where ``True`` indicates the good beams
+        """
+
+        includemask = np.ones(self.unmasked_beams.size, dtype='bool')
+
+        all_criteria = {'sr','major','minor','pa'}
+        if not set.issubset(set(criteria), set(all_criteria)):
+            raise ValueError("Criteria must be one of the allowed options: "
+                             "{0}".format(all_criteria))
+
+        props = {prop: u.Quantity([getattr(beam, prop) for beam in self.unmasked_beams])
+                 for prop in all_criteria}
+
+        if reference_beam is None:
+            reference_beam = Beam(major=mid_value(props['major']),
+                                  minor=mid_value(props['minor']),
+                                  pa=mid_value(props['pa'])
+                                 )
+
+        for prop in criteria:
+            val = props[prop]
+            mid = getattr(reference_beam, prop)
+
+            diff = np.abs((val-mid)/mid)
+
+            assert diff.shape == includemask.shape
+
+            includemask[diff > threshold] = False
+
+        return includemask
+
+    def average_beams(self, threshold, mask='compute', warn=False):
+        """
+        Average the beams.  Note that this operation only makes sense in
+        limited contexts!  Generally one would want to convolve all the beams
+        to a common shape, but this method is meant to handle the "simple" case
+        when all your beams are the same to within some small factor and can
+        therefore be arithmetically averaged.
+
+        Parameters
+        ----------
+        threshold : float
+            The fractional difference between beam major, minor, and pa to
+            permit
+        mask : 'compute', None, or boolean array
+            The mask to apply to the beams.  Useful for excluding bad channels
+            and edge beams.
+        warn : bool
+            Warn if successful?
+
+        Returns
+        -------
+        new_beam : radio_beam.Beam
+            A new radio beam object that is the average of the unmasked beams
+        """
+        if mask == 'compute':
+            beam_mask = np.any(self.mask.include() &
+                               self.goodbeams_mask[:,None,None],
+                               axis=(1,2))
+        else:
+            if mask.ndim > 1:
+                beam_mask = mask & self.goodbeams_mask[:,None,None]
+            else:
+                beam_mask = mask & self.goodbeams_mask
+
+        # use private _beams here because the public one excludes the bad beams
+        # by default
+        new_beam = self._beams.average_beam(includemask=beam_mask)
+
+        if np.isnan(new_beam):
+            raise ValueError("Beam was not finite after averaging.  "
+                             "This either indicates that there was a problem "
+                             "with the include mask, one of the beam's values, "
+                             "or a bug.")
+
+        self._check_beam_areas(threshold, mean_beam=new_beam, mask=beam_mask)
+        if warn:
+            warnings.warn("Arithmetic beam averaging is being performed.  This is "
+                          "not a mathematically robust operation, but is being "
+                          "permitted because the beams differ by "
+                          "<{0}".format(threshold),
+                          BeamAverageWarning
+                         )
+        return new_beam
+
+
+    def _handle_beam_areas_wrapper(self, function, beam_threshold=None):
+        """
+        Wrapper: if the function takes "axis" and is operating over axis 0 (the
+        spectral axis), check that the beam threshold is not exceeded before
+        performing the operation
+
+        Also, if the operation *is* valid, average the beam appropriately to
+        get the output
+        """
+        # deferred import to avoid a circular import problem
+        from .lower_dimensional_structures import LowerDimensionalObject
+
+        if beam_threshold is None:
+            beam_threshold = self.beam_threshold
+
+        def newfunc(*args, **kwargs):
+            """ Wrapper function around the standard operations to handle beams
+            when creating projections """
+
+            # check that the spectral axis is being operated over.  If it is,
+            # we need to average beams
+            # moments are a special case b/c they default to axis=0
+            need_to_handle_beams = (('axis' in kwargs and
+                                     ((kwargs['axis']==0) or
+                                      (hasattr(kwargs['axis'], '__len__') and
+                                       0 in kwargs['axis']))) or
+                                    ('axis' not in kwargs and 'moment' in
+                                     function.__name__))
+
+            if need_to_handle_beams:
+                # do this check *first* so we don't do an expensive operation
+                # and crash afterward
+                avg_beam = self.average_beams(beam_threshold, warn=True)
+
+            result = function(*args, **kwargs)
+
+            if not isinstance(result, LowerDimensionalObject):
+                # numpy arrays are sometimes returned; these have no metadata
+                return result
+
+            elif need_to_handle_beams:
+                result.meta['beam'] = avg_beam
+                result._beam = avg_beam
+
+            return result
+
+        return newfunc
+
+    def _check_beam_areas(self, threshold, mean_beam, mask=None):
+        """
+        Check that the beam areas are the same to within some threshold
+        """
+
+        if mask is not None:
+            assert len(mask) == len(self.unmasked_beams)
+            mask = np.array(mask, dtype='bool')
+        else:
+            mask = np.ones(len(self.unmasked_beams), dtype='bool')
+
+        qtys = dict(sr=self.unmasked_beams.sr,
+                    major=self.unmasked_beams.major.to(u.deg),
+                    minor=self.unmasked_beams.minor.to(u.deg),
+                    # position angles are not really comparable
+                    #pa=u.Quantity([bm.pa for bm in self.unmasked_beams], u.deg),
+                   )
+
+        errormessage = ""
+
+        for (qtyname, qty) in (qtys.items()):
+            minv = qty[mask].min()
+            maxv = qty[mask].max()
+            mn = getattr(mean_beam, qtyname)
+            maxdiff = (np.max(np.abs(u.Quantity((maxv-mn, minv-mn))))/mn).decompose()
+
+            if isinstance(threshold, dict):
+                th = threshold[qtyname]
+            else:
+                th = threshold
+
+            if maxdiff > th:
+                errormessage += ("Beam {2}s differ by up to {0}x, which is greater"
+                                 " than the threshold {1}\n".format(maxdiff,
+                                                                    threshold,
+                                                                    qtyname
+                                                                   ))
+        if errormessage != "":
+            raise ValueError(errormessage)
+
+    def mask_out_bad_beams(self, threshold, reference_beam=None,
+                           criteria=['sr','major','minor'],
+                           mid_value=np.nanmedian):
+        """
+        See `identify_bad_beams`.  This function returns a masked cube
+
+        Returns
+        -------
+        newcube : VaryingResolutionSpectralCube
+            The cube with bad beams masked out
+        """
+
+        goodbeams = self.identify_bad_beams(threshold=threshold,
+                                            reference_beam=reference_beam,
+                                            criteria=criteria,
+                                            mid_value=mid_value)
+
+        includemask = BooleanArrayMask(goodbeams[:,None,None],
+                                       self._wcs,
+                                       shape=self._data.shape)
+
+        return self._new_thing_with(mask=self.mask & includemask,
+                                    beam_threshold=threshold,
+                                    goodbeams_mask=self.goodbeams_mask & goodbeams,
+                                   )
+
+    def with_beams(self, beams, goodbeams_mask=None,):
+        '''
+        Attach a new beams object to the VaryingResolutionSpectralCube.
+
+        Parameters
+        ----------
+        beams : `~radio_beam.Beams`
+            A new beams object.
+        '''
+
+        meta = self.meta.copy()
+        meta['beams'] = beams
+
+        return self._new_thing_with(beams=beams, meta=meta)
+
+    @abc.abstractmethod
+    def _new_thing_with(self):
+        # since the above two methods require this method, it's an ABC of this
+        # mixin as well
+        raise NotImplementedError
+
 
 
 class BeamMixinClass(object):

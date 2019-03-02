@@ -4,8 +4,10 @@ import pytest
 import warnings
 
 from astropy.io import fits
+import numpy as np
 
-from ..wcs_utils import *
+from ..wcs_utils import (WCS, drop_axis, wcs_swapaxes, add_stokes_axis_to_wcs,
+                         axis_names, slice_wcs, check_equality, strip_wcs_from_header)
 from . import path
 
 
@@ -188,3 +190,32 @@ def test_wcs_slice_unmatched_celestial():
                             drop_degenerate=True)
 
     assert 'is being removed' in str(wrn[-1].message)
+
+def test_wcs_downsampling():
+    """
+    Regression tests for #525
+
+    These are a series of simple tests I verified with pen and paper, but it's
+    always worth checking me again.
+    """
+    wcs = WCS(naxis=1)
+    wcs.wcs.ctype = ['FREQ',]
+    wcs.wcs.crpix = [1.,]
+
+    nwcs = slice_wcs(wcs, slice(0, None, 1))
+    assert nwcs.wcs.crpix[0] == 1
+
+    nwcs = slice_wcs(wcs, slice(0, None, 2))
+    assert nwcs.wcs.crpix[0] == 0.75
+
+    nwcs = slice_wcs(wcs, slice(0, None, 4))
+    assert nwcs.wcs.crpix[0] == 0.625
+
+    nwcs = slice_wcs(wcs, slice(2, None, 1))
+    assert nwcs.wcs.crpix[0] == -1
+
+    nwcs = slice_wcs(wcs, slice(2, None, 2))
+    assert nwcs.wcs.crpix[0] == -0.25
+
+    nwcs = slice_wcs(wcs, slice(2, None, 4))
+    assert nwcs.wcs.crpix[0] == 0.125

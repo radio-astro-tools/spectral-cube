@@ -4,9 +4,10 @@ import numpy as np
 from astropy.io import fits as pyfits
 from astropy import units as u
 from ..io import class_lmv, fits
-from .. import SpectralCube, StokesSpectralCube, OneDSpectrum
+from .. import SpectralCube, StokesSpectralCube
+from ..lower_dimensional_structures import (OneDSpectrum,
+                                            VaryingResolutionOneDSpectrum)
 from . import path
-import pytest
 
 from radio_beam import Beam
 
@@ -85,5 +86,6 @@ def test_1d_beams():
     spec = OneDSpectrum.from_hdu(hdu)
 
     np.testing.assert_almost_equal(spec, np.arange(5, dtype='float'))
+    assert isinstance(spec, VaryingResolutionOneDSpectrum)
     assert hasattr(spec, 'beams')
     assert len(spec.beams) == 5

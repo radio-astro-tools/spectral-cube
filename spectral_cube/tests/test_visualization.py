@@ -35,7 +35,7 @@ def test_projvis_aplpy():
     pytest.importorskip('aplpy')
     cube, data = cube_and_raw('vda_Jybeam_lower.fits')
     mom0 = cube.moment0()
-    mom0.quicklook(use_aplpy=True)
+    mom0.quicklook(use_aplpy=True, filename='test.png')
 
 
 def test_mask_quicklook():

@@ -302,11 +302,25 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True,
             if iview.step not in (None, 1):
                 crpix = mywcs.wcs.crpix[wcs_index]
                 cdelt = mywcs.wcs.cdelt[wcs_index]
-                # equivalently (keep this comment so you can compare eqns):
-                # wcs_new.wcs.crpix[wcs_index] =
-                # (crpix - iview.start)*iview.step + 0.5 - iview.step/2.
-                crp = ((crpix - iview.start - 1.)/iview.step +
-                       0.5 + 1./iview.step/2.)
+
+                # the logic is very annoying: the blc of the first pixel
+                # is at 0.5, so that value must be subtracted to get into
+                # numpy-compatible coordinates, then added back afterward
+                crp = ((crpix - iview.start - 0.5)/iview.step + 0.5)
+                # SIMPLE TEST:
+                # view(0, None, 1) w/crpix = 1
+                # crp = 1
+                # view(0, None, 2) w/crpix = 1
+                # crp = 0.75
+                # view(0, None, 4) w/crpix = 1
+                # crp = 0.625
+                # view(2, None, 1) w/crpix = 1
+                # crp = -1
+                # view(2, None, 2) w/crpix = 1
+                # crp = -0.25
+                # view(2, None, 4) w/crpix = 1
+                # crp = 0.125
+
                 wcs_new.wcs.crpix[wcs_index] = crp
                 wcs_new.wcs.cdelt[wcs_index] = cdelt * iview.step
             else:

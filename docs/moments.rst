@@ -19,14 +19,35 @@ axis::
     >>> moment_0_along_x = cube.moment(order=0, axis=2)  # doctest: +SKIP
 
 .. note:: These follow the mathematical definition of moments, so the second
-          moment is computed as the variance. For linewidth maps, see the
+          moment is computed as the variance. For the actual formulas used for
+          the moments, please see `the relevant documentation here 
+          <https://spectral-cube.readthedocs.io/en/latest/api/spectral_cube.SpectralCube.html#spectral_cube.SpectralCube.moment>`_.
+          For linewidth maps, see the
           `Linewidth maps`_ section.
+          
+You may also want to convert the unit of the datacube into a velocity one before
+you can obtain a genuine velocity map via a 1st moment map. So first it will be necessary to 
+apply the :class:`~spectral_cube.SpectralCube.with_spectral_unit` method from this package with the proper attribute settings::
+
+    >>> nii_cube = cube.with_spectral_unit(u.km/u.s, velocity_convention='optical', rest_value=6584*u.AA)  # doctest: +SKIP
+
+Note that the ``rest_value`` in the above code refers to the wavelength of the targeted line 
+in the 1D spectrum corresponding to the 3rd dimension. Also, since not all velocity values are relevant, 
+next we will use the :class:`~spectral_cube.SpectralCube.spectral_slab` method to slice out the chunk of 
+the cube that actually contains the line::
+
+    >>> nii_cube = cube.with_spectral_unit(u.km/u.s, velocity_convention='optical', rest_value=6584*u.AA).spectral_slab(-60*u.km/u.s,-20*u.km/u.s)  # doctest: +SKIP
+    
+Finally, we can now generate the 1st moment map containing the expected velocity structure::
+
+    >>> moment_1 = nii_cube_2.moment(order=1)  # doctest: +SKIP
 
 The moment maps returned are :class:`~spectral_cube.lower_dimensional_structures.Projection` instances,
 which act like :class:`~astropy.units.Quantity` objects, and also have
 convenience methods for writing to a file::
 
     >>> moment_0.write('moment0.fits')  # doctest: +SKIP
+    >>> momemt_1.write('moment1.fits')  # doctest: +SKIP
 
 and converting the data and WCS to a FITS HDU::
 
@@ -45,7 +66,7 @@ Linewidth maps
 --------------
 
 Making linewidth maps (sometimes referred to as second moment maps in radio
-astronomy), you can use:
+astronomy), you can use::
 
     >>> sigma_map = cube.linewidth_sigma()  # doctest: +SKIP
     >>> fwhm_map = cube.linewidth_fwhm()  # doctest: +SKIP

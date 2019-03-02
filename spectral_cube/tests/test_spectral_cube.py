@@ -650,7 +650,6 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
         """.strip()
 
 
-@pytest.mark.xfail
 @pytest.mark.skipif('not YT_INSTALLED')
 class TestYt():
     def setup_method(self, method):
@@ -677,9 +676,7 @@ class TestYt():
                         ds2.domain_width.value*np.array([1,1,1.0/self.spectral_factor]))
         assert_allclose(ds1.domain_width.value, ds3.domain_width.value)
         assert self.nprocs == len(ds3.index.grids)
-        assert ds1.spec_cube
-        assert ds2.spec_cube
-        assert ds3.spec_cube
+
         ds1.index
         ds2.index
         ds3.index
@@ -1372,6 +1369,18 @@ def test_multibeam_slice():
     np.testing.assert_almost_equal(flatslice.header['BMAJ'],
                                    (0.1/3600.))
 
+    # Test returning a VRODS
+
+    spec = cube[:, 0, 0]
+
+    assert (cube.beams == spec.beams).all()
+
+    # And make sure that Beams gets slice for part of a spectrum
+
+    spec_part = cube[:1, 0, 0]
+
+    assert cube.beams[0] == spec.beams[0]
+
 def test_basic_unit_conversion():
 
     cube, data = cube_and_raw('advs.fits')
@@ -1616,9 +1625,9 @@ def test_mask_bad_beams():
     cube, data = cube_and_raw('vda_beams.fits')
 
     # make sure all of the beams are initially good (finite)
-    assert np.all(cube._goodbeams_mask)
+    assert np.all(cube.goodbeams_mask)
     # make sure cropping the cube maintains the mask
-    assert np.all(cube[:3]._goodbeams_mask)
+    assert np.all(cube[:3].goodbeams_mask)
 
     # middle two beams have same area
     masked_cube = cube.mask_out_bad_beams(0.01,
@@ -1627,7 +1636,7 @@ def test_mask_bad_beams():
                                                               60*u.deg))
 
     assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])
-    assert np.all(masked_cube._goodbeams_mask == [False,False,True,False])
+    assert np.all(masked_cube.goodbeams_mask == [False,False,True,False])
 
     mean = masked_cube.mean(axis=0)
     assert np.all(mean == cube[2,:,:])
@@ -1637,7 +1646,7 @@ def test_mask_bad_beams():
 
     mean2 = masked_cube2.mean(axis=0)
     assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
-    assert np.all(masked_cube2._goodbeams_mask == [False,True,True,False])
+    assert np.all(masked_cube2.goodbeams_mask == [False,True,True,False])
 
 
 def test_convolve_to():
@@ -1769,6 +1778,21 @@ def test_spatial_smooth_g2d():
 
     np.testing.assert_almost_equal(cube_g2d[2].value, result2)
 
+def test_spatial_smooth_preserves_unit():
+    """
+    Regression test for issue527
+    """
+    cube, data = cube_and_raw('adv.fits')
+    cube._unit = u.K
+
+    #
+    # Guassian 2D smoothing test
+    #
+    g2d = Gaussian2DKernel(3)
+    cube_g2d = cube.spatial_smooth(g2d)
+
+    assert cube_g2d.unit == u.K
+
 def test_spatial_smooth_t2d():
     cube, data = cube_and_raw('adv.fits')
 
@@ -1883,3 +1907,34 @@ def test_median_2axis():
     result0 = np.array([0.83498009, 0.2606566 , 0.37271531, 0.48548023])
 
     np.testing.assert_almost_equal(cube_median.value, result0)
+
+
+def test_varyres_mask():
+    cube, data = cube_and_raw('vda_beams.fits')
+
+    # mask out two beams
+    goodbeams = cube.identify_bad_beams(0.5)
+    assert all(goodbeams == np.array([False, True, True, False]))
+
+    mcube = cube.mask_out_bad_beams(0.5)
+    assert hasattr(mcube, '_goodbeams_mask')
+    assert all(mcube.goodbeams_mask == goodbeams)
+    assert len(mcube.beams) == 2
+
+    sp_masked = mcube[:,0,0]
+
+    assert hasattr(sp_masked, '_goodbeams_mask')
+    assert all(sp_masked.goodbeams_mask == goodbeams)
+    assert len(sp_masked.beams) == 2
+
+    try:
+        assert mcube.unmasked_beams == cube.beams
+    except ValueError:
+        # older versions of beams
+        assert np.all(mcube.unmasked_beams == cube.beams)
+
+    try:
+        # check that slicing works too
+        assert mcube[:5].unmasked_beams == cube[:5].beams
+    except ValueError:
+        assert np.all(mcube[:5].unmasked_beams == cube[:5].beams)
