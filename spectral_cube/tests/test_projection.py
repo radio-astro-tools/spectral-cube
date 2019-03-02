@@ -124,6 +124,24 @@ def test_isnan(LDO, data):
     assert not hasattr(mask, 'unit')
 
 @pytest.mark.parametrize(('LDO', 'data'),
+                         zip(LDOs_2d, data_twelve_2d))
+def test_proj_with_fillvalue(LDO, data):
+    # Check that np.isnan strips units
+
+    image = data.copy()
+    image[5,6] = np.nan
+    p = LDO(image, copy=False)
+
+    p0 = p.with_fill_value(0.)
+
+    assert np.isfinite(p0.filled_data[:]).all()
+
+    mask = np.isnan(p)
+
+    assert mask.sum() == 1
+    assert not hasattr(mask, 'unit')
+
+@pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs, data_twelve))
 def test_self_arith(LDO, data):
 
