@@ -37,9 +37,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
     @property
     def hdu(self):
         if self.wcs is None:
-            hdu = PrimaryHDU(self.value)
+            hdu = PrimaryHDU(self.filled_data[:].value)
         else:
-            hdu = PrimaryHDU(self.value, header=self.header)
+            hdu = PrimaryHDU(self.filled_data[:].value,
+                             header=self.header)
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
 
         if 'beam' in self.meta:
@@ -278,7 +279,9 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         matters: ``self`` must have ``_wcs``, for example.
         """
         if mask is None:
-            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
+            # mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
+            #                         self._wcs, shape=self.value.shape)
+            mask = BooleanArrayMask(np.isfinite(self.value),
                                     self._wcs, shape=self.value.shape)
         elif isinstance(mask, np.ndarray):
             if mask.shape != self.value.shape:
@@ -484,7 +487,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
     def _quicklook_mpl(self, filename=None):
         from matplotlib import pyplot
-        self.figure = pyplot.imshow(self.value)
+        self.figure = pyplot.imshow(self.filled_data[:].value)
         if filename is not None:
             self.figure.savefig(filename)
 
@@ -570,7 +573,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         newwcs = wcs.WCS(header)
         shape_out = [header['NAXIS{0}'.format(i + 1)] for i in range(header['NAXIS'])][::-1]
 
-        newproj, newproj_valid = reproject_interp((self.value,
+        newproj, newproj_valid = reproject_interp((self.filled_data[:],
                                                    self.header),
                                                   newwcs,
                                                   shape_out=shape_out,
@@ -979,7 +982,8 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             Passed to the convolve function
         """
 
-        newspec = convolve(self.value, kernel, normalize_kernel=True, **kwargs)
+        newspec = convolve(self.filled_data[:], kernel, normalize_kernel=True,
+                           **kwargs)
 
         return self._new_spectrum_with(data=newspec)
 
