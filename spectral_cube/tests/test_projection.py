@@ -141,6 +141,22 @@ def test_proj_with_fillvalue(LDO, data):
     assert mask.sum() == 1
     assert not hasattr(mask, 'unit')
 
+def test_ondespec_with_fillvalue():
+    # Check that np.isnan strips units
+
+    spec = twelve_qty_1d.copy()
+    spec[5] = np.nan
+    p = OneDSpectrum(spec, copy=False)
+
+    p0 = p.with_fill_value(0.)
+
+    assert np.isfinite(p0.filled_data[:]).all()
+
+    mask = np.isnan(p)
+
+    assert mask.sum() == 1
+    assert not hasattr(mask, 'unit')
+
 @pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs, data_twelve))
 def test_self_arith(LDO, data):
