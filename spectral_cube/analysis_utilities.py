@@ -1,8 +1,7 @@
 import numpy as np
 
 from astropy import units as u
-from astropy.extern.six.moves import zip
-from astropy.extern.six.moves import range as xrange
+from six.moves import zip, range
 from astropy.wcs import WCS
 from astropy.utils.console import ProgressBar
 import warnings
@@ -117,7 +116,7 @@ def get_chunks(num_items, chunk):
 
     chunks = \
         np.array_split(items,
-                       [chunk * i for i in xrange(int(num_items / chunk))])
+                       [chunk * i for i in range(int(num_items / chunk))])
     if chunks[-1].size == 0:
         # Last one is empty
         chunks = chunks[:-1]

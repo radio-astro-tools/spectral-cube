@@ -1,5 +1,6 @@
 from __future__ import print_function, absolute_import, division
 
+import six
 import operator
 import itertools
 import warnings
@@ -14,7 +15,6 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.wcs import _wcs
 from astropy.tests.helper import assert_quantity_allclose
-from astropy.extern import six
 from astropy.convolution import Gaussian2DKernel, Tophat2DKernel
 import numpy as np
 

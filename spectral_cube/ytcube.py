@@ -1,12 +1,12 @@
 from __future__ import print_function, absolute_import, division
 
+import six
 import os
 import subprocess
 import numpy as np
 import time
 from astropy.utils.console import ProgressBar
 from astropy import log
-from astropy.extern import six
 import warnings
 
 __all__ = ['ytCube']

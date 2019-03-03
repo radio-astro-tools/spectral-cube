@@ -11,12 +11,11 @@ import re
 import itertools
 import copy
 import tempfile
+import six
+from six.moves import zip, range
 
 import astropy.wcs
 from astropy import units as u
-from astropy.extern import six
-from astropy.extern.six.moves import range as xrange
-from astropy.extern.six.moves import zip
 from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
 from astropy.utils.console import ProgressBar
 from astropy import log
@@ -962,8 +961,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         ny, nx = self._get_flat_shape(axis)
 
-        for y in xrange(ny):
-            for x in xrange(nx):
+        for y in range(ny):
+            for x in range(nx):
                 # create length-1 view for each position
                 slc = [slice(y, y + 1), slice(x, x + 1), ]
                 # create a length-N slice (all-inclusive) along the selected axis

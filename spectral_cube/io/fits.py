@@ -1,12 +1,12 @@
 from __future__ import print_function, absolute_import, division
 
+import six
 import warnings
 
 from astropy.io import fits
 import astropy.wcs
 from astropy import wcs
 from astropy.wcs import WCS
-from astropy.extern import six
 from collections import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
 
@@ -165,7 +165,7 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
             cube = VaryingResolutionSpectralCube(data, wcs, mask, meta=meta,
                                                  header=header,
                                                  beam_table=beam_table)
-        
+
         if hasattr(cube._mask, '_data'):
             # check that the shape matches if there is a shape
             # it is possible that VaryingResolution cubes will have a composite

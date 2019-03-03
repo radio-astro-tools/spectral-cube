@@ -4,12 +4,12 @@ import abc
 import warnings
 import tempfile
 
+from six.moves import zip
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
 from astropy.wcs import InconsistentAxisTypesError
 from astropy.io import fits
-from astropy.extern.six.moves import zip
 
 from . import wcs_utils
 from .utils import WCSWarning
