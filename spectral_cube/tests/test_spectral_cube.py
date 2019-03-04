@@ -1879,6 +1879,26 @@ def test_spectral_smooth_median_4cores():
 def update_function():
     print("Update Function Call")
 
+def test_smooth_update_function_parallel_no_capsys():
+    """
+    travis-ci test: the next test, with capsys, fails.  This is added as a test
+    to see if the no-capsys version works.
+    """
+
+    pytest.importorskip('joblib')
+    pytest.importorskip('scipy.ndimage')
+
+    cube, data = cube_and_raw('adv.fits')
+
+    # this is potentially a major disaster: if update_function can't be
+    # pickled, it won't work, which is why update_function is (very badly)
+    # defined outside of this function
+    cube_spectral_median = cube.spectral_smooth_median(3, num_cores=4,
+                                                       update_function=update_function)
+
+    sys.stdout.flush()
+
+
 def test_smooth_update_function_parallel(capsys):
 
     pytest.importorskip('joblib')
