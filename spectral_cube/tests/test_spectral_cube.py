@@ -1896,8 +1896,6 @@ def test_smooth_update_function_parallel_no_capsys():
     cube_spectral_median = cube.spectral_smooth_median(3, num_cores=4,
                                                        update_function=update_function)
 
-    sys.stdout.flush()
-
 
 def test_smooth_update_function_parallel(capsys):
 
