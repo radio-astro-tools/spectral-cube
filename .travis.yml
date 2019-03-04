@@ -36,7 +36,7 @@ matrix:
         # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
         ## COVERAGE TESTS DISABLED: they don't work any more.  I have found no combination of anything that fixes this.
-        - env: SETUP_CMD='test --coverage'
+        - env: SETUP_CMD='test --coverage --args="-vv"'
                CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy pytest-xdist joblib glue-core scipy'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
           name: coverage
@@ -70,12 +70,14 @@ matrix:
         - env: CONDA_DEPENDENCIES="matplotlib=3 aplpy yt bottleneck joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+               SETUP_CMD='test -a "--boxed" --args="-vv"'
           name: vistools
 
         - env: # separate joblib-only test
                CONDA_DEPENDENCIES="joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+               SETUP_CMD='test -a "--boxed" --args="-vv"'
           name: joblib
 
 

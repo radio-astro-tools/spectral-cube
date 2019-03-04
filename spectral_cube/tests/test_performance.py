@@ -214,15 +214,17 @@ def test_memory_usage_coordinates():
 
     snap1 = tracemalloc.take_snapshot()
 
+    size = 200
+
     # create a "flat" cube
-    cube,_ = utilities.generate_gaussian_cube(shape=[1,2000,2000])
+    cube,_ = utilities.generate_gaussian_cube(shape=[1,size,size])
     sz = _.dtype.itemsize
 
     snap1b = tracemalloc.take_snapshot()
     diff = snap1b.compare_to(snap1, 'lineno')
     diffvals = np.array([dd.size_diff for dd in diff])
     # at this point, the generated cube should still exist in memory
-    assert diffvals.max()*u.B >= 2000**2*sz*u.B
+    assert diffvals.max()*u.B >= size**2*sz*u.B
 
     del _
     snap2 = tracemalloc.take_snapshot()
@@ -233,7 +235,7 @@ def test_memory_usage_coordinates():
 
     # printing the cube should not occupy any more memory
     # (it will allocate a few bytes for the cache, but should *not*
-    # load the full 2000x2000 coordinate arrays for RA, Dec
+    # load the full size x size coordinate arrays for RA, Dec
     snap3 = tracemalloc.take_snapshot()
     diff = snap3.compare_to(snap2, 'lineno')
     assert sum([dd.size_diff for dd in diff])*u.B < 100*u.kB
