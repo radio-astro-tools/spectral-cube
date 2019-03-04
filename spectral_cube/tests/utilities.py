@@ -3,11 +3,12 @@
 Utilities for tests.
 '''
 
+from six.moves import zip
+
 import numpy as np
 import astropy.units as u
 from astropy.io import fits
 from astropy.utils import NumpyRNGContext
-from astropy.extern.six.moves import zip
 
 from ..spectral_cube import SpectralCube
 
