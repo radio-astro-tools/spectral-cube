@@ -74,7 +74,7 @@ matrix:
                CONDA_DEPENDENCIES="joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
-               SETUP_CMD='test --args="-vv --capture=no"'
+               SETUP_CMD="test --args='-vv --capture=no'"
           name: joblib
 
 
