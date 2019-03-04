@@ -21,7 +21,7 @@ env:
         - SETUP_CMD='test -a "--boxed"'
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='sip<4.19 aplpy pytest-xdist joblib glue-core scipy'
+        - CONDA_DEPENDENCIES='sip<4.19 aplpy pytest-xdist glue-core scipy'
         - CONDA_CHANNELS='astropy glueviz'
         - PIP_DEPENDENCIES='matplotlib<2 Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
         - SETUP_XVFB=True
@@ -47,6 +47,7 @@ matrix:
         # test python2.7 with recent numpy version
         - env: PYTHON_VERSION=2.7 PYTEST_VERSION="<3.7"
                PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
+               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy pytest-xdist glue-core scipy'
 
         - env: NUMPY_VERSION=1.11 ASTROPY_VERSION=LTS
                CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest-xdist'
@@ -59,7 +60,12 @@ matrix:
         - env: ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
 
-        - env: CONDA_DEPENDENCIES='matplotlib=3 aplpy yt bottleneck pytest-xdist joblib'
+        - env: CONDA_DEPENDENCIES="matplotlib=3 aplpy yt bottleneck joblib $CONDA_DEPENDENCIES"
+               ASTROPY_VERSION='development'
+               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+
+        - env: # separate joblib-only test
+               CONDA_DEPENDENCIES="joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
 
