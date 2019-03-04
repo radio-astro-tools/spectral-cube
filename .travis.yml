@@ -14,14 +14,11 @@ env:
         # The following versions are the 'default' for tests, unless
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
-        # We run the tests in 'boxed' mode, i.e. one subprocess per test,
-        # because there are memory leaks in Astropy that currently cause the
-        # memory to go up to levels that cause the tests to be slow.
         - PYTHON_VERSION=3.6
-        - SETUP_CMD='test -a "--boxed"'
+        - SETUP_CMD='test'
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='sip<4.19 aplpy pytest-xdist glue-core scipy'
+        - CONDA_DEPENDENCIES='sip<4.19 aplpy glue-core scipy'
         - CONDA_CHANNELS='astropy glueviz'
         - PIP_DEPENDENCIES='matplotlib<2 Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
         - SETUP_XVFB=True
@@ -30,14 +27,14 @@ matrix:
     include:
         - env: SETUP_CMD='egg_info'
 
-        - env: PYTHON_VERSION=3.5 CONDA_DEPENDENCIES='pytest-xdist' PIP_DEPENDENCIES='radio_beam' NUMPY_VERSION=1.14
+        - env: PYTHON_VERSION=3.5 CONDA_DEPENDENCIES='' PIP_DEPENDENCIES='radio_beam' NUMPY_VERSION=1.14
           name: py35
 
         # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
         ## COVERAGE TESTS DISABLED: they don't work any more.  I have found no combination of anything that fixes this.
         - env: SETUP_CMD='test --coverage --args="-vv"'
-               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy pytest-xdist joblib glue-core scipy'
+               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy joblib glue-core scipy'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
           name: coverage
 
@@ -50,11 +47,11 @@ matrix:
         # test python2.7 with recent numpy version
         - env: PYTHON_VERSION=2.7 PYTEST_VERSION="<3.7"
                PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
-               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy pytest-xdist glue-core scipy'
+               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy glue-core scipy'
           name: py27
 
         - env: NUMPY_VERSION=1.11 ASTROPY_VERSION=LTS
-               CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest-xdist'
+               CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
                PYTEST_VERSION="<3.7"
           name: astropy-lts_np1.11
 
@@ -70,14 +67,14 @@ matrix:
         - env: CONDA_DEPENDENCIES="matplotlib=3 aplpy yt bottleneck joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
-               SETUP_CMD='test -a "--boxed" --args="-vv --capture=no"'
+               SETUP_CMD='test --args="-vv --capture=no"'
           name: vistools
 
         - env: # separate joblib-only test
                CONDA_DEPENDENCIES="joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
-               SETUP_CMD='test -a "--boxed" --args="-vv --capture=no"'
+               SETUP_CMD='test --args="-vv --capture=no"'
           name: joblib
 
 
