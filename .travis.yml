@@ -31,6 +31,7 @@ matrix:
         - env: SETUP_CMD='egg_info'
 
         - env: PYTHON_VERSION=3.5 CONDA_DEPENDENCIES='pytest-xdist' PIP_DEPENDENCIES='radio_beam' NUMPY_VERSION=1.14
+          name: py35
 
         # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
@@ -38,36 +39,44 @@ matrix:
         - env: SETUP_CMD='test --coverage'
                CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy pytest-xdist joblib glue-core scipy'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+          name: coverage
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time.
         # We need to use an old numpy version here as there are warnings in the inherited methods when using newer one
-        -  env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.13
+        - env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.13
+          name: docs
 
         # test python2.7 with recent numpy version
         - env: PYTHON_VERSION=2.7 PYTEST_VERSION="<3.7"
                PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
                CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy pytest-xdist glue-core scipy'
+          name: py27
 
         - env: NUMPY_VERSION=1.11 ASTROPY_VERSION=LTS
                CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest-xdist'
                PYTEST_VERSION="<3.7"
+          name: astropy-lts_np1.11
 
         # Test with development versions
         - env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.15 ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+          name: py35_astropy-dev
 
         - env: ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+          name: astropy-dev
 
         - env: CONDA_DEPENDENCIES="matplotlib=3 aplpy yt bottleneck joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+          name: vistools
 
         - env: # separate joblib-only test
                CONDA_DEPENDENCIES="joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
                PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+          name: joblib
 
 
 install:
