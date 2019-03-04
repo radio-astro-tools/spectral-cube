@@ -1,11 +1,4 @@
-language: python
-
-python:
-    - 3.5
-    - 3.6
-
-# Setting sudo to false opts in to Travis-CI container-based builds.
-sudo: false
+language: c
 
 # The apt packages below are needed for sphinx builds, which can no longer
 # be installed with sudo apt-get.
@@ -24,64 +17,52 @@ env:
         # We run the tests in 'boxed' mode, i.e. one subprocess per test,
         # because there are memory leaks in Astropy that currently cause the
         # memory to go up to levels that cause the tests to be slow.
+        - PYTHON_VERSION=3.6
         - SETUP_CMD='test -a "--boxed"'
-        - NUMPY_VERSION=1.13
+        - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - CONDA_DEPENDENCIES='sip<4.19 aplpy pytest-xdist joblib glue-core scipy'
-        - PYTEST_VERSION=3.9.3
         - CONDA_CHANNELS='astropy glueviz'
         - PIP_DEPENDENCIES='matplotlib<2 Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
         - SETUP_XVFB=True
 
-    matrix:
-        - SETUP_CMD='egg_info'
-        - # run with default settings
-        - ASTROPY_VERSION='development'
-        - CONDA_DEPENDENCIES='pytest-xdist' PIP_DEPENDENCIES='radio_beam'
-
 matrix:
     include:
+        - env: SETUP_CMD='egg_info'
+
+        - env: PYTHON_VERSION=3.5 CONDA_DEPENDENCIES='pytest-xdist' PIP_DEPENDENCIES='radio_beam' NUMPY_VERSION=1.14
 
         # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
         ## COVERAGE TESTS DISABLED: they don't work any more.  I have found no combination of anything that fixes this.
-        - python: 3.6
-          env: SETUP_CMD='test --coverage'
-               PYTEST_VERSION="<3.10"
-               CONDA_DEPENDENCIES='matplotlib aplpy yt bottleneck sip<4.19 aplpy pytest-xdist joblib glue-core scipy'
-               # pytest 3.9.3 suggested by @e-koch, @astrofrog.  3.10.1 doesn't work, 4.x doesn't work
-               # overrode python version too, per bsipocz
+        - env: SETUP_CMD='test --coverage'
+               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy pytest-xdist joblib glue-core scipy'
+               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
 
         # Check for sphinx doc build warnings - we do this first because it
-        # may run for a long time
-        - python: 3.6
-          env: SETUP_CMD='build_sphinx -w'
+        # may run for a long time.
+        # We need to use an old numpy version here as there are warnings in the inherited methods when using newer one
+        -  env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.13
 
         # test python2.7 with recent numpy version
-        - python: 2.7
-          env: PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
+        - env: PYTHON_VERSION=2.7 PYTEST_VERSION="<3.7"
+               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
 
-        - python: 3.6
-          env: NUMPY_VERSION=1.11 ASTROPY_VERSION=LTS CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest-xdist'
-               PYTEST_VERSION=''
+        - env: NUMPY_VERSION=1.11 ASTROPY_VERSION=LTS
+               CONDA_DEPENDENCIES='matplotlib aplpy bottleneck pytest-xdist'
+               PYTEST_VERSION="<3.7"
 
         # Test with development versions
-        - python: 3.5
-          env:
-              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
-              ASTROPY_VERSION='development'
+        - env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.15 ASTROPY_VERSION='development'
+               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
 
-        - python: 3.6
-          env:
-              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
-              ASTROPY_VERSION='development'
+        - env: ASTROPY_VERSION='development'
+               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
 
-        - python: 3.6
-          env:
-              CONDA_DEPENDENCIES='matplotlib=3 aplpy yt bottleneck pytest-xdist joblib'
-              PIP_DEPENDENCIES='https://github.com/radio-astro-tools/radio_beam/archive/master.zip https://github.com/radio-astro-tools/pvextractor/archive/master.zip'
-              PYTEST_VERSION=''
-              ASTROPY_VERSION='development'
+        - env: CONDA_DEPENDENCIES='matplotlib=3 aplpy yt bottleneck pytest-xdist joblib'
+               ASTROPY_VERSION='development'
+               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+
 
 install:
     - git clone git://github.com/astropy/ci-helpers.git
