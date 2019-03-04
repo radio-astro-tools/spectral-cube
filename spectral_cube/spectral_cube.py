@@ -2724,26 +2724,30 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 from joblib import Parallel, delayed
 
                 if update_function is not None:
+                    print("Creating update function callback")
                     class Callback_Backend(MultiprocessingBackend):
                         def callback(self, result):
                             update_function()
 
                         # Overload apply_async and set callback=self.callback
                         def apply_async(self, func, callback=None):
-                            applyResult = super().apply_async(func, self.callback)
+                            applyResult = super(Callback_Backend, self).apply_async(func, self.callback)
                             return applyResult
 
+                    print("Calling register_parallel_backend")
                     joblib.register_parallel_backend('custom',
                                                      Callback_Backend,
                                                      make_default=True)
+                    print("Called register_parallel_backend")
 
-
+                print("Beginning parallel job")
                 Parallel(n_jobs=num_cores,
                          verbose=verbose,
                          max_nbytes=None)(delayed(applicator)(arg, outcube,
                                                               function,
                                                               **kwargs)
                                           for arg in iteration_data)
+                print("Ended parallel job")
             except ImportError:
                 if num_cores is not None and num_cores > 1:
                     warnings.warn("Could not import joblib.  Will run in serial.",
