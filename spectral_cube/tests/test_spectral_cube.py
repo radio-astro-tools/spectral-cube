@@ -53,6 +53,10 @@ try:
 except ImportError:
     scipyOK = False
 
+import os
+# if ON_TRAVIS is set, we're on travis.
+on_travis = bool(os.environ.get('ON_TRAVIS'))
+
 from radio_beam import Beam, Beams
 
 NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
@@ -1879,6 +1883,7 @@ def test_spectral_smooth_median_4cores():
 def update_function():
     print("Update Function Call")
 
+@pytest.mark.skipif(on_travis)
 def test_smooth_update_function_parallel_no_capsys():
     """
     travis-ci test: the next test, with capsys, fails.  This is added as a test
@@ -1897,6 +1902,7 @@ def test_smooth_update_function_parallel_no_capsys():
                                                        update_function=update_function)
 
 
+@pytest.mark.skipif(on_travis)
 def test_smooth_update_function_parallel(capsys):
 
     pytest.importorskip('joblib')
