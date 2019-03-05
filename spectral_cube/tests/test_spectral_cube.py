@@ -1884,7 +1884,7 @@ def update_function():
     print("Update Function Call")
 
 
-@pytest.mark.skipif(on_travis)
+@pytest.mark.skipif('on_travis')
 def test_smooth_update_function_parallel(capsys):
 
     pytest.importorskip('joblib')
@@ -1903,7 +1903,7 @@ def test_smooth_update_function_parallel(capsys):
     assert captured.out == "Update Function Call\n"*6
 
 
-@pytest.mark.skipif(on_travis)
+@pytest.mark.skipif('on_travis')
 def test_smooth_update_function_serial(capsys):
 
     pytest.importorskip('scipy.ndimage')
