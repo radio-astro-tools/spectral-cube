@@ -1,10 +1,10 @@
 from __future__ import print_function, absolute_import, division
 
+import six
 import numpy as np
 import struct
 import warnings
 import string
-from astropy.extern import six
 from astropy import log
 from .fits import load_fits_cube
 

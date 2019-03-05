@@ -1,8 +1,8 @@
 from __future__ import print_function, absolute_import, division
 
+import six
 import warnings
 from astropy.io import fits
-from astropy.extern import six
 from astropy.wcs import WCS
 import numpy as np
 

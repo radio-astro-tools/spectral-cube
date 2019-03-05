@@ -1,8 +1,8 @@
 from __future__ import print_function, absolute_import, division
 
+import six
 import numpy as np
 
-from astropy.extern import six
 from .spectral_cube import SpectralCube, BaseSpectralCube
 from . import wcs_utils
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller

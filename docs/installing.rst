@@ -16,6 +16,7 @@ This package has the following dependencies:
 * `Regions <https://astropy-regions.readthedocs.io/en/latest>`_ >=0.3dev, optional
   (Serialises/Deserialises DS9/CRTF region files and handles them. Used when
   extracting a subcube from region)
+* `six <http://pypi.python.org/pypi/six/>`_
 
 Installation
 ------------
