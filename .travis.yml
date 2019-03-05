@@ -20,7 +20,7 @@ env:
         - ASTROPY_VERSION=stable
         - CONDA_DEPENDENCIES='sip glue-core scipy'
         - CONDA_CHANNELS='astropy glueviz'
-        - PIP_DEPENDENCIES='matplotlib<2 Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
+        - PIP_DEPENDENCIES='Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
         - SETUP_XVFB=True
         - ON_TRAVIS=True
 
@@ -35,8 +35,7 @@ matrix:
         # make sure *everything* is run for coverage tests
         ## COVERAGE TESTS DISABLED: they don't work any more.  I have found no combination of anything that fixes this.
         - env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy joblib glue-core scipy'
-               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
+               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip aplpy joblib glue-core scipy'
           name: coverage
 
         # Check for sphinx doc build warnings - we do this first because it
@@ -58,22 +57,18 @@ matrix:
 
         # Test with development versions
         - env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.15 ASTROPY_VERSION='development'
-               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
           name: py35_astropy-dev
 
         - env: ASTROPY_VERSION='development'
-               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
           name: astropy-dev
 
         - env: CONDA_DEPENDENCIES="matplotlib=3 aplpy yt bottleneck joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
-               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
           name: vistools
 
         - env: # separate joblib-only test
                CONDA_DEPENDENCIES="joblib $CONDA_DEPENDENCIES"
                ASTROPY_VERSION='development'
-               PIP_DEPENDENCIES="`echo $PIP_DEPENDENCIES | sed 's/matplotlib<2//'`"
           name: joblib
 
 
