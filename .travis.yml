@@ -47,7 +47,7 @@ matrix:
         # test python2.7 with recent numpy version
         - env: PYTHON_VERSION=2.7 PYTEST_VERSION="<3.7"
                PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
-               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip<4.19 aplpy glue-core scipy'
+               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip aplpy glue-core scipy'
           name: py27
 
         - env: NUMPY_VERSION=1.11 ASTROPY_VERSION=LTS
