@@ -97,10 +97,14 @@ def load_casa_image(filename, skipdata=False,
     """
 
     try:
-        from taskinit import iatool
-        ia = iatool()
+        import casatools
+        ia = casatools.image()
     except ImportError:
-        raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
+        try:
+            from taskinit import iatool
+            ia = iatool()
+        except ImportError:
+            raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
 
     # use the ia tool to get the file contents
     ia.open(filename)
