@@ -15,7 +15,7 @@ env:
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
         - PYTHON_VERSION=3.6
-        - SETUP_CMD='test'
+        - SETUP_CMD='test -vv'
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
         - CONDA_DEPENDENCIES='sip<4.19 aplpy glue-core scipy'
