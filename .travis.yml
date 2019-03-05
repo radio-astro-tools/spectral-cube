@@ -22,7 +22,10 @@ env:
           # well include it here
         - CONDA_DEPENDENCIES='matplotlib sip glue-core scipy'
         - CONDA_CHANNELS='astropy glueviz'
-        - PIP_DEPENDENCIES='Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
+        - PVEXTRACTOR="https://github.com/radio-astro-tools/pvextractor/archive/master.zip"
+        - REGIONS="https://github.com/astropy/regions/archive/master.zip"
+        - REPROJECT="https://github.com/astropy/reproject/archive/master.zip"
+        - PIP_DEPENDENCIES="Cython $PVEXTRACTOR radio_beam $REGIONS $REPROJECT"
         - SETUP_XVFB=True
         - ON_TRAVIS=True
 
@@ -52,7 +55,7 @@ matrix:
 
         # test python2.7 with recent numpy version
         - env: PYTHON_VERSION=2.7 PYTEST_VERSION="<3.7"
-               PIP_DEPENDENCIES='https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam'
+               PIP_DEPENDENCIES="$PVEXTRACTOR radio_beam"
                CONDA_DEPENDENCIES='matplotlib yt bottleneck sip aplpy scipy'
           name: py27
 
