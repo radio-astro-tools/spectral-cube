@@ -23,6 +23,7 @@ env:
         - PIP_DEPENDENCIES='Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
         - SETUP_XVFB=True
         - ON_TRAVIS=True
+        - MPLBACKEND='qt5agg'
 
 matrix:
     include:
