@@ -15,7 +15,7 @@ env:
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
         - PYTHON_VERSION=3.6
-        - SETUP_CMD='test --args="-vv"'
+        - SETUP_CMD='test'
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
           # matplotlib>2 is an install requirement of pvextractor, so we may as
