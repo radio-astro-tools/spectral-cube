@@ -18,7 +18,7 @@ env:
         - SETUP_CMD='test -vv'
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='sip<4.19 aplpy glue-core scipy'
+        - CONDA_DEPENDENCIES='sip glue-core scipy'
         - CONDA_CHANNELS='astropy glueviz'
         - PIP_DEPENDENCIES='matplotlib<2 Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
         - SETUP_XVFB=True
