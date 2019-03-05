@@ -18,12 +18,13 @@ env:
         - SETUP_CMD='test --args="-vv"'
         - NUMPY_VERSION=stable
         - ASTROPY_VERSION=stable
-        - CONDA_DEPENDENCIES='sip glue-core scipy'
+          # matplotlib>2 is an install requirement of pvextractor, so we may as
+          # well include it here
+        - CONDA_DEPENDENCIES='matplotlib sip glue-core scipy'
         - CONDA_CHANNELS='astropy glueviz'
         - PIP_DEPENDENCIES='Cython https://github.com/radio-astro-tools/pvextractor/archive/master.zip radio_beam https://github.com/astropy/regions/archive/master.zip https://github.com/astropy/reproject/archive/master.zip'
         - SETUP_XVFB=True
         - ON_TRAVIS=True
-        - MPLBACKEND='qt5agg'
 
 matrix:
     include:
@@ -31,6 +32,10 @@ matrix:
 
         - env: PYTHON_VERSION=3.5 CONDA_DEPENDENCIES='' PIP_DEPENDENCIES='radio_beam' NUMPY_VERSION=1.14
           name: py35
+
+        # Test with development versions
+        - env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.15 ASTROPY_VERSION='development'
+          name: py35_astropy-dev
 
         # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
@@ -56,9 +61,6 @@ matrix:
                PYTEST_VERSION="<3.7"
           name: astropy-lts_np1.11
 
-        # Test with development versions
-        - env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.15 ASTROPY_VERSION='development'
-          name: py35_astropy-dev
 
         - env: ASTROPY_VERSION='development'
           name: astropy-dev
