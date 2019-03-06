@@ -4,9 +4,11 @@ import six
 import warnings
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy import units as u
 import numpy as np
+from radio_beam import Beam, Beams
 
-from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask
+from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
 from .. import cube_utils
 
 # Read and write from a CASA image. This has a few
@@ -126,6 +128,28 @@ def load_casa_image(filename, skipdata=False,
 
     unit = ia.brightnessunit()
 
+    beam_ = ia.restoringbeam()
+    if 'major' in beam_:
+        beam = Beam(major=u.Quantity(beam_['major']['value'], unit=beam_['major']['unit']),
+                    minor=u.Quantity(beam_['minor']['value'], unit=beam_['minor']['unit']),
+                    pa=u.Quantity(beam_['positionangle']['value'], unit=beam_['positionangle']['unit']),
+                   )
+    elif 'beams' in beam_:
+        bdict = beam_['beams']
+        if beam_['nStokes'] > 1:
+            raise NotImplementedError()
+        nbeams = len(bdict)
+        assert nbeams == beam_['nChannels']
+
+        majors = [u.Quantity(bdict['*{0}'.format(ii)]['major']['value'],  bdict['*{0}'.format(ii)]['major']['unit']) for ii in range(nbeams)]
+        minors = [u.Quantity(bdict['*{0}'.format(ii)]['minor']['value'],  bdict['*{0}'.format(ii)]['minor']['unit']) for ii in range(nbeams)]
+        pas = [u.Quantity(bdict['*{0}'.format(ii)]['positionangle']['value'],  bdict['*{0}'.format(ii)]['positionangle']['unit']) for ii in range(nbeams)]
+
+        beams = Beams(major=majors,
+                      minor=minors,
+                      pa=pas)
+
+
     # don't need this yet
     # stokes = get_casa_axis(temp_cs, wanttype="Stokes", skipdeg=False,)
 
@@ -159,7 +183,10 @@ def load_casa_image(filename, skipdata=False,
 
     if wcs.naxis == 3:
         mask = BooleanArrayMask(np.logical_not(valid), wcs)
-        cube = SpectralCube(data, wcs, mask, meta=meta)
+        if 'beam' in locals():
+            cube = SpectralCube(data, wcs, mask, meta=meta, beam=beam)
+        elif 'beams' in locals:
+            cube = VaryingResolutionSpectralCube(data, wcs, mask, meta=meta, beams=beams)
         # we've already loaded the cube into memory because of CASA
         # limitations, so there's no reason to disallow operations
         cube.allow_huge_operations = True
