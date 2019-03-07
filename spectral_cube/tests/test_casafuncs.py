@@ -150,11 +150,11 @@ def test_casa_beams():
     make_casa_testimage(path('adv.fits'), path('casa_adv.image'))
     make_casa_testimage(path('adv_beams.fits'), path('casa_adv_beams.image'))
 
-    cube = SpectralCube.read(path('adv.image'), format='casa_image')
+    cube = SpectralCube.read(path('casa_adv.image'), format='casa_image')
 
     assert hasattr(cube, 'beam')
 
-    cube_beams = SpectralCube.read(path('adv_beams.image'), format='casa_image')
+    cube_beams = SpectralCube.read(path('casa_adv_beams.image'), format='casa_image')
 
     assert hasattr(cube_beams, 'beams')
     assert isinstance(cube_beams, VaryingResolutionSpectralCube)
