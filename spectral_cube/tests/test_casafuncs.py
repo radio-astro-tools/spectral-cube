@@ -80,7 +80,7 @@ def test_casa_mask():
         os.system('rm -rf casa.mask')
 
     make_casa_mask(cube, 'casa.mask', add_stokes=False,
-                   append_to_image=False)
+                   append_to_image=False, overwrite=True)
 
     ia.open('casa.mask')
 
@@ -134,7 +134,8 @@ def test_casa_mask_append():
 
     # in this case, casa.mask is the name of the mask, not its path
     make_casa_mask(cube, 'casa.mask', append_to_image=True,
-                   img=path('casa.image'), add_stokes=False)
+                   img=path('casa.image'), add_stokes=False,
+                   overwrite=True)
 
     assert os.path.exists(path('casa.image/casa.mask'))
 
