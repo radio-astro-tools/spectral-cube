@@ -10,6 +10,7 @@ from astropy import units as u
 from ..io.casa_masks import make_casa_mask
 from ..io.casa_image import wcs_casa2astropy
 from .. import SpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
+from . import path
 
 try:
     import casatools
@@ -54,7 +55,7 @@ def make_casa_testimage(infile, outname):
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask():
 
-    cube = SpectralCube.read('adv.fits')
+    cube = SpectralCube.read(path('adv.fits'))
 
     mask_array = np.array([[True, False], [False, False], [True, True]])
     bool_mask = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
@@ -101,14 +102,14 @@ def test_casa_mask():
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask_append():
 
-    cube = SpectralCube.read('adv.fits')
+    cube = SpectralCube.read(path('adv.fits'))
 
     mask_array = np.array([[True, False], [False, False], [True, True]])
     bool_mask = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
                                  shape=cube.shape)
     cube = cube.with_mask(bool_mask)
 
-    make_casa_testimage('adv.fits', 'casa.image')
+    make_casa_testimage(path('adv.fits'), path('casa.image'))
 
     if os.path.exists('casa.mask'):
         os.system('rm -rf casa.mask')
@@ -126,14 +127,14 @@ def test_casa_beams():
     image reader
     """
 
-    make_casa_testimage('adv.fits', 'casa_adv.image')
-    make_casa_testimage('adv_beams.fits', 'casa_adv_beams.image')
+    make_casa_testimage(path('adv.fits'), path('casa_adv.image'))
+    make_casa_testimage(path('adv_beams.fits'), path('casa_adv_beams.image'))
 
     cube = SpectralCube.read('adv.image', format='casa_image')
 
     assert hasattr(cube, 'beam')
 
-    cube_beams = SpectralCube.read('adv_beams.image', format='casa_image')
+    cube_beams = SpectralCube.read(path('adv_beams.image'), format='casa_image')
 
     assert hasattr(cube_beams, 'beams')
     assert isinstance(cube_beams, VaryingResolutionSpectralCube)
