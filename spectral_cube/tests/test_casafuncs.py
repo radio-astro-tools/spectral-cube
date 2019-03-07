@@ -54,6 +54,17 @@ def make_casa_testimage(infile, outname):
         ia.close()
 
 
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+def test_casa_read():
+
+    cube = SpectralCube.read(path('adv.fits'))
+
+    make_casa_testimage(path('adv.fits'), path('casa_adv.image'))
+
+    casacube = SpectralCube.read(path('casa_adv.image'), format='casa_image')
+
+    assert casacube.shape == cube.shape
+    # what other equalities should we check?
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask():

@@ -12,7 +12,9 @@ __all__ = ['make_casa_mask']
 
 
 def make_casa_mask(SpecCube, outname, append_to_image=True,
-                   img=None, add_stokes=True, stokes_posn=None):
+                   img=None, add_stokes=True, stokes_posn=None,
+                   overwrite=False
+                  ):
     '''
     Outputs the mask attached to the SpectralCube object as a CASA image, or
     optionally appends the mask to a preexisting CASA image.
@@ -32,6 +34,8 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
         Adds a Stokes axis onto the wcs from SpecCube.
     stokes_posn : int, optional
         Sets the position of the new Stokes axis. Defaults to the last axis.
+    overwrite : bool, optional
+        Overwrite the image and mask files if they exist?
     '''
 
     try:
@@ -78,7 +82,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
     hdu.writeto(temp.name)
 
-    ia.fromfits(infile=temp.name, outfile=temp2.name, overwrite=True)
+    ia.fromfits(infile=temp.name, outfile=temp2.name, overwrite=overwrite)
 
     temp.close()
 
@@ -97,7 +101,8 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     mask_arr = mask_arr.T
 
     ia.newimagefromarray(outfile=maskpath,
-                         pixels=mask_arr.astype('int16'))
+                         pixels=mask_arr.astype('int16'),
+                         overwrite=overwrite)
 
     ia.open(maskpath)
     ia.setcoordsys(cs.torecord())
