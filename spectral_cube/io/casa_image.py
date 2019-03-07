@@ -141,10 +141,14 @@ def load_casa_image(filename, skipdata=False,
             raise NotImplementedError()
         nbeams = len(bdict)
         assert nbeams == beam_['nChannels']
+        stokesidx = '*0'
 
-        majors = [u.Quantity(bdict['*{0}'.format(ii)]['major']['value'],  bdict['*{0}'.format(ii)]['major']['unit']) for ii in range(nbeams)]
-        minors = [u.Quantity(bdict['*{0}'.format(ii)]['minor']['value'],  bdict['*{0}'.format(ii)]['minor']['unit']) for ii in range(nbeams)]
-        pas = [u.Quantity(bdict['*{0}'.format(ii)]['positionangle']['value'],  bdict['*{0}'.format(ii)]['positionangle']['unit']) for ii in range(nbeams)]
+        majors = [u.Quantity(bdict['*{0}'.format(ii)][stokesidx]['major']['value'],
+                             bdict['*{0}'.format(ii)][stokesidx]['major']['unit']) for ii in range(nbeams)]
+        minors = [u.Quantity(bdict['*{0}'.format(ii)][stokesidx]['minor']['value'],
+                             bdict['*{0}'.format(ii)][stokesidx]['minor']['unit']) for ii in range(nbeams)]
+        pas = [u.Quantity(bdict['*{0}'.format(ii)][stokesidx]['positionangle']['value'],
+                          bdict['*{0}'.format(ii)][stokesidx]['positionangle']['unit']) for ii in range(nbeams)]
 
         beams = Beams(major=majors,
                       minor=minors,
