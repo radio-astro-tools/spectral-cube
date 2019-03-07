@@ -1498,7 +1498,7 @@ def test_varyres_moment():
         m0 = cube.moment0()
 
     assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
-    assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
+    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
 def test_append_beam_to_hdr():
@@ -1632,7 +1632,7 @@ def test_varyres_moment_logic_issue364():
         pass
     else:
         assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
-    assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
+    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
 def test_mask_bad_beams():
