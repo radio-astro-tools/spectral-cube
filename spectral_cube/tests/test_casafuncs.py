@@ -40,7 +40,7 @@ def make_casa_testimage(infile, outname):
         ia.setrestoringbeam(major={'value':1.0, 'unit':'arcsec'},
                             minor={'value':1.0, 'unit':'arcsec'},
                             pa={'value':90.0, 'unit':'deg'},
-                            channel=len(cube.beams),
+                            channel=len(cube.beams)-1,
                             polarization=-1,
                            )
         # populate each beam (hard assumption of 1 poln)
