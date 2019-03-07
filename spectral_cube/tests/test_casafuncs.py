@@ -27,6 +27,9 @@ except ImportError:
 
 def make_casa_testimage(infile, outname):
 
+    if not casaOK:
+        raise Exception("Attempted to make a CASA test image in a non-CASA "
+                        "environment")
     ia.fromfits(infile=infile, outfile=outname, overwrite=True)
     ia.close()
 

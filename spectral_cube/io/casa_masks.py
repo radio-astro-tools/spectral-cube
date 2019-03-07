@@ -34,9 +34,13 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     '''
 
     try:
-        from taskinit import ia
+        from casatools import image
+        ia = image()
     except ImportError:
-        print("Cannot import casac. Must be run in a CASA environment.")
+        try:
+            from taskinit import ia
+        except ImportError:
+            raise ImportError("Cannot import casa. Must be run in a CASA environment.")
 
     # Get the header info from the image
     # There's not wcs_astropy2casa (yet), so create a temporary file for
