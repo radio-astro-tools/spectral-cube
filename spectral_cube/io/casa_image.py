@@ -150,9 +150,9 @@ def load_casa_image(filename, skipdata=False,
         pas = [u.Quantity(bdict['*{0}'.format(ii)][stokesidx]['positionangle']['value'],
                           bdict['*{0}'.format(ii)][stokesidx]['positionangle']['unit']) for ii in range(nbeams)]
 
-        beams = Beams(major=majors,
-                      minor=minors,
-                      pa=pas)
+        beams = Beams(major=u.Quantity(majors),
+                      minor=u.Quantity(minors),
+                      pa=u.Quantity(pas))
 
 
     # don't need this yet
