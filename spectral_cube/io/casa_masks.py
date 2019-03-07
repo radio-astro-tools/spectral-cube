@@ -119,6 +119,6 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
         ia.close()
 
         ia.open(img)
-        ia.maskhandler('copy', [maskname+":mask0", maskname])
+        ia.maskhandler('copy', [maskpath+":mask0", maskname])
         ia.maskhandler('set', maskname)
         ia.close()
