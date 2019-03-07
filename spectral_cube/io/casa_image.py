@@ -190,7 +190,7 @@ def load_casa_image(filename, skipdata=False,
         mask = BooleanArrayMask(np.logical_not(valid), wcs)
         if 'beam' in locals():
             cube = SpectralCube(data, wcs, mask, meta=meta, beam=beam)
-        elif 'beams' in locals:
+        elif 'beams' in locals():
             cube = VaryingResolutionSpectralCube(data, wcs, mask, meta=meta, beams=beams)
         # we've already loaded the cube into memory because of CASA
         # limitations, so there's no reason to disallow operations
