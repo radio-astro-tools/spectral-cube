@@ -113,7 +113,8 @@ def load_casa_image(filename, skipdata=False,
 
     # read in the data
     if not skipdata:
-        data = ia.getchunk().reshape(ia.shape())
+        # CASA data are apparently transposed.
+        data = ia.getchunk().reshape(ia.shape()).transpose()
 
     # CASA stores validity of data as a mask
     if not skipvalid:
