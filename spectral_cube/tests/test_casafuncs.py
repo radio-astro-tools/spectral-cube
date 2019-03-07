@@ -114,13 +114,13 @@ def test_casa_mask_append():
 
     make_casa_testimage(path('adv.fits'), path('casa.image'))
 
-    if os.path.exists('casa.mask'):
-        os.system('rm -rf casa.mask')
+    if os.path.exists(path('casa.mask')):
+        os.system('rm -rf {0}'.format(path('casa.mask')))
 
-    make_casa_mask(cube, 'casa.mask', append_to_image=True,
-                   img='casa.image', add_stokes=False)
+    make_casa_mask(cube, path('casa.mask'), append_to_image=True,
+                   img=path('casa.image'), add_stokes=False)
 
-    assert os.path.exists('casa.image/casa.mask')
+    assert os.path.exists(path('casa.image/casa.mask'))
 
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
@@ -133,7 +133,7 @@ def test_casa_beams():
     make_casa_testimage(path('adv.fits'), path('casa_adv.image'))
     make_casa_testimage(path('adv_beams.fits'), path('casa_adv_beams.image'))
 
-    cube = SpectralCube.read('adv.image', format='casa_image')
+    cube = SpectralCube.read(path('adv.image'), format='casa_image')
 
     assert hasattr(cube, 'beam')
 
