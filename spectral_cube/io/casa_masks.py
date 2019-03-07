@@ -103,6 +103,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     ia.newimagefromarray(outfile=maskpath,
                          pixels=mask_arr.astype('int16'),
                          overwrite=overwrite)
+    ia.close()
 
     ia.open(maskpath)
     ia.setcoordsys(cs.torecord())

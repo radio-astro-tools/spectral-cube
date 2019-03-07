@@ -133,7 +133,7 @@ def test_casa_mask_append():
         os.system('rm -rf {0}'.format(maskpath))
 
     # in this case, casa.mask is the name of the mask, not its path
-    make_casa_mask(cube, 'casa.mask', append_to_image=True,
+    make_casa_mask(cube, path('casa.mask'), append_to_image=True,
                    img=path('casa.image'), add_stokes=False,
                    overwrite=True)
 
