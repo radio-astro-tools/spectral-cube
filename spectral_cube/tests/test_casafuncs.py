@@ -117,7 +117,12 @@ def test_casa_mask_append():
     if os.path.exists(path('casa.mask')):
         os.system('rm -rf {0}'.format(path('casa.mask')))
 
-    make_casa_mask(cube, path('casa.mask'), append_to_image=True,
+    maskpath = os.path.join(path('casa.image'),'casa.mask')
+    if os.path.exists(maskpath):
+        os.system('rm -rf {0}'.format(maskpath))
+
+    # in this case, casa.mask is the name of the mask, not its path
+    make_casa_mask(cube, 'casa.mask', append_to_image=True,
                    img=path('casa.image'), add_stokes=False)
 
     assert os.path.exists(path('casa.image/casa.mask'))
