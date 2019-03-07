@@ -5,21 +5,44 @@ import numpy as np
 from numpy.testing import assert_allclose
 import os
 
+from astropy import units as u
+
 from ..io.casa_masks import make_casa_mask
 from ..io.casa_image import wcs_casa2astropy
-from .. import SpectralCube, BooleanArrayMask
+from .. import SpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
 
 try:
-    from taskinit import ia
+    import casatools
+    ia = casatools.image()
     casaOK = True
 except ImportError:
-    print("Run in CASA environment.")
-    casaOK = False
+    try:
+        from taskinit import ia
+        casaOK = True
+    except ImportError:
+        print("Run in CASA environment.")
+        casaOK = False
 
 
 def make_casa_testimage(infile, outname):
 
     ia.fromfits(infile=infile, outfile=outname, overwrite=True)
+
+    cube = SpectralCube.read(infile)
+    if isinstance(cube, VaryingResolutionSpectralCube):
+        # populate restoring beam emptily
+        ia.setrestoringbeam(major={'value':1.0, 'unit':'arcsec'},
+                            minor={'value':1.0, 'unit':'arcsec'},
+                            pa={'value':90.0, 'unit':'deg'}
+                           )
+        # populate each beam (hard assumption of 1 poln)
+        for channum, beam in enumerate(cube.beams):
+            casabdict = {'major': {'value':beam.major.to(u.deg).value, 'unit':'deg'},
+                         'minor': {'value':beam.minor.to(u.deg).value, 'unit':'deg'},
+                         'positionangle': {'value':beam.pa.to(u.deg).value, 'unit':'deg'}
+                        }
+            ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=1)
+
     ia.close()
 
 
@@ -89,3 +112,19 @@ def test_casa_mask_append():
                    img='casa.image', add_stokes=False)
 
     assert os.path.exists('casa.image/casa.mask')
+
+
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+def test_casa_beams():
+
+    make_casa_testimage('adv.fits', 'casa_adv.image')
+    make_casa_testimage('adv_beams.fits', 'casa_adv_beams.image')
+
+    cube = SpectralCube.read('adv.image', format='casa_image')
+
+    assert hasattr(cube, 'beam')
+
+    cube_beams = SpectralCube.read('adv_beams.image', format='casa_image')
+
+    assert hasattr(cube_beams, 'beams')
+    assert isinstance(cube_beams, VaryingResolutionSpectralCube)
