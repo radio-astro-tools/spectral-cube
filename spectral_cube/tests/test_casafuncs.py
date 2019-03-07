@@ -49,7 +49,7 @@ def make_casa_testimage(infile, outname):
                          'minor': {'value':beam.minor.to(u.deg).value, 'unit':'deg'},
                          'positionangle': {'value':beam.pa.to(u.deg).value, 'unit':'deg'}
                         }
-            ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=1)
+            ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=0)
 
         ia.close()
 
