@@ -27,13 +27,17 @@ except ImportError:
 def make_casa_testimage(infile, outname):
 
     ia.fromfits(infile=infile, outfile=outname, overwrite=True)
+    ia.close()
 
     cube = SpectralCube.read(infile)
     if isinstance(cube, VaryingResolutionSpectralCube):
+        ia.open(outname)
         # populate restoring beam emptily
         ia.setrestoringbeam(major={'value':1.0, 'unit':'arcsec'},
                             minor={'value':1.0, 'unit':'arcsec'},
-                            pa={'value':90.0, 'unit':'deg'}
+                            pa={'value':90.0, 'unit':'deg'},
+                            channel=len(cube.beams),
+                            polarization=-1,
                            )
         # populate each beam (hard assumption of 1 poln)
         for channum, beam in enumerate(cube.beams):
@@ -43,7 +47,8 @@ def make_casa_testimage(infile, outname):
                         }
             ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=1)
 
-    ia.close()
+        ia.close()
+
 
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
@@ -116,6 +121,10 @@ def test_casa_mask_append():
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_beams():
+    """
+    test both ``make_casa_testimage`` and the beam reading tools using casa's
+    image reader
+    """
 
     make_casa_testimage('adv.fits', 'casa_adv.image')
     make_casa_testimage('adv_beams.fits', 'casa_adv_beams.image')
