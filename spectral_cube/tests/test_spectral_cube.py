@@ -1367,13 +1367,16 @@ def test_multibeam_slice():
     cube, data = cube_and_raw('vda_beams.fits')
 
     assert isinstance(cube, VaryingResolutionSpectralCube)
-    np.testing.assert_almost_equal(cube.beams[0].major.value, 0.1)
+    np.testing.assert_almost_equal(cube.beams[0].major.value, 0.4)
+    np.testing.assert_almost_equal(cube.beams[0].minor.value, 0.4)
     np.testing.assert_almost_equal(cube.beams[3].major.value, 0.4)
 
     scube = cube[:2,:,:]
 
-    np.testing.assert_almost_equal(scube.beams[0].major.value, 0.1)
-    np.testing.assert_almost_equal(scube.beams[1].major.value, 0.2)
+    np.testing.assert_almost_equal(scube.beams[0].major.value, 0.4)
+    np.testing.assert_almost_equal(scube.beams[0].minor.value, 0.1)
+    np.testing.assert_almost_equal(scube.beams[1].major.value, 0.3)
+    np.testing.assert_almost_equal(scube.beams[1].minor.value, 0.2)
 
     flatslice = cube[0,:,:]
 
