@@ -197,7 +197,7 @@ def load_casa_image(filename, skipdata=False,
         cube.allow_huge_operations = True
 
     elif wcs.naxis == 4:
-        data, wcs = cube_utils._split_stokes(data.T, wcs)
+        data, wcs = cube_utils._split_stokes(data, wcs)
         mask = {}
         for component in data:
             data_, wcs_slice = cube_utils._orient(data[component], wcs)

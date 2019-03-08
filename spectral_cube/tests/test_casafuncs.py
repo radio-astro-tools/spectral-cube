@@ -55,16 +55,17 @@ def make_casa_testimage(infile, outname):
 
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
-def test_casa_read():
+@pytest.mark.parametrize('basefn', ('adv', 'advs', 'sdav', 'vad', 'vsad'))
+def test_casa_read(basefn):
 
-    cube = SpectralCube.read(path('adv.fits'))
+    cube = SpectralCube.read(path('{0}.fits').format(basefn))
     assert cube.shape[2] == 2
     assert cube.shape[1] == 3
     assert cube.shape[0] == 4
 
-    make_casa_testimage(path('adv.fits'), path('casa_adv.image'))
+    make_casa_testimage(path('{0}.fits').format(basefn), path('casa_{0}.image').format(basefn))
 
-    casacube = SpectralCube.read(path('casa_adv.image'), format='casa_image')
+    casacube = SpectralCube.read(path('casa_{0}.image').format(basefn), format='casa_image')
     assert casacube.shape[2] == 2
     assert casacube.shape[1] == 3
     assert casacube.shape[0] == 4
