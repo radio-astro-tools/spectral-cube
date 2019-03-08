@@ -1367,18 +1367,21 @@ def test_multibeam_slice():
     cube, data = cube_and_raw('vda_beams.fits')
 
     assert isinstance(cube, VaryingResolutionSpectralCube)
-    np.testing.assert_almost_equal(cube.beams[0].major.value, 0.1)
+    np.testing.assert_almost_equal(cube.beams[0].major.value, 0.4)
+    np.testing.assert_almost_equal(cube.beams[0].minor.value, 0.1)
     np.testing.assert_almost_equal(cube.beams[3].major.value, 0.4)
 
     scube = cube[:2,:,:]
 
-    np.testing.assert_almost_equal(scube.beams[0].major.value, 0.1)
-    np.testing.assert_almost_equal(scube.beams[1].major.value, 0.2)
+    np.testing.assert_almost_equal(scube.beams[0].major.value, 0.4)
+    np.testing.assert_almost_equal(scube.beams[0].minor.value, 0.1)
+    np.testing.assert_almost_equal(scube.beams[1].major.value, 0.3)
+    np.testing.assert_almost_equal(scube.beams[1].minor.value, 0.2)
 
     flatslice = cube[0,:,:]
 
     np.testing.assert_almost_equal(flatslice.header['BMAJ'],
-                                   (0.1/3600.))
+                                   (0.4/3600.))
 
     # Test returning a VRODS
 
@@ -1495,7 +1498,7 @@ def test_varyres_moment():
         m0 = cube.moment0()
 
     assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
-    assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
+    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
 def test_append_beam_to_hdr():
@@ -1629,10 +1632,17 @@ def test_varyres_moment_logic_issue364():
         pass
     else:
         assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
-    assert_quantity_allclose(m0.meta['beam'].major, 0.25*u.arcsec)
+
+    # note that this is just a sanity check; one should never use the average beam
+    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
 def test_mask_bad_beams():
+    """
+    Prior to #543, this tested two different scenarios of beam masking.  After
+    that, the tests got mucked up because we can no longer have minor>major in
+    the beams.
+    """
     cube, data = cube_and_raw('vda_beams.fits')
 
     # make sure all of the beams are initially good (finite)
@@ -1646,18 +1656,19 @@ def test_mask_bad_beams():
                                                               0.2*u.arcsec,
                                                               60*u.deg))
 
-    assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])
-    assert np.all(masked_cube.goodbeams_mask == [False,False,True,False])
+    assert np.all(masked_cube.mask.include()[:,0,0] == [False,True,True,False])
+    assert np.all(masked_cube.goodbeams_mask == [False,True,True,False])
 
     mean = masked_cube.mean(axis=0)
-    assert np.all(mean == cube[2,:,:])
+    assert np.all(mean == cube[1:3,:,:].mean(axis=0))
 
 
-    masked_cube2 = cube.mask_out_bad_beams(0.5,)
+    #doesn't test anything any more
+    # masked_cube2 = cube.mask_out_bad_beams(0.5,)
 
-    mean2 = masked_cube2.mean(axis=0)
-    assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
-    assert np.all(masked_cube2.goodbeams_mask == [False,True,True,False])
+    # mean2 = masked_cube2.mean(axis=0)
+    # assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
+    # assert np.all(masked_cube2.goodbeams_mask == [False,True,True,False])
 
 
 def test_convolve_to():
@@ -1986,20 +1997,25 @@ def test_median_2axis():
 def test_varyres_mask():
     cube, data = cube_and_raw('vda_beams.fits')
 
-    # mask out two beams
-    goodbeams = cube.identify_bad_beams(0.5)
-    assert all(goodbeams == np.array([False, True, True, False]))
+    cube._beams.major.value[0] = 0.9
+    cube._beams.minor.value[0] = 0.05
+    cube._beams.major.value[3] = 0.6
+    cube._beams.minor.value[3] = 0.09
+
+    # mask out one beams
+    goodbeams = cube.identify_bad_beams(0.5, )
+    assert all(goodbeams == np.array([False, True, True, True]))
 
     mcube = cube.mask_out_bad_beams(0.5)
     assert hasattr(mcube, '_goodbeams_mask')
     assert all(mcube.goodbeams_mask == goodbeams)
-    assert len(mcube.beams) == 2
+    assert len(mcube.beams) == 3
 
     sp_masked = mcube[:,0,0]
 
     assert hasattr(sp_masked, '_goodbeams_mask')
     assert all(sp_masked.goodbeams_mask == goodbeams)
-    assert len(sp_masked.beams) == 2
+    assert len(sp_masked.beams) == 3
 
     try:
         assert mcube.unmasked_beams == cube.beams

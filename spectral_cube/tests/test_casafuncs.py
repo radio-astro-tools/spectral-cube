@@ -5,28 +5,74 @@ import numpy as np
 from numpy.testing import assert_allclose
 import os
 
+from astropy import units as u
+
 from ..io.casa_masks import make_casa_mask
 from ..io.casa_image import wcs_casa2astropy
-from .. import SpectralCube, BooleanArrayMask
+from .. import SpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
+from . import path
 
 try:
-    from taskinit import ia
+    import casatools
+    ia = casatools.image()
     casaOK = True
 except ImportError:
-    print("Run in CASA environment.")
-    casaOK = False
+    try:
+        from taskinit import ia
+        casaOK = True
+    except ImportError:
+        print("Run in CASA environment.")
+        casaOK = False
 
 
 def make_casa_testimage(infile, outname):
 
+    if not casaOK:
+        raise Exception("Attempted to make a CASA test image in a non-CASA "
+                        "environment")
     ia.fromfits(infile=infile, outfile=outname, overwrite=True)
     ia.close()
 
+    cube = SpectralCube.read(infile)
+    if isinstance(cube, VaryingResolutionSpectralCube):
+        ia.open(outname)
+        # populate restoring beam emptily
+        ia.setrestoringbeam(major={'value':1.0, 'unit':'arcsec'},
+                            minor={'value':1.0, 'unit':'arcsec'},
+                            pa={'value':90.0, 'unit':'deg'},
+                            channel=len(cube.beams)-1,
+                            polarization=-1,
+                           )
+        # populate each beam (hard assumption of 1 poln)
+        for channum, beam in enumerate(cube.beams):
+            casabdict = {'major': {'value':beam.major.to(u.deg).value, 'unit':'deg'},
+                         'minor': {'value':beam.minor.to(u.deg).value, 'unit':'deg'},
+                         'positionangle': {'value':beam.pa.to(u.deg).value, 'unit':'deg'}
+                        }
+            ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=0)
+
+        ia.close()
+
+
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.parametrize('basefn', ('adv', 'advs', 'sdav', 'vad', 'vsad'))
+def test_casa_read(basefn):
+
+    cube = SpectralCube.read(path('{0}.fits').format(basefn))
+
+    make_casa_testimage(path('{0}.fits').format(basefn), path('casa_{0}.image').format(basefn))
+
+    casacube = SpectralCube.read(path('casa_{0}.image').format(basefn), format='casa_image')
+
+    assert casacube.shape == cube.shape
+    # what other equalities should we check?
+
+    os.system('rm -rf {0}'.format(path('casa_{0}.image'.format(basefn))))
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask():
 
-    cube = SpectralCube.read('adv.fits')
+    cube = SpectralCube.read(path('adv.fits'))
 
     mask_array = np.array([[True, False], [False, False], [True, True]])
     bool_mask = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
@@ -37,7 +83,7 @@ def test_casa_mask():
         os.system('rm -rf casa.mask')
 
     make_casa_mask(cube, 'casa.mask', add_stokes=False,
-                   append_to_image=False)
+                   append_to_image=False, overwrite=True)
 
     ia.open('casa.mask')
 
@@ -73,19 +119,50 @@ def test_casa_mask():
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask_append():
 
-    cube = SpectralCube.read('adv.fits')
+    cube = SpectralCube.read(path('adv.fits'))
 
     mask_array = np.array([[True, False], [False, False], [True, True]])
     bool_mask = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
                                  shape=cube.shape)
     cube = cube.with_mask(bool_mask)
 
-    make_casa_testimage('adv.fits', 'casa.image')
+    make_casa_testimage(path('adv.fits'), path('casa.image'))
 
-    if os.path.exists('casa.mask'):
-        os.system('rm -rf casa.mask')
+    if os.path.exists(path('casa.mask')):
+        os.system('rm -rf {0}'.format(path('casa.mask')))
 
-    make_casa_mask(cube, 'casa.mask', append_to_image=True,
-                   img='casa.image', add_stokes=False)
+    maskpath = os.path.join(path('casa.image'),'casa.mask')
+    if os.path.exists(maskpath):
+        os.system('rm -rf {0}'.format(maskpath))
 
-    assert os.path.exists('casa.image/casa.mask')
+    # in this case, casa.mask is the name of the mask, not its path
+    make_casa_mask(cube, path('casa.mask'), append_to_image=True,
+                   img=path('casa.image'), add_stokes=False,
+                   overwrite=True)
+
+    assert os.path.exists(path('casa.image/casa.mask'))
+
+    os.system('rm -rf {0}'.format(path('casa.image')))
+    os.system('rm -rf {0}'.format(path('casa.mask')))
+
+
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+def test_casa_beams():
+    """
+    test both ``make_casa_testimage`` and the beam reading tools using casa's
+    image reader
+    """
+
+    make_casa_testimage(path('adv.fits'), path('casa_adv.image'))
+    make_casa_testimage(path('adv_beams.fits'), path('casa_adv_beams.image'))
+
+    cube = SpectralCube.read(path('casa_adv.image'), format='casa_image')
+
+    assert hasattr(cube, 'beam')
+
+    cube_beams = SpectralCube.read(path('casa_adv_beams.image'), format='casa_image')
+
+    assert hasattr(cube_beams, 'beams')
+    assert isinstance(cube_beams, VaryingResolutionSpectralCube)
+
+    os.system('rm -rf {0}'.format(path('casa_adv_beams.image')))

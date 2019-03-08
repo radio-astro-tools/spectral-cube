@@ -1,6 +1,9 @@
-0.4.4 (unreleased)
+0.4.5 (unreleased)
 ------------------
- - none yet
+ - Added support for casatools-based io in #541 and beam reading from CASA
+   images in #543
+ - Add support for ``update_function`` in the joblib-based job distributor
+   in #534
 
 0.4.4 (2019-02-20)
 ------------------

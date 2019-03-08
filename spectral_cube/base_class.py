@@ -445,7 +445,7 @@ class MultiBeamMixinClass(object):
         if value.size != self.shape[0]:
             raise ValueError("The 'good beams' mask must have the same size "
                              "as the cube's spectral dimension")
-                             
+
         self._goodbeams_mask = value
 
     def identify_bad_beams(self, threshold, reference_beam=None,

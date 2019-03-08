@@ -4,6 +4,7 @@ import numpy as np
 from astropy.io import fits
 import tempfile
 import warnings
+import os
 
 from ..wcs_utils import add_stokes_axis_to_wcs
 
@@ -11,7 +12,9 @@ __all__ = ['make_casa_mask']
 
 
 def make_casa_mask(SpecCube, outname, append_to_image=True,
-                   img=None, add_stokes=True, stokes_posn=None):
+                   img=None, add_stokes=True, stokes_posn=None,
+                   overwrite=False
+                  ):
     '''
     Outputs the mask attached to the SpectralCube object as a CASA image, or
     optionally appends the mask to a preexisting CASA image.
@@ -31,12 +34,22 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
         Adds a Stokes axis onto the wcs from SpecCube.
     stokes_posn : int, optional
         Sets the position of the new Stokes axis. Defaults to the last axis.
+    overwrite : bool, optional
+        Overwrite the image and mask files if they exist?
     '''
 
     try:
-        from taskinit import ia
+        from casatools import image
+        ia = image()
     except ImportError:
-        print("Cannot import casac. Must be run in a CASA environment.")
+        try:
+            from taskinit import ia
+        except ImportError:
+            raise ImportError("Cannot import casa. Must be run in a CASA environment.")
+
+    # the 'mask name' is distinct from the mask _path_
+    maskname = os.path.split(outname)[1]
+    maskpath = outname
 
     # Get the header info from the image
     # There's not wcs_astropy2casa (yet), so create a temporary file for
@@ -69,7 +82,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
     hdu.writeto(temp.name)
 
-    ia.fromfits(infile=temp.name, outfile=temp2.name, overwrite=True)
+    ia.fromfits(infile=temp.name, outfile=temp2.name, overwrite=overwrite)
 
     temp.close()
 
@@ -87,10 +100,12 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     # Transpose to match CASA axes
     mask_arr = mask_arr.T
 
-    ia.newimagefromarray(outfile=outname,
-                         pixels=mask_arr.astype('int16'))
+    ia.newimagefromarray(outfile=maskpath,
+                         pixels=mask_arr.astype('int16'),
+                         overwrite=overwrite)
+    ia.close()
 
-    ia.open(outname)
+    ia.open(maskpath)
     ia.setcoordsys(cs.torecord())
 
     ia.close()
@@ -99,11 +114,11 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
         if img is None:
             raise TypeError("img argument must be specified to append the mask.")
 
-        ia.open(outname)
-        ia.calcmask(outname+">0.5")
+        ia.open(maskpath)
+        ia.calcmask(maskname+">0.5")
         ia.close()
 
         ia.open(img)
-        ia.maskhandler('copy', [outname+":mask0", outname])
-        ia.maskhandler('set', outname)
+        ia.maskhandler('copy', [maskpath+":mask0", maskname])
+        ia.maskhandler('set', maskname)
         ia.close()
