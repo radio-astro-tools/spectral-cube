@@ -140,6 +140,9 @@ def test_casa_mask_append():
 
     assert os.path.exists(path('casa.image/casa.mask'))
 
+    os.system('rm -rf {0}'.format(path('casa.image')))
+    os.system('rm -rf {0}'.format(path('casa.mask')))
+
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_beams():
