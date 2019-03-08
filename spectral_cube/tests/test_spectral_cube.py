@@ -1638,6 +1638,11 @@ def test_varyres_moment_logic_issue364():
 
 
 def test_mask_bad_beams():
+    """
+    Prior to #543, this tested two different scenarios of beam masking.  After
+    that, the tests got mucked up because we can no longer have minor>major in
+    the beams.
+    """
     cube, data = cube_and_raw('vda_beams.fits')
 
     # make sure all of the beams are initially good (finite)
@@ -1651,11 +1656,11 @@ def test_mask_bad_beams():
                                                               0.2*u.arcsec,
                                                               60*u.deg))
 
-    assert np.all(masked_cube.mask.include()[:,0,0] == [False,False,True,False])
-    assert np.all(masked_cube.goodbeams_mask == [False,False,True,False])
+    assert np.all(masked_cube.mask.include()[:,0,0] == [False,True,True,False])
+    assert np.all(masked_cube.goodbeams_mask == [False,True,True,False])
 
     mean = masked_cube.mean(axis=0)
-    assert np.all(mean == cube[2,:,:])
+    assert np.all(mean == cube[1:3,:,:].mean(axis=0))
 
 
     masked_cube2 = cube.mask_out_bad_beams(0.5,)
@@ -2003,13 +2008,13 @@ def test_varyres_mask():
     mcube = cube.mask_out_bad_beams(0.5)
     assert hasattr(mcube, '_goodbeams_mask')
     assert all(mcube.goodbeams_mask == goodbeams)
-    assert len(mcube.beams) == 2
+    assert len(mcube.beams) == 3
 
     sp_masked = mcube[:,0,0]
 
     assert hasattr(sp_masked, '_goodbeams_mask')
     assert all(sp_masked.goodbeams_mask == goodbeams)
-    assert len(sp_masked.beams) == 2
+    assert len(sp_masked.beams) == 3
 
     try:
         assert mcube.unmasked_beams == cube.beams
