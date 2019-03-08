@@ -67,6 +67,8 @@ def test_casa_read(basefn):
     assert casacube.shape == cube.shape
     # what other equalities should we check?
 
+    os.system('rm -rf {0}'.format(path('casa_{0}.image'.format(basefn))))
+
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask():
 
@@ -162,3 +164,5 @@ def test_casa_beams():
 
     assert hasattr(cube_beams, 'beams')
     assert isinstance(cube_beams, VaryingResolutionSpectralCube)
+
+    os.system('rm -rf {0}'.format(path('casa_adv_beams.image')))
