@@ -1381,7 +1381,7 @@ def test_multibeam_slice():
     flatslice = cube[0,:,:]
 
     np.testing.assert_almost_equal(flatslice.header['BMAJ'],
-                                   (0.1/3600.))
+                                   (0.4/3600.))
 
     # Test returning a VRODS
 
