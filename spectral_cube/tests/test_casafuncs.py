@@ -59,16 +59,10 @@ def make_casa_testimage(infile, outname):
 def test_casa_read(basefn):
 
     cube = SpectralCube.read(path('{0}.fits').format(basefn))
-    assert cube.shape[2] == 2
-    assert cube.shape[1] == 3
-    assert cube.shape[0] == 4
 
     make_casa_testimage(path('{0}.fits').format(basefn), path('casa_{0}.image').format(basefn))
 
     casacube = SpectralCube.read(path('casa_{0}.image').format(basefn), format='casa_image')
-    assert casacube.shape[2] == 2
-    assert casacube.shape[1] == 3
-    assert casacube.shape[0] == 4
 
     assert casacube.shape == cube.shape
     # what other equalities should we check?
