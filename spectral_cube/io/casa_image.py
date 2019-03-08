@@ -114,12 +114,11 @@ def load_casa_image(filename, skipdata=False,
     # read in the data
     if not skipdata:
         # CASA data are apparently transposed.
-        # (however, this is supposed to be handled in orient_data)
-        data = ia.getchunk().reshape(ia.shape())
+        data = ia.getchunk().transpose()
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        valid = ia.getchunk(getmask=True).reshape(ia.shape())
+        valid = ia.getchunk(getmask=True).transpose()
 
     # transpose is dealt with within the cube object
 
