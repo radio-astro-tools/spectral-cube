@@ -1632,6 +1632,8 @@ def test_varyres_moment_logic_issue364():
         pass
     else:
         assert "Arithmetic beam averaging is being performed" in str(wrn[-1].message)
+
+    # note that this is just a sanity check; one should never use the average beam
     assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
@@ -1989,9 +1991,14 @@ def test_median_2axis():
 def test_varyres_mask():
     cube, data = cube_and_raw('vda_beams.fits')
 
-    # mask out two beams
-    goodbeams = cube.identify_bad_beams(0.5)
-    assert all(goodbeams == np.array([False, True, True, False]))
+    cube._beams.major.value[0] = 0.9
+    cube._beams.minor.value[0] = 0.05
+    cube._beams.major.value[3] = 0.6
+    cube._beams.minor.value[3] = 0.09
+
+    # mask out one beams
+    goodbeams = cube.identify_bad_beams(0.5, )
+    assert all(goodbeams == np.array([False, True, True, True]))
 
     mcube = cube.mask_out_bad_beams(0.5)
     assert hasattr(mcube, '_goodbeams_mask')
