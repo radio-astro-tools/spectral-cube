@@ -208,8 +208,15 @@ def load_casa_image(filename, skipdata=False,
             mask[component] = LazyMask(np.isfinite, data=data[component],
                                        wcs=wcs_slice)
 
-            data[component] = SpectralCube(data_, wcs_slice, mask[component],
-                                           meta=meta)
+            if 'beam' in locals():
+                data[component] = SpectralCube(data_, wcs_slice, mask[component],
+                                               meta=meta, beam=beam)
+            elif 'beams' in locals():
+                data[component] = VaryingResolutionSpectralCube(data_,
+                                                                wcs_slice,
+                                                                mask[component],
+                                                                meta=meta,
+                                                                beams=beams)
             data[component].allow_huge_operations = True
 
 
