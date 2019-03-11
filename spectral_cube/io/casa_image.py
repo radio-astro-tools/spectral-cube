@@ -10,6 +10,7 @@ from radio_beam import Beam, Beams
 
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
 from .. import cube_utils
+from .. utils import BeamWarning
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -153,6 +154,9 @@ def load_casa_image(filename, skipdata=False,
         beams = Beams(major=u.Quantity(majors),
                       minor=u.Quantity(minors),
                       pa=u.Quantity(pas))
+    else:
+        warnings.warn("No beam information found in CASA image.",
+                      BeamWarning)
 
 
     # don't need this yet
