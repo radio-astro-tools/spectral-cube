@@ -196,6 +196,8 @@ def load_casa_image(filename, skipdata=False,
             cube = SpectralCube(data, wcs, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
             cube = VaryingResolutionSpectralCube(data, wcs, mask, meta=meta, beams=beams)
+        else:
+            cube = SpectralCube(data, wcs, mask, meta=meta)
         # we've already loaded the cube into memory because of CASA
         # limitations, so there's no reason to disallow operations
         cube.allow_huge_operations = True
@@ -217,6 +219,10 @@ def load_casa_image(filename, skipdata=False,
                                                                 mask[component],
                                                                 meta=meta,
                                                                 beams=beams)
+            else:
+                data[component] = SpectralCube(data_, wcs_slice, mask[component],
+                                               meta=meta)
+
             data[component].allow_huge_operations = True
 
 
