@@ -75,24 +75,21 @@ found. More information can be found in the
 Alternative approach to spatial smoothing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 There is an alternative way to spatially smooth a data cube, which is using the
-:meth:`~spectral_cube.SpectralCube.spatial_smooth` method. Example code snippets
-are as follows::
+:meth:`~spectral_cube.SpectralCube.spatial_smooth` method. This is an example
+of how you can do this::
 
     from spectral_cube import SpectralCube
     from astropy.io import fits
     from astropy.convolution import Gaussian2DKernel
 
-    cube0 = fits.open('/some_path/some_file.fits')
-    cube = SpectralCube.read(cube0)
-    kernel = Gaussian2DKernel(1)
+    cube = SpectralCube.read('/some_path/some_file.fits')
+    kernel = Gaussian2DKernel(x_stddev=1)
     new_cube = cube.spatial_smooth(kernel)
     new_cube.write('/some_path/some_other_file.fits')
 
-One can adjust the value to be passed to the ``astropy.convolution`` class
-``Gaussian2DKernel`` to change the standard deviation of the Gaussian in x 
-from the :math:`1` in the sample to something else within the reasonable limits say :math:`2.5`.
-For more information regarding that class please refer to the 
-`documentation at astropy <http://docs.astropy.org/en/stable/api/astropy.convolution.Gaussian2DKernel.html>`_.
+`x_stddev` specifies the width of the `Gaussian kernel <http://docs.astropy.org/en/stable/api/astropy.convolution.Gaussian2DKernel.html>`_.
+Any `astropy convolution <kernel http://docs.astropy.org/en/stable/convolution/kernels.html>`_
+is acceptable.
 
 Spectral Smoothing
 ==================
