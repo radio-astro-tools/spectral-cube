@@ -87,7 +87,7 @@ of how you can do this::
     new_cube = cube.spatial_smooth(kernel)
     new_cube.write('/some_path/some_other_file.fits')
 
-`x_stddev` specifies the width of the `Gaussian kernel <http://docs.astropy.org/en/stable/api/astropy.convolution.Gaussian2DKernel.html>`_.
+``x_stddev`` specifies the width of the `Gaussian kernel <http://docs.astropy.org/en/stable/api/astropy.convolution.Gaussian2DKernel.html>`_.
 Any `astropy convolution <kernel http://docs.astropy.org/en/stable/convolution/kernels.html>`_
 is acceptable.
 
