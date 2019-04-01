@@ -4,6 +4,7 @@ import numpy as np
 import warnings
 import abc
 
+import astropy
 from astropy.io.fits import Card
 from radio_beam import Beam, Beams
 
@@ -714,3 +715,11 @@ class BeamMixinClass(object):
             raise TypeError("beam must be a radio_beam.Beam object.")
 
         self._beam = obj
+
+
+    @property
+    @cached
+    def pixels_per_beam(self):
+        return (self.beam.sr /
+                (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
+                 u.deg**2)).to(u.dimensionless_unscaled).value
