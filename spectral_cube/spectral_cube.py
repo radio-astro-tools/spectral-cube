@@ -3294,10 +3294,6 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
             self._meta['beam'] = beam
             self._header.update(beam.to_header_keywords())
 
-            self.pixels_per_beam = (self.beam.sr /
-                                    (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
-                                     u.deg**2)).to(u.dimensionless_unscaled).value
-
     def _new_cube_with(self, **kwargs):
         beam = kwargs.pop('beam', None)
         if 'beam' in self._meta and beam is None:
