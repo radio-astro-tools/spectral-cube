@@ -3277,7 +3277,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def plot_channel_maps(self, nx, ny, channels, contourkwargs={}, output_file=None,
                           fig=None, fig_smallest_dim_inches=8, decimals=3, zoom=1,
-                          textcolor=None, cmap='gray_r', tighten=True,
+                          textcolor=None, cmap='gray_r', tighten=False,
                           savefig_kwargs={}, **kwargs):
         """
         Make channel maps from a spectral cube
