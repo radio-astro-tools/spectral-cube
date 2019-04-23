@@ -3276,8 +3276,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                    mask=BooleanArrayMask(mask, wcs=newwcs))
 
     def plot_channel_maps(self, nx, ny, channels, contourkwargs={}, output_file=None,
-                          fig=None, figsize=(20,20), decimals=3, zoom=1,
-                          cmap='gray_r', tighten=True, **kwargs):
+                          fig=None, fig_smallest_dim_inches=8, decimals=3, zoom=1,
+                          textcolor=None, cmap='gray_r', tighten=True,
+                          savefig_kwargs={}, **kwargs):
         """
         Make channel maps from a spectral cube
 
@@ -3293,12 +3294,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             The name of a colormap to use for the ``imshow`` colors
         contourcolors : list
             A list of contour colors corresponding to the contour levels
+        textcolor : None or str
+            Color of the label text to overlay.  If ``None``, will be
+            determined automatically.  If ``'notext'``, no text will be added.
         output_file : str
             Name of the matplotlib plot
         fig : matplotlib figure
-            The figure object to plot onto.
-        figsize : tuple, optional
-            Figure size for matplotlib.  Only used if ``fig`` is unspecified.
+            The figure object to plot onto.  Will be overridden to enforce a
+            specific aspect ratio.
+        fig_smallest_dim_inches : float
+            The size of the smallest dimension (either width or height) of the
+            figure in inches.  The other dimension will be selected based on
+            the aspect ratio of the data: it cannot be a free parameter.
         decimals : int, optional
             Number of decimal places to show in spectral value
         zoom : int, optional
@@ -3306,11 +3313,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             pointing center will be customizable.
         tighten : bool
             Call ``plt.tight_layout()`` after plotting?
+        savefig_kwargs : dict
+            Keyword arguments to pass to ``savefig`` (e.g.,
+            ``bbox_inches='tight'``)
         kwargs : dict
             Passed to ``imshow``
         """
 
         import matplotlib.pyplot as plt
+        from matplotlib.gridspec import GridSpec
 
         cmap = getattr(plt.cm, cmap)
 
@@ -3320,39 +3331,73 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Read in spectral cube and get spectral axis
         spectral_axis = self.spectral_axis
 
-        if fig is None:
-            fig = plt.figure(figsize=figsize)
-
         sizey, sizex = self.shape[1:]
         cenx = sizex / 2.
         ceny = sizey / 2.
+
+        aspect_ratio = self.shape[2]/float(self.shape[1])
+        gridratio = ny / float(nx) * aspect_ratio
+        if gridratio > 1:
+            ysize = fig_smallest_dim_inches*gridratio
+            xsize = fig_smallest_dim_inches
+        else:
+            xsize = fig_smallest_dim_inches*gridratio
+            ysize = fig_smallest_dim_inches
+
+        if fig is None:
+            fig = plt.figure(figsize=(xsize, ysize))
+        else:
+            fig.set_figheight(ysize)
+            fig.set_figwidth(xsize)
+        # unclear if needed
+        #fig.subplots_adjust(margin,margin,1.-margin,1.-margin,0.,0.)
+
+        axis_list = []
+
+        gs = GridSpec(ny, nx, figure=fig, hspace=0, wspace=0)
 
         for ichannel, channel in enumerate(channels):
 
             slc = self[channel,:,:]
 
-            ax = fig.add_subplot(ny, nx, ichannel + 1,
-                                 projection=self.wcs,
-                                 slices=('x', 'y', channel))
-            ax.imshow(slc.value, origin='lower', cmap=cmap, **kwargs)
+            ax = plt.subplot(gs[ichannel], projection=slc.wcs)
+            im = ax.imshow(slc.value, origin='lower', cmap=cmap, **kwargs)
             if contourkwargs:
-                ax.contour(slc.value,
-                           **contourkwargs)
+                ax.contour(slc.value, **contourkwargs)
             ax.set_xlim(cenx - cenx / zoom, cenx + cenx / zoom)
             ax.set_ylim(ceny - ceny / zoom, ceny + ceny / zoom)
-            ax.set_title(("{0:." + str(decimals) + "f}").format(spectral_axis[channel]))
 
-            if ichannel % nx != 0:
+            if textcolor != 'notext':
+                if textcolor is None:
+                    # determine average image color and set textcolor to opposite
+                    # (this is a bit hacky and there is _definitely_ a better way
+                    # to do this)
+                    avgcolor = im.cmap(im.norm(im.get_array())).mean(axis=(0,1))
+                    totalcolor = avgcolor[:3].sum()
+                    if totalcolor > 0.5:
+                        textcolor = 'w'
+                    else:
+                        textcolor = 'k'
+
+                ax.set_title(("{0:." + str(decimals) + "f}").format(spectral_axis[channel]),
+                             x=0.5, y=0.9, color=textcolor)
+
+            # only label bottom-left panel with locations
+            if (ichannel != nx*(ny-1)):
+                ax.coords[0].set_ticklabel_position('')
                 ax.coords[1].set_ticklabel_position('')
 
-            if ichannel < nx * (ny - 1) != 0:
-                ax.coords[0].set_ticklabel_position('')
+            ax.tick_params(direction='in', color=textcolor)
+
+            axis_list.append(ax)
 
         if tighten:
             plt.tight_layout()
 
         if output_file is not None:
-            fig.savefig(output_file)
+            fig.savefig(output_file, **savefig_kwargs)
+
+        return axis_list
 
 
 
