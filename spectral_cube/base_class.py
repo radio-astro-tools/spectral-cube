@@ -195,13 +195,23 @@ class SpatialCoordMixinClass(object):
     @property
     @cached
     def world_extrema(self):
-        corners = [(0, self.shape[2]-1),
-                   (self.shape[1]-1, 0),
-                   (self.shape[1]-1, self.shape[2]-1),
-                   (0,0)]
-        latlon_corners = [self.world[0, y, x] for y,x in corners]
-        lon = u.Quantity([x for z,y,x in latlon_corners])
-        lat = u.Quantity([y for z,y,x in latlon_corners])
+        if len(self.shape) == 2:
+            corners = [(0, self.shape[1]-1),
+                       (self.shape[0]-1, 0),
+                       (self.shape[0]-1, self.shape[1]-1),
+                       (0, 0)]
+            latlon_corners = [self.world[y, x] for y,x in corners]
+
+        elif len(self.shape) == 3:
+            corners = [(0, self.shape[2]-1),
+                       (self.shape[1]-1, 0),
+                       (self.shape[1]-1, self.shape[2]-1),
+                       (0,0)]
+
+            latlon_corners = [self.world[0, y, x][1:] for y,x in corners]
+
+        lon = u.Quantity([x for y,x in latlon_corners])
+        lat = u.Quantity([y for y,x in latlon_corners])
 
         _lon_min = lon.min()
         _lon_max = lon.max()
@@ -445,7 +455,7 @@ class MultiBeamMixinClass(object):
         if value.size != self.shape[0]:
             raise ValueError("The 'good beams' mask must have the same size "
                              "as the cube's spectral dimension")
-                             
+
         self._goodbeams_mask = value
 
     def identify_bad_beams(self, threshold, reference_beam=None,
