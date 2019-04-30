@@ -731,3 +731,16 @@ def test_basic_arrayness():
     # assert np.all(np.ma.asanyarray(slc).value == data[0,:,:])
     # assert np.all(np.ma.asarray(slc) == data[0,:,:])
     # assert np.all(np.ma.array(slc) == data[0,:,:])
+
+
+def test_spatial_world_extrema_2D():
+
+    hdu = fits.open(path("522_delta.fits"))[0]
+
+    cube = SpectralCube.read(hdu)
+
+    plane = cube[0]
+
+    assert (cube.world_extrema == plane.world_extrema).all()
+    assert (cube.longitude_extrema == plane.longitude_extrema).all()
+    assert (cube.latitude_extrema == plane.latitude_extrema).all()
