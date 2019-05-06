@@ -133,7 +133,6 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         new._meta = self._meta
         new._mask=(self._mask[key] if self._mask is not nomask else nomask)
         new._header = self._header
-        new._cache = {}
 
         return new
 
@@ -343,6 +342,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
             # TODO: Enable header updating when non-celestial slices are
             # properly handled in the WCS object.
             # self._header.update(beam.to_header_keywords())
+
+        self._cache = {}
 
         return self
 
@@ -1073,6 +1074,8 @@ class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
             self.beam = beam
             self.meta['beam'] = beam
 
+        self._cache = {}
+
         return self
 
     def _new_spectrum_with(self, **kwargs):
@@ -1134,6 +1137,8 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
         if goodbeams_mask is not None:
             self.goodbeams_mask = goodbeams_mask
+
+        self._cache = {}
 
         return self
 
