@@ -133,6 +133,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         new._meta = self._meta
         new._mask=(self._mask[key] if self._mask is not nomask else nomask)
         new._header = self._header
+        new._cache = {}
 
         return new
 

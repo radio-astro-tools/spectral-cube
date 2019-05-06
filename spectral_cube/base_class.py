@@ -20,6 +20,11 @@ DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
 DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
 DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
 
+# convenience structures to keep track of the reversed index
+# conventions between WCS and numpy
+np2wcs = {2: 0, 1: 1, 0: 2}
+wcs2np = {0: 2, 1: 1, 2: 0}
+
 
 class BaseNDClass(object):
 
@@ -107,6 +112,20 @@ class SpatialCoordMixinClass(object):
     def _raise_wcs_no_celestial(self):
         if not self._has_wcs_celestial:
             raise WCSCelestialError("WCS does not contain two spatial axes.")
+
+    def _celestial_axes(self):
+        '''
+        Return the spatial axes in the data from the WCS object.
+        '''
+
+        self._raise_wcs_no_celestial()
+
+        wcs_cel_axis = [self.wcs.world_axis_physical_types.index(axtype)
+                        for axtype in
+                        self.wcs.celestial.world_axis_physical_types]
+
+        # Swap to numpy ordering
+        return [wcs2np[val] for val in wcs_cel_axis][::-1]
 
     @cube_utils.slice_syntax
     def world(self, view):
@@ -202,10 +221,12 @@ class SpatialCoordMixinClass(object):
                        (0, 0)]
             latlon_corners = [self.world[y, x] for y,x in corners]
 
-        elif len(self.shape) == 3:
-            corners = [(0, self.shape[2]-1),
-                       (self.shape[1]-1, 0),
-                       (self.shape[1]-1, self.shape[2]-1),
+        else:
+            y_ax, x_ax = self._celestial_axes()
+
+            corners = [(0, self.shape[x_ax]-1),
+                       (self.shape[y_ax]-1, 0),
+                       (self.shape[y_ax]-1, self.shape[x_ax]-1),
                        (0,0)]
 
             latlon_corners = [self.world[0, y, x][1:] for y,x in corners]
