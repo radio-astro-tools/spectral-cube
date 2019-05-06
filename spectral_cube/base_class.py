@@ -120,12 +120,18 @@ class SpatialCoordMixinClass(object):
 
         self._raise_wcs_no_celestial()
 
-        wcs_cel_axis = [self.wcs.world_axis_physical_types.index(axtype)
-                        for axtype in
-                        self.wcs.celestial.world_axis_physical_types]
+        # This works for astropy >v3
+        # wcs_cel_axis = [self.wcs.world_axis_physical_types.index(axtype)
+        #                 for axtype in
+        #                 self.wcs.celestial.world_axis_physical_types]
+
+        # This works for all LTS releases
+        wcs_cel_axis = [ax for ax, ax_type in enumerate(self.wcs.get_axis_types()) if
+                        ax_type['coordinate_type'] == 'celestial']
+
 
         # Swap to numpy ordering
-        return [wcs2np[val] for val in wcs_cel_axis][::-1]
+        return [wcs2np[val] for val in wcs_cel_axis[::-1]]
 
     @cube_utils.slice_syntax
     def world(self, view):
