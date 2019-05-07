@@ -43,7 +43,6 @@ from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
                          MaskableArrayMixinClass, MultiBeamMixinClass,
                          HeaderMixinClass, BeamMixinClass,
-                         np2wcs
                         )
 from .utils import (cached, warn_slow, VarianceWarning, BeamWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
@@ -70,6 +69,10 @@ except ImportError:
 warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning, append=True)
 
 SIGMA2FWHM = 2. * np.sqrt(2. * np.log(2.))
+
+# convenience structures to keep track of the reversed index
+# conventions between WCS and numpy
+np2wcs = {2: 0, 1: 1, 0: 2}
 
 
 _NP_DOC = """

@@ -20,11 +20,6 @@ DOPPLER_CONVENTIONS['radio'] = u.doppler_radio
 DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
 DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
 
-# convenience structures to keep track of the reversed index
-# conventions between WCS and numpy
-np2wcs = {2: 0, 1: 1, 0: 2}
-wcs2np = {0: 2, 1: 1, 2: 0}
-
 
 class BaseNDClass(object):
 
@@ -129,9 +124,10 @@ class SpatialCoordMixinClass(object):
         wcs_cel_axis = [ax for ax, ax_type in enumerate(self.wcs.get_axis_types()) if
                         ax_type['coordinate_type'] == 'celestial']
 
-
         # Swap to numpy ordering
-        return [wcs2np[val] for val in wcs_cel_axis[::-1]]
+        np_order_cel_axis = [self.ndim - 1 - ind for ind in wcs_cel_axis][::-1]
+
+        return np_order_cel_axis
 
     @cube_utils.slice_syntax
     def world(self, view):
@@ -220,21 +216,17 @@ class SpatialCoordMixinClass(object):
     @property
     @cached
     def world_extrema(self):
+
+        y_ax, x_ax = self._celestial_axes()
+
+        corners = [(0, self.shape[x_ax]-1),
+                   (self.shape[y_ax]-1, 0),
+                   (self.shape[y_ax]-1, self.shape[x_ax]-1),
+                   (0,0)]
+
         if len(self.shape) == 2:
-            corners = [(0, self.shape[1]-1),
-                       (self.shape[0]-1, 0),
-                       (self.shape[0]-1, self.shape[1]-1),
-                       (0, 0)]
             latlon_corners = [self.world[y, x] for y,x in corners]
-
         else:
-            y_ax, x_ax = self._celestial_axes()
-
-            corners = [(0, self.shape[x_ax]-1),
-                       (self.shape[y_ax]-1, 0),
-                       (self.shape[y_ax]-1, self.shape[x_ax]-1),
-                       (0,0)]
-
             latlon_corners = [self.world[0, y, x][1:] for y,x in corners]
 
         lon = u.Quantity([x for y,x in latlon_corners])
