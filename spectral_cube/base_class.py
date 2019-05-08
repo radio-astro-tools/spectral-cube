@@ -109,6 +109,32 @@ class SpatialCoordMixinClass(object):
         if not self._has_wcs_celestial:
             raise WCSCelestialError("WCS does not contain two spatial axes.")
 
+    def _celestial_axes(self):
+        '''
+        Return the spatial axes in the data from the WCS object. The order of
+        the spatial axes returned is [y, x].
+
+        '''
+
+        self._raise_wcs_no_celestial()
+
+        # This works for astropy >v3
+        # wcs_cel_axis = [self.wcs.world_axis_physical_types.index(axtype)
+        #                 for axtype in
+        #                 self.wcs.celestial.world_axis_physical_types]
+
+        # This works for all LTS releases
+        wcs_cel_axis = [ax for ax, ax_type in enumerate(self.wcs.get_axis_types()) if
+                        ax_type['coordinate_type'] == 'celestial']
+
+        # Swap to numpy ordering
+        # Since we're mapping backwards to get the numpy convention, we need to
+        # reverse the order at the end.
+        # 0 is the y spatial axis and 1 is the x spatial axis
+        np_order_cel_axis = [self.ndim - 1 - ind for ind in wcs_cel_axis][::-1]
+
+        return np_order_cel_axis
+
     @cube_utils.slice_syntax
     def world(self, view):
         """
@@ -196,13 +222,21 @@ class SpatialCoordMixinClass(object):
     @property
     @cached
     def world_extrema(self):
-        corners = [(0, self.shape[2]-1),
-                   (self.shape[1]-1, 0),
-                   (self.shape[1]-1, self.shape[2]-1),
+
+        y_ax, x_ax = self._celestial_axes()
+
+        corners = [(0, self.shape[x_ax]-1),
+                   (self.shape[y_ax]-1, 0),
+                   (self.shape[y_ax]-1, self.shape[x_ax]-1),
                    (0,0)]
-        latlon_corners = [self.world[0, y, x] for y,x in corners]
-        lon = u.Quantity([x for z,y,x in latlon_corners])
-        lat = u.Quantity([y for z,y,x in latlon_corners])
+
+        if len(self.shape) == 2:
+            latlon_corners = [self.world[y, x] for y,x in corners]
+        else:
+            latlon_corners = [self.world[0, y, x][1:] for y,x in corners]
+
+        lon = u.Quantity([x for y,x in latlon_corners])
+        lat = u.Quantity([y for y,x in latlon_corners])
 
         _lon_min = lon.min()
         _lon_max = lon.max()

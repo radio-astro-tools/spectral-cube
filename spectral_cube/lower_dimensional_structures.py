@@ -343,6 +343,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
             # properly handled in the WCS object.
             # self._header.update(beam.to_header_keywords())
 
+        self._cache = {}
+
         return self
 
     def with_beam(self, beam):
@@ -1072,6 +1074,8 @@ class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
             self.beam = beam
             self.meta['beam'] = beam
 
+        self._cache = {}
+
         return self
 
     def _new_spectrum_with(self, **kwargs):
@@ -1133,6 +1137,8 @@ class VaryingResolutionOneDSpectrum(BaseOneDSpectrum, MultiBeamMixinClass):
 
         if goodbeams_mask is not None:
             self.goodbeams_mask = goodbeams_mask
+
+        self._cache = {}
 
         return self
 
