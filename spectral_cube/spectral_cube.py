@@ -3278,6 +3278,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def plot_channel_maps(self, nx, ny, channels, contourkwargs={}, output_file=None,
                           fig=None, fig_smallest_dim_inches=8, decimals=3, zoom=1,
                           textcolor=None, cmap='gray_r', tighten=False,
+                          textxloc=0.5, textyloc=0.9,
                           savefig_kwargs={}, **kwargs):
         """
         Make channel maps from a spectral cube
@@ -3297,6 +3298,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         textcolor : None or str
             Color of the label text to overlay.  If ``None``, will be
             determined automatically.  If ``'notext'``, no text will be added.
+        textxloc : float
+        textyloc : float
+            Text label X,Y-location in axis fraction units
         output_file : str
             Name of the matplotlib plot
         fig : matplotlib figure
@@ -3380,7 +3384,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                         textcolor = 'k'
 
                 ax.set_title(("{0:." + str(decimals) + "f}").format(spectral_axis[channel]),
-                             x=0.5, y=0.9, color=textcolor)
+                             x=textxloc, y=textyloc, color=textcolor)
 
             # only label bottom-left panel with locations
             if (ichannel != nx*(ny-1)):
