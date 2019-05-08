@@ -110,7 +110,9 @@ class SpatialCoordMixinClass(object):
 
     def _celestial_axes(self):
         '''
-        Return the spatial axes in the data from the WCS object.
+        Return the spatial axes in the data from the WCS object. The order of
+        the spatial axes returned is [y, x].
+
         '''
 
         self._raise_wcs_no_celestial()
@@ -125,6 +127,9 @@ class SpatialCoordMixinClass(object):
                         ax_type['coordinate_type'] == 'celestial']
 
         # Swap to numpy ordering
+        # Since we're mapping backwards to get the numpy convention, we need to
+        # reverse the order at the end.
+        # 0 is the y spatial axis and 1 is the x spatial axis
         np_order_cel_axis = [self.ndim - 1 - ind for ind in wcs_cel_axis][::-1]
 
         return np_order_cel_axis
