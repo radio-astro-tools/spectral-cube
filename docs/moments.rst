@@ -64,25 +64,15 @@ plotting packages such as APLpy::
     >>> f.save('moment_0.png')  # doctest: +SKIP
 
 The equation for the N-th moment, where N is usually an integer between -1 and some arbitrary
-positive integer say 11, is as follows:
+positive integer, is as follows:
 
 .. math:: M_N = \frac{\int I (l - M_l)^N dl}{M_0}
 
-Descriptions for the twelve most common moments used are as follows:
+Descriptions for the three most common moments used are as follows:
 
-moments=-1 - the mean value of the spectrum  
-moments=0  - the integrated value of the spectrum, can be used for computing line ratios
-moments=1  - the intensity weighted coordinate; by convention used to get the ’velocity fields’
-moments=2  - the intensity weighted dispersion of the coordinate; by convention used to get the ’velocity dispersion’  
-moments=3  - the median of the cube I
-moments=4  - the median coordinate  
-moments=5  - the standard deviation (SD) about the mean of the spectrum  
-moments=6  - the root mean square of the spectrum  
-moments=7  - the absolute mean deviation of the spectrum  
-moments=8  - the maximum value of the spectrum  
-moments=9  - the coordinate of the maximum value of the spectrum  
-moments=10 - the minimum value of the spectrum  
-moments=11 - the coordinate of the minimum value of the spectrum
+* 0th moment - the integrated flux over the spectral line, can be used for computing some line ratios
+* 1st moment - the the intensity-weighted velocity of the spectral line; can be taken as a measure for the mean velocity of the gas
+* 2nd moment - a measure for the velocity dispersion of the gas along the line of sight, or the width of the spectral line, and is defined by the intensity-weighted square of the velocity
 
 
 Linewidth maps
