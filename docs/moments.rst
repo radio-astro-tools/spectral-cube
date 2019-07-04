@@ -70,7 +70,7 @@ positive integer, is as follows:
 
 Descriptions for the three most common moments used are as follows:
 
-* 0th moment - the integrated flux over the spectral line, can be used for computing some line ratios
+* 0th moment - the integrated intensity over the spectral line, and is often used for computing line ratios
 * 1st moment - the the intensity-weighted velocity of the spectral line; can be taken as a measure for the mean velocity of the gas
 * 2nd moment - a measure for the velocity dispersion of the gas along the line of sight, or the width of the spectral line, and is defined by the intensity-weighted square of the velocity
 
@@ -83,6 +83,16 @@ astronomy), you can use::
 
     >>> sigma_map = cube.linewidth_sigma()  # doctest: +SKIP
     >>> fwhm_map = cube.linewidth_fwhm()  # doctest: +SKIP
+
+The ``linewdith_sigma`` computes a sigma linewidth map along the spectral axis, whereas
+the ``linewidth_fwhm`` function computes a FWHM linewidth map along the same spectral axis.
+
+The relations between the linewidth maps and the second moment are as follows:
+
+Suppose the 2nd moment is denoted by :math:`x`>
+
+.. math:: linewidth_{sigma} = \sqrt{`x`} \\
+          linewidth_{fwhm} = 2.35 * \sqrt{x}
 
 These also return :class:`~spectral_cube.lower_dimensional_structures.Projection` instances as for the
 `Moment maps`_.
