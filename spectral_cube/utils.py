@@ -4,6 +4,8 @@ from functools import wraps
 
 from astropy.utils.exceptions import AstropyUserWarning
 
+bigdataurl = "https://spectral-cube.readthedocs.io/en/latest/big_data.html"
+
 def cached(func):
     """
     Decorator to cache function calls
@@ -31,8 +33,13 @@ def warn_slow(function):
                              "cube into memory, and the cube is large ({1} "
                              "pixels), so by default we disable this operation. "
                              "To enable the operation, set "
-                             "`cube.allow_huge_operations=True` and try again."
-                             .format(str(function), self.size,))
+                             "`cube.allow_huge_operations=True` and try again.  "
+                             "Alternatively, you may want to consider using an "
+                             "approach that does not load the whole cube into "
+                             "memory by specifying how='slice' or how='ray'.  "
+                             "See {bigdataurl} for details."
+                             .format(str(function), self.size,
+                                     bigdataurl=bigdataurl))
         elif warn_how and not self._is_huge:
             # TODO: add check for whether cube has been loaded into memory
             warnings.warn("This function ({0}) requires loading the entire cube into "
