@@ -98,6 +98,33 @@ def aggregation_docstring(func):
     wrapper.__doc__ += _NP_DOC
     return wrapper
 
+
+_PARALLEL_DOC = """
+Other keyword arguments are passed to `apply_function_parallel`
+
+Other Parameters
+----------------
+parallel : bool
+    Use joblib to parallelize the operation.
+    If set to ``False``, will force the use of a single core without
+    using ``joblib``.
+num_cores : int or None
+    The number of cores to use when applying this function in parallel
+    across the cube.
+use_memmap : bool
+    If specified, a memory mapped temporary file on disk will be
+    written to rather than storing the intermediate spectra in memory.
+"""
+
+
+def parallel_docstring(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    wrapper.__doc__ += _PARALLEL_DOC
+    return wrapper
+
 def _apply_spectral_function(arguments, outcube, function, **kwargs):
     """
     Helper function to apply a function to a spectrum.
@@ -2553,6 +2580,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                   )
 
 
+    @parallel_docstring
     def spatial_smooth_median(self, ksize, update_function=None, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
@@ -2578,6 +2606,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return newcube
 
+    @parallel_docstring
     def spatial_smooth(self, kernel,
                        convolve=convolution.convolve,
                        **kwargs):
@@ -2607,6 +2636,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return newcube
 
+    @parallel_docstring
     def spectral_smooth_median(self, ksize,
                                use_memmap=True,
                                verbose=0,
@@ -2621,11 +2651,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Size of the median filter (scipy.ndimage.filters.median_filter)
         verbose : int
             Verbosity level to pass to joblib
-        use_memmap : bool
-            If specified, a memory mapped temporary file on disk will be
-            written to rather than storing the intermediate spectra in memory.
-        num_cores : int or None
-            The number of cores to use if running in parallel
         kwargs : dict
             Not used at the moment.
         """
@@ -2895,6 +2920,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   **kwargs
                                                  )
 
+    @parallel_docstring
     def sigma_clip(self, threshold, verbose=0, use_memmap=True,
                    num_cores=None, **kwargs):
         """
@@ -2907,12 +2933,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             to the number of sigma above which to cut.
         verbose : int
             Verbosity level to pass to joblib
-        num_cores : int or None
-            The number of cores to use when applying this function in parallel
-            across the cube.
-        use_memmap : bool
-            If specified, a memory mapped temporary file on disk will be
-            written to rather than storing the intermediate spectra in memory.
+
         """
 
         return self.apply_function_parallel_spectral(stats.sigma_clip,
@@ -2923,6 +2944,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                      verbose=verbose,
                                                      **kwargs)
 
+    @parallel_docstring
     def spectral_smooth(self, kernel,
                         convolve=convolution.convolve,
                         verbose=0,
@@ -2944,11 +2966,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             `astropy.convolution.convolve_fft`
         verbose : int
             Verbosity level to pass to joblib
-        use_memmap : bool
-            If specified, a memory mapped temporary file on disk will be
-            written to rather than storing the intermediate spectra in memory.
-        num_cores : int or None
-            The number of cores to use if running in parallel
         kwargs : dict
             Passed to the convolve function
         """
@@ -2975,7 +2992,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             If disabled, a warning will be raised when interpolating onto a
             grid that does not nyquist sample the existing grid.  Disable this
             if you have already appropriately smoothed the data.
-
         fill_value : float
             Value for extrapolated spectral values that lie outside of
             the spectral range defined in the original data.  The
