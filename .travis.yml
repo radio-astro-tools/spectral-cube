@@ -59,7 +59,7 @@ matrix:
           name: py27
 
         - env: NUMPY_VERSION=1.11 ASTROPY_VERSION=LTS
-               CONDA_DEPENDENCIES='matplotlib aplpy bottleneck'
+               CONDA_DEPENDENCIES='matplotlib aplpy bottleneck scipy'
                PYTEST_VERSION="<3.7"
           name: astropy-lts_np1.11
 
