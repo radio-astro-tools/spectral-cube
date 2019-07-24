@@ -37,8 +37,8 @@ matrix:
           name: py35
 
         # Test with development versions
-        - env: PYTHON_VERSION=3.5 NUMPY_VERSION=1.15 ASTROPY_VERSION='development'
-          name: py35_astropy-dev
+        - env: PYTHON_VERSION=3.7 ASTROPY_VERSION='development'
+          name: py37_astropy-dev
 
         # Do a coverage test in Python 3.
         # make sure *everything* is run for coverage tests
@@ -49,8 +49,7 @@ matrix:
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time.
-        # We need to use an old numpy version here as there are warnings in the inherited methods when using newer one
-        - env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.13
+        - env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.15
           name: docs
 
         # test python2.7 with recent numpy version
