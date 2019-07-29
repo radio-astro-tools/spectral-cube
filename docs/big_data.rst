@@ -42,12 +42,15 @@ by working with a single slice of ``x`` at a time::
 Many methods in :class:`SpectralCube` allow you to extract subsets
 of relevant data, to make writing code like this easier:
 
-- :meth:`~spectral_cube.SpectralCube.filled_data`, :meth:`~spectral_cube.SpectralCube.unmasked_data`,
-  :meth:`~spectral_cube.SpectralCube.world` all accept Numpy style slice syntax. For
+- `~spectral_cube.base_class.MaskableArrayMixinClass.filled_data`,
+  `~spectral_cube.spectral_cube.BaseSpectralCube.unmasked_data`,
+  `~spectral_cube.base_class.SpatialCoordMixinClass.world` all accept Numpy style
+  slice syntax. For
   example, ``cube.filled_data[0:3, :, :]`` returns only the first 3 spectral
   channels of the cube, with masked elements replaced with ``cube.fill_value``.
-- :meth:`~spectral_cube.SpectralCube` itself can be sliced to extract subcubes
-- :meth:`~spectral_cube.SpectralCube.spectral_slab` extracts a subset of spectral channels.
+- :class:`~spectral_cube.SpectralCube` itself can be sliced to extract subcubes
+- `~spectral_cube.base_class.BaseSpectralCube.spectral_slab` extracts a subset
+  of spectral channels.
 
 Many methods in :class:`~spectral_cube.SpectralCube` iterate over smaller
 chunks of data, to avoid large memory allocations when working with big cubes.
@@ -58,8 +61,8 @@ array in memory, ``how='slice'`` works with one slice at a time, and
 
 As a user, your best strategy for working with large datasets is to rely on
 builtin methods to :class:`~spectral_cube.SpectralCube`, and to access data
-from :meth:`~spectral_cube.SpectralCube.filled_data` and
-:meth:`~spectral_cube.SpectralCube.unmasked_data` in smaller chunks if
+from `~spectral_cube.base_class.MaskableArrayMixinClass.filled_data` and
+`~spectral_cube.spectral_cube.BaseSpectralCube.unmasked_data` in smaller chunks if
 possible.
 
 .. warning ::
@@ -70,7 +73,7 @@ possible.
 Minimize Data Copying
 ---------------------
 
-Methods in :meth:`~spectral_cube.SpectralCube` avoid copying as much as
+Methods in :class:`~spectral_cube.SpectralCube` avoid copying as much as
 possible. For example, all of the following operations create new cubes or
 masks without copying any data::
 
