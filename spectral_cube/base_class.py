@@ -15,6 +15,11 @@ from .masks import BooleanArrayMask
 
 
 __doctest_skip__ = ['SpatialCoordMixinClass.world']
+__all__ = ['BaseNDClass', 'BeamMixinClass',
+           'HeaderMixinClass', 'MaskableArrayMixinClass',
+           'MultiBeamMixinClass', 'SpatialCoordMixinClass',
+           'SpectralAxisMixinClass',
+          ]
 
 DOPPLER_CONVENTIONS = {}
 DOPPLER_CONVENTIONS['radio'] = u.doppler_radio

@@ -16,3 +16,7 @@ API Documentation
 .. automodapi:: spectral_cube.lower_dimensional_structures
    :no-inheritance-diagram:
    :no-inherited-members:
+
+.. automodapi:: spectral_cube.base_class
+   :no-inheritance-diagram:
+   :inherited-members:

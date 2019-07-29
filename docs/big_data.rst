@@ -65,6 +65,7 @@ from `~spectral_cube.base_class.MaskableArrayMixinClass.filled_data` and
 `~spectral_cube.spectral_cube.BaseSpectralCube.unmasked_data` in smaller chunks if
 possible.
 
+
 .. warning ::
     At the moment, :meth:`~SpectralCube.argmax` and :meth:`~SpectralCube.argmin`,
     are **not** optimized for handling large datasets.
