@@ -64,13 +64,13 @@ shape can be used as a boolean array mask.
 Accessing masked data
 ---------------------
 
-As mention in :doc:`accessing`, the raw and unmasked data can be accessed
-with the :attr:`~spectral_cube.SpectralCube.unmasked_data` attribute.
-You can access the masked data using ``filled_data``. This array is a
-copy of the original data with any masked value replaced by a fill value
+As mention in :doc:`accessing`, the raw and unmasked data can be accessed with
+the :attr:`~spectral_cube.spectral_cube.BaseSpectralCube.unmasked_data`
+attribute.  You can access the masked data using ``filled_data``. This array is
+a copy of the original data with any masked value replaced by a fill value
 (which is ``np.nan`` by default but can be changed using the ``fill_value``
-option in the :class:`~spectral_cube.SpectralCube`
-initializer). The 'filled' data is accessed with e.g.::
+option in the :class:`~spectral_cube.SpectralCube` initializer). The 'filled'
+data is accessed with e.g.::
 
     >>> slice_filled = cube.filled_data[0,:,:]  # doctest: +SKIP
 
