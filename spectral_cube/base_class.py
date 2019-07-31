@@ -745,7 +745,7 @@ class BeamMixinClass(object):
             raise NoBeamError("No beam is defined for this SpectralCube or the"
                               " beam information could not be parsed from the"
                               " header. A `~radio_beam.Beam` object can be"
-                              " defined using `cube.with_beam`.")
+                              " added using `cube.with_beam`.")
 
         return self._beam
 
