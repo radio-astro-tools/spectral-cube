@@ -10,7 +10,7 @@ from radio_beam import Beam, Beams
 
 from . import wcs_utils
 from . import cube_utils
-from .utils import cached, WCSCelestialError, BeamAverageWarning
+from .utils import cached, WCSCelestialError, BeamAverageWarning, NoBeamError
 from .masks import BooleanArrayMask
 
 
@@ -740,12 +740,20 @@ class BeamMixinClass(object):
 
     @property
     def beam(self):
+        if self._beam is None:
+            # print warning
+            raise NoBeamError("No beam is defined for this SpectralCube or the"
+                              " beam information could not be parsed from the"
+                              " header. A `~radio_beam.Beam` object can be"
+                              " defined using `cube.with_beam`.")
+
         return self._beam
 
     @beam.setter
     def beam(self, obj):
 
-        if not isinstance(obj, Beam):
+        if not isinstance(obj, Beam) and obj is not None:
+            print(obj)
             raise TypeError("beam must be a radio_beam.Beam object.")
 
         self._beam = obj
