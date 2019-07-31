@@ -275,11 +275,17 @@ def try_load_beam(header):
     except Exception as ex:
         # We don't emit a warning if no beam was found since it's ok for
         # cubes to not have beams
-        if 'No BMAJ' not in str(ex):
-            warnings.warn("Could not parse beam information from header."
-                          "  Exception was: {0}".format(ex.__repr__()),
-                          FITSWarning
-                         )
+        # if 'No BMAJ' not in str(ex):
+        #     warnings.warn("Could not parse beam information from header."
+        #                   "  Exception was: {0}".format(ex.__repr__()),
+        #                   FITSWarning
+        #                  )
+
+        # Avoid warning since cubes don't have a beam
+        # Warning now provided when `SpectralCube.beam` is None
+        beam = None
+
+    return beam
 
 def try_load_beams(data):
     '''
@@ -322,10 +328,14 @@ def try_load_beams(data):
             beam = Beam.from_fits_header(data)
             return beam
         except Exception as ex:
-            warnings.warn("Could not parse beam information from header."
-                          "  Exception was: {0}".format(ex.__repr__()),
-                          FITSWarning
-                         )
+            # warnings.warn("Could not parse beam information from header."
+            #               "  Exception was: {0}".format(ex.__repr__()),
+            #               FITSWarning
+            #              )
+
+            # Avoid warning since cubes don't have a beam
+            # Warning now provided when `SpectralCube.beam` is None
+            beam = None
     else:
         raise ValueError("How did you get here?  This is some sort of error.")
 
