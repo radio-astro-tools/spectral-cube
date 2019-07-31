@@ -1301,7 +1301,11 @@ def test_beam_custom():
     newcube = SpectralCube(data=data, wcs=cube.wcs, header=header)
 
     # newcube should now not have a beam
-    assert not hasattr(newcube, "beam")
+    # Should raise exception
+    try:
+        newcube.beam
+    except utils.NoBeamError:
+        pass
 
     # Attach the beam
     newcube = newcube.with_beam(beam=beam)
@@ -1331,6 +1335,34 @@ def test_beam_custom():
     # Should be in meta too
     assert newcube2.meta['beam'] == newbeam
 
+
+def test_cube_with_no_beam():
+
+    cube, data = cube_and_raw('adv.fits')
+
+    header = cube._header.copy()
+    beam = Beam.from_fits_header(header)
+    del header["BMAJ"], header["BMIN"], header["BPA"]
+
+    newcube = SpectralCube(data=data, wcs=cube.wcs, header=header)
+
+    # Accessing beam raises an error
+    try:
+        newcube.beam
+    except utils.NoBeamError:
+        pass
+
+    # But is still has a beam attribute
+    assert hasattr(newcube, "_beam")
+
+    # Attach the beam
+    newcube = newcube.with_beam(beam=beam)
+
+    # But now it should have an accessible beam
+    try:
+        newcube.beam
+    except utils.NoBeamError as exc:
+        raise exc
 
 def test_multibeam_custom():
 
