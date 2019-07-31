@@ -215,7 +215,8 @@ class SpatialCoordMixinClass(object):
         Raises error if this operation is ill-posed (e.g. rotated world
         coordinates, strong distortions)
 
-        This method is not currently implemented. Use :meth:`world` instead.
+        This method is not currently implemented. Use
+        ``world`` instead.
         """
         raise NotImplementedError()
 
@@ -376,7 +377,7 @@ class MaskableArrayMixinClass(object):
     def filled_data(self, view):
         """
         Return a portion of the data array, with excluded mask values
-        replaced by :meth:`fill_value`.
+        replaced by ``fill_value``.
 
         Returns
         -------
@@ -396,7 +397,7 @@ class MaskableArrayMixinClass(object):
     def unitless_filled_data(self, view):
         """
         Return a portion of the data array, with excluded mask values
-        replaced by :meth:`fill_value`.
+        replaced by ``fill_value``.
 
         Returns
         -------
@@ -407,16 +408,16 @@ class MaskableArrayMixinClass(object):
 
     @property
     def fill_value(self):
-        """ The replacement value used by :meth:`filled_data`.
+        """ The replacement value used by `~spectral_cube.base_class.MaskableArrayMixinClass.filled_data`.
 
-        fill_value is immutable; use :meth:`with_fill_value`
+        fill_value is immutable; use `~spectral_cube.base_class.MaskableArrayMixinClass.with_fill_value`
         to create a new cube with a different fill value.
         """
         return self._fill_value
 
     def with_fill_value(self, fill_value):
         """
-        Create a new object with a different `fill_value`.
+        Create a new object with a different ``fill_value``.
 
         Notes
         -----
@@ -739,7 +740,7 @@ class BeamMixinClass(object):
     """
     Functionality for objects with a single beam.
 
-    Specific objects (cubes, LDOs) still need to define their own `with_beam`
+    Specific objects (cubes, LDOs) still need to define their own ``with_beam``
     methods.
     """
 
