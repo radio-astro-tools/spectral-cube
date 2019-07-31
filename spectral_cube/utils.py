@@ -95,3 +95,6 @@ class BadVelocitiesWarning(SpectralCubeWarning):
 
 class FITSReadError(Exception):
     pass
+
+class NoBeamError(Exception):
+    pass
