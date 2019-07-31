@@ -20,3 +20,7 @@ API Documentation
 .. automodapi:: spectral_cube.base_class
    :no-inheritance-diagram:
    :inherited-members:
+
+.. automodapi:: spectral_cube.spectral_cube
+   :no-inheritance-diagram:
+   :inherited-members:
