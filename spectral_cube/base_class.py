@@ -741,7 +741,6 @@ class BeamMixinClass(object):
     @property
     def beam(self):
         if self._beam is None:
-            # print warning
             raise NoBeamError("No beam is defined for this SpectralCube or the"
                               " beam information could not be parsed from the"
                               " header. A `~radio_beam.Beam` object can be"
@@ -753,7 +752,6 @@ class BeamMixinClass(object):
     def beam(self, obj):
 
         if not isinstance(obj, Beam) and obj is not None:
-            print(obj)
             raise TypeError("beam must be a radio_beam.Beam object.")
 
         self._beam = obj
