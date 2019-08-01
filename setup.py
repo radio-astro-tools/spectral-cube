@@ -2,7 +2,10 @@
 
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-import builtins
+try:
+    import builtins
+except ImportError:
+    import __builtins__ as builtins
 import os
 
 # Ensure that astropy-helpers is available
