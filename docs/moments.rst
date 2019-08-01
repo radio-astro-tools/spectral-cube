@@ -84,15 +84,16 @@ astronomy), you can use::
     >>> sigma_map = cube.linewidth_sigma()  # doctest: +SKIP
     >>> fwhm_map = cube.linewidth_fwhm()  # doctest: +SKIP
 
-The ``linewdith_sigma`` computes a sigma linewidth map along the spectral axis, whereas
-the ``linewidth_fwhm`` function computes a FWHM linewidth map along the same spectral axis.
+The ``~spectral_cube.SpectralCube.linewidth_sigma`` computes a sigma linewidth map
+along the spectral axis, whereas the ``~spectral_cube.SpectralCube.linewidth_fwhm``
+function computes a FWHM linewidth map along the same spectral axis.
 
 The relations between the linewidth maps and the second moment are as follows:
 
 Suppose the 2nd moment is denoted by :math:`x`>
 
 .. math:: linewidth_{sigma} = \sqrt{`x`} \\
-          linewidth_{fwhm} = 2.35 * \sqrt{x}
+          linewidth_{fwhm} = \sqrt{8*ln{2}} * \sqrt{x}
 
 These also return :class:`~spectral_cube.lower_dimensional_structures.Projection` instances as for the
 `Moment maps`_.
