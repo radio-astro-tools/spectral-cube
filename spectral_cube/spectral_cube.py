@@ -1761,7 +1761,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if spatial_only:
             slices = (slice(None), slices[1], slices[2])
 
-        return slices
+        return tuple(slices)
 
     def subcube(self, xlo='min', xhi='max', ylo='min', yhi='max', zlo='min',
                 zhi='max', rest_value=None):
@@ -1840,6 +1840,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         slices = [slice(limit_dict[xx+'lo'], limit_dict[xx+'hi'])
                   for xx in 'zyx']
+        slices = tuple(slices)
 
         log.debug('slices: {0}'.format(slices))
 
