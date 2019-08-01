@@ -201,8 +201,6 @@ def slice_syntax(f):
 
     result = property(wrapper)
 
-    result.__doc__ = wrapper.__doc__
-
     return result
 
 slice_doc = """
