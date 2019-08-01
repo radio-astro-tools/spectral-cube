@@ -43,7 +43,7 @@ Many methods in :class:`SpectralCube` allow you to extract subsets
 of relevant data, to make writing code like this easier:
 
 - `~spectral_cube.base_class.MaskableArrayMixinClass.filled_data`,
-  `~spectral_cube.spectral_cube.BaseSpectralCube.unmasked_data`,
+  `~spectral_cube.BaseSpectralCube.unmasked_data`,
   `~spectral_cube.base_class.SpatialCoordMixinClass.world` all accept Numpy style
   slice syntax. For
   example, ``cube.filled_data[0:3, :, :]`` returns only the first 3 spectral
@@ -62,7 +62,7 @@ array in memory, ``how='slice'`` works with one slice at a time, and
 As a user, your best strategy for working with large datasets is to rely on
 builtin methods to :class:`~spectral_cube.SpectralCube`, and to access data
 from `~spectral_cube.base_class.MaskableArrayMixinClass.filled_data` and
-`~spectral_cube.spectral_cube.BaseSpectralCube.unmasked_data` in smaller chunks if
+`~spectral_cube.BaseSpectralCube.unmasked_data` in smaller chunks if
 possible.
 
 
