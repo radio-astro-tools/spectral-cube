@@ -102,9 +102,6 @@ def aggregation_docstring(func):
 
 _PARALLEL_DOC = """
 
-Other keyword arguments are passed to
-`~spectral_cube.spectral_cube.BaseSpectralCube._apply_function_parallel_base`
-
 Other Parameters
 ----------------
 parallel : bool
