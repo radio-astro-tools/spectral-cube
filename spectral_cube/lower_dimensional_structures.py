@@ -10,7 +10,9 @@ from astropy import units as u
 from astropy import wcs
 #from astropy import log
 from astropy.io.fits import Header, HDUList, PrimaryHDU, BinTableHDU, FITS_rec
+
 from radio_beam import Beam, Beams
+from specutils.spectra.spectrum_mixin import SpectralAxisMixin
 
 from .io.core import determine_format
 from . import spectral_axis
@@ -19,7 +21,7 @@ from .cube_utils import convert_bunit
 from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
 
-from .base_class import (BaseNDClass, SpectralAxisMixinClass,
+from .base_class import (BaseNDClass,
                          SpatialCoordMixinClass, MaskableArrayMixinClass,
                          MultiBeamMixinClass, BeamMixinClass,
                          HeaderMixinClass
@@ -650,7 +652,7 @@ class Slice(Projection):
 
 
 class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
-                       SpectralAxisMixinClass):
+                       SpectralAxisMixin):
     """
     Properties shared between OneDSpectrum and VaryingResolutionOneDSpectrum.
     """

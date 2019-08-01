@@ -27,6 +27,7 @@ from astropy.constants import si
 import numpy as np
 
 from radio_beam import Beam, Beams
+from specutils.spectra.spectrum_mixin import SpectralAxisMixin
 
 from . import cube_utils
 from . import wcs_utils
@@ -38,7 +39,7 @@ from .lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                            LowerDimensionalObject,
                                            VaryingResolutionOneDSpectrum
                                           )
-from .base_class import (BaseNDClass, SpectralAxisMixinClass,
+from .base_class import (BaseNDClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
                          MaskableArrayMixinClass, MultiBeamMixinClass,
                          HeaderMixinClass, BeamMixinClass,
@@ -127,7 +128,7 @@ def _apply_spatial_function(arguments, outcube, function, **kwargs):
 
 
 class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
-                       SpectralAxisMixinClass, SpatialCoordMixinClass,
+                       SpectralAxisMixin, SpatialCoordMixinClass,
                        HeaderMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
