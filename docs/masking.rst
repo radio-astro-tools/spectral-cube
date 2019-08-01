@@ -23,15 +23,15 @@ boolean mask from a boolean array ``mask_array``, you can for example use::
    Currently, the mask convention is opposite of what is defined for
    Numpy masked array and Astropy ``Table``.
 
-Using a pure boolean array may not always be the most efficient solution,
+Using a pure boolean array may not always be the most efficient solution
 because it may require a large amount of memory.
 
 You can also create a mask using simple conditions directly on the cube
 values themselves, for example::
 
-    >>> mask = cube > 1.3*u.K  # doctest: +SKIP
+    >>> include_mask = cube > 1.3*u.K  # doctest: +SKIP
 
-This is more efficient, because the condition is actually evaluated on-the-fly
+This is more efficient because the condition is actually evaluated on-the-fly
 as needed.  Note that units equivalent to the cube's units must be used.
 
 Masks can be combined using standard boolean comparison operators::
