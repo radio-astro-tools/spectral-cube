@@ -2,7 +2,7 @@ Smoothing
 ---------
 
 There are two types of smoothing routine available in ``spectral_cube``:
-spectral and spatial.
+spatial and spectral.
 
 Spatial Smoothing
 =================
@@ -63,7 +63,7 @@ The default value of ``epsilon=1e-3`` will sample points 0.1% larger than the
 edge of each beam in the set. Increasing ``epsilon`` ensures that a valid common
 beam can be found, avoiding the tolerance issue, but will result in
 overestimating the common beam area. For most radio data sets, where the beam
-is oversampled by :math:`\sim\3\mbox{--}5}` pixels, moderate increases in
+is oversampled by :math:`\sim 3 \mbox{-5}` pixels, moderate increases in
 ``epsilon`` will increase the common beam area far less than a pixel area, making
 the overestimation negligible.
 
@@ -71,6 +71,25 @@ We recommend testing different values of tolerance to find convergence, and if
 the error persists, to then slowly increase epsilon until a valid common beam is
 found. More information can be found in the
 `radio-beam documentation <https://radio-beam.readthedocs.io/en/latest/>`_.
+
+Alternative approach to spatial smoothing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+There is an alternative way to spatially smooth a data cube, which is using the
+:meth:`~spectral_cube.SpectralCube.spatial_smooth` method. This is an example
+of how you can do this::
+
+    from spectral_cube import SpectralCube
+    from astropy.io import fits
+    from astropy.convolution import Gaussian2DKernel
+
+    cube = SpectralCube.read('/some_path/some_file.fits')
+    kernel = Gaussian2DKernel(x_stddev=1)
+    new_cube = cube.spatial_smooth(kernel)
+    new_cube.write('/some_path/some_other_file.fits')
+
+``x_stddev`` specifies the width of the `Gaussian kernel <http://docs.astropy.org/en/stable/api/astropy.convolution.Gaussian2DKernel.html>`_.
+Any `astropy convolution <kernel http://docs.astropy.org/en/stable/convolution/kernels.html>`_
+is acceptable.
 
 Spectral Smoothing
 ==================
