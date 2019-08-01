@@ -48,6 +48,7 @@ sections, we look at how to read data into this class, manipulate spectral
 cubes, extract moment maps or subsets of spectral cubes, and write spectral
 cubes to files.
 
+
 Getting started
 ^^^^^^^^^^^^^^^
 
@@ -71,6 +72,10 @@ Getting started
    continuum_subtraction.rst
    examples.rst
    visualization.rst
+
+There is also an `astropy tutorial
+<http://learn.astropy.org/rst-tutorials/FITS-cubes.html>`__ on accessing and
+manipulating FITS cubes with spectral-cube.
 
 Advanced
 ^^^^^^^^
