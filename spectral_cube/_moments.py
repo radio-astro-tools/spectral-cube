@@ -49,7 +49,7 @@ def _slice0(cube, axis):
     valid = np.zeros(shp, dtype=np.bool)
     for i in range(cube.shape[axis]):
         view[axis] = i
-        plane = cube._get_filled_data(fill=np.nan, view=view)
+        plane = cube._get_filled_data(fill=np.nan, view=tuple(view))
         valid |= np.isfinite(plane)
         result += np.nan_to_num(plane) * cube._pix_size_slice(axis)
     result[~valid] = np.nan
@@ -79,9 +79,9 @@ def _slice1(cube, axis):
 
     for i in range(cube.shape[axis]):
         view[axis] = i
-        plane = cube._get_filled_data(fill=0, view=view)
+        plane = cube._get_filled_data(fill=0, view=tuple(view))
         result += (plane *
-                   pix_cen[view] *
+                   pix_cen[tuple(view)] *
                    pix_size)
         weights += plane * pix_size
     return result / weights
@@ -110,9 +110,9 @@ def moment_slicewise(cube, order, axis):
 
     for i in range(cube.shape[axis]):
         view[axis] = i
-        plane = cube._get_filled_data(fill=0, view=view)
+        plane = cube._get_filled_data(fill=0, view=tuple(view))
         result += (plane *
-                   (pix_cen[view] - mom1) ** order *
+                   (pix_cen[tuple(view)] - mom1) ** order *
                    pix_size)
         weights += plane * pix_size
 

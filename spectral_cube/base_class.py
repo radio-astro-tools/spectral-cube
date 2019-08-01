@@ -180,8 +180,6 @@ class SpatialCoordMixinClass(object):
 
         self._raise_wcs_no_celestial()
 
-        # note: view is a tuple of view
-
         # the next 3 lines are equivalent to (but more efficient than)
         # inds = np.indices(self._data.shape)
         # inds = [i[view] for i in inds]
@@ -222,7 +220,7 @@ class SpatialCoordMixinClass(object):
 
     @property
     def spatial_coordinate_map(self):
-        view = [0 for ii in range(self.ndim - 2)] + [slice(None)] * 2
+        view = tuple([0 for ii in range(self.ndim - 2)] + [slice(None)] * 2)
         return self.world[view][self.ndim - 2:]
 
     @property

@@ -37,6 +37,9 @@ warnings.simplefilter('always', UserWarning)
 warnings.simplefilter('error', utils.UnsupportedIterationStrategyWarning)
 warnings.simplefilter('error', utils.NotImplementedWarning)
 warnings.simplefilter('error', utils.WCSMismatchWarning)
+warnings.simplefilter('error', FutureWarning)
+warnings.filterwarnings(action='ignore', category=FutureWarning,
+                        module='reproject')
 
 
 try:

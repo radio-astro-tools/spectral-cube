@@ -76,12 +76,12 @@ def test_ds9region_255(regfile):
 @pytest.mark.skipif('not regionsOK', reason='Could not import regions')
 @pytest.mark.skipif('not REGIONS_GT_03', reason='regions version should be >= 0.3')
 @pytest.mark.parametrize(('regfile', 'result'),
-                             (('fk5.reg', [slice(None), 1, 1]),
-                              ('image.reg', [slice(None), 1, slice(None)]),
+                             (('fk5.reg', (slice(None), 1, 1)),
+                              ('image.reg', (slice(None), 1, slice(None))),
                               (
-                              'partial_overlap_image.reg', [slice(None), 1, 1]),
+                              'partial_overlap_image.reg', (slice(None), 1, 1)),
                               ('no_overlap_image.reg', ValueError),
-                              ('partial_overlap_fk5.reg', [slice(None), 1, 1]),
+                              ('partial_overlap_fk5.reg', (slice(None), 1, 1)),
                               ('no_overlap_fk5.reg', ValueError),
                               ))
 def test_ds9region_new(regfile, result):

@@ -616,7 +616,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                 dim = dims[lim[0]]
                 sl = [slice(0, 1)]
                 sl.insert(dim, slice(None))
-                spine = self.world[sl][dim]
+                spine = self.world[tuple(sl)][dim]
                 val = np.argmin(np.abs(limval - spine))
                 if limval > spine.max() or limval < spine.min():
                     pass
@@ -632,7 +632,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         slices = [slice(limit_dict[xx + 'lo'], limit_dict[xx + 'hi'])
                   for xx in 'yx']
 
-        return self[slices]
+        return self[tuple(slices)]
 
     def to(self, unit, equivalencies=[], freq=None):
         """

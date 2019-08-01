@@ -968,7 +968,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 slc = [slice(y, y + 1), slice(x, x + 1), ]
                 # create a length-N slice (all-inclusive) along the selected axis
                 slc.insert(axis, slice(None))
-                yield y, x, slc
+                yield y, x, tuple(slc)
 
     def _iter_slices(self, axis, fill=np.nan, check_endian=False):
         """
@@ -978,7 +978,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         view = [slice(None)] * 3
         for x in range(self.shape[axis]):
             view[axis] = x
-            yield self._get_filled_data(view=view, fill=fill,
+            yield self._get_filled_data(view=tuple(view), fill=fill,
                                         check_endian=check_endian)
 
     def _iter_mask_slices(self, axis):
@@ -990,7 +990,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         for x in range(self.shape[axis]):
             view[axis] = x
             yield self._mask.include(data=self._data,
-                                     view=view,
+                                     view=tuple(view),
                                      wcs=self._wcs,
                                      wcs_tolerance=self._wcs_tolerance,
                                     )
@@ -1761,7 +1761,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if spatial_only:
             slices = (slice(None), slices[1], slices[2])
 
-        return slices
+        return tuple(slices)
 
     def subcube(self, xlo='min', xhi='max', ylo='min', yhi='max', zlo='min',
                 zhi='max', rest_value=None):
@@ -1811,6 +1811,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 dim = dims[lim[0]]
                 sl = [slice(0,1)]*2
                 sl.insert(dim, slice(None))
+                sl = tuple(sl)
                 spine = self.world[sl][dim]
                 val = np.argmin(np.abs(limval-spine))
                 if limval > spine.max() or limval < spine.min():
@@ -1840,6 +1841,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         slices = [slice(limit_dict[xx+'lo'], limit_dict[xx+'hi'])
                   for xx in 'zyx']
+        slices = tuple(slices)
 
         log.debug('slices: {0}'.format(slices))
 
@@ -3185,7 +3187,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             view = [slice(None) for ii in range(self.ndim)]
             # then fill the appropriate slice
             view[axis] = slice(startpoint,None,step)
-            return view
+            return tuple(view)
 
         # size of the dimension of interest
         xs = self.shape[axis]
@@ -3195,6 +3197,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 if truncate:
                     view = [slice(None) for ii in range(self.ndim)]
                     view[axis] = slice(None,xs-(xs % int(factor)))
+                    view = tuple(view)
                     crarr = self.filled_data[view]
                     mask = self.mask[view].include()
                 else:
@@ -3228,7 +3231,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 view = [slice(None) for ii in range(self.ndim)]
                 # then fill the appropriate slice
                 view[axis] = slice(startpoint,startpoint+nsteps,1)
-                return view
+                return tuple(view)
 
             newshape = list(self.shape)
             newshape[axis] = (newshape[axis]//factor +
@@ -3243,6 +3246,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # Create a view that will add a blank newaxis at the right spot
             view_newaxis = [slice(None) for ii in range(self.ndim)]
             view_newaxis[axis] = None
+            view_newaxis = tuple(view_newaxis)
 
             ntf = tempfile.NamedTemporaryFile()
             dsarr = np.memmap(ntf, mode='w+', shape=newshape, dtype=np.float)
