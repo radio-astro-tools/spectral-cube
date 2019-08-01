@@ -1811,6 +1811,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 dim = dims[lim[0]]
                 sl = [slice(0,1)]*2
                 sl.insert(dim, slice(None))
+                sl = tuple(sl)
                 spine = self.world[sl][dim]
                 val = np.argmin(np.abs(limval-spine))
                 if limval > spine.max() or limval < spine.min():
