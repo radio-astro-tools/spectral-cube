@@ -1274,6 +1274,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return cube
 
 
+    @property
+    def dummy_property(blah):
+        """
+        this is a test that is not good to think word.
+        """
+
     @cube_utils.slice_syntax
     def unmasked_data(self, view):
         """
