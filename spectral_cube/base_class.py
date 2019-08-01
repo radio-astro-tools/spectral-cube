@@ -220,7 +220,7 @@ class SpatialCoordMixinClass(object):
 
     @property
     def spatial_coordinate_map(self):
-        view = [0 for ii in range(self.ndim - 2)] + [slice(None)] * 2
+        view = tuple([0 for ii in range(self.ndim - 2)] + [slice(None)] * 2)
         return self.world[view][self.ndim - 2:]
 
     @property
