@@ -50,6 +50,7 @@ matrix:
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time.
         - env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.15
+               PIP_DEPENDENCIES="Cython $PVEXTRACTOR radio_beam $REGIONS $REPROJECT sphinx-astropy"
           name: docs
 
         # test python2.7 with recent numpy version
