@@ -10,7 +10,7 @@ This is an Astropy affiliated package.
 from ._astropy_init import __version__, __githash__, test
 # ----------------------------------------------------------------------------
 if not _ASTROPY_SETUP_:
-    from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube
+    from .spectral_cube import (SpectralCube, VaryingResolutionSpectralCube)
     from .stokes_spectral_cube import StokesSpectralCube
     from .masks import (MaskBase, InvertedMask, CompositeMask,
                         BooleanArrayMask, LazyMask, LazyComparisonMask,
@@ -21,4 +21,4 @@ if not _ASTROPY_SETUP_:
                'StokesSpectralCube', 'CompositeMask', 'LazyComparisonMask',
                'LazyMask', 'BooleanArrayMask', 'FunctionMask',
                'OneDSpectrum', 'Projection', 'Slice'
-              ]
+              ] 
