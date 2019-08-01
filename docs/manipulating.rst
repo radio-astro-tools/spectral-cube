@@ -6,7 +6,7 @@ Modifying the spectral axis
 
 As mentioned in :doc:`accessing`, it is straightforward to find the
 coordinates along the spectral axis using the
-:attr:`~spectral_cube.SpectralCube.spectral_axis` attribute::
+:attr:`~spectral_cube.spectral_cube.BaseSpectralCube.spectral_axis` attribute::
 
    >>> cube.spectral_axis  # doctest: +SKIP
    [ -2.97198762e+03  -2.63992044e+03  -2.30785327e+03  -1.97578610e+03

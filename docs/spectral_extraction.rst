@@ -49,21 +49,21 @@ mask.  The ds9/crtf region support relies on `regions
 shapes in ds9 and crtf, so you are not limited to circular apertures.
 
 In this example, we'll extract a subcube from ds9 region string using
-`~spectral_cube.spectral_cube.SpectralCube.subcube_from_ds9region`::
+:meth:`~spectral_cube.spectral_cube.BaseSpectralCube.subcube_from_ds9region`::
 
     >>> ds9_str = 'fk5; circle(19:23:43.907, +14:30:34.66, 3")'  # doctest: +SKIP
     >>> subcube = cube.subcube_from_ds9region(ds9_str)  # doctest: +SKIP
     >>> spectrum = subcube.mean(axis=(1, 2))  # doctest: +SKIP
 
 Similarly, one can extract a subcube from a crtf region string using
-`~spectral_cube.spectral_cube.SpectralCube.subcube_from_crtfregion`::
+:meth:`~spectral_cube.spectral_cube.BaseSpectralCube.subcube_from_crtfregion`::
 
     >>> crtf_str = 'circle[[19:23:43.907, +14:30:34.66], 3"], coord=fk5, range=[150km/s, 300km/s]'  # doctest: +SKIP
     >>> subcube = cube.subcube_from_crtfregion(crtf_str)  # doctest: +SKIP
     >>> spectrum = subcube.mean(axis=(1, 2))  # doctest: +SKIP
 
 You can also use a _list_ of `~regions.Region` objects to extract a subcube using
-`~spectral_cube.spectral_cube.SpectralCube.subcube_from_regions`::
+:meth:`~spectral_cube.spectral_cube.BaseSpectralCube.subcube_from_regions`::
 
     >>> import regions # doctest: +SKIP
     >>> regpix = regions.RectanglePixelRegion(regions.PixCoord(0.5, 1), width=4, height=2)  # doctest: +SKIP

@@ -200,6 +200,7 @@ def slice_syntax(f):
                                        f.__name__)
 
     result = property(wrapper)
+
     return result
 
 slice_doc = """

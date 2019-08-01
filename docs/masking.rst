@@ -64,13 +64,13 @@ shape can be used as a boolean array mask.
 Accessing masked data
 ---------------------
 
-As mention in :doc:`accessing`, the raw and unmasked data can be accessed
-with the :attr:`~spectral_cube.SpectralCube.unmasked_data` attribute.
-You can access the masked data using ``filled_data``. This array is a
-copy of the original data with any masked value replaced by a fill value
+As mention in :doc:`accessing`, the raw and unmasked data can be accessed with
+the `spectral_cube.spectral_cube.BaseSpectralCube.unmasked_data`
+attribute.  You can access the masked data using ``filled_data``. This array is
+a copy of the original data with any masked value replaced by a fill value
 (which is ``np.nan`` by default but can be changed using the ``fill_value``
-option in the :class:`~spectral_cube.SpectralCube`
-initializer). The 'filled' data is accessed with e.g.::
+option in the :class:`~spectral_cube.SpectralCube` initializer). The 'filled'
+data is accessed with e.g.::
 
     >>> slice_filled = cube.filled_data[0,:,:]  # doctest: +SKIP
 
@@ -107,10 +107,10 @@ Inclusion and Exclusion
 The term "mask" is often used to refer both to the act of exluding
 and including pixels from analysis. To be explicit about how they behave,
 all mask objects have an
-:meth:`~spectral_cube.MaskBase.include` method that returns a boolean
+:meth:`~spectral_cube.masks.MaskBase.include` method that returns a boolean
 array. `True` values in this array indicate that the pixel is included/valid,
 and not filtered/replaced in any way. Conversely, `True` values in the output
-from :meth:`~spectral_cube.MaskBase.exclude`
+from :meth:`~spectral_cube.masks.MaskBase.exclude`
 indicate the pixel is excluded/invalid, and will be filled/filtered.
 The inclusion/exclusion behavior of any mask can be inverted via::
 
