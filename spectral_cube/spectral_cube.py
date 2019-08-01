@@ -54,7 +54,7 @@ from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
 from distutils.version import LooseVersion
 
 
-__all__ = ['SpectralCube', 'VaryingResolutionSpectralCube']
+__all__ = ['BaseSpectralCube', 'SpectralCube', 'VaryingResolutionSpectralCube']
 
 # apply_everywhere, world: do not have a valid cube to test on
 __doctest_skip__ = ['BaseSpectralCube._apply_everywhere']
@@ -1112,7 +1112,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         Parameters
         ----------
-        mask : :class:`MaskBase` instance, or boolean numpy array
+        mask : :class:`~spectral_cube.masks.MaskBase` instance, or boolean numpy array
             The mask to apply. If a boolean array is supplied,
             it will be converted into a mask, assuming that
             `True` values indicate included elements.
@@ -1720,7 +1720,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         Parameters
         ----------
-        region_mask: `masks.MaskBase` or boolean `numpy.ndarray`
+        region_mask: `~spectral_cube.masks.MaskBase` or boolean `numpy.ndarray`
             The mask with appropraite WCS or an ndarray with matched
             coordinates
         """
@@ -1733,7 +1733,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         Parameters
         ----------
-        region_mask: `masks.MaskBase` or boolean `numpy.ndarray`
+        region_mask: `~spectral_cube.masks.MaskBase` or boolean `numpy.ndarray`
             The mask with appropriate WCS or an ndarray with matched
             coordinates
         spatial_only: bool

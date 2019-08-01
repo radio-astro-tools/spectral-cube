@@ -42,23 +42,29 @@ by working with a single slice of ``x`` at a time::
 Many methods in :class:`SpectralCube` allow you to extract subsets
 of relevant data, to make writing code like this easier:
 
-- :meth:`SpectralCube.filled_data`, :meth:`SpectralCube.unmasked_data`,
-  :meth:`SpectralCube.world` all accept Numpy style slice syntax. For
+- `~spectral_cube.base_class.MaskableArrayMixinClass.filled_data`,
+  `~spectral_cube.BaseSpectralCube.unmasked_data`,
+  `~spectral_cube.base_class.SpatialCoordMixinClass.world` all accept Numpy style
+  slice syntax. For
   example, ``cube.filled_data[0:3, :, :]`` returns only the first 3 spectral
   channels of the cube, with masked elements replaced with ``cube.fill_value``.
-- :meth:`SpectralCube` itself can be sliced to extract subcubes
-- :meth:`SpectralCube.spectral_slab` extracts a subset of spectral channels.
+- :class:`~spectral_cube.SpectralCube` itself can be sliced to extract subcubes
+- `~spectral_cube.base_class.BaseSpectralCube.spectral_slab` extracts a subset
+  of spectral channels.
 
-Many methods in :class:`SpectralCube` iterate over smaller chunks of data, to avoid large memory allocations when working with
-big cubes. Some of these have a ``how`` keyword parameter, for
-fine-grained control over how much memory is accessed at once.
-``how='cube'`` works with the entire array in memory, ``how='slice'``
-works with one slice at a time, and ``how='ray'`` works with one ray at a time.
+Many methods in :class:`~spectral_cube.SpectralCube` iterate over smaller
+chunks of data, to avoid large memory allocations when working with big cubes.
+Some of these have a ``how`` keyword parameter, for fine-grained control over
+how much memory is accessed at once.  ``how='cube'`` works with the entire
+array in memory, ``how='slice'`` works with one slice at a time, and
+``how='ray'`` works with one ray at a time.
 
 As a user, your best strategy for working with large datasets is to rely on
-builtin methods to :class:`SpectralCube`, and to access data from
-:meth:`~SpectralCube.filled_data` and :meth:`~SpectralCube.unmasked_data`
-in smaller chunks if possible.
+builtin methods to :class:`~spectral_cube.SpectralCube`, and to access data
+from `~spectral_cube.base_class.MaskableArrayMixinClass.filled_data` and
+`~spectral_cube.BaseSpectralCube.unmasked_data` in smaller chunks if
+possible.
+
 
 .. warning ::
     At the moment, :meth:`~SpectralCube.argmax` and :meth:`~SpectralCube.argmin`,
@@ -68,8 +74,9 @@ in smaller chunks if possible.
 Minimize Data Copying
 ---------------------
 
-Methods in :meth:`SpectralCube` avoid copying as much as possible. For example, all of the following operations create new cubes or masks
-without copying any data::
+Methods in :class:`~spectral_cube.SpectralCube` avoid copying as much as
+possible. For example, all of the following operations create new cubes or
+masks without copying any data::
 
     >>> mask = cube > 3  # doctest: +SKIP
     >>> slab = cube.spectral_slab(...)  # doctest: +SKIP

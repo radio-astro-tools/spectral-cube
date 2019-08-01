@@ -1736,7 +1736,9 @@ def test_jybeam_factors():
 
     assert_allclose(cube.jtok_factors(),
                     [15111171.12641629, 10074201.06746361, 10074287.73828087,
-                     15111561.14508185])
+                     15111561.14508185],
+                    rtol=5e-7
+                   )
 
 def test_channelmask_singlebeam():
     cube, data = cube_and_raw('adv.fits')
