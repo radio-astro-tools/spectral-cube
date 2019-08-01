@@ -2721,17 +2721,28 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             try:
                 import joblib
                 from joblib._parallel_backends import MultiprocessingBackend
+                from joblib import register_parallel_backend, parallel_backend
                 from joblib import Parallel, delayed
 
                 if update_function is not None:
+
+                    # https://stackoverflow.com/questions/38483874/intermediate-results-from-joblib
+                    class MultiCallback:
+                        def __init__(self, *callbacks):
+                            self.callbacks = [cb for cb in callbacks if cb]
+
+                        def __call__(self, out):
+                            for cb in self.callbacks:
+                                cb(out)
+
                     class Callback_Backend(MultiprocessingBackend):
                         def callback(self, result):
                             update_function()
 
                         # Overload apply_async and set callback=self.callback
                         def apply_async(self, func, callback=None):
-                            applyResult = super(Callback_Backend, self).apply_async(func, self.callback)
-                            return applyResult
+                            cbs = MultiCallback(callback, self.callback)
+                            return super().apply_async(func, cbs)
 
                     joblib.register_parallel_backend('custom',
                                                      Callback_Backend,
