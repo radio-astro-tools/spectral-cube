@@ -3300,8 +3300,12 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
             if not isinstance(beam, Beam):
                 raise TypeError("beam must be a radio_beam.Beam object.")
 
+        # Allow setting the beam attribute even if there is no beam defined
+        # Accessing `SpectralCube.beam` without a beam defined raises a
+        # `NoBeamError` with an informative message.
+        self.beam = beam
+
         if beam is not None:
-            self.beam = beam
             self._meta['beam'] = beam
             self._header.update(beam.to_header_keywords())
 
