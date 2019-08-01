@@ -11,6 +11,7 @@ import re
 import itertools
 import copy
 import tempfile
+import textwrap
 import six
 from six.moves import zip, range
 
@@ -100,7 +101,9 @@ def aggregation_docstring(func):
 
 
 _PARALLEL_DOC = """
-Other keyword arguments are passed to `apply_function_parallel`
+
+Other keyword arguments are passed to
+`~spectral_cube.spectral_cube.BaseSpectralCube._apply_function_parallel_base`
 
 Other Parameters
 ----------------
@@ -122,7 +125,10 @@ def parallel_docstring(func):
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
 
-    wrapper.__doc__ += _PARALLEL_DOC
+    line1 = wrapper.__doc__.split("\n")[1]
+    indentation = " "*(len(line1) - len(line1.lstrip()))
+
+    wrapper.__doc__ += textwrap.indent(_PARALLEL_DOC, indentation)
     return wrapper
 
 def _apply_spectral_function(arguments, outcube, function, **kwargs):
