@@ -141,8 +141,8 @@ if __name__ == "__main__":
     beams = np.recarray(5, dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'),
                                   ('BPA', '>f4'), ('CHAN', '>i4'),
                                   ('POL', '>i4')])
-    beams['BMAJ'] = [0.1,0.2,0.3,0.4,0.5] # arcseconds
-    beams['BMIN'] = [0.5,0.4,0.3,0.2,0.1]
+    beams['BMAJ'] = [0.5,0.4,0.3,0.4,0.5] # arcseconds
+    beams['BMIN'] = [0.1,0.2,0.3,0.2,0.1]
     beams['BPA'] = [0,45,60,30,0] # degrees
     beams['CHAN'] = [0,0,0,0,0]
     beams['POL'] = [0,0,0,0,0]
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     d = np.zeros([5, 5], dtype='float')
     d[2, 2] = 1.0
     fits.writeto('55_delta.fits', d, h, overwrite=True)
-    
+
     # oneD spectra
     d = np.arange(5, dtype='float')
     h = wcs.WCS(fits.Header.fromtextfile(HEADER_FILENAME)).sub([wcs.WCSSUB_SPECTRAL]).to_header()
