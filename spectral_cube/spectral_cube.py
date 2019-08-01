@@ -990,7 +990,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         for x in range(self.shape[axis]):
             view[axis] = x
             yield self._mask.include(data=self._data,
-                                     view=view,
+                                     view=tuple(view),
                                      wcs=self._wcs,
                                      wcs_tolerance=self._wcs_tolerance,
                                     )
