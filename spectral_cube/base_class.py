@@ -180,8 +180,6 @@ class SpatialCoordMixinClass(object):
 
         self._raise_wcs_no_celestial()
 
-        # note: view is a tuple of view
-
         # the next 3 lines are equivalent to (but more efficient than)
         # inds = np.indices(self._data.shape)
         # inds = [i[view] for i in inds]
