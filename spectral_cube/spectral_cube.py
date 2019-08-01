@@ -125,7 +125,12 @@ def parallel_docstring(func):
     line1 = wrapper.__doc__.split("\n")[1]
     indentation = " "*(len(line1) - len(line1.lstrip()))
 
-    wrapper.__doc__ += textwrap.indent(_PARALLEL_DOC, indentation)
+    try:
+        wrapper.__doc__ += textwrap.indent(_PARALLEL_DOC, indentation)
+    except AttributeError:
+        # python2.7
+        wrapper.__doc__ = textwrap.dedent(wrapper.__doc__) + _PARALLEL_DOC
+
     return wrapper
 
 def _apply_spectral_function(arguments, outcube, function, **kwargs):
