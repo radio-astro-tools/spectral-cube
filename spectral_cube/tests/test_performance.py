@@ -80,6 +80,32 @@ def test_parallel_performance_smoothing():
 
     import timeit
 
+
+    from dask.distributed import Client, LocalCluster
+    cluster = LocalCluster()
+    client = Client(cluster)
+
+    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,64,64))'
+    setup = setup + "; from astropy import convolution"
+    stmt = ('result = cube.dask_apply_along_axis(function=convolution.convolve, '
+            'axis=0,'
+            'kernel=convolution.Gaussian1DKernel(20.0))')
+
+    rslt = {}
+    for ncores in (1,2,3,4):
+        print(f"Started dask ncores={ncores}")
+        cluster.scale(ncores)
+        time = timeit.timeit(stmt=stmt, setup=setup, globals=globals(), number=5)
+        rslt[ncores] = time
+        print(f"Completed dask ncores={ncores}")
+
+
+    print()
+    print("dask")
+    print(rslt)
+
+
+
     setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,64,64))'
     stmt = 'result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(20.0), num_cores={0}, use_memmap=False)'
 
@@ -106,6 +132,8 @@ def test_parallel_performance_smoothing():
     print()
     print("memmap=True")
     print(rslt)
+
+
 
 
     if False:

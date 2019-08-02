@@ -495,6 +495,127 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         else:
             return out
 
+    def dask_apply_along_axis(self, function, axis, fill=np.nan, reduce=True,
+                              projection=False, unit=None, check_endian=False,
+                              includemask=False,
+                              **kwargs):
+        """
+        Apply a numpy function to the cube
+
+        Parameters
+        ----------
+        function : a function
+            A function to apply to the cube
+        fill : float
+            The fill value to use on the data
+        reduce : bool
+            reduce indicates whether this is a reduce-like operation,
+            that can be accumulated one slice at a time.
+            sum/max/min are like this. argmax/argmin/stddev are not
+        how : cube | slice | ray | auto
+           How to compute the moment. All strategies give the same
+           result, but certain strategies are more efficient depending
+           on data size and layout. Cube/slice/ray iterate over
+           decreasing subsets of the data, to conserve memory.
+           Default='auto'
+        projection : bool
+            Return a :class:`~spectral_cube.lower_dimensional_structures.Projection` if the resulting array is 2D or a
+            OneDProjection if the resulting array is 1D and the sum is over both
+            spatial axes?
+        unit : None or `astropy.units.Unit`
+            The unit to include for the output array.  For example,
+            `SpectralCube.max` calls
+            ``SpectralCube.apply_numpy_function(np.max, unit=self.unit)``,
+            inheriting the unit from the original cube.
+            However, for other numpy functions, e.g. `numpy.argmax`, the return
+            is an index and therefore unitless.
+        check_endian : bool
+            A flag to check the endianness of the data before applying the
+            function.  This is only needed for optimized functions, e.g. those
+            in the `bottleneck <https://pypi.python.org/pypi/Bottleneck>`_ package.
+        kwargs : dict
+            Passed to the numpy function.
+
+        Returns
+        -------
+        result : :class:`~spectral_cube.lower_dimensional_structures.Projection` or `~astropy.units.Quantity` or float
+            The result depends on the value of ``axis``, ``projection``, and
+            ``unit``.  If ``axis`` is None, the return will be a scalar with or
+            without units.  If axis is an integer, the return will be a
+            :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
+        """
+
+
+        out = None
+
+        log.debug("applying dask function {0}".format(function))
+
+        import dask.array
+
+        da = dask.array.from_array(self.unitless_filled_data, chunks="auto")
+
+        # might consider more arguments here, even rechunking depending on the
+        # axis?
+        operation = dask.array.apply_along_axis(function, axis=axis,
+                                                arr=da, **kwargs)
+
+        out = operation.compute()
+
+        if axis is None:
+            # return is scalar
+            if unit is not None:
+                return u.Quantity(out, unit=unit)
+            else:
+                return out
+        elif projection and reduce:
+            meta = {'collapse_axis': axis}
+            meta.update(self._meta)
+
+            if hasattr(axis, '__len__') and len(axis) == 2:
+                # if operation is over two spatial dims
+                if set(axis) == set((1,2)):
+                    new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
+                    header = self._nowcs_header
+                    if hasattr(self, 'beam'):
+                        bmarg = {'beam': self.beam}
+                    elif hasattr(self, 'beams'):
+                        bmarg = {'beams': self.unmasked_beams}
+                    else:
+                        bmarg = {}
+                    return self._oned_spectrum(value=out,
+                                               wcs=new_wcs,
+                                               copy=False,
+                                               unit=unit,
+                                               header=header,
+                                               meta=meta,
+                                               spectral_unit=self._spectral_unit,
+                                               **bmarg
+                                              )
+                else:
+                    warnings.warn("Averaging over a spatial and a spectral "
+                                  "dimension cannot produce a Projection "
+                                  "quantity (no units or WCS are preserved).",
+                                  SliceWarning
+                                 )
+                    return out
+
+            else:
+                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                header = self._nowcs_header
+
+                return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                                  unit=unit, header=header)
+        else:
+            # if the return is a masked array, parse that "correctly"
+            if hasattr(out, 'mask'):
+                new_mask = self.mask & BooleanArrayMask(out.mask, wcs=self.wcs)
+                out = out.data
+            newcube = self._new_cube_with(data=out, wcs=self.wcs,
+                                          mask=self.mask, meta=self.meta,
+                                          fill_value=self.fill_value)
+            return newcube
+
+
     def dask_apply_function(self, function, fill=np.nan, reduce=True,
                             projection=False, unit=None, check_endian=False,
                             includemask=False, **kwargs):
