@@ -227,6 +227,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         self._cache = {}
 
     @property
+    def dtype(self):
+        return self._data.dtype
+
+    @property
     def _is_huge(self):
         return cube_utils.is_huge(self)
 
@@ -556,7 +560,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         # might consider more arguments here, even rechunking depending on the
         # axis?
-        operation = da.map_blocks(function, axis=axis, dropaxis=axis if reduce else None)
+        operation = da.map_blocks(function,
+                                  drop_axis=axis if reduce else None,
+                                  **kwargs
+                                 )
 
         out = operation.compute()
 
@@ -605,7 +612,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                                   unit=unit, header=header)
         else:
-            return out
+            # if the return is a masked array, parse that "correctly"
+            if hasattr(out, 'mask'):
+                new_mask = self.mask & BooleanArrayMask(out.mask, wcs=self.wcs)
+                out = out.data
+            newcube = self._new_cube_with(data=out, wcs=self.wcs,
+                                          mask=self.mask, meta=self.meta,
+                                          fill_value=self.fill_value)
+            return newcube
 
 
 

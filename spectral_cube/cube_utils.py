@@ -235,6 +235,10 @@ class SliceIndexer(object):
         return self._other.shape
 
     @property
+    def ndim(self):
+        return self._other.ndim
+
+    @property
     def dtype(self):
         return self._other.dtype
 
