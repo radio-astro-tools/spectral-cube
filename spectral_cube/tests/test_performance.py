@@ -75,8 +75,68 @@ def test_pix_cen():
     assert find_base_nbytes(y) == sc.shape[1]*sc.shape[2]*bytes_per_pix
     assert find_base_nbytes(x) == sc.shape[1]*sc.shape[2]*bytes_per_pix
 
+
 @pytest.mark.skipif('True')
-def test_parallel_performance_smoothing():
+def test_parallel_performance_smoothing_spatial():
+
+    import timeit
+
+
+    from dask.distributed import Client, LocalCluster
+    cluster = LocalCluster()
+    client = Client(cluster)
+
+    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(50,64,64))'
+    setup = setup + "; from astropy import convolution"
+    stmt = ('result = cube.dask_apply_function_by_image(function=convolution.convolve, '
+            'kernel=convolution.Gaussian2DKernel(5.0))')
+
+    rslt = {}
+    for ncores in (1,2,3,4):
+        print(f"Started dask ncores={ncores}")
+        cluster.scale(ncores)
+        time = timeit.timeit(stmt=stmt, setup=setup, globals=globals(), number=5)
+        rslt[ncores] = time
+        print(f"Completed dask ncores={ncores}")
+
+
+    print()
+    print("dask")
+    print(rslt)
+
+
+
+    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,64,64))'
+    stmt = 'result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(10.0), num_cores={0}, use_memmap=False)'
+
+    rslt = {}
+    for ncores in (1,2,3,4):
+        time = timeit.timeit(stmt=stmt.format(ncores), setup=setup, number=5, globals=globals())
+        rslt[ncores] = time
+
+    print()
+    print("memmap=False")
+    print(rslt)
+
+    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,64,64))'
+    stmt = 'result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(10.0), num_cores={0}, use_memmap=True)'
+
+    rslt = {}
+    for ncores in (1,2,3,4):
+        time = timeit.timeit(stmt=stmt.format(ncores), setup=setup, number=5, globals=globals())
+        rslt[ncores] = time
+
+    stmt = 'result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(10.0), num_cores={0}, use_memmap=True, parallel=False)'
+    rslt[0] = timeit.timeit(stmt=stmt.format(1), setup=setup, number=5, globals=globals())
+
+    print()
+    print("memmap=True")
+    print(rslt)
+
+
+
+@pytest.mark.skipif('True')
+def test_parallel_performance_smoothing_spectral():
 
     import timeit
 
