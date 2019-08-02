@@ -226,6 +226,18 @@ class SliceIndexer(object):
         raise Exception("You need to specify a slice (e.g. ``[:]`` or "
                         "``[0,:,:]`` in order to access this property.")
 
+    """
+    For dask interoperability: can use SliceIndexer objects as arrays if these
+    are defined.
+    """
+    @property
+    def shape(self):
+        return self._other.shape
+
+    @property
+    def dtype(self):
+        return self._other.dtype
+
 
 # TODO: make this into a proper configuration item
 # TODO: make threshold depend on memory?
