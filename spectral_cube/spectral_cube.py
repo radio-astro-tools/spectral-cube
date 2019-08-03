@@ -144,6 +144,12 @@ def _apply_spectral_function(arguments, outcube, function, **kwargs):
     joblib.
     """
     (spec, includemask, ii, jj) = arguments
+    try:
+        spec = spec(ii, jj)
+        includemask = includemask(ii, jj)
+    except TypeError:
+        # assume already arrays
+        pass
 
     if np.any(includemask):
         outcube[:,jj,ii] = function(spec, **kwargs)
@@ -158,11 +164,20 @@ def _apply_spatial_function(arguments, outcube, function, **kwargs):
     joblib.
     """
     (img, includemask, ii) = arguments
+    try:
+        img = img(ii)
+        includemask = includemask(ii)
+    except TypeError:
+        # assume already arrays
+        print("Failed TypeCheck")
+        pass
 
     if np.any(includemask):
         outcube[ii, :, :] = function(img, **kwargs)
     else:
         outcube[ii, :, :] = img
+
+    return outcube[ii, :, :]
 
 
 class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
@@ -826,30 +841,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         import dask.array
         import dask.distributed
-        client = dask.distributed.get_client()
+        try:
+            client = dask.distributed.get_client()
+        except ValueError:
+            client = dask.distributed.Client()
 
-        #da = dask.array.from_array(self.unitless_filled_data, chunks="auto")
-
-        # might consider more arguments here, even rechunking depending on the
-        # axis?
-        #list_of_futures = client.map(function, self.unitless_filled_data, **kwargs)
-
-        #out = np.array(list_of_futures)
-
-        #print("Creating data_Iterator")
         data_iterator = [dask.delayed(self._get_filled_data)(view=(ii,
                                                                    slice(None),
                                                                    slice(None)))
                          for ii in range(len(self))]
-        #print("Creating list_of_Futures")
         list_of_futures = [dask.delayed(function)(x, **kwargs) for x in data_iterator]
-        #print("Computing list of futures")
         results = client.compute(list_of_futures)
-        #print("Done computing list of futures")
 
         out = np.empty(self.shape)
         for ii,rr in enumerate(results):
-            #print(f"Getting result {ii}")
             out[ii,:,:] = rr.result()
 
         return self._format_output(out, axis, unit)
@@ -3002,6 +3007,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       verbose=0,
                                       use_memmap=True,
                                       parallel=False,
+                                      use_dask=False,
                                       memmap_dir=None,
                                       update_function=None,
                                       **kwargs
@@ -3069,7 +3075,59 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                              "options.  Either specify num_cores=1 or "
                              "parallel=True")
 
-        if parallel and use_memmap:
+        if use_dask:
+            import dask
+            import dask.array
+            import dask.distributed
+            try:
+                client = dask.distributed.get_client()
+            except ValueError:
+                client = dask.distributed.Client()
+
+            """
+            I'm stuck: I can get dask to return the output as a full in-memory
+            cube by simply returning the result array from the applicator
+            function and using client.map to get the results (see
+            dask_apply_function_by_image), but I can't figure out how to get
+            dask to call a function that writes its results into an existing
+            (memory-mapped) array.
+
+            I think I came close with something like:
+                list_of_funccalls = [delay(function)(image) for image in cube]
+                daskarr = dask.array.from_delayed(list_of_funccalls, shape, dtype)
+                daskarr.store(outcube)
+            but:
+                (1) the from_delayed call seems to fail unless "list_of_funccalls"
+                is itself delayed (i.e., dask.delayed(list_of_funccalls), but
+                then we end up with an extra size-1 dimension
+                (2) it is unclear whether the "store" process will operate
+                incrementally or suck the entire cube into memory
+
+            The dask numpy ufuncs have `out=` parameters, but it seems to only
+            apply to doing something with dask arrays, replacing their
+            metadata, not their data.
+            """
+
+            #data_getter = dask.delayed(lambda: next(iteration_data))
+            applicator_calls = [dask.delayed(applicator)(arg, outcube,
+                                                         function, **kwargs)
+                                for arg in iteration_data]
+            #applicator_calls = dask.delayed(applicator)(data_getter,
+            #                                           outcube, function, **kwargs)
+
+            #result = dask.array.from_delayed(dask.delayed(applicator_calls),
+            #                                 shape=self.shape,
+            #                                 dtype=self.dtype)
+            client.compute(applicator_calls)
+            assert not np.all(output == 0)
+            #blah=result.compute()
+            #result.store(outcube)
+            #dask.array.store(result, output)
+            #results = client.compute(applicator_calls, sync=True)
+            #print(results)
+            #raise
+
+        elif parallel and use_memmap:
 
             # it is not possible to run joblib parallelization without memmap
             try:
@@ -3143,6 +3201,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                         verbose=0,
                                         use_memmap=True,
                                         parallel=True,
+                                        use_dask=False,
                                         **kwargs
                                        ):
         """
@@ -3175,10 +3234,21 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         data = self.unitless_filled_data
 
+        def data_getter(zz):
+            return data[zz, :, :]
+        def mask_getter(zz):
+            return self.mask.include(view=(zz, slice(None), slice(None)))
+
+        if use_dask:
+            import dask
+            data_getter = dask.delayed(data_getter)
+            mask_getter = dask.delayed(mask_getter)
+
+
         # 'images' is a generator
         # the boolean check will skip the function for bad spectra
-        images = ((data[ii,:,:],
-                   self.mask.include(view=(ii, slice(None), slice(None))),
+        images = ((data_getter,
+                   mask_getter,
                    ii,
                    )
                   for ii in range(shape[0]))
@@ -3189,6 +3259,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   parallel=parallel,
                                                   num_cores=num_cores,
                                                   use_memmap=use_memmap,
+                                                  use_dask=use_dask,
                                                   **kwargs)
 
     def apply_function_parallel_spectral(self,
@@ -3197,6 +3268,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          verbose=0,
                                          use_memmap=True,
                                          parallel=True,
+                                         use_dask=False,
                                          **kwargs
                                         ):
         """
@@ -3229,11 +3301,21 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         data = self.unitless_filled_data
 
+        def data_getter(xx, yy):
+            return data[:, yy, xx]
+        def mask_getter(xx, yy):
+            return self.mask.include(view=(slice(None), yy, xx))
+
+        if use_dask:
+            import dask
+            data_getter = dask.delayed(data_getter)
+            mask_getter = dask.delayed(mask_getter)
+
         # 'spectra' is a generator
         # the boolean check will skip the function for bad spectra
         # TODO: should spatial good/bad be cached?
-        spectra = ((data[:,jj,ii],
-                    self.mask.include(view=(slice(None), jj, ii)),
+        spectra = ((data_getter,
+                    mask_getter,
                     ii, jj,
                    )
                    for jj in range(shape[1])
@@ -3246,6 +3328,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   parallel=parallel,
                                                   verbose=verbose,
                                                   num_cores=num_cores,
+                                                  use_dask=use_dask,
                                                   **kwargs
                                                  )
 
