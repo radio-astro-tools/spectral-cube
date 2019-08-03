@@ -49,8 +49,9 @@ def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, v
     np.testing.assert_array_almost_equal(basic_result.unitless_filled_data[:],
                                          result.unitless_filled_data[:])
 
-def test_dask_apply_to_images():
-    cube,_ = utilities.generate_gaussian_cube(shape=(4,32,32))
+@pytest.mark.parametrize('nspec', (4, 14, 32))
+def test_dask_apply_to_images(nspec):
+    cube,_ = utilities.generate_gaussian_cube(shape=(nspec,32,32))
 
     basic_result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(2.0),
                                        use_dask=False, use_memmap=False,

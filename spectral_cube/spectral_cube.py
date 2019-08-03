@@ -182,14 +182,11 @@ def _apply_spatial_function(arguments, outcube, function, shape=None, **kwargs):
     else:
         outcube[ii, :, :] = img
 
-# import dask
-# # this has to be defined out-of-scope so that it can be pickled, maybe?
-# @dask.delayed
-# def get_out(filename, shape, dtype):
-#     out = np.memmap(filename=filename, mode='r+', shape=shape,
-#                     dtype=dtype)
-#     return out
 class DelayedMemmapWriter(object):
+    """
+    A peculiar object that wraps memmap objects that already exist to allow
+    independent threads to write to them
+    """
     def __init__(self, filename, shape, dtype):
         self.filename = filename
         self.shape = shape
@@ -828,13 +825,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # This seems like the biggest hack ever
             out = DelayedMemmapWriter(ntf.name, self.shape, self.dtype)
 
+            # instead of loading the data into memory, write them to our "out"
+            # object, which is a memmap (wrapped by a DelayedMemmapWriter...)
             result = dask.array.store(daskarr,
                                       out,
                                       lock=False,
                                       compute=True)
-            out = np.memmap(filename=ntf.name, mode='r+', shape=self.shape,
-                            dtype=self.dtype)
         else:
+            # the easy way: if results fit in memory, just let dask compute them
+            # and hand them back
             out = daskarr.compute()
 
         return self._reformat_cube_output(out, axis, unit,
