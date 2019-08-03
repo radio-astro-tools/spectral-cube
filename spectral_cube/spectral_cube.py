@@ -137,7 +137,8 @@ def parallel_docstring(func):
 
     return wrapper
 
-def _apply_spectral_function(arguments, outcube, function, **kwargs):
+def _apply_spectral_function(arguments, outcube, function, shape=None,
+                             return_vals=False, **kwargs):
     """
     Helper function to apply a function to a spectrum.
     Needs to be declared toward the top of the code to allow pickling by
@@ -151,11 +152,17 @@ def _apply_spectral_function(arguments, outcube, function, **kwargs):
         # assume already arrays
         pass
 
-    if np.any(includemask):
-        outcube[:,jj,ii] = function(spec, **kwargs)
-    else:
-        outcube[:,jj,ii] = spec
+    if isinstance(outcube, str):
+        outcube = DelayedMemmapWriter(filename=outcube, shape=shape,
+                                      dtype=np.float)
 
+    if np.any(includemask):
+        outcube[:, jj, ii] = function(spec, **kwargs)
+    else:              
+        outcube[:, jj, ii] = spec
+
+    if return_vals:
+        return outcube[:, jj, ii]
 
 def _apply_spatial_function(arguments, outcube, function, shape=None,
                             return_vals=False, **kwargs):
@@ -3093,6 +3100,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
                 arr = dask.array.from_array(client.compute(applicator_calls,
                                                            sync=True))
+                # client.compute will produce something with a wrong shape,
+                # where one dimension is n_processors
+                #arr = arr.reshape(self.shape)
+                assert arr.shape == self.shape
                 outcube[:] = arr.compute()
 
         elif parallel and use_memmap:
