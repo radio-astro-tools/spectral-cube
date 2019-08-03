@@ -833,6 +833,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       out,
                                       lock=False,
                                       compute=True)
+
+            # important: re-load "out" from disk here, since "out" was defined
+            # just a moment ago to be a non-array-like object
+            out = np.memmap(filename=ntf.name, mode='r+', shape=self.shape,
+                            dtype=self.dtype)
         else:
             # the easy way: if results fit in memory, just let dask compute them
             # and hand them back
