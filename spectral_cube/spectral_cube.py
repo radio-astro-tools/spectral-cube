@@ -540,8 +540,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def _reformat_cube_output(self, out, axis, unit, projection=False,
                              reduce=True):
         """
+        Helper function for all the various parallel things to handle
+        the re-formation of the output object
         """
-        print(f"axis={axis} unit={unit} projection={projection} reduce={reduce}")
         if axis is None and reduce:
             # return is scalar
             if unit is not None:
