@@ -172,10 +172,8 @@ def _apply_spatial_function(arguments, outcube, function, shape=None, **kwargs):
         pass
 
     if isinstance(outcube, str):
-        import os
-        print(f"apply_spatial: Before: {os.stat(outcube).st_size}")
-        outcube = np.memmap(outcube, mode='r+', shape=shape, dtype=np.float)
-        print(f"apply_spatial: After: {os.stat(outcube).st_size}")
+        outcube = DelayedMemmapWriter(filename=outcube, shape=shape,
+                                      dtype=np.float)
 
     if np.any(includemask):
         outcube[ii, :, :] = function(img, **kwargs)
@@ -3064,29 +3062,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             except ValueError:
                 client = dask.distributed.Client()
 
-            import os
-            print(f"Before: {os.stat(ntf.name).st_size}")
-            # make sure the cube is written...
-            outcube[:,:,:] = 0.0
-            outcube.flush()
-            print(f"After: {os.stat(ntf.name).st_size}")
-            # free memory, keep ntf alive though
-            #del outcube
+            out_target = ntf.name if use_memmap else outcube
 
             applicator_calls = [dask.delayed(applicator)(arg,
-                                                         ntf.name,
+                                                         outcube,
                                                          function,
                                                          shape=self.shape,
                                                          **kwargs)
                                 for arg in iteration_data]
 
             compresult = client.compute(applicator_calls, sync=True)
-
-            # re-open outcube
-            # (this is only a sanity check / debug operation: it should be removed
-            # because technically an all-zero cube is valid)
-            outcube = np.memmap(ntf.name, mode='r', shape=self.shape, dtype=np.float)
-            assert not np.all(outcube == 0)
 
         elif parallel and use_memmap:
 
