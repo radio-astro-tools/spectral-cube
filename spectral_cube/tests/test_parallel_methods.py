@@ -32,7 +32,7 @@ from astropy import convolution, units as u
 import itertools
 
 @pytest.mark.parametrize('use_dask, use_memmap, num_cores, parallel, verbose'.split(', '),
-                         [(True,False)]*5)
+                         itertools.product([True,False], repeat=5))
 def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, verbose):
 
     cube,_ = utilities.generate_gaussian_cube(shape=(4,32,32))
@@ -45,6 +45,30 @@ def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, v
                                  use_dask=use_dask, use_memmap=use_memmap,
                                  num_cores=num_cores, parallel=parallel,
                                  verbose=verbose)
+
+    np.testing.assert_array_almost_equal(basic_result.unitless_filled_data[:],
+                                         result.unitless_filled_data[:])
+
+def test_dask_apply_to_images():
+    cube,_ = utilities.generate_gaussian_cube(shape=(4,32,32))
+
+    basic_result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(2.0),
+                                       use_dask=False, use_memmap=False,
+                                       num_cores=1, parallel=False)
+
+
+    result_nomemmap = cube.dask_apply_function_by_image(function=convolution.convolve,
+                                                        kernel=convolution.Gaussian2DKernel(2.0),
+                                                        projection=False,
+                                                        reduce=False,
+                                                        use_memmap=False)
+
+    np.testing.assert_array_almost_equal(basic_result.unitless_filled_data[:],
+                                         result_nomemmap.unitless_filled_data[:])
+
+    result = cube.dask_apply_function_by_image(function=convolution.convolve,
+                                               kernel=convolution.Gaussian2DKernel(2.0),
+                                               projection=False, reduce=False)
 
     np.testing.assert_array_almost_equal(basic_result.unitless_filled_data[:],
                                          result.unitless_filled_data[:])

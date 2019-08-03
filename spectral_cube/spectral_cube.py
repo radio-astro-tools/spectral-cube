@@ -157,7 +157,7 @@ def _apply_spectral_function(arguments, outcube, function, **kwargs):
         outcube[:,jj,ii] = spec
 
 
-def _apply_spatial_function(arguments, outcube, function, **kwargs):
+def _apply_spatial_function(arguments, outcube, function, shape=None, **kwargs):
     """
     Helper function to apply a function to an image.
     Needs to be declared toward the top of the code to allow pickling by
@@ -169,16 +169,37 @@ def _apply_spatial_function(arguments, outcube, function, **kwargs):
         includemask = includemask(ii)
     except TypeError:
         # assume already arrays
-        print("Failed TypeCheck")
         pass
+
+    if isinstance(outcube, str):
+        import os
+        print(f"apply_spatial: Before: {os.stat(outcube).st_size}")
+        outcube = np.memmap(outcube, mode='r+', shape=shape, dtype=np.float)
+        print(f"apply_spatial: After: {os.stat(outcube).st_size}")
 
     if np.any(includemask):
         outcube[ii, :, :] = function(img, **kwargs)
     else:
         outcube[ii, :, :] = img
 
-    return outcube[ii, :, :]
+# import dask
+# # this has to be defined out-of-scope so that it can be pickled, maybe?
+# @dask.delayed
+# def get_out(filename, shape, dtype):
+#     out = np.memmap(filename=filename, mode='r+', shape=shape,
+#                     dtype=dtype)
+#     return out
+class DelayedMemmapWriter(object):
+    def __init__(self, filename, shape, dtype):
+        self.filename = filename
+        self.shape = shape
+        self.dtype = dtype
 
+    def __setitem__(self, view, value):
+        out = np.memmap(filename=self.filename, mode='r+', shape=self.shape,
+                        dtype=self.dtype)
+        out[view] = value
+        out.flush()
 
 class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                        SpectralAxisMixinClass, SpatialCoordMixinClass,
@@ -510,10 +531,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         else:
             return out
 
-    def _format_output(self, out, axis, unit):
+    def _reformat_cube_output(self, out, axis, unit, projection=False,
+                             reduce=True):
         """
         """
-        if axis is None:
+        print(f"axis={axis} unit={unit} projection={projection} reduce={reduce}")
+        if axis is None and reduce:
             # return is scalar
             if unit is not None:
                 return u.Quantity(out, unit=unit)
@@ -566,76 +589,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                           mask=self.mask, meta=self.meta,
                                           fill_value=self.fill_value)
             return newcube
-
-    def dask_apply_along_axes(self, function, axes, fill=np.nan, reduce=True,
-                              projection=False, unit=None, check_endian=False,
-                              includemask=False,
-                              **kwargs):
-        """
-        Apply a function to the cube along multiple axes
-
-        Parameters
-        ----------
-        function : a function
-            A function to apply to the cube
-        fill : float
-            The fill value to use on the data
-        reduce : bool
-            reduce indicates whether this is a reduce-like operation,
-            that can be accumulated one slice at a time.
-            sum/max/min are like this. argmax/argmin/stddev are not
-        how : cube | slice | ray | auto
-           How to compute the moment. All strategies give the same
-           result, but certain strategies are more efficient depending
-           on data size and layout. Cube/slice/ray iterate over
-           decreasing subsets of the data, to conserve memory.
-           Default='auto'
-        projection : bool
-            Return a :class:`~spectral_cube.lower_dimensional_structures.Projection` if the resulting array is 2D or a
-            OneDProjection if the resulting array is 1D and the sum is over both
-            spatial axes?
-        unit : None or `astropy.units.Unit`
-            The unit to include for the output array.  For example,
-            `SpectralCube.max` calls
-            ``SpectralCube.apply_numpy_function(np.max, unit=self.unit)``,
-            inheriting the unit from the original cube.
-            However, for other numpy functions, e.g. `numpy.argmax`, the return
-            is an index and therefore unitless.
-        check_endian : bool
-            A flag to check the endianness of the data before applying the
-            function.  This is only needed for optimized functions, e.g. those
-            in the `bottleneck <https://pypi.python.org/pypi/Bottleneck>`_ package.
-        kwargs : dict
-            Passed to the numpy function.
-
-        Returns
-        -------
-        result : :class:`~spectral_cube.lower_dimensional_structures.Projection` or `~astropy.units.Quantity` or float
-            The result depends on the value of ``axis``, ``projection``, and
-            ``unit``.  If ``axis`` is None, the return will be a scalar with or
-            without units.  If axis is an integer, the return will be a
-            :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
-        """
-
-
-        out = None
-
-        log.debug("applying dask function {0}".format(function))
-
-        import dask.array
-
-        da = dask.array.from_array(self.unitless_filled_data, chunks="auto")
-
-        # might consider more arguments here, even rechunking depending on the
-        # axis?
-        def wfunction(arr, dummy=None):
-            print(f"dummy = {dummy}")
-            return function(arr, **kwargs)
-        operation = dask.array.apply_over_axes(wfunction, axes=axes, a=da)
-
-        out = operation.compute()
-
-        return self._format_output(out=out, axis=axes, unit=unit)
 
 
     def dask_apply_along_axis(self, function, axis, fill=np.nan, reduce=True,
@@ -704,7 +657,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         out = operation.compute()
 
-        return self._format_output(out=out, axis=axis, unit=unit)
+        return self._reformat_cube_output(out=out, axis=axis, unit=unit)
 
 
     def dask_apply_function(self, function, fill=np.nan, reduce=True,
@@ -779,11 +732,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         out = operation.compute()
 
-        return self._format_output(out, axis, unit)
+        return self._reformat_cube_output(out, axis, unit)
 
-    def dask_apply_function_by_image(self, function, fill=np.nan, reduce=True,
+    def dask_apply_function_by_image(self, function, fill=np.nan, reduce=False,
                                      projection=False, unit=None,
-                                     check_endian=False, includemask=False,
+                                     check_endian=False,
+                                     use_memmap=True,
+                                     memmap_dir=None,
                                      **kwargs):
         """
         Apply a numpy function to the cube
@@ -851,13 +806,39 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                                    slice(None)))
                          for ii in range(len(self))]
         list_of_futures = [dask.delayed(function)(x, **kwargs) for x in data_iterator]
-        results = client.compute(list_of_futures)
 
-        out = np.empty(self.shape)
-        for ii,rr in enumerate(results):
-            out[ii,:,:] = rr.result()
+        # Are there any cases where the output dtype != self.dtype?  FFTs, for
+        # example, definitely fit this...
+        list_of_arrays = [dask.array.from_delayed(fut, shape=self.shape[1:],
+                                                  dtype=self.dtype) for fut in
+                          list_of_futures]
+        # we need a dask-array-like object so we can use `store`, since dask
+        # doesn't (afaict) provide _any_ other ways to write to disk
+        daskarr = dask.array.stack(list_of_arrays)
 
-        return self._format_output(out, axis, unit)
+        if use_memmap:
+            # create a memory map object to hold the data
+            ntf = tempfile.NamedTemporaryFile(dir=memmap_dir)
+            out = np.memmap(filename=ntf.name, mode='w+', shape=self.shape,
+                            dtype=self.dtype)
+            # clear the memmap object now that it has shape so we can "safely"
+            # (hmm...) load it in other processes
+            del out
+
+            # This seems like the biggest hack ever
+            out = DelayedMemmapWriter(ntf.name, self.shape, self.dtype)
+
+            result = dask.array.store(daskarr,
+                                      out,
+                                      lock=False,
+                                      compute=True)
+            out = np.memmap(filename=ntf.name, mode='r+', shape=self.shape,
+                            dtype=self.dtype)
+        else:
+            out = daskarr.compute()
+
+        return self._reformat_cube_output(out, axis, unit,
+                                          projection=projection, reduce=reduce)
 
 
 
@@ -3053,7 +3034,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         if use_memmap:
             ntf = tempfile.NamedTemporaryFile(dir=memmap_dir)
-            outcube = np.memmap(ntf, mode='w+', shape=self.shape, dtype=np.float)
+            outcube = np.memmap(ntf.name, mode='w+', shape=self.shape, dtype=np.float)
         else:
             if self._is_huge and not self.allow_huge_operations:
                 raise ValueError("Applying a function without ``use_memmap`` "
@@ -3084,49 +3065,29 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             except ValueError:
                 client = dask.distributed.Client()
 
-            """
-            I'm stuck: I can get dask to return the output as a full in-memory
-            cube by simply returning the result array from the applicator
-            function and using client.map to get the results (see
-            dask_apply_function_by_image), but I can't figure out how to get
-            dask to call a function that writes its results into an existing
-            (memory-mapped) array.
+            import os
+            print(f"Before: {os.stat(ntf.name).st_size}")
+            # make sure the cube is written...
+            outcube[:,:,:] = 0.0
+            outcube.flush()
+            print(f"After: {os.stat(ntf.name).st_size}")
+            # free memory, keep ntf alive though
+            #del outcube
 
-            I think I came close with something like:
-                list_of_funccalls = [delay(function)(image) for image in cube]
-                daskarr = dask.array.from_delayed(list_of_funccalls, shape, dtype)
-                daskarr.store(outcube)
-            but:
-                (1) the from_delayed call seems to fail unless "list_of_funccalls"
-                is itself delayed (i.e., dask.delayed(list_of_funccalls), but
-                then we end up with an extra size-1 dimension
-                (2) it is unclear whether the "store" process will operate
-                incrementally or suck the entire cube into memory
-
-            The dask numpy ufuncs have `out=` parameters, but it seems to only
-            apply to doing something with dask arrays, replacing their
-            metadata, not their data.
-            """
-
-            #data_getter = dask.delayed(lambda: next(iteration_data))
-            #applicator_calls = [dask.delayed(applicator)(arg, outcube,
-            #                                             function, **kwargs)
-            #                    for arg in iteration_data]
-            #applicator_calls = dask.delayed(applicator)(data_getter,
-            #                                           outcube, function, **kwargs)
-            applicator_calls = [applicator(arg, outcube,
-                                           dask.delayed(function), **kwargs)
+            applicator_calls = [dask.delayed(applicator)(arg,
+                                                         ntf.name,
+                                                         function,
+                                                         shape=self.shape,
+                                                         **kwargs)
                                 for arg in iteration_data]
 
-            #result = dask.array.stack(applicator_calls)
-            compresult = client.compute(applicator_calls)
+            compresult = client.compute(applicator_calls, sync=True)
+
+            # re-open outcube
+            # (this is only a sanity check / debug operation: it should be removed
+            # because technically an all-zero cube is valid)
+            outcube = np.memmap(ntf.name, mode='r', shape=self.shape, dtype=np.float)
             assert not np.all(outcube == 0)
-            #blah=result.compute()
-            #result.store(outcube)
-            #dask.array.store(result, output)
-            #results = client.compute(applicator_calls, sync=True)
-            #print(results)
-            #raise
 
         elif parallel and use_memmap:
 
