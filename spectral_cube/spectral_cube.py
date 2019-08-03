@@ -157,7 +157,8 @@ def _apply_spectral_function(arguments, outcube, function, **kwargs):
         outcube[:,jj,ii] = spec
 
 
-def _apply_spatial_function(arguments, outcube, function, shape=None, **kwargs):
+def _apply_spatial_function(arguments, outcube, function, shape=None,
+                            return_vals=False, **kwargs):
     """
     Helper function to apply a function to an image.
     Needs to be declared toward the top of the code to allow pickling by
@@ -179,6 +180,9 @@ def _apply_spatial_function(arguments, outcube, function, shape=None, **kwargs):
         outcube[ii, :, :] = function(img, **kwargs)
     else:
         outcube[ii, :, :] = img
+
+    if return_vals:
+        return outcube[ii, :, :]
 
 class DelayedMemmapWriter(object):
     """
@@ -3066,12 +3070,25 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
             applicator_calls = [dask.delayed(applicator)(arg,
                                                          out_target,
-                                                         function,
+                                                         dask.delayed(function),
                                                          shape=self.shape,
+                                                         return_vals=not use_memmap,
                                                          **kwargs)
                                 for arg in iteration_data]
 
-            compresult = client.compute(applicator_calls, sync=True)
+            if use_memmap:
+                # compresult will be [None] * ncalls because return_vals=False
+                compresult = client.compute(applicator_calls, sync=True)
+            else:
+                # I don't know why you can't use from_delayed:
+                #arr = dask.array.from_delayed(dask.delayed(applicator_calls),
+                #                              shape=self.shape,
+                #                              dtype=self.dtype
+                #                             )
+
+                arr = dask.array.from_array(client.compute(applicator_calls,
+                                                           sync=True))
+                outcube[:] = arr.compute()
 
         elif parallel and use_memmap:
 
