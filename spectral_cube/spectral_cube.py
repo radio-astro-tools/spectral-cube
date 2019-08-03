@@ -3065,7 +3065,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             out_target = ntf.name if use_memmap else outcube
 
             applicator_calls = [dask.delayed(applicator)(arg,
-                                                         outcube,
+                                                         out_target,
                                                          function,
                                                          shape=self.shape,
                                                          **kwargs)
