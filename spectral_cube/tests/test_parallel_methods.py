@@ -36,7 +36,7 @@ import itertools
 def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, verbose):
 
     # BEWARE: if shape[0] == nprocs, you can get spurious passes
-    cube,_ = utilities.generate_gaussian_cube(shape=(6,32,32))
+    cube,_ = utilities.generate_gaussian_cube(shape=(6,30,32))
 
     try:
         result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(2.0),
@@ -60,7 +60,8 @@ def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, v
                          itertools.product([True,False], repeat=5))
 def test_parallel_smoothing_spectral(use_dask, use_memmap, num_cores, parallel, verbose):
 
-    cube,_ = utilities.generate_gaussian_cube(shape=(32,4,4))
+    # use asymmetric dimensions to help debugging
+    cube,_ = utilities.generate_gaussian_cube(shape=(32,4,6))
 
     try:
         result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(2.0),

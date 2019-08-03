@@ -3100,10 +3100,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
                 arr = dask.array.from_array(client.compute(applicator_calls,
                                                            sync=True))
+
                 # client.compute will produce something with a wrong shape,
                 # where one dimension is n_processors
-                #arr = arr.reshape(self.shape)
-                assert arr.shape == self.shape
+                if applicator is _apply_spectral_function:
+                    # there must be a better way to test this?
+                    arr = arr.T.reshape(self.shape)
                 outcube[:] = arr.compute()
 
         elif parallel and use_memmap:
