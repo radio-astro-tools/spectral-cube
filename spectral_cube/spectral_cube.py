@@ -3109,17 +3109,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             """
 
             #data_getter = dask.delayed(lambda: next(iteration_data))
-            applicator_calls = [dask.delayed(applicator)(arg, outcube,
-                                                         function, **kwargs)
-                                for arg in iteration_data]
+            #applicator_calls = [dask.delayed(applicator)(arg, outcube,
+            #                                             function, **kwargs)
+            #                    for arg in iteration_data]
             #applicator_calls = dask.delayed(applicator)(data_getter,
             #                                           outcube, function, **kwargs)
+            applicator_calls = [applicator(arg, outcube,
+                                           dask.delayed(function), **kwargs)
+                                for arg in iteration_data]
 
-            #result = dask.array.from_delayed(dask.delayed(applicator_calls),
-            #                                 shape=self.shape,
-            #                                 dtype=self.dtype)
-            client.compute(applicator_calls)
-            assert not np.all(output == 0)
+            #result = dask.array.stack(applicator_calls)
+            compresult = client.compute(applicator_calls)
+            assert not np.all(outcube == 0)
             #blah=result.compute()
             #result.store(outcube)
             #dask.array.store(result, output)
