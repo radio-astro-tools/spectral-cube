@@ -34,12 +34,19 @@ def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, v
     try:
         result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(2.0),
                                      use_dask=use_dask, use_memmap=use_memmap,
-                                     num_cores=num_cores, parallel=parallel,
+                                     num_cores=4 if num_cores else 1, parallel=parallel,
                                      verbose=verbose)
     except ValueError as ex:
         if num_cores == 0 and parallel and not use_dask:
             assert "n_jobs == 0 in Parallel has no meaning" in str(ex)
             return
+        elif num_cores > 0 and not parallel:
+            assert ("parallel execution was not requested, but multiple cores were: "
+                    "these are incompatible options."
+                    "  Either specify num_cores=1 or parallel=True") in str(ex)
+            return
+        else:
+            raise ex
 
     basic_result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(2.0),
                                        use_dask=False, use_memmap=False,
@@ -68,8 +75,13 @@ def test_parallel_smoothing_spectral(use_dask, use_memmap, num_cores, parallel, 
         if num_cores == 0 and parallel and not use_dask:
             assert "n_jobs == 0 in Parallel has no meaning" in str(ex)
             return
+        elif num_cores > 0 and not parallel:
+            assert ("parallel execution was not requested, but multiple cores were: "
+                    "these are incompatible options."
+                    "  Either specify num_cores=1 or parallel=True") in str(ex)
+            return
         else:
-            raise
+            raise ex
 
     basic_result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(2.0),
                                         use_dask=False, use_memmap=False,
