@@ -9,6 +9,7 @@ import numpy as np
 import astropy.units as u
 from astropy.io import fits
 from astropy.utils import NumpyRNGContext
+import tempfile
 
 from ..spectral_cube import SpectralCube
 
@@ -58,7 +59,9 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
                            beamfwhm=3 * u.arcsec,
                            v0=None,
                            vel_surface=None,
-                           seed=247825498):
+                           seed=247825498,
+                           write_to_disk=False
+                          ):
     '''
     Generate a SpectralCube with Gaussian profiles.
 
@@ -66,6 +69,12 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
     the peaks of the profiles are randomly assigned positions in the cubes.
     This is primarily to test shuffling and stacking of spectra, rather than
     trying to be being physically meaningful.
+
+    Parameters
+    ----------
+    write_to_disk : bool
+        Write the data to disk before reading.  This will create a memory
+        mapped object as the basis for the test rather than an in-memory object
 
     Returns
     -------
@@ -106,7 +115,12 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
     test_hdu = generate_hdu(test_cube, pixel_scale, spec_scale, beamfwhm,
                             spec_inds[0] + v0)
 
-    spec_cube = SpectralCube.read(test_hdu)
+    if write_to_disk:
+        ntf = tempfile.NamedTemporaryFile()
+        test_hdu.writeto(ntf.name)
+        spec_cube = SpectralCube.read(ntf.name, format='fits')
+    else:
+        spec_cube = SpectralCube.read(test_hdu)
 
     mean_positions = mean_positions * spec_scale.unit
 

@@ -27,9 +27,11 @@ try:
 except ImportError:
     JOBLIB_OK = False
 
-@pytest.mark.parametrize('use_dask, use_memmap, num_cores, parallel, verbose'.split(', '),
-                         itertools.product([True,False], repeat=5))
-def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, verbose):
+pars = 'use_dask, use_memmap, num_cores, parallel, verbose, write_to_disk'.split(', ')
+@pytest.mark.parametrize(pars,
+                         itertools.product([True,False], repeat=len(pars)))
+def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel,
+                                    verbose, write_to_disk):
 
     if use_dask and not DASK_OK:
         pytest.skip("Dask not installed")
@@ -37,7 +39,8 @@ def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, v
         pytest.skip("joblib not installed")
 
     # BEWARE: if shape[0] == nprocs, you can get spurious passes
-    cube,_ = utilities.generate_gaussian_cube(shape=(6,30,32))
+    cube,_ = utilities.generate_gaussian_cube(shape=(6,30,32),
+                                              write_to_disk=write_to_disk)
 
     try:
         result = cube.spatial_smooth(kernel=convolution.Gaussian2DKernel(2.0),
@@ -64,9 +67,10 @@ def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, v
     assert_allclose(basic_result.unitless_filled_data[:],
                     result.unitless_filled_data[:])
 
-@pytest.mark.parametrize('use_dask, use_memmap, num_cores, parallel, verbose'.split(', '),
-                         itertools.product([True,False], repeat=5))
-def test_parallel_smoothing_spectral(use_dask, use_memmap, num_cores, parallel, verbose):
+@pytest.mark.parametrize(pars,
+                         itertools.product([True,False], repeat=len(pars)))
+def test_parallel_smoothing_spectral(use_dask, use_memmap, num_cores, parallel,
+                                     verbose, write_to_disk):
 
     if use_dask and not DASK_OK:
         pytest.skip("Dask not installed")
@@ -74,7 +78,8 @@ def test_parallel_smoothing_spectral(use_dask, use_memmap, num_cores, parallel, 
         pytest.skip("joblib not installed")
 
     # use asymmetric dimensions to help debugging
-    cube,_ = utilities.generate_gaussian_cube(shape=(32,4,6))
+    cube,_ = utilities.generate_gaussian_cube(shape=(32,4,6),
+                                              write_to_disk=write_to_disk)
 
     try:
         result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(2.0),
