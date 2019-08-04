@@ -3005,6 +3005,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       use_dask=False,
                                       memmap_dir=None,
                                       update_function=None,
+                                      number_of_operations=None,
                                       **kwargs
                                      ):
         """
@@ -3160,7 +3161,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if update_function is not None:
                 pbu = update_function
             elif verbose > 0:
-                progressbar = ProgressBar(self.shape[1]*self.shape[2])
+                progressbar = ProgressBar(number_of_operations)
                 pbu = progressbar.update
             else:
                 pbu = object
@@ -3242,6 +3243,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   num_cores=num_cores,
                                                   use_memmap=use_memmap,
                                                   use_dask=use_dask,
+                                                  number_of_operations=self.shape[0],
                                                   **kwargs)
 
     def apply_function_parallel_spectral(self,
@@ -3311,6 +3313,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   verbose=verbose,
                                                   num_cores=num_cores,
                                                   use_dask=use_dask,
+                                                  number_of_operations=self.shape[1]*self.shape[2],
                                                   **kwargs
                                                  )
 
