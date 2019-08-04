@@ -21,12 +21,20 @@ try:
 except ImportError:
     DASK_OK = False
 
+try:
+    import joblib
+    JOBLIB_OK = True
+except ImportError:
+    JOBLIB_OK = False
+
 @pytest.mark.parametrize('use_dask, use_memmap, num_cores, parallel, verbose'.split(', '),
                          itertools.product([True,False], repeat=5))
 def test_parallel_smoothing_spatial(use_dask, use_memmap, num_cores, parallel, verbose):
 
     if use_dask and not DASK_OK:
         pytest.skip("Dask not installed")
+    if not use_dask and not JOBLIB_OK:
+        pytest.skip("joblib not installed")
 
     # BEWARE: if shape[0] == nprocs, you can get spurious passes
     cube,_ = utilities.generate_gaussian_cube(shape=(6,30,32))
@@ -62,6 +70,8 @@ def test_parallel_smoothing_spectral(use_dask, use_memmap, num_cores, parallel, 
 
     if use_dask and not DASK_OK:
         pytest.skip("Dask not installed")
+    if not use_dask and not JOBLIB_OK:
+        pytest.skip("joblib not installed")
 
     # use asymmetric dimensions to help debugging
     cube,_ = utilities.generate_gaussian_cube(shape=(32,4,6))
@@ -69,7 +79,7 @@ def test_parallel_smoothing_spectral(use_dask, use_memmap, num_cores, parallel, 
     try:
         result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(2.0),
                                       use_dask=use_dask, use_memmap=use_memmap,
-                                      num_cores=num_cores, parallel=parallel,
+                                      num_cores=4 if num_cores else 1, parallel=parallel,
                                       verbose=verbose)
     except ValueError as ex:
         if num_cores == 0 and parallel and not use_dask:
