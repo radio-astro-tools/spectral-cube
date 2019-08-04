@@ -28,6 +28,22 @@ try:
 except ImportError:
     JOBLIB_OK = False
 
+
+
+# optional fixture to add; client should be closed internally, though.
+# @pytest.mark.skipif("not DASK_OK")
+# @pytest.fixture(scope="module")
+# def dask_client_spinup():
+#     import dask.distributed
+#     try:
+#         client = dask.distributed.get_client()
+#     except ValueError:
+#         client = dask.distributed.Client()
+#     yield client  # provide the fixture value
+#     print("teardown dask client")
+#     client.close()
+
+
 pars = 'use_dask, use_memmap, num_cores, parallel, verbose, write_to_disk'.split(', ')
 @pytest.mark.parametrize(pars,
                          itertools.product([True,False], repeat=len(pars)))

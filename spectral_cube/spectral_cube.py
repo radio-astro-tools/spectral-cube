@@ -851,6 +851,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # and hand them back
             out = daskarr.compute()
 
+        client.close()
+
         return self._reformat_cube_output(out, axis, unit,
                                           projection=projection, reduce=reduce)
 
@@ -3109,6 +3111,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     # there must be a better way to test this?
                     arr = arr.T.reshape(self.shape)
                 outcube[:] = arr.compute()
+
+            client.close()
 
         elif parallel and use_memmap:
 
