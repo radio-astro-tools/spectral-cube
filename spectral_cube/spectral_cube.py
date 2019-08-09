@@ -1216,7 +1216,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                if hasattr(self, 'beam'):
+                # As of #561, beam is defined in all cases
+                if self._beam is not None:
                     bmarg = {'beam': self.beam}
                 elif hasattr(self, 'beams'):
                     bmarg = {'beams': self.beams}
@@ -3470,7 +3471,7 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
     def _new_cube_with(self, **kwargs):
         beam = kwargs.pop('beam', None)
         if 'beam' in self._meta and beam is None:
-            beam = self.beam
+            beam = self._beam
         newcube = super(SpectralCube, self)._new_cube_with(beam=beam, **kwargs)
         return newcube
 
