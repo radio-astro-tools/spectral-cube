@@ -937,6 +937,13 @@ def test_slice_wcs(view, naxis):
     sl = cube[view]
     assert sl.wcs.naxis == naxis
 
+    # Ensure slices work without a beam
+    cube._beam = None
+
+    sl = cube[view]
+    assert sl.wcs.naxis == naxis
+
+
 def test_slice_wcs_reversal():
     cube, data = cube_and_raw('advs.fits')
     view = (slice(None,None,-1), slice(None), slice(None))
