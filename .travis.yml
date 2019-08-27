@@ -25,7 +25,8 @@ env:
         - PVEXTRACTOR="https://github.com/radio-astro-tools/pvextractor/archive/master.zip"
         - REGIONS="https://github.com/astropy/regions/archive/master.zip"
         - REPROJECT="https://github.com/astropy/reproject/archive/master.zip"
-        - PIP_DEPENDENCIES="Cython $PVEXTRACTOR radio_beam $REGIONS $REPROJECT"
+        - RADIOBEAM="https://github.com/radio-astro-tools/radio-beam/archive/master.zip"
+        - PIP_DEPENDENCIES="Cython $PVEXTRACTOR $RADIOBEAM $REGIONS $REPROJECT"
         - SETUP_XVFB=True
         - ON_TRAVIS=True
 
@@ -33,7 +34,7 @@ matrix:
     include:
         - env: SETUP_CMD='egg_info'
 
-        - env: PYTHON_VERSION=3.5 CONDA_DEPENDENCIES='' PIP_DEPENDENCIES='radio_beam' NUMPY_VERSION=1.14
+        - env: PYTHON_VERSION=3.5 CONDA_DEPENDENCIES='' PIP_DEPENDENCIES=$RADIOBEAM NUMPY_VERSION=1.14
           name: py35
 
         # Test with development versions
@@ -50,12 +51,12 @@ matrix:
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time.
         - env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.15
-               PIP_DEPENDENCIES="Cython $PVEXTRACTOR radio_beam $REGIONS $REPROJECT sphinx-astropy"
+               PIP_DEPENDENCIES="Cython $PVEXTRACTOR $RADIOBEAM $REGIONS $REPROJECT sphinx-astropy"
           name: docs
 
         # test python2.7 with recent numpy version
         - env: PYTHON_VERSION=2.7 PYTEST_VERSION="<3.7"
-               PIP_DEPENDENCIES="$PVEXTRACTOR radio_beam"
+               PIP_DEPENDENCIES="$PVEXTRACTOR $RADIOBEAM"
                CONDA_DEPENDENCIES='matplotlib yt bottleneck sip aplpy scipy'
           name: py27
 

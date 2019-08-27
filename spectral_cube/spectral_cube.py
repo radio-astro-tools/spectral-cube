@@ -3129,6 +3129,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             A SpectralCube with a single ``beam``
         """
 
+        # Check if the beams are the same.
+        if beam == self.beam:
+            warnings.warn("The given beam is identical to the current beam. "
+                          "Skipping convolution.")
+            return self
+
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
