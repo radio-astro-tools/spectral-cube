@@ -514,6 +514,12 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         if not hasattr(self, 'beam'):
             raise ValueError("No beam is contained in Projection.meta.")
 
+        # Check if the beams are the same.
+        if beam == self.beam:
+            warnings.warn("The given beam is identical to the current beam. "
+                          "Skipping convolution.")
+            return self
+
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5 * u.deg
 
         convolution_kernel = \
