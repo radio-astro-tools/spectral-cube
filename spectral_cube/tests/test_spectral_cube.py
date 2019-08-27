@@ -1712,6 +1712,21 @@ def test_mask_bad_beams():
     # assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
     # assert np.all(masked_cube2.goodbeams_mask == [False,True,True,False])
 
+def test_convolve_to_equal():
+    cube, data = cube_and_raw('vda.fits')
+
+    convolved = cube.convolve_to(cube.beam)
+
+    assert np.all(convolved.filled_data[:].value == cube.filled_data[:].value)
+
+    # And one channel
+
+    plane = cube[0]
+
+    convolved = plane.convolve_to(cube.beam)
+
+    assert np.all(convolved.value == plane.value)
+
 
 def test_convolve_to():
     cube, data = cube_and_raw('vda_beams.fits')
