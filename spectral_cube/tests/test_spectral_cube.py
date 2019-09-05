@@ -170,12 +170,18 @@ class TestSpectralCube(object):
                              ))
     def test_world(self, file, view):
         p = path(file)
-        d = fits.getdata(p)
-        wcs = WCS(p)
-        c = SpectralCube(d, wcs)
+        # d = fits.getdata(p)
+        # wcs = WCS(p)
+        # c = SpectralCube(d, wcs)
 
-        shp = d.shape
-        inds = np.indices(d.shape)
+        c = SpectralCube.read(p)
+
+        wcs = c.wcs
+
+        # shp = d.shape
+        # inds = np.indices(d.shape)
+        shp = c.shape
+        inds = np.indices(c.shape)
         pix = np.column_stack([i.ravel() for i in inds[::-1]])
         world = wcs.all_pix2world(pix, 0).T
 
@@ -186,6 +192,13 @@ class TestSpectralCube(object):
         w2 = c.world[view]
         for result, expected in zip(w2, world):
             assert_allclose(result, expected)
+
+        # Test world_flattened here, too
+        w2_flat = c.flattened_world(view=view)
+        for result, expected in zip(w2_flat, world):
+            print(result.shape, expected.flatten().shape)
+            assert_allclose(result, expected.flatten())
+
 
     @pytest.mark.parametrize('view', (np.s_[:, :,:],
                              np.s_[:2, :3, ::2]))
