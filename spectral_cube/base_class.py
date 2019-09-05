@@ -205,6 +205,33 @@ class SpatialCoordMixinClass(object):
 
         return world[::-1]  # reverse WCS -> numpy order
 
+    def flattened_world(self, view=()):
+        """
+        Retrieve the world coordinates corresponding to the extracted flattened
+        version of the cube
+        """
+
+        # NOTE: this should be moved to SpatialCoordMixinClass once masks
+        # are implemented for lower dim objects - EK
+
+        self._raise_wcs_no_celestial()
+
+        if not self.wcs.is_celestial:
+            spec, lon, lat = self.world[view]
+            spec = self._mask._flattened(data=spec, wcs=self._wcs, view=view)
+            lon = self._mask._flattened(data=lon, wcs=self._wcs, view=view)
+            lat = self._mask._flattened(data=lat, wcs=self._wcs, view=view)
+            # Return in reverse numpy ordering,
+            return spec, lon, lat
+
+        else:
+            raise NotImplementedError("flattened_world requires masks to "
+                                      "be implemented for 2D objects.")
+            lon, lat = self.world[view]
+            lon = self._mask._flattened(data=lon, wcs=self._wcs, view=slice)
+            lat = self._mask._flattened(data=lat, wcs=self._wcs, view=slice)
+            return lon, lat
+
     def world_spines(self):
         """
         Returns a list of 1D arrays, for the world coordinates
