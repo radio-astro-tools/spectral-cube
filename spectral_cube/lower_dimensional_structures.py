@@ -17,7 +17,8 @@ from . import spectral_axis
 from .utils import SliceWarning, BeamWarning, SmoothingWarning, FITSWarning
 from .cube_utils import convert_bunit
 from . import wcs_utils
-from .masks import BooleanArrayMask, MaskBase
+from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
+                    is_broadcastable_and_smaller)
 
 from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          SpatialCoordMixinClass, MaskableArrayMixinClass,
@@ -37,9 +38,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
     @property
     def hdu(self):
         if self.wcs is None:
-            hdu = PrimaryHDU(self.value)
+            hdu = PrimaryHDU(self.filled_data[:].value)
         else:
-            hdu = PrimaryHDU(self.value, header=self.header)
+            hdu = PrimaryHDU(self.filled_data[:].value,
+                             header=self.header)
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
 
         if 'beam' in self.meta:
@@ -278,7 +280,9 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         matters: ``self`` must have ``_wcs``, for example.
         """
         if mask is None:
-            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
+            # mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
+            #                         self._wcs, shape=self.value.shape)
+            mask = BooleanArrayMask(np.isfinite(self.value),
                                     self._wcs, shape=self.value.shape)
         elif isinstance(mask, np.ndarray):
             if mask.shape != self.value.shape:
@@ -297,6 +301,55 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
                            wcs_tolerance=self._wcs_tolerance)
 
         self._mask = mask
+
+    def with_mask(self, mask, inherit_mask=True, wcs_tolerance=None):
+        """
+        Return a new LowerDimensionalObject instance that contains a composite
+        mask of the current LDO and the new ``mask``.  Values of the mask that
+        are ``True`` will be *included* (masks are analogous to numpy boolean
+        index arrays, they are the inverse of the ``.mask`` attribute of a numpy
+        masked array).
+
+        Parameters
+        ----------
+        mask : :class:`MaskBase` instance, or boolean numpy array
+            The mask to apply. If a boolean array is supplied,
+            it will be converted into a mask, assuming that
+            `True` values indicate included elements.
+
+        inherit_mask : bool (optional, default=True)
+            If True, combines the provided mask with the
+            mask currently attached to the cube
+
+        wcs_tolerance : None or float
+            The tolerance of difference in WCS parameters between the cube and
+            the mask.  Defaults to `self._wcs_tolerance` (which itself defaults
+            to 0.0) if unspecified
+
+        Returns
+        -------
+        new_ldo : :class:`LowerDimensionalObject`
+            A LDO with the new mask applied.
+
+        Notes
+        -----
+        This operation returns a view into the data, and not a copy.
+        """
+        if isinstance(mask, np.ndarray):
+            if not is_broadcastable_and_smaller(mask.shape, self._data.shape):
+                raise ValueError("Mask shape is not broadcastable to data shape: "
+                                 "%s vs %s" % (mask.shape, self._data.shape))
+            mask = BooleanArrayMask(mask, self._wcs, shape=self._data.shape)
+
+        if self._mask is not None and inherit_mask:
+            new_mask = self._mask & mask
+        else:
+            new_mask = mask
+
+        new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs,
+                               wcs_tolerance=wcs_tolerance or self._wcs_tolerance)
+
+        return self._new_thing_with(mask=new_mask, wcs_tolerance=wcs_tolerance)
 
 
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
@@ -486,7 +539,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
     def _quicklook_mpl(self, filename=None):
         from matplotlib import pyplot
-        self.figure = pyplot.imshow(self.value)
+        self.figure = pyplot.imshow(self.filled_data[:].value)
         if filename is not None:
             self.figure.savefig(filename)
 
@@ -525,7 +578,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         convolution_kernel = \
             beam.deconvolve(self.beam).as_kernel(pixscale)
 
-        newdata = convolve(self.value, convolution_kernel,
+        newdata = convolve(self.unitless_filled_data[:], convolution_kernel,
                            normalize_kernel=True)
 
         self = Projection(newdata, unit=self.unit, wcs=self.wcs,
@@ -578,7 +631,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         newwcs = wcs.WCS(header)
         shape_out = [header['NAXIS{0}'.format(i + 1)] for i in range(header['NAXIS'])][::-1]
 
-        newproj, newproj_valid = reproject_interp((self.value,
+        newproj, newproj_valid = reproject_interp((self.filled_data[:],
                                                    self.header),
                                                   newwcs,
                                                   shape_out=shape_out,
@@ -987,7 +1040,8 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             Passed to the convolve function
         """
 
-        newspec = convolve(self.value, kernel, normalize_kernel=True, **kwargs)
+        newspec = convolve(self.filled_data[:], kernel, normalize_kernel=True,
+                           **kwargs)
 
         return self._new_spectrum_with(data=newspec)
 
