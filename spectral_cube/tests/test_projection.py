@@ -778,7 +778,7 @@ def test_spatial_world(file, view):
 
     # Test world_flattened here, too
     # TODO: Enable once 2D masking is a thing
-    # w2_flat = plane.flattened_world(view=view)
-    # for result, expected in zip(w2_flat, world):
-    #     print(result.shape, expected.flatten().shape)
-    #     assert_allclose(result, expected.flatten())
+    w2_flat = plane.flattened_world(view=view)
+    for result, expected in zip(w2_flat, world):
+        print(result.shape, expected.flatten().shape)
+        assert_allclose(result, expected.flatten())
