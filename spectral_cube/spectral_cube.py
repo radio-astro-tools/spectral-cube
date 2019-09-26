@@ -450,9 +450,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
                     header = self._nowcs_header
                     # check whether the cube has beams at all
-                    if hasattr(self, 'beam') and self._beam is not None:
+                    # (note that "hasattr(self, 'beam') on an object with no
+                    # _beam will result in an exception....?!?!?!?)
+                    if hasattr(self, '_beam') and self._beam is not None:
                         bmarg = {'beam': self.beam}
-                    elif hasattr(self, 'beams') and self._beams is not None:
+                    elif hasattr(self, '_beams') and self._beams is not None:
                         bmarg = {'beams': self.unmasked_beams}
                     else:
                         bmarg = {}
@@ -603,9 +605,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       unit=self.unit, header=self._nowcs_header)
                 elif axis == (1,2):
                     newwcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
-                    if hasattr(self, 'beam'):
+                    if hasattr(self, '_beam') and self._beam is not None:
                         bmarg = {'beam': self.beam}
-                    elif hasattr(self, 'beams'):
+                    elif hasattr(self, '_beams') and self._beams is not None:
                         bmarg = {'beams': self.unmasked_beams}
                     else:
                         bmarg = {}
@@ -1217,11 +1219,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                # As of #561, beam is defined in all cases
-                if self._beam is not None:
+                if hasattr(self, '_beam') and self._beam is not None:
                     bmarg = {'beam': self.beam}
-                elif hasattr(self, 'beams'):
-                    bmarg = {'beams': self.beams}
+                elif hasattr(self, '_beams') and self._beams is not None:
+                    bmarg = {'beams': self.unmasked_beams}
                 else:
                     bmarg = {}
                 return self._oned_spectrum(value=self._data[view],
@@ -3654,10 +3655,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                if hasattr(self, 'beam'):
+                if hasattr(self, '_beam') and self._beam is not None:
                     bmarg = {'beam': self.beam}
-                elif hasattr(self, 'beams'):
-                    bmarg = {'beams': self.unmasked_beams[specslice]}
+                elif hasattr(self, '_beams') and self._beams is not None:
+                    bmarg = {'beams': self.unmasked_beams}
                 else:
                     bmarg = {}
                 return self._oned_spectrum(value=self._data[view],
