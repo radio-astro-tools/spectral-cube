@@ -24,7 +24,8 @@ env:
         - CONDA_CHANNELS='astropy glueviz'
         - PVEXTRACTOR="https://github.com/radio-astro-tools/pvextractor/archive/master.zip"
         - REGIONS="https://github.com/astropy/regions/archive/master.zip"
-        - REPROJECT="https://github.com/astropy/reproject/archive/master.zip"
+          # lock to reproject v0.5.1: master branch acquired serious regressions in #166
+        - REPROJECT="https://github.com/astropy/reproject/archive/v0.5.1.tar.gz"
         - RADIOBEAM="https://github.com/radio-astro-tools/radio-beam/archive/master.zip"
         - PIP_DEPENDENCIES="Cython $PVEXTRACTOR $RADIOBEAM $REGIONS $REPROJECT"
         - SETUP_XVFB=True
