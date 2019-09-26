@@ -40,7 +40,8 @@ if __name__ == "__main__":
     h['NAXIS2'] = 3
     h['NAXIS3'] = 4
     h['NAXIS4'] = 1
-    d = np.random.random((1, 2, 3, 4))
+    d_advs = d = np.random.random((1, 2, 3, 4))
+
 
     fits.writeto('advs.fits', d, h, overwrite=True)
 
@@ -174,3 +175,16 @@ if __name__ == "__main__":
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
     hdul.writeto('5_spectral_beams.fits', overwrite=True)
+
+    # Single Stokes, _no_ beam
+    h = fits.header.Header.fromtextfile(HEADER_FILENAME)
+    h['BUNIT'] = 'K' # Kelvins are a valid unit, JY/BEAM are not: they should be tested separately
+    h['NAXIS1'] = 2
+    h['NAXIS2'] = 3
+    h['NAXIS3'] = 4
+    h['NAXIS4'] = 1
+    del h['BMAJ']
+    del h['BMIN']
+    del h['BPA']
+
+    fits.writeto('advs_nobeam.fits', d_advs, h, overwrite=True)
