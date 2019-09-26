@@ -607,7 +607,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     newwcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
                     if hasattr(self, '_beam') and self._beam is not None:
                         bmarg = {'beam': self.beam}
-                    elif hasattr(self, '_beams') and self._beams is not None:
+                    elif hasattr(self, 'beams'):
                         bmarg = {'beams': self.unmasked_beams}
                     else:
                         bmarg = {}
@@ -1219,10 +1219,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
+                # As of #561, beam is defined in all cases
                 if hasattr(self, '_beam') and self._beam is not None:
                     bmarg = {'beam': self.beam}
-                elif hasattr(self, '_beams') and self._beams is not None:
-                    bmarg = {'beams': self.unmasked_beams}
+                elif hasattr(self, 'beams'):
+                    bmarg = {'beams': self.beams}
                 else:
                     bmarg = {}
                 return self._oned_spectrum(value=self._data[view],
@@ -2434,7 +2435,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         if self.unit.is_equivalent(u.Jy/u.beam):
             # replace "beam" with the actual beam
-            if not hasattr(self, 'beam'):
+            if not hasattr(self, 'beam') or self._beam is None:
                 raise ValueError("To convert cubes with Jy/beam units, "
                                  "the cube needs to have a beam defined.")
             brightness_unit = self.unit * u.beam
@@ -3657,8 +3658,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                         if a not in [x+1 for x in intslices]])
                 if hasattr(self, '_beam') and self._beam is not None:
                     bmarg = {'beam': self.beam}
-                elif hasattr(self, '_beams') and self._beams is not None:
-                    bmarg = {'beams': self.unmasked_beams}
+                elif hasattr(self, 'beams'):
+                    bmarg = {'beams': self.unmasked_beams[specslice]}
                 else:
                     bmarg = {}
                 return self._oned_spectrum(value=self._data[view],
