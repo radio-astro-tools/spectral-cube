@@ -449,9 +449,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 if set(axis) == set((1,2)):
                     new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
                     header = self._nowcs_header
-                    if hasattr(self, 'beam'):
+                    # check whether the cube has beams at all
+                    if hasattr(self, 'beam') and self._beam is not None:
                         bmarg = {'beam': self.beam}
-                    elif hasattr(self, 'beams'):
+                    elif hasattr(self, 'beams') and self._beams is not None:
                         bmarg = {'beams': self.unmasked_beams}
                     else:
                         bmarg = {}
