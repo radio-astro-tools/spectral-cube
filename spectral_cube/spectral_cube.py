@@ -2567,17 +2567,17 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
                            range(header['NAXIS'])][::-1])
 
-        if use_memmap:
-            # note: requires reproject from December 2018 or later
-            outarray = np.memmap(filename='output.np', mode='w+',
-                                 shape=tuple(shape_out), dtype='float32')
-        else:
-            outarray = None
-
         if filled:
             data = self.filled_data[:]
         else:
             data = self._data
+
+        if use_memmap:
+            # note: requires reproject from December 2018 or later
+            outarray = np.memmap(filename='output.np', mode='w+',
+                                 shape=tuple(shape_out), dtype=data.dtype)
+        else:
+            outarray = None
 
         newcube, newcube_valid = reproject_interp((data,
                                                    self.header),
