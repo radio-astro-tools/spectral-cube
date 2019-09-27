@@ -486,7 +486,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
     def _quicklook_mpl(self, filename=None):
         from matplotlib import pyplot
-        self.figure = pyplot.imshow(self.value)
+        self.figure = pyplot.gcf()
+        self.image = pyplot.imshow(self.value)
         if filename is not None:
             self.figure.savefig(filename)
 
