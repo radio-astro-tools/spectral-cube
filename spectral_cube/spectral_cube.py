@@ -2553,6 +2553,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if LooseVersion(version) < "0.5":
             raise Warning("Requires version >=0.5 of reproject. The current "
                           "version is: {}".format(version))
+        elif LooseVersion(version) >= 0.6:
+            reproj_kwargs = {}
+        else:
+            reproj_kwargs = {'independent_celestial_slices': True}
 
         from reproject import reproject_interp
 
@@ -2581,7 +2585,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   output_array=outarray,
                                                   shape_out=shape_out,
                                                   order=order,
-                                                  independent_celestial_slices=True)
+                                                  **reproj_kwargs)
 
         return self._new_cube_with(data=newcube,
                                    wcs=newwcs,
