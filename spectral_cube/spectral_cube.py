@@ -2573,9 +2573,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             data = self._data
 
         if use_memmap:
+            if data.dtype.itemsize not in (4,8):
+                raise ValueError("Data must be float32 or float64 to be "
+                                 "reprojected.  Other data types need some "
+                                 "kind of additional memory handling.")
             # note: requires reproject from December 2018 or later
             outarray = np.memmap(filename='output.np', mode='w+',
-                                 shape=tuple(shape_out), dtype=data.dtype)
+                                 shape=tuple(shape_out),
+                                 dtype='float64' if data.dtype.itemsize == 8 else 'float32')
         else:
             outarray = None
 
