@@ -3238,17 +3238,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     view = [slice(None) for ii in range(self.ndim)]
                     view[axis] = slice(None,xs-(xs % int(factor)))
                     view = tuple(view)
-                    crarr = self.filled_data[view]
+                    crarr = self.unitless_filled_data[view]
                     mask = self.mask[view].include()
                 else:
                     extension_shape = list(self.shape)
                     extension_shape[axis] = (factor - xs % int(factor))
                     extension = np.empty(extension_shape) * np.nan
-                    crarr = np.concatenate((self.filled_data[:], extension), axis=axis)
+                    crarr = np.concatenate((self.unitless_filled_data[:],
+                                            extension), axis=axis)
                     extension[:] = 0
                     mask = np.concatenate((self.mask.include(), extension), axis=axis)
             else:
-                crarr = self.filled_data[:]
+                crarr = self.unitless_filled_data[:]
                 mask = self.mask.include()
 
             # The extra braces here are crucial: We're adding an extra dimension so we
@@ -3296,7 +3297,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 view_fulldata = makeslice_local(ii*factor)
                 view_newdata = makeslice_local(ii, nsteps=1)
 
-                to_average = self.filled_data[view_fulldata]
+                to_average = self.unitless_filled_data[view_fulldata]
                 to_anyfy = self.mask[view_fulldata].include()
 
                 dsarr[view_newdata] = estimator(to_average, axis)[view_newaxis]
