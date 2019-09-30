@@ -144,7 +144,7 @@ if __name__ == "__main__":
     beams['BMAJ'] = [0.5,0.4,0.3,0.4,0.5] # arcseconds
     beams['BMIN'] = [0.1,0.2,0.3,0.2,0.1]
     beams['BPA'] = [0,45,60,30,0] # degrees
-    beams['CHAN'] = [0,0,0,0,0]
+    beams['CHAN'] = [0,1,2,3,4]
     beams['POL'] = [0,0,0,0,0]
     beams = fits.BinTableHDU(beams)
 
