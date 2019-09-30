@@ -2568,7 +2568,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                            range(header['NAXIS'])][::-1])
 
         if filled:
-            data = self.filled_data[:]
+            data = self.unitless_filled_data[:]
         else:
             data = self._data
 
