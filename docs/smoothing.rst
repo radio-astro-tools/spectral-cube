@@ -154,6 +154,9 @@ done in the unit of pixel.  In our example, each channel is 0.1 km/s wide::
     pixel_scale = 0.1 * u.km/u.s
     gaussian_width = ((target_resolution**2 - current_resolution**2)**0.5 /
                       pixel_scale / fwhm_factor)
-    kernel = Gaussian1DKernel(gaussian_width)
+    kernel = Gaussian1DKernel(gaussian_width.value)
     new_cube = cube.spectral_smooth(kernel)
     new_cube.write('newfile.fits')
+
+`gaussian_width` is in pixel units but is defined as a unitless `~astropy.units.Quantity`.
+By using `gaussian_width.value`, we convert the pixel width into a float.

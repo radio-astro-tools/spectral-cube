@@ -133,6 +133,16 @@ def test_spectral_smooth():
                                                                 x_size=5).array,
                                    4)
 
+def test_catch_kernel_with_units():
+    # Passing a kernel with a unit should raise a u.UnitsError
+
+    cube, data = cube_and_raw('522_delta.fits')
+
+    with pytest.raises(u.UnitsError) as exc:
+        result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0 * u.dimensionless_unscaled),
+                                      use_memmap=False)
+    assert exc.value.args[0] == "The convolution kernel should be defined without a unit."
+
 
 def test_spectral_smooth_4cores():
 

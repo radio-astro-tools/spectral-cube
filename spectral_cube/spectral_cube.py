@@ -2990,6 +2990,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to the convolve function
         """
 
+        if isinstance(kernel.array, u.Quantity):
+            raise u.UnitsError("The convolution kernel should be defined "
+                               "without a unit.")
+
         return self.apply_function_parallel_spectral(convolve,
                                                      kernel=kernel,
                                                      normalize_kernel=True,
