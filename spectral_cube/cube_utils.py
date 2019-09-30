@@ -358,7 +358,7 @@ def beams_to_bintable(beams):
     bmhdu.header['EXTVER'] = 1
     bmhdu.header['XTENSION'] = 'BINTABLE'
     bmhdu.header['NCHAN'] = len(beams)
-    bmhdu.header['NPOL'] = len(set([bm.meta['POL'] for bm in beams]))
+    bmhdu.header['NPOL'] = len(set([bm.meta['POL'] for bm in beams if 'POL' in bm.meta]))
     return bmhdu
 
 

@@ -24,7 +24,8 @@ env:
         - CONDA_CHANNELS='astropy glueviz'
         - PVEXTRACTOR="https://github.com/radio-astro-tools/pvextractor/archive/master.zip"
         - REGIONS="https://github.com/astropy/regions/archive/master.zip"
-        - REPROJECT="https://github.com/astropy/reproject/archive/master.zip"
+          # lock to reproject v0.5.1: master branch acquired serious regressions in #166
+        - REPROJECT="https://github.com/astropy/reproject/archive/v0.5.1.tar.gz"
         - RADIOBEAM="https://github.com/radio-astro-tools/radio-beam/archive/master.zip"
         - PIP_DEPENDENCIES="Cython $PVEXTRACTOR $RADIOBEAM $REGIONS $REPROJECT"
         - SETUP_XVFB=True
@@ -53,17 +54,6 @@ matrix:
         - env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.15
                PIP_DEPENDENCIES="Cython $PVEXTRACTOR $RADIOBEAM $REGIONS $REPROJECT sphinx-astropy"
           name: docs
-
-        # test python2.7 with recent numpy version
-        - env: PYTHON_VERSION=2.7 PYTEST_VERSION="<3.7"
-               PIP_DEPENDENCIES="$PVEXTRACTOR $RADIOBEAM"
-               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip aplpy scipy'
-          name: py27
-
-        - env: NUMPY_VERSION=1.11 ASTROPY_VERSION=LTS
-               CONDA_DEPENDENCIES='matplotlib aplpy bottleneck scipy'
-               PYTEST_VERSION="<3.7"
-          name: astropy-lts_np1.11
 
 
         - env: ASTROPY_VERSION='development'
