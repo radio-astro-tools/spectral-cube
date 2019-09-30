@@ -233,10 +233,13 @@ def stack_spectra(cube, velocity_surface, v0=None,
          np.any(velocity_surface < vmin))):
         warnings.warn("Some velocities are outside the allowed range and will be "
                       "masked out.", BadVelocitiesWarning)
-        velocity_surface = u.Quantity(np.where(
+        # issue 580/1 note: numpy <=1.16 will strip units from velocity, >=
+        # 1.17 will not
+        masked_velocities = np.where(
             (velocity_surface < vmax) &
             (velocity_surface > vmin),
-            velocity_surface, np.nan), velocity_surface.unit)
+            velocity_surface.value, np.nan)
+        velocity_surface = u.Quantity(masked_velocities, velocity_surface.unit)
 
     pix_shifts = vdiff_sign * ((velocity_surface.to(vel_unit) -
                                 v0.to(vel_unit)) / vdiff).value[xy_posns]

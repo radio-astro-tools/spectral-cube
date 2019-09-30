@@ -2553,6 +2553,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if LooseVersion(version) < "0.5":
             raise Warning("Requires version >=0.5 of reproject. The current "
                           "version is: {}".format(version))
+        elif LooseVersion(version) >= "0.6":
+            reproj_kwargs = {}
+        else:
+            reproj_kwargs = {'independent_celestial_slices': True}
 
         from reproject import reproject_interp
 
@@ -2563,17 +2567,22 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
                            range(header['NAXIS'])][::-1])
 
-        if use_memmap:
-            # note: requires reproject from December 2018 or later
-            outarray = np.memmap(filename='output.np', mode='w+',
-                                 shape=tuple(shape_out), dtype='float32')
-        else:
-            outarray = None
-
         if filled:
-            data = self.filled_data[:]
+            data = self.unitless_filled_data[:]
         else:
             data = self._data
+
+        if use_memmap:
+            if data.dtype.itemsize not in (4,8):
+                raise ValueError("Data must be float32 or float64 to be "
+                                 "reprojected.  Other data types need some "
+                                 "kind of additional memory handling.")
+            # note: requires reproject from December 2018 or later
+            outarray = np.memmap(filename='output.np', mode='w+',
+                                 shape=tuple(shape_out),
+                                 dtype='float64' if data.dtype.itemsize == 8 else 'float32')
+        else:
+            outarray = None
 
         newcube, newcube_valid = reproject_interp((data,
                                                    self.header),
@@ -2581,7 +2590,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   output_array=outarray,
                                                   shape_out=shape_out,
                                                   order=order,
-                                                  independent_celestial_slices=True)
+                                                  **reproj_kwargs)
 
         return self._new_cube_with(data=newcube,
                                    wcs=newwcs,
@@ -3229,17 +3238,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     view = [slice(None) for ii in range(self.ndim)]
                     view[axis] = slice(None,xs-(xs % int(factor)))
                     view = tuple(view)
-                    crarr = self.filled_data[view]
+                    crarr = self.unitless_filled_data[view]
                     mask = self.mask[view].include()
                 else:
                     extension_shape = list(self.shape)
                     extension_shape[axis] = (factor - xs % int(factor))
                     extension = np.empty(extension_shape) * np.nan
-                    crarr = np.concatenate((self.filled_data[:], extension), axis=axis)
+                    crarr = np.concatenate((self.unitless_filled_data[:],
+                                            extension), axis=axis)
                     extension[:] = 0
                     mask = np.concatenate((self.mask.include(), extension), axis=axis)
             else:
-                crarr = self.filled_data[:]
+                crarr = self.unitless_filled_data[:]
                 mask = self.mask.include()
 
             # The extra braces here are crucial: We're adding an extra dimension so we
@@ -3287,7 +3297,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 view_fulldata = makeslice_local(ii*factor)
                 view_newdata = makeslice_local(ii, nsteps=1)
 
-                to_average = self.filled_data[view_fulldata]
+                to_average = self.unitless_filled_data[view_fulldata]
                 to_anyfy = self.mask[view_fulldata].include()
 
                 dsarr[view_newdata] = estimator(to_average, axis)[view_newaxis]
