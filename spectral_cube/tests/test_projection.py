@@ -744,3 +744,41 @@ def test_spatial_world_extrema_2D():
     assert (cube.world_extrema == plane.world_extrema).all()
     assert (cube.longitude_extrema == plane.longitude_extrema).all()
     assert (cube.latitude_extrema == plane.latitude_extrema).all()
+
+
+@pytest.mark.parametrize(('file', 'view'), (
+                         ('adv.fits', np.s_[:, :]),
+                         ('adv.fits', np.s_[::2, :]),
+                         ('adv.fits', np.s_[0]),
+                         ))
+def test_spatial_world(file, view):
+    p = path(file)
+    # d = fits.getdata(p)
+    # wcs = WCS(p)
+    # c = SpectralCube(d, wcs)
+
+    c = SpectralCube.read(p)
+
+    plane = c[0]
+
+    wcs = plane.wcs
+
+    shp = plane.shape
+    inds = np.indices(plane.shape)
+    pix = np.column_stack([i.ravel() for i in inds[::-1]])
+    world = wcs.all_pix2world(pix, 0).T
+
+    world = [w.reshape(shp) for w in world]
+    world = [w[view] * u.Unit(wcs.wcs.cunit[i])
+             for i, w in enumerate(world)][::-1]
+
+    w2 = plane.world[view]
+    for result, expected in zip(w2, world):
+        assert_allclose(result, expected)
+
+    # Test world_flattened here, too
+    # TODO: Enable once 2D masking is a thing
+    w2_flat = plane.flattened_world(view=view)
+    for result, expected in zip(w2_flat, world):
+        print(result.shape, expected.flatten().shape)
+        assert_allclose(result, expected.flatten())

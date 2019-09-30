@@ -205,6 +205,16 @@ class SpatialCoordMixinClass(object):
 
         return world[::-1]  # reverse WCS -> numpy order
 
+    def flattened_world(self, view=()):
+        """
+        Retrieve the world coordinates corresponding to the extracted flattened
+        version of the cube
+        """
+
+        self._raise_wcs_no_celestial()
+
+        return [wd_dim.ravel() for wd_dim in self.world[view]]
+
     def world_spines(self):
         """
         Returns a list of 1D arrays, for the world coordinates
