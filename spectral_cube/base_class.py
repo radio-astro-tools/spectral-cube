@@ -211,9 +211,6 @@ class SpatialCoordMixinClass(object):
         version of the cube
         """
 
-        # NOTE: this should be moved to SpatialCoordMixinClass once masks
-        # are implemented for lower dim objects - EK
-
         self._raise_wcs_no_celestial()
 
         return [wd_dim.ravel() for wd_dim in self.world[view]]
