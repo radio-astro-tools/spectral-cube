@@ -449,9 +449,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 if set(axis) == set((1,2)):
                     new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
                     header = self._nowcs_header
-                    if hasattr(self, 'beam'):
+                    # check whether the cube has beams at all
+                    # (note that "hasattr(self, 'beam') on an object with no
+                    # _beam will result in an exception....?!?!?!?)
+                    if hasattr(self, '_beam') and self._beam is not None:
                         bmarg = {'beam': self.beam}
-                    elif hasattr(self, 'beams'):
+                    elif hasattr(self, '_beams') and self._beams is not None:
                         bmarg = {'beams': self.unmasked_beams}
                     else:
                         bmarg = {}
@@ -602,7 +605,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       unit=self.unit, header=self._nowcs_header)
                 elif axis == (1,2):
                     newwcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
-                    if hasattr(self, 'beam'):
+                    if hasattr(self, '_beam') and self._beam is not None:
                         bmarg = {'beam': self.beam}
                     elif hasattr(self, 'beams'):
                         bmarg = {'beams': self.unmasked_beams}
@@ -1202,7 +1205,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
                 # As of #561, beam is defined in all cases
-                if self._beam is not None:
+                if hasattr(self, '_beam') and self._beam is not None:
                     bmarg = {'beam': self.beam}
                 elif hasattr(self, 'beams'):
                     bmarg = {'beams': self.beams}
@@ -2417,7 +2420,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         if self.unit.is_equivalent(u.Jy/u.beam):
             # replace "beam" with the actual beam
-            if not hasattr(self, 'beam'):
+            if not hasattr(self, 'beam') or self._beam is None:
                 raise ValueError("To convert cubes with Jy/beam units, "
                                  "the cube needs to have a beam defined.")
             brightness_unit = self.unit * u.beam
@@ -3642,7 +3645,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                 newwcs = self._wcs.sub([a
                                         for a in (1,2,3)
                                         if a not in [x+1 for x in intslices]])
-                if hasattr(self, 'beam'):
+                if hasattr(self, '_beam') and self._beam is not None:
                     bmarg = {'beam': self.beam}
                 elif hasattr(self, 'beams'):
                     bmarg = {'beams': self.unmasked_beams[specslice]}

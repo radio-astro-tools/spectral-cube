@@ -1080,17 +1080,19 @@ def test_airwave_to_wave():
     np.testing.assert_almost_equal(spectral_axis.air_to_vac(ax1).value,
                                    ax2.value)
 
-@pytest.mark.parametrize(('func','how','axis'),
+
+@pytest.mark.parametrize(('func','how','axis','cubename'),
                          itertools.product(('sum','std','max','min','mean'),
                                            ('slice','cube','auto'),
-                                           (0,1,2)
+                                           (0,1,2),
+                                           ('advs.fits', 'advs_nobeam.fits'),
                                           ))
-def test_twod_numpy(func, how, axis):
+def test_twod_numpy(func, how, axis, cubename):
     # Check that a numpy function returns the correct result when applied along
     # one axis
     # This is partly a regression test for #211
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(cubename)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1101,17 +1103,18 @@ def test_twod_numpy(func, how, axis):
     np.testing.assert_equal(proj.value, dproj)
     assert cube.unit == proj.unit
 
-@pytest.mark.parametrize(('func','how','axis'),
+@pytest.mark.parametrize(('func','how','axis','cubename'),
                          itertools.product(('sum','std','max','min','mean'),
                                            ('slice','cube','auto'),
-                                           ((0,1),(1,2),(0,2))
+                                           ((0,1),(1,2),(0,2)),
+                                           ('advs.fits', 'advs_nobeam.fits'),
                                           ))
-def test_twod_numpy_twoaxes(func, how, axis):
+def test_twod_numpy_twoaxes(func, how, axis, cubename):
     # Check that a numpy function returns the correct result when applied along
     # one axis
     # This is partly a regression test for #211
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(cubename)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1173,17 +1176,20 @@ def test_preserves_header_meta_values():
 
 
 
-@pytest.mark.parametrize('func',('sum','std','max','min','mean'))
-def test_oned_numpy(func):
+@pytest.mark.parametrize(('func', 'cubename'),
+                         itertools.product(('sum','std','max','min','mean'),
+                                           ('advs.fits', 'advs_nobeam.fits',),
+                                          ))
+def test_oned_numpy(func, cubename):
     # Check that a numpy function returns an appropriate spectrum
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(cubename)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     spec = getattr(cube,func)(axis=(1,2))
     dspec = getattr(data,func)(axis=(2,3)).squeeze()
-    assert isinstance(spec, OneDSpectrum)
+    assert isinstance(spec, (OneDSpectrum, VaryingResolutionOneDSpectrum))
     # data has a redundant 1st axis
     np.testing.assert_equal(spec.value, dspec)
     assert cube.unit == spec.unit
