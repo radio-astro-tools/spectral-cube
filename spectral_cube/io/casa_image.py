@@ -110,7 +110,14 @@ def load_casa_image(filename, skipdata=False,
             raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
 
     # use the ia tool to get the file contents
-    ia.open(filename)
+    try:
+        ia.open(filename)
+    except AssertionError as ex:
+        if 'must be of cReqPath type' in str(ex):
+            raise IOError("File {0} not found.  Error was: {1}"
+                          .format(filename, str(ex)))
+        else:
+            raise ex
 
     # read in the data
     if not skipdata:
