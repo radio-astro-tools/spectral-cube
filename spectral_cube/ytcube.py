@@ -144,12 +144,12 @@ class ytCube(object):
             source.tfh.bounds = cmap_range
 
         cam = sc.camera
-        cam.set_position(self.dataset.domain_center, north_vector=north_vector)
         cam.set_focus(camera_angle)
+        cam.set_position(self.dataset.domain_center, north_vector=north_vector)
         cam.set_resolution(size)
         cam.set_width(scale)
 
-        im = cam.snapshot()
+        im = sc.render()
         images = [im]
 
         pb = ProgressBar(nframes)
