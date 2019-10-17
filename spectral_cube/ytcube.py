@@ -131,23 +131,31 @@ class ytCube(object):
             lower = self.cube.std().value * 3
             cmap_range = [lower,upper]
 
+        sc = yt.create_scene(self.dataset.all_data(), field='flux')
+        source = sc[0]
+
         if transfer_function == 'auto':
             tfh = self.auto_transfer_function(cmap_range, log=log_scale)
             tfh.tf.map_to_colormap(cmap_range[0], cmap_range[1], colormap=colormap)
-            tf = tfh.tf
+            source.tfh = tfh
         else:
             tf = transfer_function
+            source.tfh.tf = tf
+            source.tfh.bounds = cmap_range
 
-        center = self.dataset.domain_center
-        cam = self.dataset.h.camera(center, camera_angle, scale, size, tf,
-                                    north_vector=north_vector, fields='flux')
+        cam = sc.camera
+        cam.set_position(self.dataset.domain_center, north_vector=north_vector)
+        cam.set_focus(camera_angle)
+        cam.set_resolution(size)
+        cam.set_width(scale)
 
-        im  = cam.snapshot()
+        im = cam.snapshot()
         images = [im]
 
         pb = ProgressBar(nframes)
-        for ii,im in enumerate(cam.rotation(2 * np.pi, nframes,
-                                            rot_vector=rot_vector)):
+        for ii in cam.iter_rotate(2*np.pi, nframes,
+                                  rot_vector=rot_vector):
+            im = sc.render()
             images.append(im)
             im.write_png(os.path.join(outdir,"%s%04i.png" % (image_prefix,
                                                              ii+start_index)),
