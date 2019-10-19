@@ -62,6 +62,7 @@ class ytCube(object):
                            camera_angle=(0,0,1),
                            north_vector=(0,0,1),
                            rot_vector=(1,0,0),
+                           zoom=None,
                            colormap='doom',
                            cmap_range='auto',
                            transfer_function='auto',
@@ -91,6 +92,9 @@ class ytCube(object):
             the spectral axis
         rot_vector: 3-tuple
             The vector around which the camera will be rotated
+        zoom : float
+            Change the width of the FOV of the camera. Default: None, which 
+            does no zooming. 
         colormap: str
             A valid colormap.  See `yt.show_colormaps`
         transfer_function: 'auto' or `yt.visualization.volume_rendering.TransferFunction`
@@ -146,6 +150,8 @@ class ytCube(object):
         cam.set_focus(camera_angle)
         cam.set_resolution(size)
         cam.set_position(self.dataset.domain_center, north_vector=north_vector)
+        if zoom is not None:
+            cam.zoom(zoom)
 
         im = sc.render()
         images = [im]
