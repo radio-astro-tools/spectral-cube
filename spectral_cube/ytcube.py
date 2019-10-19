@@ -11,6 +11,7 @@ import warnings
 
 __all__ = ['ytCube']
 
+
 class ytCube(object):
     """ Light wrapper of a yt object with ability to translate yt<->wcs
     coordinates """
@@ -57,9 +58,9 @@ class ytCube(object):
         world_coord = self.wcs.wcs_pix2world([yt_coord], first_index)[0]
         return world_coord
 
-
-    def quick_render_movie(self, outdir, size=256, nframes=30,
-                           camera_angle=(0,0,1), north_vector=(0,0,1),
+    def quick_render_movie(self, outdir, nframes=30,
+                           camera_angle=(0,0,1),
+                           north_vector=(0,0,1),
                            rot_vector=(1,0,0),
                            colormap='doom',
                            cmap_range='auto',
@@ -68,7 +69,7 @@ class ytCube(object):
                            image_prefix="",
                            output_filename='out.mp4',
                            log_scale=False,
-                           rescale=True):
+                           rescale=True, sigma_clip=None):
         """
         Create a movie rotating the cube 360 degrees from
         PP -> PV -> PP -> PV -> PP
@@ -78,9 +79,6 @@ class ytCube(object):
         outdir: str
             The output directory in which the individual image frames and the
             resulting output mp4 file should be stored
-        size: int
-            The size of the individual output frame in pixels (i.e., size=256
-            will result in a 256x256 image)
         nframes: int
             The number of frames in the resulting movie
         camera_angle: 3-tuple
@@ -108,18 +106,16 @@ class ytCube(object):
         output_filename : str
             The movie file name to output.  The suffix may affect the file type
             created.  Defaults to 'out.mp4'.  Will be placed in ``outdir``
-
-        Returns
-        -------
-
-
+        sigma_clip: float, optional
+            Image values greater than this number times the standard deviation
+            plus the mean of the image will be clipped before saving. Useful
+            for enhancing images as it gets rid of rare high pixel values.
+            Default: None
         """
         try:
             import yt
         except ImportError:
-            raise ImportError("yt could not be imported.  Cube renderings are not possible.")
-
-        scale = np.max(self.cube.shape)
+            raise ImportError("yt could not be imported. Cube renderings are not possible.")
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)
@@ -146,20 +142,17 @@ class ytCube(object):
         cam = sc.camera
         cam.set_focus(camera_angle)
         cam.set_position(self.dataset.domain_center, north_vector=north_vector)
-        cam.set_resolution(size)
-        cam.set_width(scale)
 
         im = sc.render()
         images = [im]
 
         pb = ProgressBar(nframes)
-        for ii in cam.iter_rotate(2*np.pi, nframes,
-                                  rot_vector=rot_vector):
+        for ii in cam.iter_rotate(2*np.pi, nframes, rot_vector=rot_vector):
             im = sc.render()
             images.append(im)
-            im.write_png(os.path.join(outdir,"%s%04i.png" % (image_prefix,
-                                                             ii+start_index)),
-                         rescale=False)
+            outfile = os.path.join(outdir, "%s%04i.png" % (image_prefix,
+                                                           ii+start_index))
+            im.write_png(outfile, sigma_clip=sigma_clip, rescale=False)
             pb.update(ii+1)
         log.info("Rendering complete in {0}s".format(time.time() - pb._start_time))
 
@@ -171,10 +164,9 @@ class ytCube(object):
 
         return images
 
-    def auto_transfer_function(self, cmap_range, log=False, colormap='doom',
-                               **kwargs):
-
-        from yt.visualization.volume_rendering.transfer_function_helper import TransferFunctionHelper
+    def auto_transfer_function(self, cmap_range, log=False):
+        from yt.visualization.volume_rendering.transfer_function_helper import \
+            TransferFunctionHelper
         tfh = TransferFunctionHelper(self.dataset)
         tfh.set_field('flux')
         tfh.set_bounds(bounds=cmap_range)
@@ -269,6 +261,7 @@ def _rescale_images(images, prefix):
     for i, image in enumerate(images):
         image = image.rescale(cmax=cmax, amax=amax).swapaxes(0,1)
         image.write_png("%s%04i.png" % (prefix, i), rescale=False)
+
 
 def _make_movie(moviepath, prefix="", filename='out.mp4', overwrite=True):
     """
