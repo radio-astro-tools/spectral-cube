@@ -58,7 +58,7 @@ class ytCube(object):
         world_coord = self.wcs.wcs_pix2world([yt_coord], first_index)[0]
         return world_coord
 
-    def quick_render_movie(self, outdir, nframes=30,
+    def quick_render_movie(self, outdir, size=256, nframes=30,
                            camera_angle=(0,0,1),
                            north_vector=(0,0,1),
                            rot_vector=(1,0,0),
@@ -79,6 +79,9 @@ class ytCube(object):
         outdir: str
             The output directory in which the individual image frames and the
             resulting output mp4 file should be stored
+        size: int
+            The size of the individual output frame in pixels (i.e., size=256
+            will result in a 256x256 image)
         nframes: int
             The number of frames in the resulting movie
         camera_angle: 3-tuple
@@ -141,6 +144,7 @@ class ytCube(object):
 
         cam = sc.camera
         cam.set_focus(camera_angle)
+        cam.set_resolution(size)
         cam.set_position(self.dataset.domain_center, north_vector=north_vector)
 
         im = sc.render()
