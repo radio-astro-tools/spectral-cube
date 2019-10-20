@@ -97,15 +97,12 @@ class ytCube(object):
             does no zooming. 
         colormap: str
             A valid colormap.  See `yt.show_colormaps`
+        cmap_range : 2-tuple or "auto"
+            If a 2-tuple of floats, this will be the (vmin, vmax) for the colorbar.
+            Otherise, "auto" sets the values from the data.
         transfer_function: 'auto' or `yt.visualization.volume_rendering.TransferFunction`
             Either 'auto' to use the colormap specified, or a valid
             TransferFunction instance
-        log_scale: bool
-            Should the colormap be log scaled?
-        rescale: bool
-            If True, the images will be rescaled to have a common 95th
-            percentile brightness, which can help reduce flickering from having
-            a single bright pixel in some projections
         start_index : int
             The number of the first image to save
         image_prefix : str
@@ -113,6 +110,15 @@ class ytCube(object):
         output_filename : str
             The movie file name to output.  The suffix may affect the file type
             created.  Defaults to 'out.mp4'.  Will be placed in ``outdir``
+        log_scale : bool
+            Should the colormap be log scaled?
+        run_ffmpeg : bool
+            If True, ffmpeg will be used to make a movie out of the images.
+            Default: True
+        rescale: bool
+            If True, the images will be rescaled to have a common 95th
+            percentile brightness, which can help reduce flickering from having
+            a single bright pixel in some projections
         sigma_clip: float, optional
             Image values greater than this number times the standard deviation
             plus the mean of the image will be clipped before saving. Useful
