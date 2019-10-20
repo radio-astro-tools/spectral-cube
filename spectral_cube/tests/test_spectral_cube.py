@@ -850,7 +850,7 @@ class TestYt():
         ds = self.ytc1.dataset
 
         # Test one rendering
-        
+
         n_v = 10
         vmin = 0.05
         vmax = 4.0
@@ -865,7 +865,7 @@ class TestYt():
         source.tfh.tf = transfer
         source.tfh.bounds = (vmin, vmax)
         cam = sc.camera
-        cam.set_focus(direction)
+        cam.switch_orientation(normal_vector=direction)
         cam.set_resolution(32)
         im1 = sc.render()
         im1_gold = np.load("yt_vr1.npz")

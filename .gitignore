@@ -54,6 +54,7 @@ docs/_build/
 docs/api
 
 *.fits
+*/tests/*.png
 
 # Other generated stuff
 */version.py
