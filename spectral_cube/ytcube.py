@@ -60,8 +60,8 @@ class ytCube(object):
 
     def quick_render_movie(self, outdir, size=256, nframes=30,
                            camera_angle=(0,0,1),
-                           north_vector=(0,0,1),
-                           rot_vector=(1,0,0),
+                           north_vector=(0,1,0),
+                           rot_vector=None,
                            zoom=None,
                            colormap='doom',
                            cmap_range='auto',
@@ -88,10 +88,10 @@ class ytCube(object):
         camera_angle: 3-tuple
             The initial angle of the camera
         north_vector: 3-tuple
-            The vector of 'north' in the data cube.  Default is coincident with
-            the spectral axis
+            The vector of 'north' in the data cube. Default is the "y" direction
         rot_vector: 3-tuple
-            The vector around which the camera will be rotated
+            The vector around which the camera will be rotated. Default: None,
+            which means it will be set to the north_vector value.
         zoom : float
             Change the width of the FOV of the camera. Default: None, which 
             does no zooming. 
@@ -139,6 +139,9 @@ class ytCube(object):
         elif not os.path.isdir(outdir):
             raise OSError("Output directory {0} exists and is not a directory.".format(outdir))
 
+        if rot_vector is None:
+            rot_vector = north_vector
+
         if cmap_range == 'auto':
             upper = self.cube.max().value
             lower = self.cube.std().value * 3
@@ -160,7 +163,7 @@ class ytCube(object):
         cam = sc.camera
         cam.set_focus(data_source.get_field_parameter("center"))
         cam.set_resolution(size)
-        cam.switch_orientation(normal_vector=camera_angle, north_vector=north_vector)
+        cam.switch_view(normal_vector=camera_angle, north_vector=north_vector)
         if zoom is not None:
             cam.zoom(zoom)
 
