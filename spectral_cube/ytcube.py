@@ -69,7 +69,7 @@ class ytCube(object):
                            start_index=0,
                            image_prefix="",
                            output_filename='out.mp4',
-                           log_scale=False,
+                           log_scale=False, run_ffmpeg=True,
                            rescale=True, sigma_clip=None):
         """
         Create a movie rotating the cube 360 degrees from
@@ -173,8 +173,9 @@ class ytCube(object):
         if rescale:
             _rescale_images(images, os.path.join(outdir, image_prefix))
 
-        pipe = _make_movie(outdir, prefix=image_prefix,
-                           filename=output_filename)
+        if run_ffmpeg:
+            pipe = _make_movie(outdir, prefix=image_prefix,
+                               filename=output_filename)
 
         return images
 
