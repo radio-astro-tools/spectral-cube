@@ -144,7 +144,8 @@ class ytCube(object):
             lower = self.cube.std().value * 3
             cmap_range = [lower,upper]
 
-        sc = yt.create_scene(self.dataset.all_data(), field='flux')
+        data_source = self.dataset.all_data()
+        sc = yt.create_scene(data_source, field='flux')
         source = sc[0]
 
         if transfer_function == 'auto':
@@ -157,9 +158,9 @@ class ytCube(object):
             source.tfh.bounds = cmap_range
 
         cam = sc.camera
-        cam.set_focus(camera_angle)
+        cam.set_focus(data_source.get_field_parameter("center"))
         cam.set_resolution(size)
-        cam.set_position(self.dataset.domain_center, north_vector=north_vector)
+        cam.switch_orientation(normal_vector=camera_angle, north_vector=north_vector)
         if zoom is not None:
             cam.zoom(zoom)
 
