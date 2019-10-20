@@ -1,6 +1,10 @@
 Visualizing spectral cubes with yt
 ==================================
 
+.. note::
+
+    The minimum yt version required to analyze spectral cubes is 3.5.0.
+
 Extracting yt objects
 ---------------------
 
@@ -69,7 +73,7 @@ produce a 3-d isocontour visualization using an object returned by
 
     import numpy as np
     from spectral_cube import SpectralCube
-    from yt.mods import ColorTransferFunction, write_bitmap
+    import yt
     import astropy.units as u
 
     # Read in spectral cube
@@ -85,31 +89,46 @@ produce a 3-d isocontour visualization using an object returned by
     vmin = 0.05
     vmax = 4.0
     dv = 0.02
-
+    
     # Set up color transfer function
-    transfer = ColorTransferFunction((vmin, vmax))
+    transfer = yt.ColorTransferFunction((vmin, vmax))
     transfer.add_layers(n_v, dv, colormap='RdBu_r')
-
-    # Set up the camera parameters
-
+    
     # Derive the pixel coordinate of the desired center
-    # from the corresponding world coordinate
-    center = ytcube.world2yt([51.424522,
-                              30.723611,
-                              5205.18071])
-    direction = np.array([1.0, 0.0, 0.0])
-    width = 100.  # pixels
+    # from the corresponding world coordinate, this will
+    # be the position we are focused on
+    center = ytcube.world2yt([51.40,
+                              30.76,
+                              4653.75])
+    # We need to give this units so that yt knows how to 
+    # handle it. Pixel units are "code_length"
+    center = ds.arr(center, "code_length")
+    
+    # The vector from the camera to the focus
+    direction = np.array([0.0, 0.0, 1.0])
+    # The resolution of the image
     size = 1024
-
-    camera = ds.camera(center, direction, width, size, transfer,
-                       fields=['flux'])
-
+    
+    # Create the scene
+    sc = yt.create_scene(ds, field='flux')
+    
+    # Set the transfer function
+    source = sc[0]
+    source.tfh.tf = transfer
+    source.tfh.bounds = (vmin, vmax)
+            
+    # Now grab the camera and set the resolution, focus,
+    # and normal vector (camera angle)
+    cam = sc.camera
+    cam.set_resolution(size)
+    cam.set_focus(center)
+    cam.switch_orientation(normal_vector=direction)
+    
     # Take a snapshot and save to a file
-    snapshot = camera.snapshot()
-    write_bitmap(snapshot, 'cube_rendering.png', transpose=True)
+    sc.save('rendering.png', sigma_clip=6)
 
 You can move the camera around; see the `yt camera docs
-<http://yt-project.org/docs/dev/reference/api/generated/yt.visualization.volume_rendering.camera.Camera.html>`_.
+<https://yt-project.org/doc/visualizing/volume_rendering.html#camera>`_.
 
 Movie Making
 ------------
