@@ -123,6 +123,10 @@ class ytCube(object):
             import yt
         except ImportError:
             raise ImportError("yt could not be imported. Cube renderings are not possible.")
+        else:
+            from packaging import version
+            if version.parse(yt.__version__) < version.parse("3.5.0"):
+                raise RuntimeError("Only yt versions >= 3.5.0 are supported. Please upgrade yt.")
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)
