@@ -147,9 +147,8 @@ Example:
 
 .. raw:: html
 
-   <iframe src="http://player.vimeo.com/video/104489207" width=500 height=281
-   frameborder=0 webkitallowfullscreen mozallowfullscreen allowfullscreen>
-   </iframe>
+   <iframe title="vimeo-player" src="https://player.vimeo.com/video/104489207" 
+   width="500" height="281" frameborder="0" allowfullscreen></iframe>
 
 SketchFab Isosurface Contours
 -----------------------------
