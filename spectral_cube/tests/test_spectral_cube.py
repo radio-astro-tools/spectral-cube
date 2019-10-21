@@ -846,6 +846,7 @@ class TestYt():
         self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
 
     def test_yt_vr(self):
+        filepath = os.path.abspath(os.path.dirname(__file__))
 
         ds = self.ytc1.dataset
 
@@ -868,7 +869,7 @@ class TestYt():
         cam.switch_orientation(normal_vector=direction)
         cam.set_resolution(32)
         im1 = sc.render()
-        im1_gold = np.load("yt_vr1.npz")
+        im1_gold = np.load(os.path.join(filepath, "data", "yt_vr1.npz"))
         assert_array_equal(im1, im1_gold['arr_0'])
 
         # Test movie
@@ -878,7 +879,7 @@ class TestYt():
                                            north_vector=(0.0, 1.0, 0.0),
                                            run_ffmpeg=False)
         im2 = np.array(im2)
-        im2_gold = np.load("yt_vr2.npz")
+        im2_gold = np.load(os.path.join(filepath, "data", "yt_vr2.npz"))
         assert_array_equal(im2, im2_gold['arr_0'])
 
 
