@@ -113,6 +113,11 @@ def test_reproject(use_memmap):
     result = cube.reproject(header_out, use_memmap=use_memmap)
 
     assert result.shape == (cube.shape[0], 5, 4)
+    # Check WCS in reprojected matches wcs_out
+    assert wcs_out.wcs.compare(result.wcs.wcs)
+    # And that the headers have equivalent WCS info.
+    result_wcs_from_header = WCS(result.header)
+    assert result_wcs_from_header.wcs.compare(wcs_out.wcs)
 
 
 def test_spectral_smooth():
@@ -339,6 +344,12 @@ def test_reproject_2D():
 
     assert result.shape == (5, 4)
     assert result.beam == proj.beam
+
+    # Check WCS in reprojected matches wcs_out
+    assert wcs_out.wcs.compare(result.wcs.wcs)
+    # And that the headers have equivalent WCS info.
+    result_wcs_from_header = WCS(result.header)
+    assert result_wcs_from_header.wcs.compare(wcs_out.wcs)
 
 
 def test_nocelestial_reproject_2D_fail():
