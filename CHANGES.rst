@@ -4,6 +4,30 @@
    images in #543
  - Add support for ``update_function`` in the joblib-based job distributor
    in #534
+ - Add tests for WCS equivalence in reprojected images in #589
+ - Improve error messages when CASA files are read incorrectly in #584
+ - fix a small bug in matplotlib figure saving in #583
+ - Allow for reading of beamless cubes in #582
+ - Add support for 2d world functions in #575 and extrema in #552
+ - Handle kernels defined as quantities in smoothing in #578
+ - Fix bug with NPOL header keyword in #576
+ - Convolution will be skipped if beans are equal-sized in #573
+ - Fix one-D sliceing with no beam in #568
+ - Paralellization documentation improvement in #557
+ - Astropy-helpers updated to 2.0.10 in #553
+ - Fixed some future warnings in #565
+ - Added a new documentation example in #548
+ - Added channel map making capability in #551
+ - Fix warnings when beam is not defined in #561
+ - Improvment to joblib parallelization in #564
+ - Add ppbeam attribute to lower-dimensional objects #549
+ - Handle CASA file beams in #543 and #545
+ - Add support for CASA reading using casatools (casa6) in #541
+ - Bugfix for slicing of different shapes in #532
+ - Fixes to yt integratino in #531
+ - Add `unmasked_beams` attribute and change many beams behaviors in #502
+ - Bugfix for downsampled WCS corners in #525
+ - Performance enhancement to world extrema in #524
 
 0.4.4 (2019-02-20)
 ------------------
