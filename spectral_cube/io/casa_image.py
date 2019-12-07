@@ -10,6 +10,8 @@ from astropy.wcs.wcsapi.sliced_low_level_wcs import sanitize_slices
 import numpy as np
 from radio_beam import Beam, Beams
 
+import dask.array
+
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
 from .. import cube_utils
 from .. utils import BeamWarning, cached
@@ -83,7 +85,7 @@ class ArraylikeCasaData:
     @property
     @cached
     def shape(self):
-        return tuple(self.ia.shape())
+        return tuple(self.ia.shape()[::-1])
 
     @property
     @cached
@@ -141,11 +143,11 @@ def load_casa_image(filename, skipdata=False,
     # read in the data
     if not skipdata:
         # CASA data are apparently transposed.
-        data = ArraylikeCasaData(filename)
+        data = dask.array.from_array(ArraylikeCasaData(filename))
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        valid = ArraylikeCasaData(filename, ia_kwargs={'getmask': True})
+        valid = dask.array.from_array(ArraylikeCasaData(filename, ia_kwargs={'getmask': True}))
 
     # transpose is dealt with within the cube object
 
@@ -217,7 +219,7 @@ def load_casa_image(filename, skipdata=False,
 
 
     if wcs.naxis == 3:
-        mask = BooleanArrayMask(np.logical_not(valid), wcs)
+        mask = BooleanArrayMask(valid[:], wcs)
         if 'beam' in locals():
             cube = SpectralCube(data, wcs, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
@@ -233,8 +235,7 @@ def load_casa_image(filename, skipdata=False,
         mask = {}
         for component in data:
             data_, wcs_slice = cube_utils._orient(data[component], wcs)
-            mask[component] = LazyMask(np.isfinite, data=data[component],
-                                       wcs=wcs_slice)
+            mask[component] = BooleanArrayMask(valid[:], wcs)
 
             if 'beam' in locals():
                 data[component] = SpectralCube(data_, wcs_slice, mask[component],
@@ -253,5 +254,8 @@ def load_casa_image(filename, skipdata=False,
 
 
         cube = StokesSpectralCube(stokes_data=data)
+    else:
+        raise ValueError("CASA image has {0} dimensions, and therefore "
+                         "is not readable by spectral-cube.".format(wcs.naxis))
 
     return cube
