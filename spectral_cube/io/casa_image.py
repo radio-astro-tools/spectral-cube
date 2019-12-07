@@ -6,12 +6,13 @@ import tempfile
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy import units as u
+from astropy.wcs.wcsapi.sliced_low_level_wcs import sanitize_slices
 import numpy as np
 from radio_beam import Beam, Beams
 
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
 from .. import cube_utils
-from .. utils import BeamWarning
+from .. utils import BeamWarning, cached
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -51,6 +52,63 @@ def wcs_casa2astropy(ia, coordsys):
     return WCS(tmpfitsfile)
 
 
+class ArraylikeCasaData:
+
+    def __init__(self, filename, ia_kwargs={}):
+
+        try:
+            import casatools
+            self.ia = casatools.image()
+        except ImportError:
+            try:
+                from taskinit import iatool
+                self.ia = iatool()
+            except ImportError:
+                raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
+
+        # use the ia tool to get the file contents
+        try:
+            self.ia.open(filename)
+        except AssertionError as ex:
+            if 'must be of cReqPath type' in str(ex):
+                raise IOError("File {0} not found.  Error was: {1}"
+                              .format(filename, str(ex)))
+            else:
+                raise ex
+
+        self.ia_kwargs = ia_kwargs
+
+        self._cache = {}
+
+    @property
+    @cached
+    def shape(self):
+        return tuple(self.ia.shape())
+
+    @property
+    @cached
+    def ndim(self):
+        return len(self.shape)
+
+    @property
+    @cached
+    def dtype(self):
+        return np.dtype(self.ia.pixeltype())
+
+
+    def __getitem__(self, value):
+
+        value = sanitize_slices(value, self.ndim)
+
+        blc = [(slc.start or -1) for slc in value]
+        trc = [(slc.stop or -1) for slc in value]
+        inc = [(slc.step or 1) for slc in value]
+
+        data = self.ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
+
+        return data.transpose()
+
+
 def load_casa_image(filename, skipdata=False,
                     skipvalid=False, skipcs=False, **kwargs):
     """
@@ -83,11 +141,11 @@ def load_casa_image(filename, skipdata=False,
     # read in the data
     if not skipdata:
         # CASA data are apparently transposed.
-        data = ia.getchunk().transpose()
+        data = ArraylikeCasaData(filename)
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        valid = ia.getchunk(getmask=True).transpose()
+        valid = ArraylikeCasaData(filename, ia_kwargs={'getmask': True})
 
     # transpose is dealt with within the cube object
 
