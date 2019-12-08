@@ -10,6 +10,8 @@ from astropy.wcs import WCS
 from collections import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
 
+import dask
+
 import numpy as np
 import datetime
 try:
@@ -136,6 +138,8 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
     """
 
     data, header, beam_table = read_data_fits(input, hdu=hdu, **kwargs)
+
+    data = dask.array.from_array(data)
 
     if data is None:
         raise FITSReadError('No data found in HDU {0}. You can try using the hdu= '
