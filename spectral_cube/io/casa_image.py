@@ -15,6 +15,7 @@ import dask.array
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
 from .. import cube_utils
 from .. utils import BeamWarning, cached
+from .. import wcs_utils
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -226,23 +227,30 @@ def load_casa_image(filename, skipdata=False,
 
 
     if wcs.naxis == 3:
-        mask = BooleanArrayMask(valid, wcs)
+        data, wcs_slice = cube_utils._orient(data, wcs)
+        valid, _ = cube_utils._orient(valid, wcs)
+
+        mask = BooleanArrayMask(valid, wcs_slice)
         if 'beam' in locals():
-            cube = SpectralCube(data, wcs, mask, meta=meta, beam=beam)
+            cube = SpectralCube(data, wcs_slice, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
-            cube = VaryingResolutionSpectralCube(data, wcs, mask, meta=meta, beams=beams)
+            cube = VaryingResolutionSpectralCube(data, wcs_slice, mask, meta=meta, beams=beams)
         else:
-            cube = SpectralCube(data, wcs, mask, meta=meta)
+            cube = SpectralCube(data, wcs_slice, mask, meta=meta)
+        # with #592, this is no longer true
         # we've already loaded the cube into memory because of CASA
         # limitations, so there's no reason to disallow operations
-        cube.allow_huge_operations = True
+        # cube.allow_huge_operations = True
+        assert cube.mask.shape == cube.shape
 
     elif wcs.naxis == 4:
+        valid, _ = cube_utils._split_stokes(valid, wcs)
         data, wcs = cube_utils._split_stokes(data, wcs)
         mask = {}
         for component in data:
             data_, wcs_slice = cube_utils._orient(data[component], wcs)
-            mask[component] = BooleanArrayMask(valid, wcs)
+            valid_, _ = cube_utils._orient(valid[component], wcs)
+            mask[component] = BooleanArrayMask(valid_, wcs_slice)
 
             if 'beam' in locals():
                 data[component] = SpectralCube(data_, wcs_slice, mask[component],
@@ -261,8 +269,11 @@ def load_casa_image(filename, skipdata=False,
 
 
         cube = StokesSpectralCube(stokes_data=data)
+        assert cube.I.mask.shape == cube.shape
+        assert wcs_utils.check_equality(cube.I.mask._wcs, cube.wcs)
     else:
         raise ValueError("CASA image has {0} dimensions, and therefore "
                          "is not readable by spectral-cube.".format(wcs.naxis))
+
 
     return cube

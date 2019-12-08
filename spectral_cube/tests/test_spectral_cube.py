@@ -32,6 +32,18 @@ from .. import utils
 from . import path
 from .helpers import assert_allclose, assert_array_equal
 
+try:
+    import casatools
+    ia = casatools.image()
+    casaOK = True
+except ImportError:
+    try:
+        from taskinit import ia
+        casaOK = True
+    except ImportError:
+        casaOK = False
+
+
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
 warnings.simplefilter('error', utils.UnsupportedIterationStrategyWarning)
@@ -68,9 +80,17 @@ NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
 def cube_and_raw(filename):
     p = path(filename)
 
-    d = fits.getdata(p)
+    if os.path.splitext(p)[-1] == '.fits':
+        d = fits.getdata(p)
+        c = SpectralCube.read(p, format='fits', mode='readonly')
+    elif os.path.splitext(p)[-1] == '.image':
+        ia.open(p)
+        d = ia.getchunk()
+        ia.close()
+        c = SpectralCube.read(p, format='casa_image')
+    else:
+        raise ValueError("Unsupported filetype")
 
-    c = SpectralCube.read(p, format='fits', mode='readonly')
     return c, d
 
 
@@ -231,13 +251,20 @@ class TestSpectralCube(object):
             assert_allclose(w1, w2)
 
 
-    @pytest.mark.parametrize(('filename','masktype','unit'),
+    @pytest.mark.parametrize(('filename','masktype','unit','suffix'),
                              itertools.product(('data_advs', 'data_dvsa', 'data_sdav', 'data_sadv', 'data_vsad', 'data_vad', 'data_adv',),
                                                (BooleanArrayMask, LazyMask, FunctionMask, CompositeMask),
                                                ('Hz', u.Hz),
-                                              ),
-                            indirect=['filename'])
-    def test_with_spectral_unit(self, filename, masktype, unit):
+                                               ('.fits', '.image') if casaOK else ('.fits',)
+                                               ),
+                             indirect=['filename'])
+    def test_with_spectral_unit(self, filename, masktype, unit, suffix):
+
+        if suffix == '.image':
+            import casatasks
+            casatasks.importfits(filename, filename.replace('.fits', '.image'))
+            filename = filename.replace('.fits', '.image')
+
         cube, data = cube_and_raw(filename)
         cube_freq = cube.with_spectral_unit(unit)
 
@@ -259,9 +286,19 @@ class TestSpectralCube(object):
         cube2 = cube.with_mask(mask)
         cube_masked_freq = cube2.with_spectral_unit(unit)
 
-        assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ-W2F'
-        assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ-W2F'
-        assert cube_masked_freq._mask._wcs.wcs.ctype[cube_masked_freq._mask._wcs.wcs.spec] == 'FREQ-W2F'
+        if suffix == '.fits':
+            assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ-W2F'
+            assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ-W2F'
+            assert cube_masked_freq._mask._wcs.wcs.ctype[cube_masked_freq._mask._wcs.wcs.spec] == 'FREQ-W2F'
+        elif suffix == '.image':
+            # this is *not correct* but it's a known failure in CASA: CASA's
+            # image headers don't support any of the FITS spectral standard, so
+            # it just ends up as 'FREQ'.  This isn't on us to fix so this is
+            # really an "xfail" that we hope will change...
+            assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ'
+            assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ'
+            assert cube_masked_freq._mask._wcs.wcs.ctype[cube_masked_freq._mask._wcs.wcs.spec] == 'FREQ'
+
 
         # values taken from header
         rest = 1.42040571841E+09*u.Hz
