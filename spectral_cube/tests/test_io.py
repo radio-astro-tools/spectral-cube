@@ -87,13 +87,13 @@ def test_4d_beams_roundtrip(tmpdir, data_sdav_beams):
     np.testing.assert_almost_equal(c2.beams[0].major.value, 0.4)
     np.testing.assert_almost_equal(c2.beams[0].minor.value, 0.1)
 
-
 def test_1d(data_5_spectral):
-    hdu = pyfits.open(data_5_spectral)[0]
+    hdul = pyfits.open(data_5_spectral)
+    hdu = hdul[0]
     spec = OneDSpectrum.from_hdu(hdu)
 
     np.testing.assert_almost_equal(spec, np.arange(5, dtype='float'))
-    hdu.close()
+    hdul.close()
 
 def test_1d_beams(data_5_spectral_beams):
     hdu = pyfits.open(data_5_spectral_beams)

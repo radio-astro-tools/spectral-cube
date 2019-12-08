@@ -3,6 +3,7 @@ from __future__ import print_function, absolute_import, division
 import six
 import warnings
 import tempfile
+import shutil
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy import units as u
@@ -50,7 +51,12 @@ def wcs_casa2astropy(ia, coordsys):
     ia.newimagefromarray(outfile=tmpimagefile,
                          pixels=np.ones([1] * coordsys.naxes()),
                          csys=coordsys.torecord(), log=False)
+    ia.close()
     exportfits(tmpimagefile, tmpfitsfile, stokeslast=False)
+
+    # need to explicitly delete the tempfile to _force_ casa to close the
+    # handle
+    shutil.rmtree(tmpimagefile)
 
     return WCS(tmpfitsfile)
 
@@ -185,15 +191,17 @@ def load_casa_image(filename, skipdata=False,
     # read in coordinate system object
     casa_cs = ia.coordsys()
 
-    wcs = wcs_casa2astropy(ia, casa_cs)
-
-    del casa_cs
-
     unit = ia.brightnessunit()
 
     beam_ = ia.restoringbeam()
 
     ia.close()
+
+    wcs = wcs_casa2astropy(ia, casa_cs)
+
+    del casa_cs
+    del ia
+
 
     if 'major' in beam_:
         beam = Beam(major=u.Quantity(beam_['major']['value'], unit=beam_['major']['unit']),
