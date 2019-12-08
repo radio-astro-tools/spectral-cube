@@ -185,3 +185,7 @@ def test_casa_arrayslicer():
 
     assert arr[:,0,0].size == 4
     assert arr[:,:,0].shape == (4,3)
+
+    assert arr[:3,:2,:1].shape == (3,2,1)
+    assert np.array(arr.filled_data[:3,:2,:1]).shape == (3,2,1)
+    assert np.array(arr[:3,:2,:1].mask.include()).shape == (3,2,1)
