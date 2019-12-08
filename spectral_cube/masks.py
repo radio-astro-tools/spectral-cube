@@ -223,8 +223,8 @@ class MaskBase(object):
             sliced_data = data[view].astype(dt)
 
         ex = self.exclude(data=data, wcs=wcs, view=view, **kwargs)
-        sliced_data[ex] = fill
-        return sliced_data
+
+        return np.ma.masked_array(sliced_data, mask=ex).filled(fill)
 
     def __and__(self, other):
         return CompositeMask(self, other, operation='and')

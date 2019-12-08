@@ -102,13 +102,13 @@ class ArraylikeCasaData:
 
         value = sanitize_slices(value, self.ndim)
 
-        blc = [(slc.start or -1) for slc in value]
-        trc = [(slc.stop or -1) for slc in value]
-        inc = [(slc.step or 1) for slc in value]
+        blc = [(slc.start or -1) if hasattr(slc, 'start') else slc for slc in value]
+        trc = [(slc.stop-1 if slc.stop is not None else -1) if hasattr(slc, 'stop') else slc for slc in value]
+        inc = [(slc.step or 1) if hasattr(slc, 'step') else 1 for slc in value]
 
         data = self.ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
 
-        return data.transpose()
+        return data.transpose().squeeze()
 
 
 def load_casa_image(filename, skipdata=False,
@@ -147,7 +147,9 @@ def load_casa_image(filename, skipdata=False,
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        valid = dask.array.from_array(ArraylikeCasaData(filename, ia_kwargs={'getmask': True}))
+        valid = dask.array.from_array(ArraylikeCasaData(filename,
+                                                        ia_kwargs={'getmask':
+                                                                   True}))
 
     # transpose is dealt with within the cube object
 
@@ -219,7 +221,7 @@ def load_casa_image(filename, skipdata=False,
 
 
     if wcs.naxis == 3:
-        mask = BooleanArrayMask(valid[:], wcs)
+        mask = BooleanArrayMask(valid, wcs)
         if 'beam' in locals():
             cube = SpectralCube(data, wcs, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
@@ -235,7 +237,7 @@ def load_casa_image(filename, skipdata=False,
         mask = {}
         for component in data:
             data_, wcs_slice = cube_utils._orient(data[component], wcs)
-            mask[component] = BooleanArrayMask(valid[:], wcs)
+            mask[component] = BooleanArrayMask(valid, wcs)
 
             if 'beam' in locals():
                 data[component] = SpectralCube(data_, wcs_slice, mask[component],
