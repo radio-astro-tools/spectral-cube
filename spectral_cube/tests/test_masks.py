@@ -257,12 +257,21 @@ def test_wcs_validity_check():
 
 def test_wcs_validity_check_failure():
     cube, data = cube_and_raw('adv.fits')
-    wcs2 = cube.wcs.copy()
-    # add some difference in the 4th decimal place
+
+    assert cube.wcs.wcs.crval[2] == -3.21214698632E+05
+
+    wcs2 = cube.wcs.deepcopy()
+    # add some difference in the 5th decimal place
     wcs2.wcs.crval[2] += 0.00001
 
+    assert wcs2.wcs.crval[2] == -3.21214698622E+05
+    assert cube.wcs.wcs.crval[2] == -3.21214698632E+05
+
     # can make a mask
-    mask = BooleanArrayMask(data>0, cube._wcs)
+    mask = BooleanArrayMask(data>0, wcs2)
+
+    assert cube.wcs.wcs.crval[2] != wcs2.wcs.crval[2]
+    assert cube._wcs.wcs.crval[2] != wcs2.wcs.crval[2]
 
     # but if it's not exactly equal, an error should be raised at this step
     with pytest.raises(ValueError) as exc:

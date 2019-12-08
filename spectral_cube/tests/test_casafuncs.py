@@ -166,3 +166,32 @@ def test_casa_beams():
     assert isinstance(cube_beams, VaryingResolutionSpectralCube)
 
     os.system('rm -rf {0}'.format(path('casa_adv_beams.image')))
+
+
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+def test_casa_arrayslicer():
+    """
+    """
+
+    make_casa_testimage(path('adv.fits'), path('casa_adv.image'))
+
+    from spectral_cube.io.casa_image import ArraylikeCasaData
+
+    arr = ArraylikeCasaData(path('casa_adv.image'))
+
+    assert arr.shape == (4,3,2)
+    assert arr.ndim == 3
+    assert arr.dtype == np.float64
+
+    assert arr[:,0,0].size == 4
+    assert arr[:,:,0].shape == (4,3)
+
+    assert arr[:3,:2,:1].shape == (3,2,1)
+    assert arr[:3,:2,0].shape == (3,2,)
+    assert arr[:3,:2,1].shape == (3,2,)
+
+    cube = SpectralCube.read(path('casa_adv.image'), format='casa_image')
+
+    assert cube[:3,:2,:1].shape == (3,2,1)
+    assert np.array(cube.filled_data[:3,:2,:1]).shape == (3,2,1)
+    assert np.array(cube[:3,:2,:1].mask.include()).shape == (3,2,1)

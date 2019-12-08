@@ -6,12 +6,15 @@ import tempfile
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy import units as u
+from astropy.wcs.wcsapi.sliced_low_level_wcs import sanitize_slices
 import numpy as np
 from radio_beam import Beam, Beams
 
+import dask.array
+
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
 from .. import cube_utils
-from .. utils import BeamWarning
+from .. utils import BeamWarning, cached
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -51,6 +54,68 @@ def wcs_casa2astropy(ia, coordsys):
     return WCS(tmpfitsfile)
 
 
+class ArraylikeCasaData:
+
+    def __init__(self, filename, ia_kwargs={}):
+
+        try:
+            import casatools
+            self.ia = casatools.image()
+        except ImportError:
+            try:
+                from taskinit import iatool
+                self.ia = iatool()
+            except ImportError:
+                raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
+
+        # use the ia tool to get the file contents
+        try:
+            self.ia.open(filename)
+        except AssertionError as ex:
+            if 'must be of cReqPath type' in str(ex):
+                raise IOError("File {0} not found.  Error was: {1}"
+                              .format(filename, str(ex)))
+            else:
+                raise ex
+
+        self.ia_kwargs = ia_kwargs
+
+        self._cache = {}
+
+    @property
+    @cached
+    def shape(self):
+        return tuple(self.ia.shape()[::-1])
+
+    @property
+    @cached
+    def ndim(self):
+        return len(self.shape)
+
+    @property
+    @cached
+    def dtype(self):
+        return np.dtype(self.ia.pixeltype())
+
+
+    def __getitem__(self, value):
+
+        value = sanitize_slices(value[::-1], self.ndim)
+
+        blc = [(slc.start or -1) if hasattr(slc, 'start') else slc for slc in value]
+        trc = [(slc.stop-1 if slc.stop is not None else -1)
+               if hasattr(slc, 'stop') else slc for slc in value]
+        inc = [(slc.step or 1) if hasattr(slc, 'step') else 1 for slc in value]
+
+        data = self.ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
+
+        # keep all sliced axes but drop all integer axes
+        new_view = [slice(None) if isinstance(slc, slice) else 0
+                    for slc in value]
+
+        return data[tuple(new_view)].transpose()
+
+
 def load_casa_image(filename, skipdata=False,
                     skipvalid=False, skipcs=False, **kwargs):
     """
@@ -83,11 +148,13 @@ def load_casa_image(filename, skipdata=False,
     # read in the data
     if not skipdata:
         # CASA data are apparently transposed.
-        data = ia.getchunk().transpose()
+        data = dask.array.from_array(ArraylikeCasaData(filename))
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        valid = ia.getchunk(getmask=True).transpose()
+        valid = dask.array.from_array(ArraylikeCasaData(filename,
+                                                        ia_kwargs={'getmask':
+                                                                   True}))
 
     # transpose is dealt with within the cube object
 
@@ -159,7 +226,7 @@ def load_casa_image(filename, skipdata=False,
 
 
     if wcs.naxis == 3:
-        mask = BooleanArrayMask(np.logical_not(valid), wcs)
+        mask = BooleanArrayMask(valid, wcs)
         if 'beam' in locals():
             cube = SpectralCube(data, wcs, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
@@ -175,8 +242,7 @@ def load_casa_image(filename, skipdata=False,
         mask = {}
         for component in data:
             data_, wcs_slice = cube_utils._orient(data[component], wcs)
-            mask[component] = LazyMask(np.isfinite, data=data[component],
-                                       wcs=wcs_slice)
+            mask[component] = BooleanArrayMask(valid, wcs)
 
             if 'beam' in locals():
                 data[component] = SpectralCube(data_, wcs_slice, mask[component],
@@ -195,5 +261,8 @@ def load_casa_image(filename, skipdata=False,
 
 
         cube = StokesSpectralCube(stokes_data=data)
+    else:
+        raise ValueError("CASA image has {0} dimensions, and therefore "
+                         "is not readable by spectral-cube.".format(wcs.naxis))
 
     return cube

@@ -577,14 +577,14 @@ class MultiBeamMixinClass(object):
             A new radio beam object that is the average of the unmasked beams
         """
         if mask == 'compute':
-            beam_mask = np.any(self.mask.include() &
-                               self.goodbeams_mask[:,None,None],
+            beam_mask = np.any(np.bitwise_and(self.mask.include(),
+                                              self.goodbeams_mask[:,None,None]),
                                axis=(1,2))
         else:
             if mask.ndim > 1:
-                beam_mask = mask & self.goodbeams_mask[:,None,None]
+                beam_mask = np.bitwise_and(mask, self.goodbeams_mask[:,None,None])
             else:
-                beam_mask = mask & self.goodbeams_mask
+                beam_mask = np.bitwise_and(mask, self.goodbeams_mask)
 
         # use private _beams here because the public one excludes the bad beams
         # by default
@@ -716,9 +716,9 @@ class MultiBeamMixinClass(object):
                                        self._wcs,
                                        shape=self._data.shape)
 
-        return self._new_thing_with(mask=self.mask & includemask,
+        return self._new_thing_with(mask=np.bitwise_and(self.mask, includemask),
                                     beam_threshold=threshold,
-                                    goodbeams_mask=self.goodbeams_mask & goodbeams,
+                                    goodbeams_mask=np.bitwise_and(self.goodbeams_mask, goodbeams),
                                    )
 
     def with_beams(self, beams, goodbeams_mask=None,):

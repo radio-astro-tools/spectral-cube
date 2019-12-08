@@ -37,9 +37,6 @@ matrix:
     include:
         - env: SETUP_CMD='egg_info'
 
-        - env: PYTHON_VERSION=3.5 CONDA_DEPENDENCIES='' PIP_DEPENDENCIES=$RADIOBEAM NUMPY_VERSION=1.14
-          name: py35
-
         # Test with development versions
         - env: PYTHON_VERSION=3.7 ASTROPY_VERSION='development'
           name: py37_astropy-dev

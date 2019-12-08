@@ -1165,7 +1165,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             mask = BooleanArrayMask(mask, self._wcs, shape=self._data.shape)
 
         if self._mask is not None and inherit_mask:
-            new_mask = self._mask & mask
+            new_mask = np.bitwise_and(self._mask, mask)
         else:
             new_mask = mask
 
@@ -3580,7 +3580,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             if not all(goodbeams):
                 warnings.warn("There were {0} non-finite beams; layers with "
                               "non-finite beams will be masked out.".format(
-                                  np.count_nonzero(~goodbeams)),
+                                  np.count_nonzero(np.logical_not(goodbeams))),
                               NonFiniteBeamsWarning
                              )
 
@@ -3595,7 +3595,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                  "%s vs %s" % (beam_mask.shape, self._data.shape))
             assert beam_mask.shape == self.shape
 
-            new_mask = self._mask & beam_mask
+            new_mask = np.bitwise_and(self._mask, beam_mask)
 
             new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs)
 
@@ -4017,7 +4017,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                 shape=self._data.shape)
 
         return self._new_cube_with(mask=mask,
-                                   goodbeams_mask=goodchannels & self.goodbeams_mask)
+                                   goodbeams_mask=np.logical_and(goodchannels,
+                                                                 self.goodbeams_mask))
 
 
 

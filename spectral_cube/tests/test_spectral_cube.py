@@ -477,6 +477,7 @@ class TestFilters(BaseTest):
         dmask = operation(d, 0.6) & self.c.mask.include()
         cmask = operation(c, 0.6*u.K)
         assert (self.c.mask.include() & cmask.include()).sum() == dmask.sum()
+        assert np.all(c.with_mask(cmask).mask.include() == dmask)
         np.testing.assert_almost_equal(c.with_mask(cmask).sum().value,
                                        d[dmask].sum())
 
