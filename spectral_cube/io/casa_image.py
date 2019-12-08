@@ -46,7 +46,7 @@ def wcs_casa2astropy(ia, coordsys):
     ia.newimagefromarray(outfile=tmpimagefile,
                          pixels=np.ones([1] * coordsys.naxes()),
                          csys=coordsys.torecord(), log=False)
-    exportfits(tmpimagefile, tmpfitsfile)
+    exportfits(tmpimagefile, tmpfitsfile, stokeslast=False)
 
     return WCS(tmpfitsfile)
 
