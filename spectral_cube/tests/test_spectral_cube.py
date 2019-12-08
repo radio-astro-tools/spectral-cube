@@ -81,7 +81,8 @@ def cube_and_raw(filename):
     p = path(filename)
 
     if os.path.splitext(p)[-1] == '.fits':
-        d = fits.getdata(p)
+        with fits.open(p) as hdulist:
+            d = hdulist[0].data
         c = SpectralCube.read(p, format='fits', mode='readonly')
     elif os.path.splitext(p)[-1] == '.image':
         ia.open(p)
@@ -138,6 +139,7 @@ def test_huge_disallowed(data_vda_jybeam_lower):
         cube + 5*cube.unit
     finally:
         cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
 
 
 class BaseTest(object):

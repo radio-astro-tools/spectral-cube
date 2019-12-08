@@ -111,12 +111,8 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
 
     else:
 
-        hdulist = fits_open(input, mode=mode, **kwargs)
-
-        try:
+        with fits_open(input, mode=mode, **kwargs) as hdulist:
             return read_data_fits(hdulist, hdu=hdu)
-        finally:
-            hdulist.close()
 
     return array_hdu.data, array_hdu.header, beam_table
 
