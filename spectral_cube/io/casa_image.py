@@ -187,6 +187,8 @@ def load_casa_image(filename, skipdata=False,
 
     wcs = wcs_casa2astropy(ia, casa_cs)
 
+    del casa_cs
+
     unit = ia.brightnessunit()
 
     beam_ = ia.restoringbeam()
