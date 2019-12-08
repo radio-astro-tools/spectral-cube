@@ -177,7 +177,7 @@ def test_casa_arrayslicer():
 
     from spectral_cube.io.casa_image import ArraylikeCasaData
 
-    arr = ArraylikeCasaData(path('casa_adv.image'), format='casa_image')
+    arr = ArraylikeCasaData(path('casa_adv.image'))
 
     assert arr.shape == (4,3,2)
     assert arr.ndim == 3
@@ -187,5 +187,11 @@ def test_casa_arrayslicer():
     assert arr[:,:,0].shape == (4,3)
 
     assert arr[:3,:2,:1].shape == (3,2,1)
-    assert np.array(arr.filled_data[:3,:2,:1]).shape == (3,2,1)
-    assert np.array(arr[:3,:2,:1].mask.include()).shape == (3,2,1)
+    assert arr[:3,:2,0].shape == (3,2,)
+    assert arr[:3,:2,1].shape == (3,2,)
+
+    cube = SpectralCube.read(path('casa_adv.image'), format='casa_image')
+
+    assert cube[:3,:2,:1].shape == (3,2,1)
+    assert np.array(cube.filled_data[:3,:2,:1]).shape == (3,2,1)
+    assert np.array(cube[:3,:2,:1].mask.include()).shape == (3,2,1)

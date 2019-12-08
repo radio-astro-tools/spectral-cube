@@ -109,7 +109,11 @@ class ArraylikeCasaData:
 
         data = self.ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
 
-        return data.transpose().squeeze()
+        # keep all sliced axes but drop all integer axes
+        new_view = [slice(None) if isinstance(slc, slice) else 0
+                    for slc in value]
+
+        return data[tuple(new_view)].transpose()
 
 
 def load_casa_image(filename, skipdata=False,
