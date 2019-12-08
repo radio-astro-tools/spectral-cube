@@ -28,6 +28,7 @@
  - Add `unmasked_beams` attribute and change many beams behaviors in #502
  - Bugfix for downsampled WCS corners in #525
  - Performance enhancement to world extrema in #524
+ - Simplify conversion from CASA coordsys to FITS-WCS #593
 
 0.4.4 (2019-02-20)
 ------------------

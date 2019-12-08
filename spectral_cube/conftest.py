@@ -44,3 +44,12 @@ from .version import version, astropy_helpers_version
 packagename = os.path.basename(os.path.dirname(__file__))
 TESTED_VERSIONS[packagename] = version
 TESTED_VERSIONS['astropy_helpers'] = astropy_helpers_version
+
+
+# Import casatools and casatasks here if available as they can otherwise
+# cause a segfault if imported later on during tests.
+try:
+    import casatools
+    import casatasks
+except ImportError:
+    pass

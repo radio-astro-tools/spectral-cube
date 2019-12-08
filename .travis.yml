@@ -8,6 +8,7 @@ addons:
             - graphviz
             - texlive-latex-extra
             - dvipng
+            - libgfortran3  # for casatools
 
 env:
     global:
@@ -30,6 +31,7 @@ env:
         - PIP_DEPENDENCIES="Cython $PVEXTRACTOR $RADIOBEAM $REGIONS $REPROJECT"
         - SETUP_XVFB=True
         - ON_TRAVIS=True
+        - INSTALL_CASA=False
 
 matrix:
     include:
@@ -47,6 +49,7 @@ matrix:
         ## COVERAGE TESTS DISABLED: they don't work any more.  I have found no combination of anything that fixes this.
         - env: SETUP_CMD='test --coverage'
                CONDA_DEPENDENCIES='matplotlib yt bottleneck sip aplpy joblib glue-core scipy'
+               INSTALL_CASA=True
           name: coverage
 
         # Check for sphinx doc build warnings - we do this first because it
@@ -72,6 +75,7 @@ matrix:
 install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda.sh
+    - if [[ $INSTALL_CASA == True ]]; then pip install --progress-bar off --extra-index-url https://casa-pip.nrao.edu/repository/pypi-group/simple casatools casatasks; fi
 
 script:
     - python setup.py $SETUP_CMD
