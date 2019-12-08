@@ -1165,7 +1165,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             mask = BooleanArrayMask(mask, self._wcs, shape=self._data.shape)
 
         if self._mask is not None and inherit_mask:
-            new_mask = np.logical_and(self._mask, mask)
+            new_mask = np.bitwise_and(self._mask, mask)
         else:
             new_mask = mask
 
@@ -3595,7 +3595,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                  "%s vs %s" % (beam_mask.shape, self._data.shape))
             assert beam_mask.shape == self.shape
 
-            new_mask = np.logical_and(self._mask, beam_mask)
+            new_mask = np.bitwise_and(self._mask, beam_mask)
 
             new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs)
 
