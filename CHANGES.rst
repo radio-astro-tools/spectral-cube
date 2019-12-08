@@ -29,6 +29,8 @@
  - Bugfix for downsampled WCS corners in #525
  - Performance enhancement to world extrema in #524
  - Simplify conversion from CASA coordsys to FITS-WCS #593
+ - Add chunked file reading for CASA .image opening #592
+ - Dropped python 3.5 testing in #592
 
 0.4.4 (2019-02-20)
 ------------------
