@@ -100,10 +100,11 @@ class ArraylikeCasaData:
 
     def __getitem__(self, value):
 
-        value = sanitize_slices(value, self.ndim)
+        value = sanitize_slices(value[::-1], self.ndim)
 
         blc = [(slc.start or -1) if hasattr(slc, 'start') else slc for slc in value]
-        trc = [(slc.stop-1 if slc.stop is not None else -1) if hasattr(slc, 'stop') else slc for slc in value]
+        trc = [(slc.stop-1 if slc.stop is not None else -1)
+               if hasattr(slc, 'stop') else slc for slc in value]
         inc = [(slc.step or 1) if hasattr(slc, 'step') else 1 for slc in value]
 
         data = self.ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
