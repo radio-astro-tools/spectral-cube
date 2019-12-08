@@ -72,6 +72,7 @@ matrix:
 install:
     - git clone git://github.com/astropy/ci-helpers.git
     - source ci-helpers/travis/setup_conda.sh
+    - pip install --extra-index-url https://casa-pip.nrao.edu/repository/pypi-group/simple casatools casatasks
 
 script:
     - python setup.py $SETUP_CMD
