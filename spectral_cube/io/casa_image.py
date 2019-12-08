@@ -61,27 +61,37 @@ class ArraylikeCasaData:
 
         try:
             import casatools
-            self.ia = casatools.image()
+            self.iatool = casatools.image
         except ImportError:
             try:
                 from taskinit import iatool
-                self.ia = iatool()
+                self.iatool = iatool
             except ImportError:
                 raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
 
-        # use the ia tool to get the file contents
-        try:
-            self.ia.open(filename)
-        except AssertionError as ex:
-            if 'must be of cReqPath type' in str(ex):
-                raise IOError("File {0} not found.  Error was: {1}"
-                              .format(filename, str(ex)))
-            else:
-                raise ex
 
         self.ia_kwargs = ia_kwargs
 
+        self.filename = filename
+
         self._cache = {}
+
+        self.ia = self.iatool()
+        # use the ia tool to get the file contents
+        try:
+            self.ia.open(self.filename)
+        except AssertionError as ex:
+            if 'must be of cReqPath type' in str(ex):
+                raise IOError("File {0} not found.  Error was: {1}"
+                              .format(self.filename, str(ex)))
+            else:
+                raise ex
+
+        self.shape
+        self.ndim
+        self.dtype
+
+        self.ia.close()
 
     @property
     @cached
@@ -108,7 +118,20 @@ class ArraylikeCasaData:
                if hasattr(slc, 'stop') else slc for slc in value]
         inc = [(slc.step or 1) if hasattr(slc, 'step') else 1 for slc in value]
 
+
+        self.ia = self.iatool()
+        # use the ia tool to get the file contents
+        try:
+            self.ia.open(self.filename)
+        except AssertionError as ex:
+            if 'must be of cReqPath type' in str(ex):
+                raise IOError("File {0} not found.  Error was: {1}"
+                              .format(self.filename, str(ex)))
+            else:
+                raise ex
+
         data = self.ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
+        self.ia.close()
 
         # keep all sliced axes but drop all integer axes
         new_view = [slice(None) if isinstance(slc, slice) else 0
