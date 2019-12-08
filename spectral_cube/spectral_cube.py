@@ -293,6 +293,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self._data.shape
 
     @property
+    def dtype(self):
+        return self._data.dtype
+
+
+    @property
     def size(self):
         """ Number of elements in the cube """
         return self._data.size
