@@ -190,6 +190,9 @@ def load_casa_image(filename, skipdata=False,
     unit = ia.brightnessunit()
 
     beam_ = ia.restoringbeam()
+
+    ia.close()
+
     if 'major' in beam_:
         beam = Beam(major=u.Quantity(beam_['major']['value'], unit=beam_['major']['unit']),
                     minor=u.Quantity(beam_['minor']['value'], unit=beam_['minor']['unit']),
@@ -242,8 +245,6 @@ def load_casa_image(filename, skipdata=False,
         #    print new_order
         #    self.casa_cs.reorder(new_order)
 
-    # close the ia tool
-    ia.close()
 
     meta = {'filename': filename,
             'BUNIT': unit}
