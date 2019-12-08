@@ -271,6 +271,8 @@ def test_spectral_interpolate_with_mask(data_522_delta):
 
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
 
+    hdu.close()
+
 
 def test_spectral_interpolate_reversed(data_522_delta):
 

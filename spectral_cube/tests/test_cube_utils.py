@@ -29,7 +29,8 @@ def test_beams_to_bintable_cube(data_522_delta_beams):
 
     cube, data = cube_and_raw(data_522_delta_beams)
 
-    beamtable = fits.open(data_522_delta_beams)[1]
+    hdul = fits.open(data_522_delta_beams)[1]
+    beamtable = hdul[1]
 
     bms = beams_to_bintable(cube.beams)
 
@@ -37,6 +38,8 @@ def test_beams_to_bintable_cube(data_522_delta_beams):
 
     assert bms.header['NPOL'] == 1
     assert bms.header['NCHAN'] == 5
+
+    hdul.close()
 
 def test_beams_to_bintable():
     """ Check that NPOL is set """

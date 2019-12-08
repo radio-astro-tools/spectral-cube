@@ -35,11 +35,14 @@ def test_3d_4d_stokes(data_adv, data_advs):
 
     assert c1.shape == c3.shape
     # c2 has a different shape on disk...
+    f3.close()
+    f4.close()
 
 def test_4d_stokes(data_advs):
     f = pyfits.open(data_advs)
     c = StokesSpectralCube.read(f)
     assert isinstance(c, StokesSpectralCube)
+    f.close()
 
 
 def test_3d_beams(data_vda_beams):
@@ -90,6 +93,7 @@ def test_1d(data_5_spectral):
     spec = OneDSpectrum.from_hdu(hdu)
 
     np.testing.assert_almost_equal(spec, np.arange(5, dtype='float'))
+    hdu.close()
 
 def test_1d_beams(data_5_spectral_beams):
     hdu = pyfits.open(data_5_spectral_beams)
@@ -99,3 +103,4 @@ def test_1d_beams(data_5_spectral_beams):
     assert isinstance(spec, VaryingResolutionOneDSpectrum)
     assert hasattr(spec, 'beams')
     assert len(spec.beams) == 5
+    hdu.close()

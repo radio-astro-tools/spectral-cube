@@ -1342,6 +1342,8 @@ def test_preserve_bunit(data_advs):
     assert cube.unit == u.Jy
     assert cube.header['BUNIT'] == 'Jy'
 
+    hdu.close()
+
 
 def test_preserve_beam(data_advs):
 
