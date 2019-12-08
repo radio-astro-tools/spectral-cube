@@ -8,6 +8,7 @@ addons:
             - graphviz
             - texlive-latex-extra
             - dvipng
+            - libgfortran3  # for casatools
 
 env:
     global:
