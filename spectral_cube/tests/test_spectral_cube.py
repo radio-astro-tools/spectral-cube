@@ -111,8 +111,6 @@ def test_huge_disallowed(data_vda_jybeam_lower):
 
     cube, data = cube_and_raw(data_vda_jybeam_lower)
 
-    cube = SpectralCube(data=data, wcs=cube.wcs)
-
     assert not cube._is_huge
 
     # We need to reduce the memory threshold rather than use a large cube to
