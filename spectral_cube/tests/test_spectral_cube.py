@@ -1335,14 +1335,15 @@ def test_preserve_bunit(data_advs):
 
     assert cube.header['BUNIT'] == 'K'
 
-    hdu = fits.open(data_advs)[0]
+    hdul = fits.open(data_advs)
+    hdu = hdul[0]
     hdu.header['BUNIT'] = 'Jy'
     cube = SpectralCube.read(hdu)
 
     assert cube.unit == u.Jy
     assert cube.header['BUNIT'] == 'Jy'
 
-    hdu.close()
+    hdul.close()
 
 
 def test_preserve_beam(data_advs):

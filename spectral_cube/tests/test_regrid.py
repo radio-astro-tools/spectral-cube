@@ -245,7 +245,8 @@ def test_spectral_interpolate_fail(data_522_delta_beams):
 
 def test_spectral_interpolate_with_mask(data_522_delta):
 
-    hdu = fits.open(data_522_delta)[0]
+    hdul = fits.open(data_522_delta)
+    hdu = hdul[0]
 
     # Swap the velocity axis so indiff < 0 in spectral_interpolate
     hdu.header["CDELT3"] = - hdu.header["CDELT3"]
@@ -271,7 +272,7 @@ def test_spectral_interpolate_with_mask(data_522_delta):
 
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
 
-    hdu.close()
+    hdul.close()
 
 
 def test_spectral_interpolate_reversed(data_522_delta):
