@@ -8,6 +8,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy import units as u
 from astropy.wcs.wcsapi.sliced_low_level_wcs import sanitize_slices
+from astropy import log
 import numpy as np
 from radio_beam import Beam, Beams
 
@@ -51,10 +52,10 @@ def wcs_casa2astropy(ia, coordsys):
     ia.newimagefromarray(outfile=tmpimagefile,
                          pixels=np.ones([1] * coordsys.naxes()),
                          csys=coordsys.torecord(), log=False)
+    exportfits(tmpimagefile, tmpfitsfile, stokeslast=False)
     ia.unlock()
     ia.close()
     ia.done()
-    exportfits(tmpimagefile, tmpfitsfile, stokeslast=False)
 
     # need to explicitly delete the tempfile to _force_ casa to close the
     # handle
@@ -84,6 +85,8 @@ class ArraylikeCasaData:
 
         self._cache = {}
 
+        log.debug("Creating ArrayLikeCasa object")
+
         self.ia = self.iatool()
         # use the ia tool to get the file contents
         try:
@@ -103,6 +106,8 @@ class ArraylikeCasaData:
         self.ia.close()
         self.ia.done()
 
+        log.debug("Finished with initialization of ArrayLikeCasa object")
+
     @property
     @cached
     def shape(self):
@@ -121,10 +126,24 @@ class ArraylikeCasaData:
 
     def __getitem__(self, value):
 
+
+        log.debug(f"Retrieving slice {value} from {self}")
+
         value = sanitize_slices(value[::-1], self.ndim)
 
-        blc = [(slc.start or -1) if hasattr(slc, 'start') else slc for slc in value]
-        trc = [(slc.stop-1 if slc.stop is not None else -1)
+        # several cases:
+        # integer: just use an integer
+        # slice starting w/number: start number
+        # slice starting w/None: use -1
+        blc = [(-1 if slc.start is None else slc.start)
+               if hasattr(slc, 'start') else slc
+               for slc in value]
+        # slice ending w/number >= 1: end number -1 (CASA is end-inclusive)
+        # slice ending w/zero: use zero, not -1.
+        # slice ending w/negative: use it, but ?????
+        # slice ending w/None: use -1
+        trc = [((slc.stop-1 if slc.stop >= 1 else slc.stop)
+                if slc.stop is not None else -1)
                if hasattr(slc, 'stop') else slc for slc in value]
         inc = [(slc.step or 1) if hasattr(slc, 'step') else 1 for slc in value]
 
@@ -140,14 +159,23 @@ class ArraylikeCasaData:
             else:
                 raise ex
 
+        log.debug(f'blc={blc}, trc={trc}, inc={inc}, kwargs={self.ia_kwargs}')
         data = self.ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
+        self.ia.unlock()
         self.ia.close()
+        self.ia.done()
+
+        log.debug(f"Done retrieving slice {value} from {self}")
 
         # keep all sliced axes but drop all integer axes
         new_view = [slice(None) if isinstance(slc, slice) else 0
                     for slc in value]
 
-        return data[tuple(new_view)].transpose()
+        transposed_data = data[tuple(new_view)].transpose()
+
+        log.debug(f"Done transposing data with view {new_view}")
+
+        return transposed_data
 
 
 def load_casa_image(filename, skipdata=False,
@@ -199,7 +227,9 @@ def load_casa_image(filename, skipdata=False,
 
     beam_ = ia.restoringbeam()
 
+    ia.unlock()
     ia.close()
+    ia.done()
 
     wcs = wcs_casa2astropy(ia, casa_cs)
 
