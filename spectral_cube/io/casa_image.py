@@ -71,10 +71,12 @@ class ArraylikeCasaData:
         try:
             import casatools
             self.iatool = casatools.image
+            tb = casatools.table()
         except ImportError:
             try:
-                from taskinit import iatool
+                from taskinit import iatool, tbtool
                 self.iatool = iatool
+                tb = tbtool()
             except ImportError:
                 raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
 
@@ -101,6 +103,13 @@ class ArraylikeCasaData:
         self.shape
         self.ndim
         self.dtype
+
+        tb.open(self.filename)
+        dminfo = tb.getdminfo()
+        tb.done()
+
+        # unclear if this is always the correct callspec!!!
+        self.chunksize = dminfo['*1']['SPEC']['DEFAULTTILESHAPE']
 
         self.ia.unlock()
         self.ia.close()
@@ -209,14 +218,19 @@ def load_casa_image(filename, skipdata=False,
 
     # read in the data
     if not skipdata:
+        arrdata = ArraylikeCasaData(filename)
         # CASA data are apparently transposed.
-        data = dask.array.from_array(ArraylikeCasaData(filename))
+        data = dask.array.from_array(arrdata,
+                                     chunks=arrdata.chunksize,
+                                     name=filename
+                                    )
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        valid = dask.array.from_array(ArraylikeCasaData(filename,
-                                                        ia_kwargs={'getmask':
-                                                                   True}))
+        boolarr = ArraylikeCasaData(filename, ia_kwargs={'getmask': True})
+        valid = dask.array.from_array(boolarr, chunks=boolarr.chunksize,
+                                      name=filename+".mask"
+                                     )
 
     # transpose is dealt with within the cube object
 
