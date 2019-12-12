@@ -87,7 +87,9 @@ def cube_and_raw(filename):
     elif os.path.splitext(p)[-1] == '.image':
         ia.open(p)
         d = ia.getchunk()
+        ia.unlock()
         ia.close()
+        ia.done()
         c = SpectralCube.read(p, format='casa_image')
     else:
         raise ValueError("Unsupported filetype")

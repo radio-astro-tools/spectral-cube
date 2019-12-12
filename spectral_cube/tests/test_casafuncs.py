@@ -34,7 +34,9 @@ def make_casa_testimage(infile, outname):
         raise Exception("Attempted to make a CASA test image in a non-CASA "
                         "environment")
     ia.fromfits(infile=infile, outfile=outname, overwrite=True)
+    ia.unlock()
     ia.close()
+    ia.done()
 
     cube = SpectralCube.read(infile)
     if isinstance(cube, VaryingResolutionSpectralCube):
@@ -54,7 +56,9 @@ def make_casa_testimage(infile, outname):
                         }
             ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=0)
 
+        ia.unlock()
         ia.close()
+        ia.done()
 
 
 @pytest.fixture
@@ -97,7 +101,9 @@ def test_casa_mask(data_adv, tmp_path):
 
     coords = ia.coordsys()
 
+    ia.unlock()
     ia.close()
+    ia.done()
 
     # Test masks
     # Mask array is broadcasted to the cube shape. Mimic this, switch to ints,

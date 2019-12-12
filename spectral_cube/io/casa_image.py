@@ -51,7 +51,9 @@ def wcs_casa2astropy(ia, coordsys):
     ia.newimagefromarray(outfile=tmpimagefile,
                          pixels=np.ones([1] * coordsys.naxes()),
                          csys=coordsys.torecord(), log=False)
+    ia.unlock()
     ia.close()
+    ia.done()
     exportfits(tmpimagefile, tmpfitsfile, stokeslast=False)
 
     # need to explicitly delete the tempfile to _force_ casa to close the
@@ -97,7 +99,9 @@ class ArraylikeCasaData:
         self.ndim
         self.dtype
 
+        self.ia.unlock()
         self.ia.close()
+        self.ia.done()
 
     @property
     @cached

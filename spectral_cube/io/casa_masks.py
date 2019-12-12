@@ -88,7 +88,9 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
     cs = ia.coordsys()
 
+    ia.unlock()
     ia.close()
+    ia.done()
 
     temp2.close()
 
@@ -103,12 +105,16 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     ia.newimagefromarray(outfile=maskpath,
                          pixels=mask_arr.astype('int16'),
                          overwrite=overwrite)
+    ia.unlock()
     ia.close()
+    ia.done()
 
     ia.open(maskpath)
     ia.setcoordsys(cs.torecord())
 
+    ia.unlock()
     ia.close()
+    ia.done()
 
     if append_to_image:
         if img is None:
@@ -116,9 +122,13 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
         ia.open(maskpath)
         ia.calcmask(maskname+">0.5")
+        ia.unlock()
         ia.close()
+        ia.done()
 
         ia.open(img)
         ia.maskhandler('copy', [maskpath+":mask0", maskname])
         ia.maskhandler('set', maskname)
+        ia.unlock()
         ia.close()
+        ia.done()
