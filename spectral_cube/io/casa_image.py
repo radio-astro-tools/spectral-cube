@@ -45,16 +45,16 @@ def wcs_casa2astropy(ia, coordsys):
     # to CASA by getting it to write out a FITS file and reading back in
     # using WCS
 
-    from casatasks import exportfits
-
     tmpimagefile = tempfile.mktemp() + '.image'
     tmpfitsfile = tempfile.mktemp() + '.fits'
     ia.newimagefromarray(outfile=tmpimagefile,
                          pixels=np.ones([1] * coordsys.naxes()),
                          csys=coordsys.torecord(), log=False)
     ia.done()
+    ia.open(tmpimagefile)
+    ia.tofits(tmpfitsfile, stokeslast=False)
+    ia.done()
 
-    exportfits(tmpimagefile, tmpfitsfile, stokeslast=False)
 
     # need to explicitly delete the tempfile to _force_ casa to close the
     # handle
