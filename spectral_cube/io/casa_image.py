@@ -154,7 +154,7 @@ class ArraylikeCasaData:
             else:
                 raise ex
 
-        log.debug(f'blc={blc}, trc={trc}, inc={inc}, kwargs={ia_kwargs}')
+        log.debug(f'blc={blc}, trc={trc}, inc={inc}, kwargs={self.ia_kwargs}')
         data = ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
         ia.unlock()
         ia.close()
