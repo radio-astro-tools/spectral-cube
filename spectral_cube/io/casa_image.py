@@ -91,7 +91,7 @@ class ArraylikeCasaData:
         ia = self.iatool()
         # use the ia tool to get the file contents
         try:
-            ia.open(self.filename)
+            ia.open(self.filename, cache=False)
         except AssertionError as ex:
             if 'must be of cReqPath type' in str(ex):
                 raise IOError("File {0} not found.  Error was: {1}"
@@ -111,9 +111,8 @@ class ArraylikeCasaData:
         # (transpose requires this be backwards)
         self.chunksize = dminfo['*1']['SPEC']['DEFAULTTILESHAPE'][::-1]
 
-        ia.unlock()
-        ia.close()
         ia.done()
+        ia.close()
 
         log.debug("Finished with initialization of ArrayLikeCasa object")
 
@@ -146,7 +145,7 @@ class ArraylikeCasaData:
         ia = self.iatool()
         # use the ia tool to get the file contents
         try:
-            ia.open(self.filename)
+            ia.open(self.filename, cache=False)
         except AssertionError as ex:
             if 'must be of cReqPath type' in str(ex):
                 raise IOError("File {0} not found.  Error was: {1}"
@@ -156,9 +155,8 @@ class ArraylikeCasaData:
 
         log.debug(f'blc={blc}, trc={trc}, inc={inc}, kwargs={self.ia_kwargs}')
         data = ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
-        ia.unlock()
-        ia.close()
         ia.done()
+        ia.close()
 
         log.debug(f"Done retrieving slice {value} from {self}")
 
@@ -194,7 +192,7 @@ def load_casa_image(filename, skipdata=False,
 
     # use the ia tool to get the file contents
     try:
-        ia.open(filename)
+        ia.open(filename, cache=False)
     except AssertionError as ex:
         if 'must be of cReqPath type' in str(ex):
             raise IOError("File {0} not found.  Error was: {1}"
@@ -227,9 +225,8 @@ def load_casa_image(filename, skipdata=False,
 
     beam_ = ia.restoringbeam()
 
-    ia.unlock()
-    ia.close()
     ia.done()
+    ia.close()
 
     wcs = wcs_casa2astropy(ia, casa_cs)
 
