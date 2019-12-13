@@ -52,10 +52,9 @@ def wcs_casa2astropy(ia, coordsys):
     ia.newimagefromarray(outfile=tmpimagefile,
                          pixels=np.ones([1] * coordsys.naxes()),
                          csys=coordsys.torecord(), log=False)
-    exportfits(tmpimagefile, tmpfitsfile, stokeslast=False)
-    ia.unlock()
-    ia.close()
     ia.done()
+
+    exportfits(tmpimagefile, tmpfitsfile, stokeslast=False)
 
     # need to explicitly delete the tempfile to _force_ casa to close the
     # handle
@@ -89,10 +88,10 @@ class ArraylikeCasaData:
 
         log.debug("Creating ArrayLikeCasa object")
 
-        self.ia = self.iatool()
+        ia = self.iatool()
         # use the ia tool to get the file contents
         try:
-            self.ia.open(self.filename)
+            ia.open(self.filename)
         except AssertionError as ex:
             if 'must be of cReqPath type' in str(ex):
                 raise IOError("File {0} not found.  Error was: {1}"
@@ -100,37 +99,24 @@ class ArraylikeCasaData:
             else:
                 raise ex
 
-        self.shape
-        self.ndim
-        self.dtype
+        self.shape = tuple(ia.shape()[::-1])
+        self.dtype = np.dtype(ia.pixeltype())
+        self.ndim = len(self.shape)
 
         tb.open(self.filename)
         dminfo = tb.getdminfo()
         tb.done()
 
         # unclear if this is always the correct callspec!!!
-        self.chunksize = dminfo['*1']['SPEC']['DEFAULTTILESHAPE']
+        # (transpose requires this be backwards)
+        self.chunksize = dminfo['*1']['SPEC']['DEFAULTTILESHAPE'][::-1]
 
-        self.ia.unlock()
-        self.ia.close()
-        self.ia.done()
+        ia.unlock()
+        ia.close()
+        ia.done()
 
         log.debug("Finished with initialization of ArrayLikeCasa object")
 
-    @property
-    @cached
-    def shape(self):
-        return tuple(self.ia.shape()[::-1])
-
-    @property
-    @cached
-    def ndim(self):
-        return len(self.shape)
-
-    @property
-    @cached
-    def dtype(self):
-        return np.dtype(self.ia.pixeltype())
 
 
     def __getitem__(self, value):
@@ -157,10 +143,10 @@ class ArraylikeCasaData:
         inc = [(slc.step or 1) if hasattr(slc, 'step') else 1 for slc in value]
 
 
-        self.ia = self.iatool()
+        ia = self.iatool()
         # use the ia tool to get the file contents
         try:
-            self.ia.open(self.filename)
+            ia.open(self.filename)
         except AssertionError as ex:
             if 'must be of cReqPath type' in str(ex):
                 raise IOError("File {0} not found.  Error was: {1}"
@@ -168,11 +154,11 @@ class ArraylikeCasaData:
             else:
                 raise ex
 
-        log.debug(f'blc={blc}, trc={trc}, inc={inc}, kwargs={self.ia_kwargs}')
-        data = self.ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
-        self.ia.unlock()
-        self.ia.close()
-        self.ia.done()
+        log.debug(f'blc={blc}, trc={trc}, inc={inc}, kwargs={ia_kwargs}')
+        data = ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
+        ia.unlock()
+        ia.close()
+        ia.done()
 
         log.debug(f"Done retrieving slice {value} from {self}")
 
