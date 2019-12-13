@@ -3,7 +3,6 @@ from __future__ import print_function, absolute_import, division
 import numpy as np
 from astropy.io import fits
 import tempfile
-import warnings
 import os
 
 from ..wcs_utils import add_stokes_axis_to_wcs

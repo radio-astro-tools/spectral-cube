@@ -35,6 +35,10 @@ matrix:
           env: TOXENV='py36-test-casa'
           name: "Python 3.6 with minimal dependencies and CASA"
 
+        - python: 3.6
+          env: TOXENV='py38-test-casa-dev'
+          name: "Python 3.8, CASA, and dev versions of key dependencies"
+
         - python: 3.8
           env: TOXENV='py38-test-all-dev'
           name: "Python 3.8, all dependencies, and dev versions of key dependencies"
