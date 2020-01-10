@@ -88,19 +88,27 @@ class ArraylikeCasaData:
 
         log.debug("Creating ArrayLikeCasa object")
 
-        ia = self.iatool()
-        # use the ia tool to get the file contents
-        try:
-            ia.open(self.filename, cache=False)
-        except AssertionError as ex:
-            if 'must be of cReqPath type' in str(ex):
-                raise IOError("File {0} not found.  Error was: {1}"
-                              .format(self.filename, str(ex)))
-            else:
-                raise ex
+        # try to trick CASA into destroying the ia object
+        def getshape():
+            ia = self.iatool()
+            # use the ia tool to get the file contents
+            try:
+                ia.open(self.filename, cache=False)
+            except AssertionError as ex:
+                if 'must be of cReqPath type' in str(ex):
+                    raise IOError("File {0} not found.  Error was: {1}"
+                                  .format(self.filename, str(ex)))
+                else:
+                    raise ex
 
-        self.shape = tuple(ia.shape()[::-1])
-        self.dtype = np.dtype(ia.pixeltype())
+            self.shape = tuple(ia.shape()[::-1])
+            self.dtype = np.dtype(ia.pixeltype())
+
+            ia.done()
+            ia.close()
+
+        getshape()
+
         self.ndim = len(self.shape)
 
         tb.open(self.filename)
@@ -111,8 +119,6 @@ class ArraylikeCasaData:
         # (transpose requires this be backwards)
         self.chunksize = dminfo['*1']['SPEC']['DEFAULTTILESHAPE'][::-1]
 
-        ia.done()
-        ia.close()
 
         log.debug("Finished with initialization of ArrayLikeCasa object")
 
@@ -182,13 +188,14 @@ def load_casa_image(filename, skipdata=False,
 
     try:
         import casatools
-        ia = casatools.image()
+        iatool = casatools.image
     except ImportError:
         try:
             from taskinit import iatool
-            ia = iatool()
         except ImportError:
             raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
+
+    ia = iatool()
 
     # use the ia tool to get the file contents
     try:

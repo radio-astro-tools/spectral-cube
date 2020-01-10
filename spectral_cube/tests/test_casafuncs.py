@@ -14,7 +14,6 @@ from . import path
 
 try:
     import casatools
-    ia = casatools.image()
     casaOK = True
 except ImportError:
     try:
@@ -33,6 +32,9 @@ def make_casa_testimage(infile, outname):
     if not casaOK:
         raise Exception("Attempted to make a CASA test image in a non-CASA "
                         "environment")
+
+    ia = casatools.image()
+
     ia.fromfits(infile=infile, outfile=outname, overwrite=True)
     ia.unlock()
     ia.close()
@@ -94,6 +96,8 @@ def test_casa_mask(data_adv, tmp_path):
 
     make_casa_mask(cube, str(tmp_path / 'casa.mask'), add_stokes=False,
                    append_to_image=False, overwrite=True)
+
+    ia = casatools.image()
 
     ia.open(str(tmp_path / 'casa.mask'))
 
