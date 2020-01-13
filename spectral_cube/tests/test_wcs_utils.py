@@ -71,10 +71,10 @@ def test_add_stokes():
         assert outwcs.wcs.naxis == 4
 
 
-def test_axis_names():
-    wcs = WCS(path('adv.fits'))
+def test_axis_names(data_adv, data_vad):
+    wcs = WCS(str(data_adv))
     assert axis_names(wcs) == ['RA', 'DEC', 'VOPT']
-    wcs = WCS(path('vad.fits'))
+    wcs = WCS(str(data_vad))
     assert axis_names(wcs) == ['VOPT', 'RA', 'DEC']
 
 

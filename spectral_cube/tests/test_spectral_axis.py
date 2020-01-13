@@ -345,17 +345,22 @@ def test_ctype_determinator(ctype,unit,velocity_convention,result):
 def test_vconv_determinator(ctype, vconv):
     assert determine_vconv_from_ctype(ctype) == vconv
 
-@pytest.mark.parametrize(('name'),
-                         (('advs'),
-                          ('dvsa'),
-                          ('sdav'),
-                          ('sadv'),
-                          ('vsad'),
-                          ('vad'),
-                          ('adv'),
-                          ))
-def test_vopt_to_freq(name):
-    h = fits.getheader(data_path(name+".fits"))
+
+@pytest.fixture
+def filename(request):
+    return request.getfixturevalue(request.param)
+
+@pytest.mark.parametrize(('filename'),
+                         (('data_advs'),
+                          ('data_dvsa'),
+                          ('data_sdav'),
+                          ('data_sadv'),
+                          ('data_vsad'),
+                          ('data_vad'),
+                          ('data_adv'),
+                          ), indirect=['filename'])
+def test_vopt_to_freq(filename):
+    h = fits.getheader(filename)
     wcs0 = wcs.WCS(h)
 
     # check to make sure astropy.wcs's "fix" changes VELO-HEL to VOPT

@@ -21,19 +21,19 @@ Here's a simple script demonstrating the spectral-cube package::
     >>> import astropy.units as u
     >>> from astropy.utils import data
     >>> from spectral_cube import SpectralCube
-    >>> fn = data.get_pkg_data_filename('tests/data/adv.fits', 'spectral_cube')
+    >>> fn = data.get_pkg_data_filename('tests/data/example_cube.fits', 'spectral_cube')
     >>> cube = SpectralCube.read(fn)
     >>> print(cube)
-    SpectralCube with shape=(4, 3, 2) and unit=K:
-     n_x:      2  type_x: RA---SIN  unit_x: deg    range:    24.062698 deg:   24.063349 deg
-     n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
-     n_s:      4  type_s: VOPT      unit_s: km / s  range:     -321.215 km / s:    -317.350 km / s
+    SpectralCube with shape=(7, 4, 3) and unit=Jy / beam:
+     n_x:      3  type_x: RA---ARC  unit_x: deg    range:    52.231466 deg:   52.231544 deg
+     n_y:      4  type_y: DEC--ARC  unit_y: deg    range:    31.243639 deg:   31.243739 deg
+     n_s:      7  type_s: VRAD      unit_s: m / s  range:    14322.821 m / s:   14944.909 m / s
 
     # extract the subcube between 98 and 100 GHz
     >>> slab = cube.spectral_slab(98 * u.GHz, 100 * u.GHz)  # doctest: +SKIP
 
-    # Ignore elements fainter than 1K
-    >>> masked_slab = slab.with_mask(slab > 1)  # doctest: +SKIP
+    # Ignore elements fainter than 1 Jy/beam
+    >>> masked_slab = slab.with_mask(slab > 1 Jy/beam)  # doctest: +SKIP
 
     # Compute the first moment and write to file
     >>> m1 = masked_slab.moment(order=1)  # doctest: +SKIP

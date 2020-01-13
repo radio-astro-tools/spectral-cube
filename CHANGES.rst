@@ -1,3 +1,9 @@
+0.5 (unreleased)
+----------------
+
+- Refactor tests to use fixtures for accessing data instead of needing to
+  run a script to generate test files. #598
+
 0.4.5 (unreleased)
 ------------------
  - Added support for casatools-based io in #541 and beam reading from CASA

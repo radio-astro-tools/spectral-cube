@@ -7,29 +7,29 @@ from .test_spectral_cube import cube_and_raw, path
 from ..cube_utils import largest_beam, smallest_beam, beams_to_bintable
 
 
-def test_largest_beam():
+def test_largest_beam(data_522_delta_beams):
 
-    cube, data = cube_and_raw('522_delta_beams.fits')
+    cube, data = cube_and_raw(data_522_delta_beams)
 
     large_beam = largest_beam(cube.beams)
 
     assert large_beam == cube.beams[2]
 
 
-def test_smallest_beam():
+def test_smallest_beam(data_522_delta_beams):
 
-    cube, data = cube_and_raw('522_delta_beams.fits')
+    cube, data = cube_and_raw(data_522_delta_beams)
 
     small_beam = smallest_beam(cube.beams)
 
     assert small_beam == cube.beams[0]
 
 
-def test_beams_to_bintable_cube():
+def test_beams_to_bintable_cube(data_522_delta_beams):
 
-    cube, data = cube_and_raw('522_delta_beams.fits')
+    cube, data = cube_and_raw(data_522_delta_beams)
 
-    beamtable = fits.open(path('522_delta_beams.fits'))[1]
+    beamtable = fits.open(data_522_delta_beams)[1]
 
     bms = beams_to_bintable(cube.beams)
 

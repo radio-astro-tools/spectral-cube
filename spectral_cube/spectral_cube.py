@@ -12,6 +12,7 @@ import itertools
 import copy
 import tempfile
 import textwrap
+from pathlib import PosixPath
 import six
 from six.moves import zip, range
 
@@ -2169,6 +2170,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         from .io.core import read
         from .stokes_spectral_cube import StokesSpectralCube
+        if isinstance(filename, PosixPath):
+            filename = str(filename)
         cube = read(filename, format=format, hdu=hdu, **kwargs)
         if isinstance(cube, StokesSpectralCube):
             if hasattr(cube, 'I'):
