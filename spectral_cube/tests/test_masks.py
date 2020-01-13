@@ -222,17 +222,22 @@ def test_mask_logic():
     assert_allclose(m.include(data, wcs), [[[1, 0, 1, 0, 0]]])
 
 
-@pytest.mark.parametrize(('name'),
-                         (('advs'),
-                          ('dvsa'),
-                          ('sdav'),
-                          ('sadv'),
-                          ('vsad'),
-                          ('vad'),
-                          ('adv'),
-                          ))
-def test_mask_spectral_unit(name):
-    cube, data = cube_and_raw(name + '.fits')
+@pytest.fixture
+def filename(request):
+    return request.getfixturevalue(request.param)
+
+
+@pytest.mark.parametrize(('filename'),
+                         (('data_advs'),
+                          ('data_dvsa'),
+                          ('data_sdav'),
+                          ('data_sadv'),
+                          ('data_vsad'),
+                          ('data_vad'),
+                          ('data_adv'),
+                          ), indirect=['filename'])
+def test_mask_spectral_unit(filename):
+    cube, data = cube_and_raw(filename)
     mask = BooleanArrayMask(data, cube._wcs)
     mask_freq = mask.with_spectral_unit(u.Hz)
 
@@ -246,17 +251,18 @@ def test_mask_spectral_unit(name):
     assert_allclose(mask_freq._wcs.wcs.crval[mask_freq._wcs.wcs.spec],
                     outcv.to(u.Hz).value)
 
-def test_wcs_validity_check():
-    cube, data = cube_and_raw('adv.fits')
-    mask = BooleanArrayMask(data>0, cube._wcs)
+
+def test_wcs_validity_check(data_adv):
+    cube, data = cube_and_raw(data_adv)
+    mask = BooleanArrayMask(data > 0, cube._wcs)
     cube = cube.with_mask(mask)
     s2 = cube.spectral_slab(-2 * u.km / u.s, 2 * u.km / u.s)
     s3 = s2.with_spectral_unit(u.km / u.s, velocity_convention=u.doppler_radio)
     # just checking that this works, not that it does anything in particular
     moment_map = s3.moment(order=1)
 
-def test_wcs_validity_check_failure():
-    cube, data = cube_and_raw('adv.fits')
+def test_wcs_validity_check_failure(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     assert cube.wcs.wcs.crval[2] == -3.21214698632E+05
 
@@ -288,8 +294,8 @@ def test_wcs_validity_check_failure():
     # just checking that this works, not that it does anything in particular
     moment_map = s3.moment(order=1)
 
-def test_mask_spectral_unit_functions():
-    cube, data = cube_and_raw('adv.fits')
+def test_mask_spectral_unit_functions(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     # function mask should do nothing
     mask1 = FunctionMask(lambda x: x>0)
@@ -364,8 +370,8 @@ def test_dims_to_skip(shp1, shp2, dim):
 def test_view_of_subset(shp1, shp2, inview, outview):
     assert view_of_subset(shp1,shp2,inview) == outview
 
-def test_flat_mask():
-    cube, data = cube_and_raw('adv.fits')
+def test_flat_mask(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     mask_array = np.array([[True,False],[False,False],[True,True]])
     bool_mask_array = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
@@ -380,8 +386,8 @@ def test_flat_mask():
 
 @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.7'),
                     reason='Numpy <1.7 does not support multi-slice indexing.')
-def test_flat_mask_spectral():
-    cube, data = cube_and_raw('adv.fits')
+def test_flat_mask_spectral(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     mask_array = np.array([[True,False],[False,False],[True,True]])
     bool_mask_array = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
@@ -394,8 +400,8 @@ def test_flat_mask_spectral():
     assert np.all((data*cubemask).sum(axis=(1,2)) ==
                   mcube.sum(axis=(1,2)).value)
 
-def test_include():
-    cube, data = cube_and_raw('adv.fits')
+def test_include(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     mask_array = np.array([[True,False],[False,False],[True,True]])
     bool_mask_array = BooleanArrayMask(mask=mask_array, wcs=cube._wcs,
@@ -403,12 +409,12 @@ def test_include():
 
     assert np.all(bool_mask_array.include() == mask_array)
 
-def test_1d_mask():
+def test_1d_mask(data_adv):
     # regression test for issue revealed in #183
     # In principle, this is also a regression test for #298, except this always
     # passed where #298 failed, which I don't understand.
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
     mask = np.array([True, False, True, False])
 
     sum0 = cube.with_mask(mask[:,None,None]).sum(axis=0)
@@ -416,8 +422,8 @@ def test_1d_mask():
 
     np.testing.assert_almost_equal(sum0.value, sum0d)
 
-def test_1d_mask_amp():
-    cube, data = cube_and_raw('adv.fits')
+def test_1d_mask_amp(data_adv):
+    cube, data = cube_and_raw(data_adv)
     mask = np.array([True, False, True, False])
 
     Mask = BooleanArrayMask(mask[:,None,None],
@@ -429,8 +435,8 @@ def test_1d_mask_amp():
 
     ampd.include()
 
-def test_2dcomparison_mask_1d_index():
-    cube, data = cube_and_raw('adv.fits')
+def test_2dcomparison_mask_1d_index(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     med = cube.median(axis=0)
     mask = cube > med
@@ -463,8 +469,8 @@ def test_2dcomparison_mask_1d_index():
 
     assert isinstance(spec[0], u.Quantity)
 
-def test_1dcomparison_mask_1d_index():
-    cube, data = cube_and_raw('adv.fits')
+def test_1dcomparison_mask_1d_index(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     med = cube.median()
     mask = cube > med
@@ -485,8 +491,8 @@ def test_1dcomparison_mask_1d_index():
 
     assert isinstance(spec[0], u.Quantity)
 
-def test_1dmask_indexing():
-    cube, data = cube_and_raw('adv.fits')
+def test_1dmask_indexing(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     med = cube.median()
     mask = cube > med
@@ -502,12 +508,12 @@ def test_1dmask_indexing():
     assert np.all(np.isnan(spec[badvals]))
     assert not np.any(np.isnan(spec[~badvals]))
 
-def test_numpy_ma_tools():
+def test_numpy_ma_tools(data_adv):
     """
     check that np.ma.core.is_masked works
     """
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     med = cube.median()
     mask = cube > med
@@ -520,11 +526,11 @@ def test_numpy_ma_tools():
     assert np.ma.core.getmask(mcube[:,0,0]) is not None
 
 @pytest.mark.xfail
-def test_numpy_ma_tools_2d():
+def test_numpy_ma_tools_2d(data_adv):
     """ This depends on 2D objects keeping masks, which depends on #395.
     so, TODO: un-xfail this """
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     med = cube.median()
     mask = cube > med
@@ -535,10 +541,10 @@ def test_numpy_ma_tools_2d():
     assert np.ma.core.getmask(mcube[0,:,:]) is not None
 
 
-def test_filled():
+def test_filled(data_adv):
     """ test that 'filled' works """
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     med = cube.median()
     mask = cube > med
@@ -552,9 +558,9 @@ def test_filled():
 
     assert (np.isnan(filled) == mcube.mask.exclude()).all()
 
-def test_boolean_array_composite_mask():
+def test_boolean_array_composite_mask(data_adv):
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     med = cube.median()
     mask = cube > med
@@ -566,4 +572,4 @@ def test_boolean_array_composite_mask():
     mcube = cube.with_mask(combined_mask)
 
     # not doing assert_almost_equal because I don't want to worry about precision
-    assert (mcube.sum() > 9.5 * u.K) & (mcube.sum() < 9.6*u.K)
+    assert (mcube.sum() > 9.0 * u.K) & (mcube.sum() < 9.1*u.K)

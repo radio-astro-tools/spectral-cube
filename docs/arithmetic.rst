@@ -10,11 +10,11 @@ Examples::
 
     >>> import astropy.units as u
     >>> from astropy.utils import data
-    >>> fn = data.get_pkg_data_filename('tests/data/adv.fits', 'spectral_cube')
+    >>> fn = data.get_pkg_data_filename('tests/data/example_cube.fits', 'spectral_cube')
     >>> from spectral_cube import SpectralCube
     >>> cube = SpectralCube.read(fn)
     >>> cube2 = cube * 2
-    >>> cube3 = cube + 1.5*u.K
+    >>> cube3 = cube + 1.5 * u.Jy / u.beam
     >>> cube4 = cube2 + cube3
 
 Each of these cubes is a new cube in memory.  Note that for addition and

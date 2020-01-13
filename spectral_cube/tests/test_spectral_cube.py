@@ -74,9 +74,9 @@ def cube_and_raw(filename):
     return c, d
 
 
-def test_arithmetic_warning(recwarn):
+def test_arithmetic_warning(data_vda_jybeam_lower, recwarn):
 
-    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+    cube, data = cube_and_raw(data_vda_jybeam_lower)
 
     assert not cube._is_huge
 
@@ -87,9 +87,9 @@ def test_arithmetic_warning(recwarn):
     assert 'requires loading the entire cube into' in str(w.message)
 
 
-def test_huge_disallowed():
+def test_huge_disallowed(data_vda_jybeam_lower):
 
-    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+    cube, data = cube_and_raw(data_vda_jybeam_lower)
 
     cube = SpectralCube(data=data, wcs=cube.wcs)
 
@@ -124,8 +124,9 @@ def test_huge_disallowed():
 
 class BaseTest(object):
 
-    def setup_method(self, method):
-        c, d = cube_and_raw('adv.fits')
+    @pytest.fixture(autouse=True)
+    def setup_method_fixture(self, request, data_adv):
+        c, d = cube_and_raw(data_adv)
         mask = BooleanArrayMask(d > 0.5, c._wcs)
         c._mask = mask
         self.c = c
@@ -134,42 +135,51 @@ class BaseTest(object):
 
 class BaseTestMultiBeams(object):
 
-    def setup_method(self, method):
-        c, d = cube_and_raw('adv_beams.fits')
+    @pytest.fixture(autouse=True)
+    def setup_method_fixture(self, request, data_adv_beams):
+        c, d = cube_and_raw(data_adv_beams)
         mask = BooleanArrayMask(d > 0.5, c._wcs)
         c._mask = mask
         self.c = c
         self.mask = mask
         self.d = d
 
-translist = [('advs', [0, 1, 2, 3]),
-             ('dvsa', [2, 3, 0, 1]),
-             ('sdav', [0, 2, 1, 3]),
-             ('sadv', [0, 1, 2, 3]),
-             ('vsad', [3, 0, 1, 2]),
-             ('vad', [2, 0, 1]),
-             ('vda', [0, 2, 1]),
-             ('adv', [0, 1, 2]),
+
+@pytest.fixture
+def filename(request):
+    return request.getfixturevalue(request.param)
+
+
+translist = [('data_advs', [0, 1, 2, 3]),
+             ('data_dvsa', [2, 3, 0, 1]),
+             ('data_sdav', [0, 2, 1, 3]),
+             ('data_sadv', [0, 1, 2, 3]),
+             ('data_vsad', [3, 0, 1, 2]),
+             ('data_vad', [2, 0, 1]),
+             ('data_vda', [0, 2, 1]),
+             ('data_adv', [0, 1, 2]),
              ]
 
-translist_vrsc = [('vda_beams', [0, 2, 1])]
+translist_vrsc = [('data_vda_beams', [0, 2, 1])]
+
 
 class TestSpectralCube(object):
 
-    @pytest.mark.parametrize(('name', 'trans'), translist + translist_vrsc)
-    def test_consistent_transposition(self, name, trans):
+    @pytest.mark.parametrize(('filename', 'trans'), translist + translist_vrsc,
+                             indirect=['filename'])
+    def test_consistent_transposition(self, filename, trans):
         """data() should return velocity axis first, then world 1, then world 0"""
-        c, d = cube_and_raw(name + '.fits')
+        c, d = cube_and_raw(filename)
         expected = np.squeeze(d.transpose(trans))
         assert_allclose(c._get_filled_data(), expected)
 
-    @pytest.mark.parametrize(('file', 'view'), (
-                             ('adv.fits', np.s_[:, :,:]),
-                             ('adv.fits', np.s_[::2, :, :2]),
-                             ('adv.fits', np.s_[0]),
-                             ))
-    def test_world(self, file, view):
-        p = path(file)
+    @pytest.mark.parametrize(('filename', 'view'), (
+                             ('data_adv', np.s_[:, :,:]),
+                             ('data_adv', np.s_[::2, :, :2]),
+                             ('data_adv', np.s_[0]),
+                             ), indirect=['filename'])
+    def test_world(self, filename, view):
+        p = path(filename)
         # d = fits.getdata(p)
         # wcs = WCS(p)
         # c = SpectralCube(d, wcs)
@@ -202,9 +212,9 @@ class TestSpectralCube(object):
 
     @pytest.mark.parametrize('view', (np.s_[:, :,:],
                              np.s_[:2, :3, ::2]))
-    def test_world_transposes_3d(self, view):
-        c1, d1 = cube_and_raw('adv.fits')
-        c2, d2 = cube_and_raw('vad.fits')
+    def test_world_transposes_3d(self, view, data_adv, data_vad):
+        c1, d1 = cube_and_raw(data_adv)
+        c2, d2 = cube_and_raw(data_vad)
 
         for w1, w2 in zip(c1.world[view], c2.world[view]):
             assert_allclose(w1, w2)
@@ -214,21 +224,21 @@ class TestSpectralCube(object):
                               np.s_[:2, :3, ::2],
                               np.s_[::3, ::2, :1],
                               np.s_[:], ))
-    def test_world_transposes_4d(self, view):
-        c1, d1 = cube_and_raw('advs.fits')
-        c2, d2 = cube_and_raw('sadv.fits')
+    def test_world_transposes_4d(self, view, data_advs, data_sadv):
+        c1, d1 = cube_and_raw(data_advs)
+        c2, d2 = cube_and_raw(data_sadv)
         for w1, w2 in zip(c1.world[view], c2.world[view]):
             assert_allclose(w1, w2)
 
 
-    @pytest.mark.parametrize(('name','masktype','unit'),
-                             itertools.product(('advs', 'dvsa', 'sdav', 'sadv', 'vsad', 'vad', 'adv',),
+    @pytest.mark.parametrize(('filename','masktype','unit'),
+                             itertools.product(('data_advs', 'data_dvsa', 'data_sdav', 'data_sadv', 'data_vsad', 'data_vad', 'data_adv',),
                                                (BooleanArrayMask, LazyMask, FunctionMask, CompositeMask),
                                                ('Hz', u.Hz),
-                                              )
-                            )
-    def test_with_spectral_unit(self, name, masktype, unit):
-        cube, data = cube_and_raw(name + '.fits')
+                                              ),
+                            indirect=['filename'])
+    def test_with_spectral_unit(self, filename, masktype, unit):
+        cube, data = cube_and_raw(filename)
         cube_freq = cube.with_spectral_unit(unit)
 
         if masktype == BooleanArrayMask:
@@ -273,8 +283,8 @@ class TestSpectralCube(object):
                               (operator.truediv, 0.5*u.K),
                               (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
                              ))
-    def test_apply_everywhere(self, operation, value):
-        c1, d1 = cube_and_raw('advs.fits')
+    def test_apply_everywhere(self, operation, value, data_advs):
+        c1, d1 = cube_and_raw(data_advs)
 
         # append 'o' to indicate that it has been operated on
         c1o = c1._apply_everywhere(operation, value)
@@ -284,9 +294,9 @@ class TestSpectralCube(object):
         # allclose fails on identical data?
         #assert_allclose(d1o, c1o.filled_data[:])
 
-    @pytest.mark.parametrize(('name', 'trans'), translist)
-    def test_getitem(self, name, trans):
-        c, d = cube_and_raw(name + '.fits')
+    @pytest.mark.parametrize(('filename', 'trans'), translist, indirect=['filename'])
+    def test_getitem(self, filename, trans):
+        c, d = cube_and_raw(filename)
 
         expected = np.squeeze(d.transpose(trans))
 
@@ -328,9 +338,9 @@ class TestSpectralCube(object):
         #assert_allclose(c2[1,:,1].value, expected[1,:,1])
         assert_allclose(c2[:,1,1].value, expected[:,1,1])
 
-    @pytest.mark.parametrize(('name', 'trans'), translist_vrsc)
-    def test_getitem_vrsc(self, name, trans):
-        c, d = cube_and_raw(name + '.fits')
+    @pytest.mark.parametrize(('filename', 'trans'), translist_vrsc, indirect=['filename'])
+    def test_getitem_vrsc(self, filename, trans):
+        c, d = cube_and_raw(filename)
 
         expected = np.squeeze(d.transpose(trans))
 
@@ -367,9 +377,9 @@ class TestSpectralCube(object):
         assert_allclose(c2[:,1,1].value, expected[:,1,1])
 
         # @pytest.mark.xfail(raises=AttributeError)
-        @pytest.mark.parametrize(('name', 'trans'), translist_vrsc)
-        def test_getitem_vrsc(self, name, trans):
-            c, d = cube_and_raw(name + '.fits')
+        @pytest.mark.parametrize(('filename', 'trans'), translist_vrsc, indirect=['filename'])
+        def test_getitem_vrsc(self, filename, trans):
+            c, d = cube_and_raw(filename)
 
             expected = np.squeeze(d.transpose(trans))
 
@@ -378,8 +388,9 @@ class TestSpectralCube(object):
 
 class TestArithmetic(object):
 
-    def setup_method(self, method):
-        self.c1, self.d1 = cube_and_raw('adv.fits')
+    @pytest.fixture(autouse=True)
+    def setup_method_fixture(self, request, data_adv):
+        self.c1, self.d1 = cube_and_raw(data_adv)
 
         # make nice easy-to-test numbers
         self.d1.flat[:] = np.arange(self.d1.size)
@@ -569,7 +580,7 @@ class TestNumpyMethods(BaseTest):
         assert np.count_nonzero(np.isnan(scmed)) == 0
 
         # use a more aggressive mask to force there to be some all-nan axes
-        m2 = self.c>0.65*self.c.unit
+        m2 = self.c>0.74*self.c.unit
         scmed = self.c.with_mask(m2).apply_numpy_function(np.nanmedian, axis=0)
         assert np.count_nonzero(np.isnan(scmed)) == 1
 
@@ -580,7 +591,7 @@ class TestNumpyMethods(BaseTest):
         scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
         assert np.count_nonzero(np.isnan(scmed)) == 0
 
-        m2 = self.c>0.65*self.c.unit
+        m2 = self.c>0.74*self.c.unit
         scmed = self.c.with_mask(m2).median(axis=0, iterate_rays=iterate_rays)
         assert np.count_nonzero(np.isnan(scmed)) == 1
 
@@ -600,9 +611,9 @@ class TestNumpyMethods(BaseTest):
 
     @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
                                         'median', 'argmin', 'argmax'))
-    def test_transpose(self, method):
-        c1, d1 = cube_and_raw('adv.fits')
-        c2, d2 = cube_and_raw('vad.fits')
+    def test_transpose(self, method, data_adv, data_vad):
+        c1, d1 = cube_and_raw(data_adv)
+        c2, d2 = cube_and_raw(data_vad)
         for axis in [None, 0, 1, 2]:
             assert_allclose(getattr(c1, method)(axis=axis),
                             getattr(c2, method)(axis=axis))
@@ -680,8 +691,10 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
 
 @pytest.mark.skipif('not YT_INSTALLED')
 class TestYt():
-    def setup_method(self, method):
-        self.cube = SpectralCube.read(path('adv.fits'))
+
+    @pytest.fixture(autouse=True)
+    def setup_method_fixture(self, request, data_adv):
+        self.cube = SpectralCube.read(data_adv)
         # Without any special arguments
         self.ytc1 = self.cube.to_yt()
         # With spectral factor = 0.5
@@ -751,8 +764,8 @@ class TestYt():
         world_coord3 = ytc3.yt2world(yt_coord3)
         assert_allclose(ytc3.world2yt(world_coord3), yt_coord3.value)
 
-def test_read_write_rountrip(tmpdir):
-    cube = SpectralCube.read(path('adv.fits'))
+def test_read_write_rountrip(tmpdir, data_adv):
+    cube = SpectralCube.read(data_adv)
     tmp_file = str(tmpdir.join('test.fits'))
     cube.write(tmp_file)
     cube2 = SpectralCube.read(tmp_file)
@@ -772,8 +785,8 @@ def test_read_write_rountrip(tmpdir):
 @pytest.mark.parametrize(('memmap', 'base'),
                          ((True, mmap.mmap),
                           (False, None)))
-def test_read_memmap(memmap, base):
-    cube = SpectralCube.read(path('adv.fits'), memmap=memmap)
+def test_read_memmap(memmap, base, data_adv):
+    cube = SpectralCube.read(data_adv, memmap=memmap)
 
     bb = cube.base
     while hasattr(bb, 'base'):
@@ -855,11 +868,11 @@ class TestMasks(BaseTest):
         assert_allclose(actual, expected)
 
 
-def test_preserve_spectral_unit():
+def test_preserve_spectral_unit(data_advs):
     # astropy.wcs has a tendancy to change spectral units from e.g. km/s to
     # m/s, so we have a workaround - check that it works.
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     cube_freq = cube.with_spectral_unit(u.GHz)
     assert cube_freq.wcs.wcs.cunit[2] == 'Hz'  # check internal
@@ -904,9 +917,9 @@ def test_endians():
     assert xbig.dtype.byteorder == '>'
     assert xlil.dtype.byteorder == '='
 
-def test_header_naxis():
+def test_header_naxis(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     assert cube.header['NAXIS'] == 3 # NOT data.ndim == 4
     assert cube.header['NAXIS1'] == data.shape[3]
@@ -914,9 +927,9 @@ def test_header_naxis():
     assert cube.header['NAXIS3'] == data.shape[1]
     assert 'NAXIS4' not in cube.header
 
-def test_slicing():
+def test_slicing(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     # just to check that we're starting in the right place
     assert cube.shape == (2,3,4)
@@ -944,9 +957,9 @@ def test_slicing():
                           ((slice(1), slice(1), slice(1)), 3),
                           ((slice(None, None, -1), slice(None), slice(None)), 3),
                          ])
-def test_slice_wcs(view, naxis):
+def test_slice_wcs(view, naxis, data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     sl = cube[view]
     assert sl.wcs.naxis == naxis
@@ -958,8 +971,8 @@ def test_slice_wcs(view, naxis):
     assert sl.wcs.naxis == naxis
 
 
-def test_slice_wcs_reversal():
-    cube, data = cube_and_raw('advs.fits')
+def test_slice_wcs_reversal(data_advs):
+    cube, data = cube_and_raw(data_advs)
     view = (slice(None,None,-1), slice(None), slice(None))
 
     rcube = cube[view]
@@ -980,8 +993,8 @@ def test_slice_wcs_reversal():
     np.testing.assert_array_equal(rrcube.spatial_coordinate_map[1].value,
                                   cube.spatial_coordinate_map[1].value)
 
-def test_spectral_slice_preserve_units():
-    cube, data = cube_and_raw('advs.fits')
+def test_spectral_slice_preserve_units(data_advs):
+    cube, data = cube_and_raw(data_advs)
     cube = cube.with_spectral_unit(u.km/u.s)
 
     sl = cube[:,0,0]
@@ -992,9 +1005,9 @@ def test_spectral_slice_preserve_units():
     assert cube.spectral_axis.unit == u.km/u.s
     assert sl.spectral_axis.unit == u.km/u.s
 
-def test_header_units_consistent():
+def test_header_units_consistent(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     cube_ms = cube.with_spectral_unit(u.m/u.s)
     cube_kms = cube.with_spectral_unit(u.km/u.s)
@@ -1018,9 +1031,9 @@ def test_header_units_consistent():
 
     assert cube_freq_GHz.header['CUNIT3'] == 'GHz'
 
-def test_spectral_unit_conventions():
+def test_spectral_unit_conventions(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
     cube_frq = cube.with_spectral_unit(u.Hz)
 
     cube_opt = cube.with_spectral_unit(u.km/u.s,
@@ -1045,9 +1058,9 @@ def test_spectral_unit_conventions():
     assert cube_rad.velocity_convention == u.doppler_radio
     assert cube_opt.velocity_convention == u.doppler_optical
 
-def test_invalid_spectral_unit_conventions():
+def test_invalid_spectral_unit_conventions(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     with pytest.raises(ValueError) as exc:
         cube.with_spectral_unit(u.km/u.s,
@@ -1056,9 +1069,9 @@ def test_invalid_spectral_unit_conventions():
                                  "or relativistic.")
 
 @pytest.mark.parametrize('rest', (50, 50*u.K))
-def test_invalid_rest(rest):
+def test_invalid_rest(rest, data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     with pytest.raises(ValueError) as exc:
         cube.with_spectral_unit(u.km/u.s,
@@ -1067,9 +1080,9 @@ def test_invalid_rest(rest):
     assert exc.value.args[0] == ("Rest value must be specified as an astropy "
                                  "quantity with spectral equivalence.")
 
-def test_airwave_to_wave():
+def test_airwave_to_wave(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
     cube._wcs.wcs.ctype[2] = 'AWAV'
     cube._wcs.wcs.cunit[2] = 'm'
     cube._spectral_unit = u.m
@@ -1082,18 +1095,18 @@ def test_airwave_to_wave():
                                    ax2.value)
 
 
-@pytest.mark.parametrize(('func','how','axis','cubename'),
+@pytest.mark.parametrize(('func','how','axis','filename'),
                          itertools.product(('sum','std','max','min','mean'),
                                            ('slice','cube','auto'),
                                            (0,1,2),
-                                           ('advs.fits', 'advs_nobeam.fits'),
-                                          ))
-def test_twod_numpy(func, how, axis, cubename):
+                                           ('data_advs', 'data_advs_nobeam'),
+                                          ), indirect=['filename'])
+def test_twod_numpy(func, how, axis, filename):
     # Check that a numpy function returns the correct result when applied along
     # one axis
     # This is partly a regression test for #211
 
-    cube, data = cube_and_raw(cubename)
+    cube, data = cube_and_raw(filename)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1104,18 +1117,18 @@ def test_twod_numpy(func, how, axis, cubename):
     np.testing.assert_equal(proj.value, dproj)
     assert cube.unit == proj.unit
 
-@pytest.mark.parametrize(('func','how','axis','cubename'),
+@pytest.mark.parametrize(('func','how','axis','filename'),
                          itertools.product(('sum','std','max','min','mean'),
                                            ('slice','cube','auto'),
                                            ((0,1),(1,2),(0,2)),
-                                           ('advs.fits', 'advs_nobeam.fits'),
-                                          ))
-def test_twod_numpy_twoaxes(func, how, axis, cubename):
+                                           ('data_advs', 'data_advs_nobeam'),
+                                          ), indirect=['filename'])
+def test_twod_numpy_twoaxes(func, how, axis, filename):
     # Check that a numpy function returns the correct result when applied along
     # one axis
     # This is partly a regression test for #211
 
-    cube, data = cube_and_raw(cubename)
+    cube, data = cube_and_raw(filename)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1136,10 +1149,10 @@ def test_twod_numpy_twoaxes(func, how, axis, cubename):
     else:
         np.testing.assert_almost_equal(spec, dspec)
 
-def test_preserves_header_values():
+def test_preserves_header_values(data_advs):
     # Check that the non-WCS header parameters are preserved during projection
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
     cube._header['OBJECT'] = 'TestName'
@@ -1149,10 +1162,10 @@ def test_preserves_header_values():
     assert proj.header['OBJECT'] == 'TestName'
     assert proj.hdu.header['OBJECT'] == 'TestName'
 
-def test_preserves_header_meta_values():
+def test_preserves_header_meta_values(data_advs):
     # Check that additional parameters in meta are preserved
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     cube.meta['foo'] = 'bar'
 
@@ -1177,14 +1190,14 @@ def test_preserves_header_meta_values():
 
 
 
-@pytest.mark.parametrize(('func', 'cubename'),
+@pytest.mark.parametrize(('func', 'filename'),
                          itertools.product(('sum','std','max','min','mean'),
-                                           ('advs.fits', 'advs_nobeam.fits',),
-                                          ))
-def test_oned_numpy(func, cubename):
+                                           ('data_advs', 'data_advs_nobeam',),
+                                          ), indirect=['filename'])
+def test_oned_numpy(func, filename):
     # Check that a numpy function returns an appropriate spectrum
 
-    cube, data = cube_and_raw(cubename)
+    cube, data = cube_and_raw(filename)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1195,10 +1208,10 @@ def test_oned_numpy(func, cubename):
     np.testing.assert_equal(spec.value, dspec)
     assert cube.unit == spec.unit
 
-def test_oned_slice():
+def test_oned_slice(data_advs):
     # Check that a slice returns an appropriate spectrum
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1210,10 +1223,10 @@ def test_oned_slice():
     assert spec.header['BUNIT'] == cube.header['BUNIT']
 
 
-def test_oned_slice_beams():
+def test_oned_slice_beams(data_sdav_beams):
     # Check that a slice returns an appropriate spectrum
 
-    cube, data = cube_and_raw('sdav_beams.fits')
+    cube, data = cube_and_raw(data_sdav_beams)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1227,8 +1240,8 @@ def test_oned_slice_beams():
     assert hasattr(spec, 'beams')
     assert 'BMAJ' in spec.hdulist[1].data.names
 
-def test_subcube_slab_beams():
-    cube, data = cube_and_raw('sdav_beams.fits')
+def test_subcube_slab_beams(data_sdav_beams):
+    cube, data = cube_and_raw(data_sdav_beams)
 
     slcube = cube[1:]
 
@@ -1245,11 +1258,11 @@ def test_subcube_slab_beams():
 # collapsing to one dimension raywise doesn't make sense and is therefore
 # not supported.
 @pytest.mark.parametrize('how', ('auto', 'cube', 'slice'))
-def test_oned_collapse(how):
+def test_oned_collapse(how, data_advs):
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1261,11 +1274,11 @@ def test_oned_collapse(how):
     assert spec.header['BUNIT'] == cube.header['BUNIT']
 
 
-def test_oned_collapse_beams():
+def test_oned_collapse_beams(data_sdav_beams):
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
 
-    cube, data = cube_and_raw('sdav_beams.fits')
+    cube, data = cube_and_raw(data_sdav_beams)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1279,13 +1292,13 @@ def test_oned_collapse_beams():
     assert hasattr(spec, 'beams')
     assert 'BMAJ' in spec.hdulist[1].data.names
 
-def test_preserve_bunit():
+def test_preserve_bunit(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     assert cube.header['BUNIT'] == 'K'
 
-    hdu = fits.open(path('advs.fits'))[0]
+    hdu = fits.open(data_advs)[0]
     hdu.header['BUNIT'] = 'Jy'
     cube = SpectralCube.read(hdu)
 
@@ -1293,18 +1306,18 @@ def test_preserve_bunit():
     assert cube.header['BUNIT'] == 'Jy'
 
 
-def test_preserve_beam():
+def test_preserve_beam(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
-    beam = Beam.from_fits_header(path("advs.fits"))
+    beam = Beam.from_fits_header(str(data_advs))
 
     assert cube.beam == beam
 
 
-def test_beam_attach_to_header():
+def test_beam_attach_to_header(data_adv):
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     header = cube._header.copy()
     del header["BMAJ"], header["BMIN"], header["BPA"]
@@ -1320,9 +1333,9 @@ def test_beam_attach_to_header():
     assert newcube.meta['beam'] == cube.beam
 
 
-def test_beam_custom():
+def test_beam_custom(data_adv):
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     header = cube._header.copy()
     beam = Beam.from_fits_header(header)
@@ -1366,9 +1379,9 @@ def test_beam_custom():
     assert newcube2.meta['beam'] == newbeam
 
 
-def test_cube_with_no_beam():
+def test_cube_with_no_beam(data_adv):
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     header = cube._header.copy()
     beam = Beam.from_fits_header(header)
@@ -1394,9 +1407,9 @@ def test_cube_with_no_beam():
     except utils.NoBeamError as exc:
         raise exc
 
-def test_multibeam_custom():
+def test_multibeam_custom(data_vda_beams):
 
-    cube, data = cube_and_raw('vda_beams.fits')
+    cube, data = cube_and_raw(data_vda_beams)
 
     # Make a new set of beams that differs from the original.
     new_beams = Beams([1.] * cube.shape[0] * u.deg)
@@ -1413,9 +1426,9 @@ def test_multibeam_custom():
 
 
 @pytest.mark.xfail(raises=ValueError, strict=True)
-def test_multibeam_custom_wrongshape():
+def test_multibeam_custom_wrongshape(data_vda_beams):
 
-    cube, data = cube_and_raw('vda_beams.fits')
+    cube, data = cube_and_raw(data_vda_beams)
 
     # Make a new set of beams that differs from the original.
     new_beams = Beams([1.] * cube.shape[0] * u.deg)
@@ -1424,9 +1437,9 @@ def test_multibeam_custom_wrongshape():
     cube.with_beams(new_beams[:1])
 
 
-def test_multibeam_slice():
+def test_multibeam_slice(data_vda_beams):
 
-    cube, data = cube_and_raw('vda_beams.fits')
+    cube, data = cube_and_raw(data_vda_beams)
 
     assert isinstance(cube, VaryingResolutionSpectralCube)
     np.testing.assert_almost_equal(cube.beams[0].major.value, 0.4)
@@ -1457,9 +1470,9 @@ def test_multibeam_slice():
 
     assert cube.beams[0] == spec.beams[0]
 
-def test_basic_unit_conversion():
+def test_basic_unit_conversion(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
     assert cube.unit == u.K
 
     mKcube = cube.to(u.mK)
@@ -1469,8 +1482,8 @@ def test_basic_unit_conversion():
                                     1e3))
 
 
-def test_basic_unit_conversion_beams():
-    cube, data = cube_and_raw('vda_beams.fits')
+def test_basic_unit_conversion_beams(data_vda_beams):
+    cube, data = cube_and_raw(data_vda_beams)
     cube._unit = u.K # want beams, but we want to force the unit to be something non-beamy
     cube._meta['BUNIT'] = 'K'
 
@@ -1484,9 +1497,9 @@ def test_basic_unit_conversion_beams():
 
 
 
-def test_beam_jtok_array():
+def test_beam_jtok_array(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
     cube._meta['BUNIT'] = 'Jy / beam'
     cube._unit = u.Jy/u.beam
 
@@ -1505,9 +1518,9 @@ def test_beam_jtok_array():
                                     jtok[:,None,None]).value)
 
 
-def test_multibeam_jtok_array():
+def test_multibeam_jtok_array(data_vda_beams):
 
-    cube, data = cube_and_raw('vda_beams.fits')
+    cube, data = cube_and_raw(data_vda_beams)
     assert cube.meta['BUNIT'].strip() == 'Jy / beam'
     assert cube.unit.is_equivalent(u.Jy/u.beam)
 
@@ -1528,11 +1541,11 @@ def test_multibeam_jtok_array():
 
 
 
-def test_beam_jtok():
+def test_beam_jtok(data_advs):
     # regression test for an error introduced when the previous test was solved
     # (the "is this an array?" test used len(x) where x could be scalar)
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
     # technically this should be jy/beam, but astropy's equivalency doesn't
     # handle this yet
     cube._meta['BUNIT'] = 'Jy'
@@ -1547,8 +1560,8 @@ def test_beam_jtok():
                                     jtok).value)
 
 
-def test_varyres_moment():
-    cube, data = cube_and_raw('vda_beams.fits')
+def test_varyres_moment(data_vda_beams):
+    cube, data = cube_and_raw(data_vda_beams)
 
     assert isinstance(cube, VaryingResolutionSpectralCube)
 
@@ -1563,37 +1576,37 @@ def test_varyres_moment():
     assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
-def test_append_beam_to_hdr():
+def test_append_beam_to_hdr(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
-    orig_hdr = fits.getheader(path('advs.fits'))
+    orig_hdr = fits.getheader(data_advs)
 
     assert cube.header['BMAJ'] == orig_hdr['BMAJ']
     assert cube.header['BMIN'] == orig_hdr['BMIN']
     assert cube.header['BPA'] == orig_hdr['BPA']
 
-def test_cube_with_swapped_axes():
+def test_cube_with_swapped_axes(data_vda):
     """
     Regression test for #208
     """
-    cube, data = cube_and_raw('vda.fits')
+    cube, data = cube_and_raw(data_vda)
 
     # Check that masking works (this should apply a lazy mask)
     cube.filled_data[:]
 
-def test_jybeam_upper():
+def test_jybeam_upper(data_vda_jybeam_upper):
 
-    cube, data = cube_and_raw('vda_JYBEAM_upper.fits')
+    cube, data = cube_and_raw(data_vda_jybeam_upper)
 
     assert cube.unit == u.Jy/u.beam
     assert hasattr(cube, 'beam')
     np.testing.assert_almost_equal(cube.beam.sr.value,
                                    (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
-def test_jybeam_lower():
+def test_jybeam_lower(data_vda_jybeam_lower):
 
-    cube, data = cube_and_raw('vda_Jybeam_lower.fits')
+    cube, data = cube_and_raw(data_vda_jybeam_lower)
 
     assert cube.unit == u.Jy/u.beam
     assert hasattr(cube, 'beam')
@@ -1601,9 +1614,9 @@ def test_jybeam_lower():
                                    (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
 # Regression test for #257 (https://github.com/radio-astro-tools/spectral-cube/pull/257)
-def test_jybeam_whitespace():
+def test_jybeam_whitespace(data_vda_jybeam_whitespace):
 
-    cube, data = cube_and_raw('vda_Jybeam_whitespace.fits')
+    cube, data = cube_and_raw(data_vda_jybeam_whitespace)
 
     assert cube.unit == u.Jy/u.beam
     assert hasattr(cube, 'beam')
@@ -1611,9 +1624,9 @@ def test_jybeam_whitespace():
                                    (((1*u.arcsec/np.sqrt(8*np.log(2)))**2).to(u.sr)*2*np.pi).value)
 
 
-def test_beam_proj_meta():
+def test_beam_proj_meta(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     moment = cube.moment0(axis=0)
 
@@ -1629,9 +1642,9 @@ def test_beam_proj_meta():
 
     assert 'beam' in proj.meta
 
-def test_proj_meta():
+def test_proj_meta(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     moment = cube.moment0(axis=0)
 
@@ -1648,9 +1661,9 @@ def test_proj_meta():
     assert 'BUNIT' in proj.meta
     assert proj.meta['BUNIT'] == 'K'
 
-def test_pix_sign():
+def test_pix_sign(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     s,y,x = (cube._pix_size_slice(ii) for ii in range(3))
 
@@ -1673,9 +1686,9 @@ def test_pix_sign():
     assert x>0
 
 
-def test_varyres_moment_logic_issue364():
+def test_varyres_moment_logic_issue364(data_vda_beams):
     """ regression test for issue364 """
-    cube, data = cube_and_raw('vda_beams.fits')
+    cube, data = cube_and_raw(data_vda_beams)
 
     assert isinstance(cube, VaryingResolutionSpectralCube)
 
@@ -1699,13 +1712,13 @@ def test_varyres_moment_logic_issue364():
     assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
-def test_mask_bad_beams():
+def test_mask_bad_beams(data_vda_beams):
     """
     Prior to #543, this tested two different scenarios of beam masking.  After
     that, the tests got mucked up because we can no longer have minor>major in
     the beams.
     """
-    cube, data = cube_and_raw('vda_beams.fits')
+    cube, data = cube_and_raw(data_vda_beams)
 
     # make sure all of the beams are initially good (finite)
     assert np.all(cube.goodbeams_mask)
@@ -1732,8 +1745,8 @@ def test_mask_bad_beams():
     # assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
     # assert np.all(masked_cube2.goodbeams_mask == [False,True,True,False])
 
-def test_convolve_to_equal():
-    cube, data = cube_and_raw('vda.fits')
+def test_convolve_to_equal(data_vda):
+    cube, data = cube_and_raw(data_vda)
 
     convolved = cube.convolve_to(cube.beam)
 
@@ -1748,14 +1761,14 @@ def test_convolve_to_equal():
     assert np.all(convolved.value == plane.value)
 
 
-def test_convolve_to():
-    cube, data = cube_and_raw('vda_beams.fits')
+def test_convolve_to(data_vda_beams):
+    cube, data = cube_and_raw(data_vda_beams)
 
     convolved = cube.convolve_to(Beam(0.5*u.arcsec))
 
 
-def test_convolve_to_with_bad_beams():
-    cube, data = cube_and_raw('vda_beams.fits')
+def test_convolve_to_with_bad_beams(data_vda_beams):
+    cube, data = cube_and_raw(data_vda_beams)
 
     convolved = cube.convolve_to(Beam(0.5*u.arcsec))
 
@@ -1776,8 +1789,8 @@ def test_convolve_to_with_bad_beams():
     # this is a copout test; should really check for correctness...
     assert np.all(np.isfinite(convolved.filled_data[1:3]))
 
-def test_jybeam_factors():
-    cube, data = cube_and_raw('vda_beams.fits')
+def test_jybeam_factors(data_vda_beams):
+    cube, data = cube_and_raw(data_vda_beams)
 
     assert_allclose(cube.jtok_factors(),
                     [15111171.12641629, 10074201.06746361, 10074287.73828087,
@@ -1785,15 +1798,15 @@ def test_jybeam_factors():
                     rtol=5e-7
                    )
 
-def test_channelmask_singlebeam():
-    cube, data = cube_and_raw('adv.fits')
+def test_channelmask_singlebeam(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     masked_cube = cube.mask_channels([False, True, True, False])
 
     assert np.all(masked_cube.mask.include()[:,0,0] == [False, True, True, False])
 
-def test_mad_std():
-    cube, data = cube_and_raw('adv.fits')
+def test_mad_std(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     if int(astropy.__version__[0]) < 2:
         with pytest.raises(NotImplementedError) as exc:
@@ -1801,28 +1814,27 @@ def test_mad_std():
 
     else:
         # mad_std run manually on data
-        result = np.array([[0.15509701,  0.45763670],
-                           [0.55907956,  0.42932451],
-                           [0.48819454,  0.25499305]])
+        result = np.array([[0.3099842, 0.2576232],
+                           [0.1822292, 0.6101782],
+                           [0.2819404, 0.2084236]])
 
         np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
 
         mcube = cube.with_mask(cube < 0.98*u.K)
 
-        result2 = np.array([[0.15509701,  0.45763670],
-                            [0.55907956,  0.23835865],
-                            [0.48819454,  0.25499305]])
+        result2 = np.array([[0.3099842, 0.2576232],
+                            [0.1822292, 0.6101782],
+                            [0.2819404, 0.2084236]])
 
         np.testing.assert_almost_equal(mcube.mad_std(axis=0).value, result2)
 
-def test_mad_std_params():
-    cube, data = cube_and_raw('adv.fits')
+def test_mad_std_params(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     # mad_std run manually on data
-    result = np.array([[0.15509701,  0.45763670],
-                       [0.55907956,  0.42932451],
-                       [0.48819454,  0.25499305]])
-
+    result = np.array([[0.3099842, 0.2576232],
+                       [0.1822292, 0.6101782],
+                       [0.2819404, 0.2084236]])
     np.testing.assert_almost_equal(cube.mad_std(axis=0, how='cube').value, result)
     np.testing.assert_almost_equal(cube.mad_std(axis=0, how='ray').value, result)
 
@@ -1839,9 +1851,9 @@ def test_mad_std_params():
     np.testing.assert_almost_equal(cube.mad_std(axis=0, how='ray').value, result)
 
 
-def test_caching():
+def test_caching(data_adv):
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     assert len(cube._cache) == 0
 
@@ -1856,8 +1868,8 @@ def test_caching():
     np.testing.assert_almost_equal(worldextrema.value,
                                    cube.world_extrema.value)
 
-def test_spatial_smooth_g2d():
-    cube, data = cube_and_raw('adv.fits')
+def test_spatial_smooth_g2d(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     #
     # Guassian 2D smoothing test
@@ -1866,24 +1878,24 @@ def test_spatial_smooth_g2d():
     cube_g2d = cube.spatial_smooth(g2d)
 
     # Check first slice
-    result0 = np.array([[ 0.06653894,  0.06598313],
-                        [ 0.07206352,  0.07151016],
-                        [ 0.0702898 ,  0.0697944 ]])
+    result0 = np.array([[0.0585795, 0.0588712],
+                        [0.0612525, 0.0614312],
+                        [0.0576757, 0.057723 ]])
 
     np.testing.assert_almost_equal(cube_g2d[0].value, result0)
 
     # Check third slice
-    result2 = np.array([[ 0.04217102,  0.04183251],
-                        [ 0.04470876,  0.04438826],
-                        [ 0.04269588,  0.04242956]])
+    result2 = np.array([[0.027322 , 0.027257 ],
+                        [0.0280423, 0.02803  ],
+                        [0.0259688, 0.0260123]])
 
     np.testing.assert_almost_equal(cube_g2d[2].value, result2)
 
-def test_spatial_smooth_preserves_unit():
+def test_spatial_smooth_preserves_unit(data_adv):
     """
     Regression test for issue527
     """
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
     cube._unit = u.K
 
     #
@@ -1894,8 +1906,8 @@ def test_spatial_smooth_preserves_unit():
 
     assert cube_g2d.unit == u.K
 
-def test_spatial_smooth_t2d():
-    cube, data = cube_and_raw('adv.fits')
+def test_spatial_smooth_t2d(data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     #
     # Tophat 2D smoothing test
@@ -1904,69 +1916,69 @@ def test_spatial_smooth_t2d():
     cube_t2d = cube.spatial_smooth(t2d)
 
     # Check first slice
-    result0 = np.array([[ 0.14864167,  0.14864167],
-                        [ 0.14864167,  0.14864167],
-                        [ 0.14864167,  0.14864167]])
+    result0 = np.array([[0.1265607, 0.1265607],
+                        [0.1265607, 0.1265607],
+                        [0.1265607, 0.1265607]])
 
     np.testing.assert_almost_equal(cube_t2d[0].value, result0)
 
     # Check third slice
-    result2 = np.array([[ 0.09203958,  0.09203958],
-                        [ 0.09203958,  0.09203958],
-                        [ 0.09203958,  0.09203958]])
+    result2 = np.array([[0.0585135, 0.0585135],
+                        [0.0585135, 0.0585135],
+                        [0.0585135, 0.0585135]])
 
     np.testing.assert_almost_equal(cube_t2d[2].value, result2)
 
 
-def test_spatial_smooth_median():
+def test_spatial_smooth_median(data_adv):
 
     pytest.importorskip('scipy.ndimage')
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     cube_median = cube.spatial_smooth_median(3)
 
     # Check first slice
-    result0 = np.array([[ 0.54671028,  0.54671028],
-                        [ 0.89482735,  0.77513282],
-                        [ 0.93949894,  0.89482735]])
+    result0 = np.array([[0.8172354, 0.9038805],
+                        [0.7068793, 0.8172354],
+                        [0.7068793, 0.7068793]])
 
     np.testing.assert_almost_equal(cube_median[0].value, result0)
 
     # Check third slice
-    result2 = np.array([[ 0.38867729,  0.35675333],
-                        [ 0.38867729,  0.35675333],
-                        [ 0.35675333,  0.54269608]])
+    result2 = np.array([[0.3038468, 0.3038468],
+                        [0.303744 , 0.3038468],
+                        [0.1431722, 0.303744 ]])
 
     np.testing.assert_almost_equal(cube_median[2].value, result2)
 
 
 @pytest.mark.parametrize('num_cores', (None, 1))
-def test_spectral_smooth_median(num_cores):
+def test_spectral_smooth_median(num_cores, data_adv):
 
     pytest.importorskip('scipy.ndimage')
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     cube_spectral_median = cube.spectral_smooth_median(3, num_cores=num_cores)
 
     # Check first slice
-    result = np.array([0.77513282,  0.35675333,  0.35675333,  0.98688694])
+    result = np.array([0.9038805, 0.1431722, 0.1431722, 0.9662900])
 
     np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
 
 
-def test_spectral_smooth_median_4cores():
+def test_spectral_smooth_median_4cores(data_adv):
 
     pytest.importorskip('joblib')
     pytest.importorskip('scipy.ndimage')
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     cube_spectral_median = cube.spectral_smooth_median(3, num_cores=4)
 
     # Check first slice
-    result = np.array([0.77513282,  0.35675333,  0.35675333,  0.98688694])
+    result = np.array([0.9038805, 0.1431722, 0.1431722, 0.9662900])
 
     np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
 
@@ -1974,12 +1986,12 @@ def update_function():
     print("Update Function Call")
 
 
-def test_smooth_update_function_parallel(capsys):
+def test_smooth_update_function_parallel(capsys, data_adv):
 
     pytest.importorskip('joblib')
     pytest.importorskip('scipy.ndimage')
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     # this is potentially a major disaster: if update_function can't be
     # pickled, it won't work, which is why update_function is (very badly)
@@ -1992,11 +2004,11 @@ def test_smooth_update_function_parallel(capsys):
     assert captured.out == "Update Function Call\n"*6
 
 
-def test_smooth_update_function_serial(capsys):
+def test_smooth_update_function_serial(capsys, data_adv):
 
     pytest.importorskip('scipy.ndimage')
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     def update_function():
         print("Update Function Call")
@@ -2008,9 +2020,9 @@ def test_smooth_update_function_serial(capsys):
     assert captured.out == "Update Function Call\n"*6
 
 @pytest.mark.skipif('not scipyOK')
-def test_parallel_bad_params():
+def test_parallel_bad_params(data_adv):
 
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     with pytest.raises(ValueError) as exc:
         cube.spectral_smooth_median(3, num_cores=2, parallel=False,
@@ -2030,18 +2042,18 @@ def test_parallel_bad_params():
 
 
 
-def test_initialization_from_units():
+def test_initialization_from_units(data_adv):
     """
     Regression test for issue 447
     """
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     newcube = SpectralCube(data=cube.filled_data[:], wcs=cube.wcs)
 
     assert newcube.unit == cube.unit
 
-def test_varyres_spectra():
-    cube, data = cube_and_raw('vda_beams.fits')
+def test_varyres_spectra(data_vda_beams):
+    cube, data = cube_and_raw(data_vda_beams)
 
     assert isinstance(cube, VaryingResolutionSpectralCube)
 
@@ -2056,23 +2068,23 @@ def test_varyres_spectra():
     assert hasattr(sp, 'beams')
 
 
-def test_median_2axis():
+def test_median_2axis(data_adv):
     """
     As of this writing the bottleneck.nanmedian did not accept an axis that is a
     tuple/list so this test is to make sure that is properly taken into account.
     """
-    cube, data = cube_and_raw('adv.fits')
+    cube, data = cube_and_raw(data_adv)
 
     cube_median = cube.median(axis=(1, 2))
 
     # Check first slice
-    result0 = np.array([0.83498009, 0.2606566 , 0.37271531, 0.48548023])
+    result0 = np.array([0.7620573, 0.3086828, 0.3037954, 0.7455546])
 
     np.testing.assert_almost_equal(cube_median.value, result0)
 
 
-def test_varyres_mask():
-    cube, data = cube_and_raw('vda_beams.fits')
+def test_varyres_mask(data_vda_beams):
+    cube, data = cube_and_raw(data_vda_beams)
 
     cube._beams.major.value[0] = 0.9
     cube._beams.minor.value[0] = 0.05

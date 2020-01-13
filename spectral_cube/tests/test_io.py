@@ -23,9 +23,10 @@ def test_lmv_fits():
     # should also be able to do this, but it is again false:
     #assert c1.wcs==c2.wcs
 
-def test_3d_4d_stokes():
-    f3 = pyfits.open(path('adv.fits'))
-    f4 = pyfits.open(path('advs.fits'))
+
+def test_3d_4d_stokes(data_adv, data_advs):
+    f3 = pyfits.open(data_adv)
+    f4 = pyfits.open(data_advs)
     f3b = pyfits.PrimaryHDU(data=f3[0].data, header=f4[0].header)
 
     c1 = SpectralCube.read(f3)
@@ -35,28 +36,30 @@ def test_3d_4d_stokes():
     assert c1.shape == c3.shape
     # c2 has a different shape on disk...
 
-def test_4d_stokes():
-    f = pyfits.open(path('advs.fits'))
+def test_4d_stokes(data_advs):
+    f = pyfits.open(data_advs)
     c = StokesSpectralCube.read(f)
     assert isinstance(c, StokesSpectralCube)
 
-def test_3d_beams():
-    c = SpectralCube.read(path('vda_beams.fits'))
-    np.testing.assert_almost_equal(c.beams[0].major.value, 0.4)
-    np.testing.assert_almost_equal(c.beams[0].minor.value, 0.1)
 
-def test_4d_beams():
-    c = SpectralCube.read(path('sdav_beams.fits'))
+def test_3d_beams(data_vda_beams):
+    c = SpectralCube.read(data_vda_beams)
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.4)
     np.testing.assert_almost_equal(c.beams[0].minor.value, 0.1)
 
 
-def test_3d_beams_roundtrip():
-    c = SpectralCube.read(path('vda_beams.fits'))
+def test_4d_beams(data_sdav_beams):
+    c = SpectralCube.read(data_sdav_beams)
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.4)
     np.testing.assert_almost_equal(c.beams[0].minor.value, 0.1)
-    c.write(path('vda_beams_out.fits'))
-    c2 = SpectralCube.read(path('vda_beams_out.fits'))
+
+
+def test_3d_beams_roundtrip(tmpdir, data_vda_beams):
+    c = SpectralCube.read(data_vda_beams)
+    np.testing.assert_almost_equal(c.beams[0].major.value, 0.4)
+    np.testing.assert_almost_equal(c.beams[0].minor.value, 0.1)
+    c.write(tmpdir.join('vda_beams_out.fits').strpath)
+    c2 = SpectralCube.read(tmpdir.join('vda_beams_out.fits').strpath)
 
     # assert c==c2 # this is not implemented?
     assert np.all(c.filled_data[:] == c2.filled_data[:])
@@ -66,13 +69,13 @@ def test_3d_beams_roundtrip():
     np.testing.assert_almost_equal(c2.beams[0].minor.value, 0.1)
 
 
-def test_4d_beams_roundtrip():
+def test_4d_beams_roundtrip(tmpdir, data_sdav_beams):
     # not sure if 4d can round-trip...
-    c = SpectralCube.read(path('sdav_beams.fits'))
+    c = SpectralCube.read(data_sdav_beams)
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.4)
     np.testing.assert_almost_equal(c.beams[0].minor.value, 0.1)
-    c.write(path('sdav_beams_out.fits'))
-    c2 = SpectralCube.read(path('sdav_beams_out.fits'))
+    c.write(tmpdir.join('sdav_beams_out.fits').strpath)
+    c2 = SpectralCube.read(tmpdir.join('sdav_beams_out.fits').strpath)
 
     # assert c==c2 # this is not implemented?
     assert np.all(c.filled_data[:] == c2.filled_data[:])
@@ -81,14 +84,15 @@ def test_4d_beams_roundtrip():
     np.testing.assert_almost_equal(c2.beams[0].major.value, 0.4)
     np.testing.assert_almost_equal(c2.beams[0].minor.value, 0.1)
 
-def test_1d():
-    hdu = pyfits.open(path('5_spectral.fits'))[0]
+
+def test_1d(data_5_spectral):
+    hdu = pyfits.open(data_5_spectral)[0]
     spec = OneDSpectrum.from_hdu(hdu)
 
     np.testing.assert_almost_equal(spec, np.arange(5, dtype='float'))
 
-def test_1d_beams():
-    hdu = pyfits.open(path('5_spectral_beams.fits'))
+def test_1d_beams(data_5_spectral_beams):
+    hdu = pyfits.open(data_5_spectral_beams)
     spec = OneDSpectrum.from_hdu(hdu)
 
     np.testing.assert_almost_equal(spec, np.arange(5, dtype='float'))

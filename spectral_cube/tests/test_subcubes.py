@@ -26,9 +26,9 @@ except ImportError:
     scipyOK = False
 
 
-def test_subcube():
+def test_subcube(data_advs):
 
-    cube, data = cube_and_raw('advs.fits')
+    cube, data = cube_and_raw(data_advs)
 
     sc1 = cube.subcube(xlo=1, xhi=3)
     sc2 = cube.subcube(xlo=24.06269*u.deg, xhi=24.06206*u.deg)
@@ -61,9 +61,9 @@ def test_subcube():
 @pytest.mark.parametrize('regfile',
                          ('255-fk5.reg', '255-pixel.reg'),
                         )
-def test_ds9region_255(regfile):
+def test_ds9region_255(regfile, data_255):
     # specific test for correctness
-    cube, data = cube_and_raw('255.fits')
+    cube, data = cube_and_raw(data_255)
 
     shapelist = regions.read_ds9(path(regfile))
 
@@ -84,8 +84,8 @@ def test_ds9region_255(regfile):
                               ('partial_overlap_fk5.reg', (slice(None), 1, 1)),
                               ('no_overlap_fk5.reg', ValueError),
                               ))
-def test_ds9region_new(regfile, result):
-    cube, data = cube_and_raw('adv.fits')
+def test_ds9region_new(regfile, result, data_adv):
+    cube, data = cube_and_raw(data_adv)
 
     regionlist = regions.read_ds9(path(regfile))
 
@@ -113,8 +113,8 @@ def test_ds9region_new(regfile, result):
 @pytest.mark.skipif('not scipyOK', reason='Could not import scipy')
 @pytest.mark.skipif('not regionsOK', reason='Could not import regions')
 @pytest.mark.skipif('not REGIONS_GT_03', reason='regions version should be >= 0.3')
-def test_regions_spectral():
-    cube, data = cube_and_raw('adv.fits')
+def test_regions_spectral(data_adv):
+    cube, data = cube_and_raw(data_adv)
     rf_cube = get_rest_value_from_wcs(cube.wcs).to("GHz",
                                                          equivalencies=u.spectral())
 
