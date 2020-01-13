@@ -49,5 +49,7 @@ script:
     - tox $TOXARGS -- $TOXPOSARGS
 
 after_success:
-    - pip install coveralls
+    - pip install coveralls coverage
+    - coverage combine .tmp/*/.coverage
+    - coverage report
     - coveralls
