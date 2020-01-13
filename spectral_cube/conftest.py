@@ -6,6 +6,14 @@ from __future__ import print_function, absolute_import, division
 import os
 from distutils.version import LooseVersion
 
+# Import casatools and casatasks here if available as they can otherwise
+# cause a segfault if imported later on during tests.
+try:
+    import casatools
+    import casatasks
+except ImportError:
+    pass
+
 import pytest
 import numpy as np
 from astropy.io import fits
@@ -28,15 +36,6 @@ def pytest_configure(config):
     PYTEST_HEADER_MODULES['Astropy'] = 'astropy'
     PYTEST_HEADER_MODULES['regions'] = 'regions'
     PYTEST_HEADER_MODULES['APLpy'] = 'aplpy'
-
-
-# Import casatools and casatasks here if available as they can otherwise
-# cause a segfault if imported later on during tests.
-try:
-    import casatools
-    import casatasks
-except ImportError:
-    pass
 
 HEADER_FILENAME = os.path.join(os.path.dirname(__file__), 'tests',
                                'data', 'header_jybeam.hdr')
