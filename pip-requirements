@@ -1,4 +1,0 @@
-numpy>=1.9
-astropy>=1.0
-joblib
-dask[array]

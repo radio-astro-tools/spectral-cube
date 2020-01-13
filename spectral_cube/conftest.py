@@ -43,12 +43,12 @@ PYTEST_HEADER_MODULES['regions'] = 'regions'
 PYTEST_HEADER_MODULES['APLpy'] = 'aplpy'
 
 # This is to figure out the spectral-cube's version, rather than astropy's
-from .version import version, astropy_helpers_version
+#from .version import version, astropy_helpers_version
 
 
-packagename = os.path.basename(os.path.dirname(__file__))
-TESTED_VERSIONS[packagename] = version
-TESTED_VERSIONS['astropy_helpers'] = astropy_helpers_version
+#packagename = os.path.basename(os.path.dirname(__file__))
+#TESTED_VERSIONS[packagename] = version
+#TESTED_VERSIONS['astropy_helpers'] = astropy_helpers_version
 
 
 # Import casatools and casatasks here if available as they can otherwise
