@@ -805,6 +805,8 @@ class TestYt():
         ds2.quan(1.0,unit2)
         ds3.quan(1.0,unit3)
 
+        self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
+
     @pytest.mark.skipif('YT_LT_301', reason='yt 3.0 has a FITS-related bug')
     def test_yt_fluxcompare(self):
         # Now check that we can compute quantities of the flux
@@ -826,6 +828,7 @@ class TestYt():
         assert flux1_min == flux3_min
         assert flux1_max == flux2_max
         assert flux1_max == flux3_max
+        self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
 
     def test_yt_roundtrip_wcs(self):
         # Now test round-trip conversions between yt and world coordinates
@@ -840,6 +843,7 @@ class TestYt():
         yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
         world_coord3 = ytc3.yt2world(yt_coord3)
         assert_allclose(ytc3.world2yt(world_coord3), yt_coord3.value)
+        self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
 
 def test_read_write_rountrip(tmpdir, data_adv):
     cube = SpectralCube.read(data_adv)

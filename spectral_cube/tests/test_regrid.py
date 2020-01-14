@@ -172,13 +172,13 @@ def test_spectral_smooth_4cores(data_522_delta):
 
     # num_cores = 4 is a contradiction with parallel=False, so we want to make
     # sure it fails
-    with pytest.raises(ValueError) as exc:
-        result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0),
-                                      num_cores=4, parallel=False)
-    assert exc.value.args[0] == ("parallel execution was not requested, but "
+    with pytest.raises(ValueError,
+                       match=("parallel execution was not requested, but "
                                  "multiple cores were: these are incompatible "
                                  "options.  Either specify num_cores=1 or "
-                                 "parallel=True")
+                                 "parallel=True")):
+        result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0),
+                                      num_cores=4, parallel=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    convolution.Gaussian1DKernel(1.0,
@@ -360,10 +360,9 @@ def test_nocelestial_reproject_2D_fail(data_255_delta):
 
     proj = cube.moment0(axis=1)
 
-    with pytest.raises(WCSCelestialError) as exc:
+    with pytest.raises(WCSCelestialError,
+                       match="WCS does not contain two spatial axes."):
         proj.reproject(cube.header)
-
-    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
 
 
 @pytest.mark.parametrize('use_memmap', (True,False))
