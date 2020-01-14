@@ -264,6 +264,7 @@ class TestSpectralCube(object):
 
         if suffix == '.image':
             import casatasks
+            filename = str(filename)
             casatasks.importfits(filename, filename.replace('.fits', '.image'))
             filename = filename.replace('.fits', '.image')
 
