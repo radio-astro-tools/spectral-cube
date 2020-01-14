@@ -1,4 +1,4 @@
-language: c
+language: python
 
 # The apt packages below are needed for sphinx builds, which can no longer
 # be installed with sudo apt-get.
@@ -6,76 +6,58 @@ addons:
     apt:
         packages:
             - graphviz
-            - texlive-latex-extra
-            - dvipng
             - libgfortran3  # for casatools
+            - libxkbcommon-x11-0  # for glue
 
 env:
     global:
         # The following versions are the 'default' for tests, unless
         # overidden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
-        - PYTHON_VERSION=3.6
-        - SETUP_CMD='test'
-        - NUMPY_VERSION=stable
-        - ASTROPY_VERSION=stable
-          # matplotlib>2 is an install requirement of pvextractor, so we may as
-          # well include it here
-        - CONDA_DEPENDENCIES='matplotlib sip glue-core scipy'
-        - CONDA_CHANNELS='astropy glueviz'
-        - PVEXTRACTOR="https://github.com/radio-astro-tools/pvextractor/archive/master.zip"
-        - REGIONS="https://github.com/astropy/regions/archive/master.zip"
-          # lock to reproject v0.5.1: master branch acquired serious regressions in #166
-        - REPROJECT="https://github.com/astropy/reproject/archive/v0.5.1.tar.gz"
-        - RADIOBEAM="https://github.com/radio-astro-tools/radio-beam/archive/master.zip"
-        - PIP_DEPENDENCIES="Cython $PVEXTRACTOR $RADIOBEAM $REGIONS $REPROJECT"
         - SETUP_XVFB=True
         - ON_TRAVIS=True
-        - INSTALL_CASA=False
+        - TOXENV=''
+        - TOXARGS=''
+        - TOXPOSARGS=''
 
 matrix:
     include:
-        - env: SETUP_CMD='egg_info'
 
-        # Test with development versions
-        - env: PYTHON_VERSION=3.7 ASTROPY_VERSION='development'
-          name: py37_astropy-dev
+        - python: 3.7
+          env: TOXENV='py37-test'
+          name: "Python 3.7 with minimal dependencies"
 
-        # Do a coverage test in Python 3.
-        # make sure *everything* is run for coverage tests
-        ## COVERAGE TESTS DISABLED: they don't work any more.  I have found no combination of anything that fixes this.
-        - env: SETUP_CMD='test --coverage'
-               CONDA_DEPENDENCIES='matplotlib yt bottleneck sip aplpy joblib glue-core scipy'
-               INSTALL_CASA=True
-          name: coverage
+        - python: 3.7
+          env: TOXENV='py37-test-all'
+          name: "Python 3.7 with all dependencies (except CASA)"
 
-        # Check for sphinx doc build warnings - we do this first because it
-        # may run for a long time.
-        - env: SETUP_CMD='build_sphinx -w' NUMPY_VERSION=1.16
-               PIP_DEPENDENCIES="Cython $PVEXTRACTOR $RADIOBEAM $REGIONS $REPROJECT sphinx-astropy"
-          name: docs
+        - python: 3.6
+          env: TOXENV='py36-test-casa'
+          name: "Python 3.6 with minimal dependencies and CASA"
 
+        - python: 3.8
+          env: TOXENV='py38-test-all-dev'
+          name: "Python 3.8, all dependencies, and dev versions of key dependencies"
 
-        - env: ASTROPY_VERSION='development'
-          name: astropy-dev
+        - python: 3.8
+          env: TOXENV='build_docs'
+          name: "Documentation"
 
-        - env: CONDA_DEPENDENCIES="matplotlib=3 aplpy yt bottleneck joblib $CONDA_DEPENDENCIES"
-               ASTROPY_VERSION='development'
-          name: vistools
+before_install:
+    # We need a full clone to make sure setuptools_scm
+    # works properly
+    - git fetch --unshallow .
+    - git fetch --depth=1000000
 
-        - env: # separate joblib-only test
-               CONDA_DEPENDENCIES="joblib $CONDA_DEPENDENCIES"
-               ASTROPY_VERSION='development'
-          name: joblib
-
-
-install:
-    - git clone git://github.com/astropy/ci-helpers.git
-    - source ci-helpers/travis/setup_conda.sh
-    - if [[ $INSTALL_CASA == True ]]; then pip install --progress-bar off --extra-index-url https://casa-pip.nrao.edu/repository/pypi-group/simple casatools casatasks; fi
+    - export DISPLAY=:99.0
+    - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX +render -noreset
 
 script:
-    - python setup.py $SETUP_CMD
+    - pip install tox
+    - tox $TOXARGS -- $TOXPOSARGS
 
 after_success:
-    - if [[ $SETUP_CMD == 'test --coverage' ]]; then coveralls --rcfile='spectral_cube/tests/coveragerc'; fi
+    - pip install coveralls coverage
+    - coverage combine .tmp/*/.coverage
+    - coverage report
+    - coveralls
