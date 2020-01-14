@@ -47,18 +47,14 @@ def wcs_casa2astropy(ia, coordsys):
 
     tmpimagefile = tempfile.mktemp() + '.image'
     tmpfitsfile = tempfile.mktemp() + '.fits'
-    ia.newimagefromarray(outfile=tmpimagefile,
-                         pixels=np.ones([1] * coordsys.naxes()),
-                         csys=coordsys.torecord(), log=False)
+    ia.fromarray(outfile=tmpimagefile,
+                 pixels=np.ones([1] * coordsys.naxes()),
+                 csys=coordsys.torecord(), log=False)
     ia.done()
+
     ia.open(tmpimagefile)
     ia.tofits(tmpfitsfile, stokeslast=False)
     ia.done()
-
-
-    # need to explicitly delete the tempfile to _force_ casa to close the
-    # handle
-    shutil.rmtree(tmpimagefile)
 
     return WCS(tmpfitsfile)
 

@@ -473,10 +473,9 @@ def test_projection_subimage_nocelestial_fail(data_255_delta):
 
     proj = cube.moment0(axis=1)
 
-    with pytest.raises(WCSCelestialError) as exc:
+    with pytest.raises(WCSCelestialError,
+                       match="WCS does not contain two spatial axes."):
         proj.subimage(xlo=1, xhi=3)
-
-    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
 
 
 @pytest.mark.parametrize('LDO', LDOs_2d)

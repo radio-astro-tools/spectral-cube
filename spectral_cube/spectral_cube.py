@@ -286,7 +286,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if self._unit:
             return self._unit
         else:
-            return u.dimensionless_unscaled
+            return u.one
 
     @property
     def shape(self):
@@ -313,7 +313,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def __repr__(self):
         s = "{1} with shape={0}".format(self.shape, self.__class__.__name__)
-        if self.unit is u.dimensionless_unscaled:
+        if self.unit is u.one:
             s += ":\n"
         else:
             s += " and unit={0}:\n".format(self.unit)

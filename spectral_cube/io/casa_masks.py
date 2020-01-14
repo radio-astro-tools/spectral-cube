@@ -100,9 +100,9 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     # Transpose to match CASA axes
     mask_arr = mask_arr.T
 
-    ia.newimagefromarray(outfile=maskpath,
-                         pixels=mask_arr.astype('int16'),
-                         overwrite=overwrite)
+    ia.fromarray(outfile=maskpath,
+                 pixels=mask_arr.astype('int16'),
+                 overwrite=overwrite)
     ia.done()
     ia.close()
 

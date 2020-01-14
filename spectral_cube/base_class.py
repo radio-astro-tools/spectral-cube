@@ -84,7 +84,7 @@ class HeaderMixinClass(object):
 
         # Preserve non-WCS information from previous header iteration
         header.update(wcsheader)
-        if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
+        if self.unit == u.one and 'BUNIT' in self._meta:
             # preserve the BUNIT even though it's not technically valid
             # (Jy/Beam)
             header['BUNIT'] = self._meta['BUNIT']
@@ -776,4 +776,4 @@ class BeamMixinClass(object):
     def pixels_per_beam(self):
         return (self.beam.sr /
                 (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
-                 u.deg**2)).to(u.dimensionless_unscaled).value
+                 u.deg**2)).to(u.one).value

@@ -143,10 +143,10 @@ def test_catch_kernel_with_units(data_522_delta):
 
     cube, data = cube_and_raw(data_522_delta)
 
-    with pytest.raises(u.UnitsError) as exc:
-        cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0 * u.dimensionless_unscaled),
+    with pytest.raises(u.UnitsError,
+                       match="The convolution kernel should be defined without a unit."):
+        cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0 * u.one),
                              use_memmap=False)
-    assert exc.value.args[0] == "The convolution kernel should be defined without a unit."
 
 
 def test_spectral_smooth_4cores(data_522_delta):
@@ -190,13 +190,12 @@ def test_spectral_smooth_fail(data_522_delta_beams):
 
     cube, data = cube_and_raw(data_522_delta_beams)
 
-    with pytest.raises(AttributeError) as exc:
+    with pytest.raises(AttributeError,
+                       match=("VaryingResolutionSpectralCubes can't be "
+                              "spectrally smoothed.  Convolve to a "
+                              "common resolution with `convolve_to` before "
+                              "attempting spectral smoothed.")):
         cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0))
-
-    assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
-                                 "spectrally smoothed.  Convolve to a "
-                                 "common resolution with `convolve_to` before "
-                                 "attempting spectral smoothed.")
 
 
 def test_spectral_interpolate(data_522_delta):
@@ -234,13 +233,12 @@ def test_spectral_interpolate_fail(data_522_delta_beams):
 
     cube, data = cube_and_raw(data_522_delta_beams)
 
-    with pytest.raises(AttributeError) as exc:
+    with pytest.raises(AttributeError,
+                       match=("VaryingResolutionSpectralCubes can't be "
+                              "spectrally interpolated.  Convolve to a "
+                              "common resolution with `convolve_to` before "
+                              "attempting spectral interpolation.")):
         cube.spectral_interpolate(5)
-
-    assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
-                                 "spectrally interpolated.  Convolve to a "
-                                 "common resolution with `convolve_to` before "
-                                 "attempting spectral interpolation.")
 
 
 def test_spectral_interpolate_with_mask(data_522_delta):
@@ -320,10 +318,9 @@ def test_nocelestial_convolution_2D_fail(data_255_delta):
 
     test_beam = Beam(1.0 * u.arcsec)
 
-    with pytest.raises(WCSCelestialError) as exc:
+    with pytest.raises(WCSCelestialError,
+                       match="WCS does not contain two spatial axes."):
         proj.convolve_to(test_beam)
-
-    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
 
 
 def test_reproject_2D(data_55):
