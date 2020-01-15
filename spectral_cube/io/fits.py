@@ -209,19 +209,8 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, **kwargs):
 
         raise FITSReadError("Data should be 3- or 4-dimensional")
 
-    if target_cls is BaseSpectralCube and isinstance(cube, StokesSpectralCube):
-        if hasattr(cube, 'I'):
-            warnings.warn("Cube is a Stokes cube, "
-                          "returning spectral cube for I component",
-                          StokesWarning)
-            return cube.I
-        else:
-            raise ValueError("Spectral cube is a Stokes cube that "
-                            "does not have an I component")
-    elif target_cls is StokesSpectralCube and isinstance(cube, BaseSpectralCube):
-        cube = StokesSpectralCube({'I': cube})
-    else:
-        return cube
+    from .core import normalize_cube_stokes
+    return normalize_cube_stokes(cube, target_cls=target_cls)
 
 
 def write_fits_cube(cube, filename, overwrite=False,

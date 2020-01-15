@@ -342,21 +342,8 @@ def load_casa_image(filename, skipdata=False,
         raise ValueError("CASA image has {0} dimensions, and therefore "
                          "is not readable by spectral-cube.".format(wcs.naxis))
 
-    if target_cls is BaseSpectralCube and isinstance(cube, StokesSpectralCube):
-        if hasattr(cube, 'I'):
-            warnings.warn("Cube is a Stokes cube, "
-                          "returning spectral cube for I component",
-                          StokesWarning)
-            return cube.I
-        else:
-            raise ValueError("Spectral cube is a Stokes cube that "
-                            "does not have an I component")
-    elif target_cls is StokesSpectralCube and isinstance(cube, BaseSpectralCube):
-        cube = StokesSpectralCube({'I': cube})
-    else:
-        return cube
-
-    return cube
+    from .core import normalize_cube_stokes
+    return normalize_cube_stokes(cube, target_cls=target_cls)
 
 
 io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)
