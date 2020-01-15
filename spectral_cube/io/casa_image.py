@@ -18,7 +18,7 @@ import dask.array
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from .. utils import BeamWarning, cached
+from .. utils import BeamWarning, cached, StokesWarning
 from .. import wcs_utils
 
 # Read and write from a CASA image. This has a few
@@ -173,7 +173,7 @@ class ArraylikeCasaData:
 
 
 def load_casa_image(filename, skipdata=False,
-                    skipvalid=False, skipcs=False, **kwargs):
+                    skipvalid=False, skipcs=False, target_cls=None, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can
@@ -342,9 +342,23 @@ def load_casa_image(filename, skipdata=False,
         raise ValueError("CASA image has {0} dimensions, and therefore "
                          "is not readable by spectral-cube.".format(wcs.naxis))
 
+    if target_cls is BaseSpectralCube and isinstance(cube, StokesSpectralCube):
+        if hasattr(cube, 'I'):
+            warnings.warn("Cube is a Stokes cube, "
+                          "returning spectral cube for I component",
+                          StokesWarning)
+            return cube.I
+        else:
+            raise ValueError("Spectral cube is a Stokes cube that "
+                            "does not have an I component")
+    elif target_cls is StokesSpectralCube and isinstance(cube, BaseSpectralCube):
+        cube = StokesSpectralCube({'I': cube})
+    else:
+        return cube
 
     return cube
 
 
 io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)
+io_registry.register_reader('casa_image', BaseSpectralCube, load_casa_image)
 io_registry.register_identifier('casa', BaseSpectralCube, is_casa_image)
