@@ -77,6 +77,7 @@ def test_ds9region_255(regfile, data_255):
 @pytest.mark.skipif('not REGIONS_GT_03', reason='regions version should be >= 0.3')
 @pytest.mark.parametrize(('regfile', 'result'),
                              (('fk5.reg', (slice(None), 1, 1)),
+                              ('fk5_twoboxes.reg', (slice(None), 1, 1)),
                               ('image.reg', (slice(None), 1, slice(None))),
                               (
                               'partial_overlap_image.reg', (slice(None), 1, 1)),

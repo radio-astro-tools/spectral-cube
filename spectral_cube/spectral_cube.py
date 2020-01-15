@@ -3991,6 +3991,6 @@ def _regionlist_to_single_region(region_list):
     import regions
     if len(region_list) == 1:
         return region_list[0]
-    return regions.CompoundPixelRegion(_regionlist_to_single_region(region_list[:len(region_list)/2]),
-                                       _regionlist_to_single_region(region_list[len(region_list)/2:])
+    return regions.CompoundPixelRegion(_regionlist_to_single_region(region_list[:int(len(region_list)/2)]),
+                                       _regionlist_to_single_region(region_list[int(len(region_list)/2):])
                                        )
