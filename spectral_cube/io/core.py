@@ -1,18 +1,22 @@
 from __future__ import print_function, absolute_import, division
 
+from pathlib import PosixPath
 import warnings
 
 from astropy.io import registry
 
-__doctest_skip__ = ['SpectralCubeRead', 'SpectralCubeWrite']
+__doctest_skip__ = ['SpectralCubeRead',
+                    'SpectralCubeWrite',
+                    'StokesSpectralCubeRead',
+                    'StokesSpectralCubeWrite',
+                    'LowerDimensionalObjectWrite']
 
 
 class SpectralCubeRead(registry.UnifiedReadWrite):
     """
     Read and parse a dataset and return as a SpectralCube
 
-    This function provides the SpectralCube interface to the astropy unified I/O
-    layer. This allows easily reading a dataset in several supported data
+    This allows easily reading a dataset in several supported data
     formats using syntax such as::
 
       >>> from spectral_cube import SpectralCube
@@ -53,30 +57,20 @@ class SpectralCubeRead(registry.UnifiedReadWrite):
     def __init__(self, instance, cls):
         super().__init__(instance, cls, 'read')
 
-    def __call__(self, *args, **kwargs):
-        from .. import StokesSpectralCube
-        from ..utils import StokesWarning
-        cube = registry.read(self._cls, *args, **kwargs)
-        if isinstance(cube, StokesSpectralCube):
-            if hasattr(cube, 'I'):
-                warnings.warn("Cube is a Stokes cube, "
-                              "returning spectral cube for I component",
-                              StokesWarning)
-                return cube.I
-            else:
-                raise ValueError("Spectral cube is a Stokes cube that "
-                                "does not have an I component")
-        else:
-            return cube
+    def __call__(self, filename, *args, **kwargs):
+        from ..spectral_cube import BaseSpectralCube
+        if isinstance(filename, PosixPath):
+            filename = str(filename)
+        kwargs['target_cls'] = BaseSpectralCube
+        return registry.read(BaseSpectralCube, filename, *args, **kwargs)
 
 
 class SpectralCubeWrite(registry.UnifiedReadWrite):
     """
     Write this SpectralCube object out in the specified format.
 
-    This function provides the SpectralCube interface to the astropy unified
-    I/O layer.  This allows easily writing a spectral cube in many supported
-    data formats using syntax such as::
+    This allows easily writing a spectral cube in many supported data formats
+    using syntax such as::
 
       >>> cube.write('cube.fits', format='fits')
 
@@ -108,85 +102,128 @@ class SpectralCubeWrite(registry.UnifiedReadWrite):
         registry.write(self._instance, *args, **kwargs)
 
 
-def read(filename, format=None, hdu=None, **kwargs):
+class StokesSpectralCubeRead(registry.UnifiedReadWrite):
     """
-    Read a file into a :class:`SpectralCube` or :class:`StokesSpectralCube`
-    instance.
+    Read and parse a dataset and return as a StokesSpectralCube
+
+    This allows easily reading a dataset in several supported data formats
+    using syntax such as::
+
+      >>> from spectral_cube import StokesSpectralCube
+      >>> cube1 = StokesSpectralCube.read('cube.fits', format='fits')
+      >>> cube2 = StokesSpectralCube.read('cube.image', format='casa')
+
+    If the file contains Stokes axes, they will be read in. If you are only
+    interested in the unpolarized emission (I), you can use
+    :meth:`~spectral_cube.SpectralCube.read` instead.
+
+    Get help on the available readers for ``StokesSpectralCube`` using the``help()`` method::
+
+      >>> StokesSpectralCube.read.help()  # Get help reading StokesSpectralCube and list supported formats
+      >>> StokesSpectralCube.read.help('fits')  # Get detailed help on StokesSpectralCube FITS reader
+      >>> StokesSpectralCube.read.list_formats()  # Print list of available formats
+
+    See also: http://docs.astropy.org/en/stable/io/unified.html
 
     Parameters
     ----------
-    filename : str or HDU
-        File to read
-    format : str, optional
-        File format.
-    hdu : int or str
-        For FITS files, the HDU to read in (can be the ID or name of an
-        HDU).
-    kwargs : dict
-        If the format is 'fits', the kwargs are passed to
-        :func:`~astropy.io.fits.open`.
+    *args : tuple, optional
+        Positional arguments passed through to data reader. If supplied the
+        first argument is typically the input filename.
+    format : str
+        File format specifier.
+    **kwargs : dict, optional
+        Keyword arguments passed through to data reader.
 
     Returns
     -------
-    cube : :class:`SpectralCube` or :class:`StokesSpectralCube`
-        The spectral cube read in
+    cube : `StokesSpectralCube`
+        StokesSpectralCube corresponding to dataset
+
+    Notes
+    -----
     """
 
-    if format is None:
-        format = determine_format(filename)
+    def __init__(self, instance, cls):
+        super().__init__(instance, cls, 'read')
 
-    if format == 'fits':
-        from .fits import load_fits_cube
-        return load_fits_cube(filename, hdu=hdu, **kwargs)
-    elif format == 'casa_image':
-        from .casa_image import load_casa_image
-        return load_casa_image(filename)
-    elif format in ('class_lmv','lmv'):
-        from .class_lmv import load_lmv_cube
-        return load_lmv_cube(filename)
-    else:
-        raise ValueError("Format {0} not implemented. Supported formats are "
-                         "'fits', 'casa_image', and 'lmv'.".format(format))
+    def __call__(self, filename, *args, **kwargs):
+        from ..stokes_spectral_cube import StokesSpectralCube
+        if isinstance(filename, PosixPath):
+            filename = str(filename)
+        kwargs['target_cls'] = StokesSpectralCube
+        return registry.read(StokesSpectralCube, filename, *args, **kwargs)
 
 
-def write(filename, cube, overwrite=False, format=None):
+class StokesSpectralCubeWrite(registry.UnifiedReadWrite):
     """
-    Write :class:`SpectralCube` or :class:`StokesSpectralCube` to a file.
+    Write this StokesSpectralCube object out in the specified format.
+
+    This allows easily writing a spectral cube in many supported data formats
+    using syntax such as::
+
+      >>> cube.write('cube.fits', format='fits')
+
+    Get help on the available writers for ``StokesSpectralCube`` using the``help()`` method::
+
+      >>> StokesSpectralCube.write.help()  # Get help writing StokesSpectralCube and list supported formats
+      >>> StokesSpectralCube.write.help('fits')  # Get detailed help on StokesSpectralCube FITS writer
+      >>> StokesSpectralCube.write.list_formats()  # Print list of available formats
+
+    See also: http://docs.astropy.org/en/stable/io/unified.html
 
     Parameters
     ----------
-    filename : str
-        Name of the output file
-    cube : :class:`SpectralCube` or :class:`StokesSpectralCube`
-        The spectral cube to write out
-    overwrite : bool, optional
-        Whether to overwrite the output file
-    format : str, optional
-        File format.
+    *args : tuple, optional
+        Positional arguments passed through to data writer. If supplied the
+        first argument is the output filename.
+    format : str
+        File format specifier.
+    **kwargs : dict, optional
+        Keyword arguments passed through to data writer.
+
+    Notes
+    -----
     """
+    def __init__(self, instance, cls):
+        super().__init__(instance, cls, 'write')
 
-    if format is None:
-        format = determine_format(filename)
-
-    if format == 'fits':
-        from .fits import write_fits_cube
-        write_fits_cube(filename, cube, overwrite=overwrite)
-    else:
-        raise ValueError("Format {0} not implemented. The only supported format is 'fits'".format(format))
+    def __call__(self, *args, serialize_method=None, **kwargs):
+        registry.write(self._instance, *args, **kwargs)
 
 
-def determine_format(input):
+class LowerDimensionalObjectWrite(registry.UnifiedReadWrite):
+    """
+    Write this object out in the specified format.
 
-    from .fits import is_fits
-    from .casa_image import is_casa_image
-    from .class_lmv import is_lmv
+    This allows easily writing a data object in many supported data formats
+    using syntax such as::
 
-    if is_fits(input):
-        return 'fits'
-    elif is_casa_image(input):
-        return 'casa_image'
-    elif is_lmv(input):
-        return 'lmv'
-    else:
-        raise ValueError("Could not determine format - use the `format=` "
-                         "parameter to explicitly set the format")
+      >>> data.write('data.fits', format='fits')
+
+    Get help on the available writers using the``help()`` method, e.g.::
+
+      >>> LowerDimensionalObject.write.help()  # Get help writing LowerDimensionalObject and list supported formats
+      >>> LowerDimensionalObject.write.help('fits')  # Get detailed help on LowerDimensionalObject FITS writer
+      >>> LowerDimensionalObject.write.list_formats()  # Print list of available formats
+
+    See also: http://docs.astropy.org/en/stable/io/unified.html
+
+    Parameters
+    ----------
+    *args : tuple, optional
+        Positional arguments passed through to data writer. If supplied the
+        first argument is the output filename.
+    format : str
+        File format specifier.
+    **kwargs : dict, optional
+        Keyword arguments passed through to data writer.
+
+    Notes
+    -----
+    """
+    def __init__(self, instance, cls):
+        super().__init__(instance, cls, 'write')
+
+    def __call__(self, *args, serialize_method=None, **kwargs):
+        registry.write(self._instance, *args, **kwargs)

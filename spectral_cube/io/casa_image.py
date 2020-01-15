@@ -16,6 +16,7 @@ from radio_beam import Beam, Beams
 import dask.array
 
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
+from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
 from .. utils import BeamWarning, cached
 from .. import wcs_utils
@@ -30,11 +31,8 @@ from .. import wcs_utils
 # yield the same array in memory that we would get from astropy.
 
 
-def is_casa_image(input, *args, **kwargs):
-    if isinstance(input, six.string_types):
-        if input.endswith('.image'):
-            return True
-    return False
+def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
+    return filepath is not None and filepath.lower().endswith('.image')
 
 
 def wcs_casa2astropy(ia, coordsys):
@@ -348,5 +346,5 @@ def load_casa_image(filename, skipdata=False,
     return cube
 
 
-io_registry.register_reader('casa', SpectralCube, load_casa_image)
-io_registry.register_identifier('casa', SpectralCube, is_casa_image)
+io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)
+io_registry.register_identifier('casa', BaseSpectralCube, is_casa_image)

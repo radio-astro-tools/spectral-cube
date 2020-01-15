@@ -282,6 +282,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return cube
 
+    read = UnifiedReadWriteMethod(SpectralCubeRead)
+    write = UnifiedReadWriteMethod(SpectralCubeWrite)
+
     @property
     def unit(self):
         """ The flux unit """
@@ -2146,9 +2149,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._cube_on_cube_operation(operator.pow, value)
         else:
             return self._apply_everywhere(operator.pow, value)
-
-    read = UnifiedReadWriteMethod(SpectralCubeRead)
-    write = UnifiedReadWriteMethod(SpectralCubeWrite)
 
     def to_yt(self, spectral_factor=1.0, nprocs=None, **kwargs):
         """

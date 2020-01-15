@@ -22,9 +22,10 @@ except ImportError:
     SPECTRAL_CUBE_VERSION = 'dev'
 
 from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpectralCube
+from ..lower_dimensional_structures import LowerDimensionalObject
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from ..utils import FITSWarning, FITSReadError
+from ..utils import FITSWarning, FITSReadError, StokesWarning
 
 
 def first(iterable):
@@ -45,7 +46,6 @@ def is_fits(origin, filepath, fileobj, *args, **kwargs):
     is_fits : bool
         Returns `True` if the given file is a FITS file.
     """
-    print(origin, filepath, fileobj, args, kwargs)
     if fileobj is not None:
         pos = fileobj.tell()
         sig = fileobj.read(30)
@@ -124,13 +124,16 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
 
     else:
 
+        if hasattr(input, 'read'):
+            mode = None
+
         with fits_open(input, mode=mode, **kwargs) as hdulist:
             return read_data_fits(hdulist, hdu=hdu)
 
     return array_hdu.data, array_hdu.header, beam_table
 
 
-def load_fits_cube(input, hdu=0, meta=None, **kwargs):
+def load_fits_cube(input, hdu=0, meta=None, target_cls=None, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
 
@@ -206,10 +209,22 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
 
         raise FITSReadError("Data should be 3- or 4-dimensional")
 
-    return cube
+    if target_cls is BaseSpectralCube and isinstance(cube, StokesSpectralCube):
+        if hasattr(cube, 'I'):
+            warnings.warn("Cube is a Stokes cube, "
+                          "returning spectral cube for I component",
+                          StokesWarning)
+            return cube.I
+        else:
+            raise ValueError("Spectral cube is a Stokes cube that "
+                            "does not have an I component")
+    elif target_cls is StokesSpectralCube and isinstance(cube, BaseSpectralCube):
+        cube = StokesSpectralCube({'I': cube})
+    else:
+        return cube
 
 
-def write_fits_cube(filename, cube, overwrite=False,
+def write_fits_cube(cube, filename, overwrite=False,
                     include_origin_notes=True):
     """
     Write a FITS cube with a WCS to a filename
@@ -230,6 +245,30 @@ def write_fits_cube(filename, cube, overwrite=False,
         raise NotImplementedError()
 
 
-io_registry.register_reader('fits', SpectralCube, load_fits_cube)
-io_registry.register_writer('fits', SpectralCube, write_fits_cube)
-io_registry.register_identifier('fits', SpectralCube, is_fits)
+def write_fits_ldo(data, filename, overwrite=False):
+    # Spectra may have HDUList objects instead of HDUs because they
+    # have a beam table attached, so we want to try that first
+    # (a more elegant way to write this might be to do "self._hdu_general.write"
+    # and create a property `self._hdu_general` that selects the right one...)
+    if hasattr(data, 'hdulist'):
+        try:
+            data.hdulist.writeto(filename, overwrite=overwrite)
+        except TypeError:
+            data.hdulist.writeto(filename, clobber=overwrite)
+    elif hasattr(data, 'hdu'):
+        try:
+            data.hdu.writeto(filename, overwrite=overwrite)
+        except TypeError:
+            data.hdu.writeto(filename, clobber=overwrite)
+
+
+io_registry.register_reader('fits', BaseSpectralCube, load_fits_cube)
+io_registry.register_writer('fits', BaseSpectralCube, write_fits_cube)
+io_registry.register_identifier('fits', BaseSpectralCube, is_fits)
+
+io_registry.register_reader('fits', StokesSpectralCube, load_fits_cube)
+io_registry.register_writer('fits', StokesSpectralCube, write_fits_cube)
+io_registry.register_identifier('fits', StokesSpectralCube, is_fits)
+
+io_registry.register_writer('fits', LowerDimensionalObject, write_fits_ldo)
+io_registry.register_identifier('fits', LowerDimensionalObject, is_fits)

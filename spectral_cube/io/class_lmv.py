@@ -7,7 +7,7 @@ import warnings
 import string
 from astropy import log
 from astropy.io import registry as io_registry
-from ..spectral_cube import SpectralCube
+from ..spectral_cube import BaseSpectralCube
 from .fits import load_fits_cube
 
 """
@@ -42,18 +42,13 @@ _proj_dict = {0:'ARC', 1:'TAN', 2:'SIN', 3:'AZP', 4:'STG', 5:'ZEA', 6:'AIT',
               7:'GLS', 8:'SFL', }
 _bunit_dict = {'k (tmb)': 'K'}
 
-def is_lmv(input, *args, **kwargs):
+def is_lmv(origin, filepath, fileobj, *args, **kwargs):
     """
     Determine whether input is in GILDAS CLASS lmv format
     """
-    if isinstance(input, six.string_types):
-        if input.lower().endswith(('.lmv')):
-            return True
-    else:
-        return False
+    return filepath is not None and filepath.lower().endswith('.lmv')
 
-
-def read_lmv(filename):
+def read_lmv(lf):
     """
     Read an LMV cube file
 
@@ -62,29 +57,28 @@ def read_lmv(filename):
     log.warning("CLASS LMV cube reading is tentatively supported.  "
              "Please post bug reports at the first sign of danger!")
 
-    with open(filename,'rb') as lf:
-        # lf for "LMV File"
-        filetype = _read_string(lf, 12)
-        #!---------------------------------------------------------------------
-        #! @ private
-        #!       SYCODE system code
-        #!       '-'    IEEE
-        #!       '.'    EEEI (IBM like)
-        #!       '_'    VAX
-        #!       IMCODE file code
-        #!       '<'    IEEE  64 bits    (Little Endian, 99.9 % of recent computers)
-        #!       '>'    EEEI  64 bits    (Big Endian, HPUX, IBM-RISC, and SPARC ...)
-        #!---------------------------------------------------------------------
-        imcode = filetype[6]
-        if filetype[:6] != 'GILDAS' or filetype[7:] != 'IMAGE':
-            raise TypeError("File is not a GILDAS Image file")
+    # lf for "LMV File"
+    filetype = _read_string(lf, 12)
+    #!---------------------------------------------------------------------
+    #! @ private
+    #!       SYCODE system code
+    #!       '-'    IEEE
+    #!       '.'    EEEI (IBM like)
+    #!       '_'    VAX
+    #!       IMCODE file code
+    #!       '<'    IEEE  64 bits    (Little Endian, 99.9 % of recent computers)
+    #!       '>'    EEEI  64 bits    (Big Endian, HPUX, IBM-RISC, and SPARC ...)
+    #!---------------------------------------------------------------------
+    imcode = filetype[6]
+    if filetype[:6] != 'GILDAS' or filetype[7:] != 'IMAGE':
+        raise TypeError("File is not a GILDAS Image file")
 
-        if imcode in ('<','>'):
-            if imcode =='>':
-                log.warning("Swap the endianness first...")
-            return read_lmv_type2(lf)
-        else:
-            return read_lmv_type1(lf)
+    if imcode in ('<','>'):
+        if imcode =='>':
+            log.warning("Swap the endianness first...")
+        return read_lmv_type2(lf)
+    else:
+        return read_lmv_type1(lf)
 
 def read_lmv_type1(lf):
     header = {}
@@ -247,9 +241,9 @@ def read_lmv_type1(lf):
     # debug
     #return data.reshape([naxis3,naxis2,naxis1]), header, hdr_f, hdr_s, hdr_i, hdr_d, hdr_d_2
 
-def read_lmv_tofits(filename):
+def read_lmv_tofits(fileobj):
     from astropy.io import fits
-    data,header = read_lmv(filename)
+    data,header = read_lmv(fileobj)
     # LMV may contain extra dimensions that are improperly labeled
     data = data.squeeze()
     bad_kws = ['NAXIS4','CRVAL4','CRPIX4','CDELT4','CROTA4','CUNIT4','CTYPE4']
@@ -265,9 +259,9 @@ def read_lmv_tofits(filename):
     hdu = fits.PrimaryHDU(data=data, header=Header)
     return hdu
 
-def load_lmv_cube(filename):
-    hdu = read_lmv_tofits(filename)
-    meta = {'filename':filename}
+def load_lmv_cube(fileobj, target_cls=None):
+    hdu = read_lmv_tofits(fileobj)
+    meta = {'filename':fileobj.name}
 
     return load_fits_cube(hdu, meta=meta)
 
@@ -676,6 +670,6 @@ def read_lmv_type2(lf):
     return data,header
 
 
-io_registry.register_reader('lmv', SpectralCube, load_lmv_cube)
-io_registry.register_reader('class_lmv', SpectralCube, load_lmv_cube)
-io_registry.register_identifier('lmv', SpectralCube, is_lmv)
+io_registry.register_reader('lmv', BaseSpectralCube, load_lmv_cube)
+io_registry.register_reader('class_lmv', BaseSpectralCube, load_lmv_cube)
+io_registry.register_identifier('lmv', BaseSpectralCube, is_lmv)
