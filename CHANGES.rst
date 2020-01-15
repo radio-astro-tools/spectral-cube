@@ -1,6 +1,8 @@
 0.5 (unreleased)
 ----------------
 
+- Bugfix: subcubes from compound regions previously did not work.  #601
+
 - Refactor tests to use fixtures for accessing data instead of needing to
   run a script to generate test files. #598
 

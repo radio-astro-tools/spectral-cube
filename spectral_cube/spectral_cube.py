@@ -3988,9 +3988,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
 
 def _regionlist_to_single_region(region_list):
+    """
+    Recursively merge a region list into a single compound region
+    """
     import regions
     if len(region_list) == 1:
         return region_list[0]
-    return regions.CompoundPixelRegion(_regionlist_to_single_region(region_list[:len(region_list)/2]),
-                                       _regionlist_to_single_region(region_list[len(region_list)/2:])
-                                       )
+    left = _regionlist_to_single_region(region_list[:len(region_list)//2])
+    right = _regionlist_to_single_region(region_list[len(region_list)//2:])
+    return regions.CompoundPixelRegion(left, right, operator.or_)
