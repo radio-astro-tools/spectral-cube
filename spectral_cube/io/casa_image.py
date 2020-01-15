@@ -9,6 +9,7 @@ from astropy.wcs import WCS
 from astropy import units as u
 from astropy.wcs.wcsapi.sliced_low_level_wcs import sanitize_slices
 from astropy import log
+from astropy.io import registry as io_registry
 import numpy as np
 from radio_beam import Beam, Beams
 
@@ -29,7 +30,7 @@ from .. import wcs_utils
 # yield the same array in memory that we would get from astropy.
 
 
-def is_casa_image(input, **kwargs):
+def is_casa_image(input, *args, **kwargs):
     if isinstance(input, six.string_types):
         if input.endswith('.image'):
             return True
@@ -345,3 +346,7 @@ def load_casa_image(filename, skipdata=False,
 
 
     return cube
+
+
+io_registry.register_reader('casa', SpectralCube, load_casa_image)
+io_registry.register_identifier('casa', SpectralCube, is_casa_image)

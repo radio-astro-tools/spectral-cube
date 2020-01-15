@@ -6,6 +6,8 @@ import struct
 import warnings
 import string
 from astropy import log
+from astropy.io import registry as io_registry
+from ..spectral_cube import SpectralCube
 from .fits import load_fits_cube
 
 """
@@ -40,7 +42,7 @@ _proj_dict = {0:'ARC', 1:'TAN', 2:'SIN', 3:'AZP', 4:'STG', 5:'ZEA', 6:'AIT',
               7:'GLS', 8:'SFL', }
 _bunit_dict = {'k (tmb)': 'K'}
 
-def is_lmv(input, **kwargs):
+def is_lmv(input, *args, **kwargs):
     """
     Determine whether input is in GILDAS CLASS lmv format
     """
@@ -49,6 +51,7 @@ def is_lmv(input, **kwargs):
             return True
     else:
         return False
+
 
 def read_lmv(filename):
     """
@@ -671,3 +674,8 @@ def read_lmv_type2(lf):
     data[data==bval] = np.nan
 
     return data,header
+
+
+io_registry.register_reader('lmv', SpectralCube, load_lmv_cube)
+io_registry.register_reader('class_lmv', SpectralCube, load_lmv_cube)
+io_registry.register_identifier('lmv', SpectralCube, is_lmv)

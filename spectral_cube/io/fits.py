@@ -4,11 +4,13 @@ import six
 import warnings
 
 from astropy.io import fits
+from astropy.io import registry as io_registry
 import astropy.wcs
 from astropy import wcs
 from astropy.wcs import WCS
 from collections import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
+from astropy.io.fits.connect import FITS_SIGNATURE
 
 import numpy as np
 import datetime
@@ -29,20 +31,31 @@ def first(iterable):
     return next(iter(iterable))
 
 
-# FITS registry code - once Astropy includes a proper extensible I/O base
-# class, we can use that instead. The following code takes care of
-# interpreting string input (filename), HDU, and HDUList.
+def is_fits(origin, filepath, fileobj, *args, **kwargs):
+    """
+    Determine whether `origin` is a FITS file.
 
-def is_fits(input, **kwargs):
+    Parameters
+    ----------
+    origin : str or readable file-like object
+        Path or file object containing a potential FITS file.
+
+    Returns
+    -------
+    is_fits : bool
+        Returns `True` if the given file is a FITS file.
     """
-    Determine whether input is in FITS format
-    """
-    if isinstance(input, six.string_types):
-        if input.lower().endswith(('.fits', '.fits.gz',
-                                   '.fit', '.fit.gz',
-                                   '.fits.Z', '.fit.Z')):
+    print(origin, filepath, fileobj, args, kwargs)
+    if fileobj is not None:
+        pos = fileobj.tell()
+        sig = fileobj.read(30)
+        fileobj.seek(pos)
+        return sig == FITS_SIGNATURE
+    elif filepath is not None:
+        if filepath.lower().endswith(('.fits', '.fits.gz', '.fit', '.fit.gz',
+                                      '.fts', '.fts.gz')):
             return True
-    elif isinstance(input, (fits.HDUList, fits.PrimaryHDU, fits.ImageHDU)):
+    elif isinstance(args[0], (fits.HDUList, fits.ImageHDU, fits.PrimaryHDU)):
         return True
     else:
         return False
@@ -215,3 +228,8 @@ def write_fits_cube(filename, cube, overwrite=False,
             hdulist.writeto(filename, clobber=overwrite)
     else:
         raise NotImplementedError()
+
+
+io_registry.register_reader('fits', SpectralCube, load_fits_cube)
+io_registry.register_writer('fits', SpectralCube, write_fits_cube)
+io_registry.register_identifier('fits', SpectralCube, is_fits)

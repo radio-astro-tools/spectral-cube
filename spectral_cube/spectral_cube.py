@@ -25,6 +25,7 @@ from astropy import wcs
 from astropy import convolution
 from astropy import stats
 from astropy.constants import si
+from astropy.io.registry import UnifiedReadWriteMethod
 
 import numpy as np
 
@@ -52,6 +53,7 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamWarning,
                     BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning)
 from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
                             doppler_beta, doppler_gamma, doppler_z)
+from .io.core import SpectralCubeRead, SpectralCubeWrite
 
 from distutils.version import LooseVersion
 
@@ -2145,61 +2147,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         else:
             return self._apply_everywhere(operator.pow, value)
 
-
-    @classmethod
-    def read(cls, filename, format=None, hdu=None, **kwargs):
-        """
-        Read a spectral cube from a file.
-
-        If the file contains Stokes axes, they will automatically be dropped.
-        If you want to read in all Stokes informtion, use
-        :meth:`~spectral_cube.StokesSpectralCube.read` instead.
-
-        Parameters
-        ----------
-        filename : str
-            The file to read the cube from
-        format : str
-            The format of the file to read. (Currently limited to 'fits' and 'casa_image')
-        hdu : int or str
-            For FITS files, the HDU to read in (can be the ID or name of an
-            HDU).
-        kwargs : dict
-            If the format is 'fits', the kwargs are passed to
-            :func:`~astropy.io.fits.open`.
-        """
-        from .io.core import read
-        from .stokes_spectral_cube import StokesSpectralCube
-        if isinstance(filename, PosixPath):
-            filename = str(filename)
-        cube = read(filename, format=format, hdu=hdu, **kwargs)
-        if isinstance(cube, StokesSpectralCube):
-            if hasattr(cube, 'I'):
-                warnings.warn("Cube is a Stokes cube, "
-                              "returning spectral cube for I component",
-                              StokesWarning)
-                return cube.I
-            else:
-                raise ValueError("Spectral cube is a Stokes cube that "
-                                 "does not have an I component")
-        else:
-            return cube
-
-    def write(self, filename, overwrite=False, format=None):
-        """
-        Write the spectral cube to a file.
-
-        Parameters
-        ----------
-        filename : str
-            The path to write the file to
-        format : str
-            The format of the file to write. (Currently limited to 'fits')
-        overwrite : bool
-            If True, overwrite ``filename`` if it exists
-        """
-        from .io.core import write
-        write(filename, self, overwrite=overwrite, format=format)
+    read = UnifiedReadWriteMethod(SpectralCubeRead)
+    write = UnifiedReadWriteMethod(SpectralCubeWrite)
 
     def to_yt(self, spectral_factor=1.0, nprocs=None, **kwargs):
         """
