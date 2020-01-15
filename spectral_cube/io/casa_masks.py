@@ -3,7 +3,6 @@ from __future__ import print_function, absolute_import, division
 import numpy as np
 from astropy.io import fits
 import tempfile
-import warnings
 import os
 
 from ..wcs_utils import add_stokes_axis_to_wcs
@@ -88,6 +87,7 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
 
     cs = ia.coordsys()
 
+    ia.done()
     ia.close()
 
     temp2.close()
@@ -100,25 +100,29 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
     # Transpose to match CASA axes
     mask_arr = mask_arr.T
 
-    ia.newimagefromarray(outfile=maskpath,
-                         pixels=mask_arr.astype('int16'),
-                         overwrite=overwrite)
+    ia.fromarray(outfile=maskpath,
+                 pixels=mask_arr.astype('int16'),
+                 overwrite=overwrite)
+    ia.done()
     ia.close()
 
-    ia.open(maskpath)
+    ia.open(maskpath, cache=False)
     ia.setcoordsys(cs.torecord())
 
+    ia.done()
     ia.close()
 
     if append_to_image:
         if img is None:
             raise TypeError("img argument must be specified to append the mask.")
 
-        ia.open(maskpath)
+        ia.open(maskpath, cache=False)
         ia.calcmask(maskname+">0.5")
+        ia.done()
         ia.close()
 
-        ia.open(img)
+        ia.open(img, cache=False)
         ia.maskhandler('copy', [maskpath+":mask0", maskname])
         ia.maskhandler('set', maskname)
+        ia.done()
         ia.close()

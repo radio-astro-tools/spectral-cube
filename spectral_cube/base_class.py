@@ -84,7 +84,7 @@ class HeaderMixinClass(object):
 
         # Preserve non-WCS information from previous header iteration
         header.update(wcsheader)
-        if self.unit == u.dimensionless_unscaled and 'BUNIT' in self._meta:
+        if self.unit == u.one and 'BUNIT' in self._meta:
             # preserve the BUNIT even though it's not technically valid
             # (Jy/Beam)
             header['BUNIT'] = self._meta['BUNIT']
@@ -577,14 +577,14 @@ class MultiBeamMixinClass(object):
             A new radio beam object that is the average of the unmasked beams
         """
         if mask == 'compute':
-            beam_mask = np.any(np.bitwise_and(self.mask.include(),
+            beam_mask = np.any(np.logical_and(self.mask.include(),
                                               self.goodbeams_mask[:,None,None]),
                                axis=(1,2))
         else:
             if mask.ndim > 1:
-                beam_mask = np.bitwise_and(mask, self.goodbeams_mask[:,None,None])
+                beam_mask = np.logical_and(mask, self.goodbeams_mask[:,None,None])
             else:
-                beam_mask = np.bitwise_and(mask, self.goodbeams_mask)
+                beam_mask = np.logical_and(mask, self.goodbeams_mask)
 
         # use private _beams here because the public one excludes the bad beams
         # by default
@@ -776,4 +776,4 @@ class BeamMixinClass(object):
     def pixels_per_beam(self):
         return (self.beam.sr /
                 (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
-                 u.deg**2)).to(u.dimensionless_unscaled).value
+                 u.deg**2)).to(u.one).value

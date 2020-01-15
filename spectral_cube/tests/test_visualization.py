@@ -6,6 +6,7 @@ from distutils.version import LooseVersion
 from .test_spectral_cube import cube_and_raw
 
 
+@pytest.mark.openfiles_ignore
 def test_projvis(data_vda_jybeam_lower):
     pytest.importorskip('matplotlib')
     cube, data = cube_and_raw(data_vda_jybeam_lower)
@@ -25,6 +26,7 @@ def test_proj_imshow(data_vda_jybeam_lower):
         plt.imshow(mom0)
 
 
+@pytest.mark.openfiles_ignore
 def test_projvis_aplpy(tmp_path, data_vda_jybeam_lower):
     pytest.importorskip('aplpy')
     cube, data = cube_and_raw(data_vda_jybeam_lower)
@@ -38,12 +40,14 @@ def test_mask_quicklook(data_vda_jybeam_lower):
     cube.mask.quicklook(view=(0, slice(None), slice(None)), use_aplpy=True)
 
 
+@pytest.mark.openfiles_ignore
 def test_to_glue(data_vda_jybeam_lower):
     pytest.importorskip('glue')
     cube, data = cube_and_raw(data_vda_jybeam_lower)
     cube.to_glue(start_gui=False)
 
 
+@pytest.mark.openfiles_ignore
 def test_to_pvextractor(data_vda_jybeam_lower):
     pytest.importorskip('pvextractor')
     cube, data = cube_and_raw(data_vda_jybeam_lower)

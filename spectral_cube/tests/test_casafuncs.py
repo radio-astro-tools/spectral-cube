@@ -14,7 +14,6 @@ from . import path
 
 try:
     import casatools
-    ia = casatools.image()
     casaOK = True
 except ImportError:
     try:
@@ -33,8 +32,13 @@ def make_casa_testimage(infile, outname):
     if not casaOK:
         raise Exception("Attempted to make a CASA test image in a non-CASA "
                         "environment")
+
+    ia = casatools.image()
+
     ia.fromfits(infile=infile, outfile=outname, overwrite=True)
+    ia.unlock()
     ia.close()
+    ia.done()
 
     cube = SpectralCube.read(infile)
     if isinstance(cube, VaryingResolutionSpectralCube):
@@ -54,7 +58,9 @@ def make_casa_testimage(infile, outname):
                         }
             ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=0)
 
+        ia.unlock()
         ia.close()
+        ia.done()
 
 
 @pytest.fixture
@@ -91,13 +97,17 @@ def test_casa_mask(data_adv, tmp_path):
     make_casa_mask(cube, str(tmp_path / 'casa.mask'), add_stokes=False,
                    append_to_image=False, overwrite=True)
 
+    ia = casatools.image()
+
     ia.open(str(tmp_path / 'casa.mask'))
 
     casa_mask = ia.getchunk()
 
     coords = ia.coordsys()
 
+    ia.unlock()
     ia.close()
+    ia.done()
 
     # Test masks
     # Mask array is broadcasted to the cube shape. Mimic this, switch to ints,

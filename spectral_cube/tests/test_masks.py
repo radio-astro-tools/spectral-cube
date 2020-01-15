@@ -280,9 +280,8 @@ def test_wcs_validity_check_failure(data_adv):
     assert cube._wcs.wcs.crval[2] != wcs2.wcs.crval[2]
 
     # but if it's not exactly equal, an error should be raised at this step
-    with pytest.raises(ValueError) as exc:
-        cube = cube.with_mask(mask)
-    assert exc.value.args[0] == "WCS does not match mask WCS"
+    with pytest.raises(ValueError, match="WCS does not match mask WCS"):
+        cube.with_mask(mask)
 
     # this one should work though
     cube = cube.with_mask(mask, wcs_tolerance=1e-4)
@@ -293,6 +292,7 @@ def test_wcs_validity_check_failure(data_adv):
     s3 = s2.with_spectral_unit(u.km / u.s, velocity_convention=u.doppler_radio)
     # just checking that this works, not that it does anything in particular
     moment_map = s3.moment(order=1)
+
 
 def test_mask_spectral_unit_functions(data_adv):
     cube, data = cube_and_raw(data_adv)

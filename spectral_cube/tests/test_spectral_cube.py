@@ -1,5 +1,6 @@
 from __future__ import print_function, absolute_import, division
 
+import re
 import six
 import operator
 import itertools
@@ -31,6 +32,18 @@ from .. import utils
 
 from . import path
 from .helpers import assert_allclose, assert_array_equal
+
+try:
+    import casatools
+    ia = casatools.image()
+    casaOK = True
+except ImportError:
+    try:
+        from taskinit import ia
+        casaOK = True
+    except ImportError:
+        casaOK = False
+
 
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
@@ -68,9 +81,20 @@ NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
 def cube_and_raw(filename):
     p = path(filename)
 
-    d = fits.getdata(p)
+    if os.path.splitext(p)[-1] == '.fits':
+        with fits.open(p) as hdulist:
+            d = hdulist[0].data
+        c = SpectralCube.read(p, format='fits', mode='readonly')
+    elif os.path.splitext(p)[-1] == '.image':
+        ia.open(p)
+        d = ia.getchunk()
+        ia.unlock()
+        ia.close()
+        ia.done()
+        c = SpectralCube.read(p, format='casa_image')
+    else:
+        raise ValueError("Unsupported filetype")
 
-    c = SpectralCube.read(p, format='fits', mode='readonly')
     return c, d
 
 
@@ -91,8 +115,6 @@ def test_huge_disallowed(data_vda_jybeam_lower):
 
     cube, data = cube_and_raw(data_vda_jybeam_lower)
 
-    cube = SpectralCube(data=data, wcs=cube.wcs)
-
     assert not cube._is_huge
 
     # We need to reduce the memory threshold rather than use a large cube to
@@ -105,14 +127,11 @@ def test_huge_disallowed(data_vda_jybeam_lower):
 
         assert cube._is_huge
 
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(ValueError, match='entire cube into memory'):
             cube + 5*cube.unit
-        assert 'entire cube into memory' in exc.value.args[0]
 
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(ValueError, match='entire cube into memory'):
             cube.max(how='cube')
-        assert 'entire cube into memory' in exc.value.args[0]
-
 
         cube.allow_huge_operations = True
 
@@ -120,6 +139,7 @@ def test_huge_disallowed(data_vda_jybeam_lower):
         cube + 5*cube.unit
     finally:
         cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
 
 
 class BaseTest(object):
@@ -231,13 +251,21 @@ class TestSpectralCube(object):
             assert_allclose(w1, w2)
 
 
-    @pytest.mark.parametrize(('filename','masktype','unit'),
+    @pytest.mark.parametrize(('filename','masktype','unit','suffix'),
                              itertools.product(('data_advs', 'data_dvsa', 'data_sdav', 'data_sadv', 'data_vsad', 'data_vad', 'data_adv',),
                                                (BooleanArrayMask, LazyMask, FunctionMask, CompositeMask),
                                                ('Hz', u.Hz),
-                                              ),
-                            indirect=['filename'])
-    def test_with_spectral_unit(self, filename, masktype, unit):
+                                               ('.fits', '.image') if casaOK else ('.fits',)
+                                               ),
+                             indirect=['filename'])
+    def test_with_spectral_unit(self, filename, masktype, unit, suffix):
+
+        if suffix == '.image':
+            import casatasks
+            filename = str(filename)
+            casatasks.importfits(filename, filename.replace('.fits', '.image'))
+            filename = filename.replace('.fits', '.image')
+
         cube, data = cube_and_raw(filename)
         cube_freq = cube.with_spectral_unit(unit)
 
@@ -259,9 +287,19 @@ class TestSpectralCube(object):
         cube2 = cube.with_mask(mask)
         cube_masked_freq = cube2.with_spectral_unit(unit)
 
-        assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ-W2F'
-        assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ-W2F'
-        assert cube_masked_freq._mask._wcs.wcs.ctype[cube_masked_freq._mask._wcs.wcs.spec] == 'FREQ-W2F'
+        if suffix == '.fits':
+            assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ-W2F'
+            assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ-W2F'
+            assert cube_masked_freq._mask._wcs.wcs.ctype[cube_masked_freq._mask._wcs.wcs.spec] == 'FREQ-W2F'
+        elif suffix == '.image':
+            # this is *not correct* but it's a known failure in CASA: CASA's
+            # image headers don't support any of the FITS spectral standard, so
+            # it just ends up as 'FREQ'.  This isn't on us to fix so this is
+            # really an "xfail" that we hope will change...
+            assert cube_freq._wcs.wcs.ctype[cube_freq._wcs.wcs.spec] == 'FREQ'
+            assert cube_masked_freq._wcs.wcs.ctype[cube_masked_freq._wcs.wcs.spec] == 'FREQ'
+            assert cube_masked_freq._mask._wcs.wcs.ctype[cube_masked_freq._mask._wcs.wcs.spec] == 'FREQ'
+
 
         # values taken from header
         rest = 1.42040571841E+09*u.Hz
@@ -388,6 +426,10 @@ class TestSpectralCube(object):
 
 class TestArithmetic(object):
 
+    # FIXME: in the tests below we need to manually do self.c1 = self.d1 = None
+    # because if we try and do this in a teardown method, the open-files check
+    # gets done first. This is an issue that should be resolved in pytest-openfiles.
+
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, request, data_adv):
         self.c1, self.d1 = cube_and_raw(data_adv)
@@ -402,12 +444,14 @@ class TestArithmetic(object):
         c2 = self.c1 + value*u.K
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
+        self.c1 = self.d1 = None
 
     def test_add_cubes(self):
         d2 = self.d1 + self.d1
         c2 = self.c1 + self.c1
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
+        self.c1 = self.d1 = None
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_subtract(self, value):
@@ -419,6 +463,8 @@ class TestArithmetic(object):
         # regression test #251: the _data attribute must not be a quantity
         assert not hasattr(c2._data, 'unit')
 
+        self.c1 = self.d1 = None
+
     def test_subtract_cubes(self):
         d2 = self.d1 - self.d1
         c2 = self.c1 - self.c1
@@ -429,18 +475,22 @@ class TestArithmetic(object):
         # regression test #251: the _data attribute must not be a quantity
         assert not hasattr(c2._data, 'unit')
 
+        self.c1 = self.d1 = None
+
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_mul(self, value):
         d2 = self.d1 * value
         c2 = self.c1 * value
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
+        self.c1 = self.d1 = None
 
     def test_mul_cubes(self):
         d2 = self.d1 * self.d1
         c2 = self.c1 * self.c1
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K**2
+        self.c1 = self.d1 = None
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_div(self, value):
@@ -448,13 +498,15 @@ class TestArithmetic(object):
         c2 = self.c1 / value
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
+        self.c1 = self.d1 = None
 
     def test_div_cubes(self):
         d2 = self.d1 / self.d1
         c2 = self.c1 / self.c1
         assert np.all((d2 == c2.filled_data[:].value) | (np.isnan(c2.filled_data[:])))
         assert np.all((c2.filled_data[:] == 1) | (np.isnan(c2.filled_data[:])))
-        assert c2.unit == u.dimensionless_unscaled
+        assert c2.unit == u.one
+        self.c1 = self.d1 = None
 
     @pytest.mark.parametrize(('value'),
                              (1,1.0,2,2.0))
@@ -463,12 +515,14 @@ class TestArithmetic(object):
         c2 = self.c1 ** value
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K**value
+        self.c1 = self.d1 = None
 
     def test_cube_add(self):
         c2 = self.c1 + self.c1
         d2 = self.d1 + self.d1
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
+        self.c1 = self.d1 = None
 
 
 
@@ -481,6 +535,7 @@ class TestFilters(BaseTest):
 
         expected = np.where(d > .5, d, 0)
         assert_allclose(c._get_filled_data(fill=0), expected)
+        self.c = self.d = None
 
     @pytest.mark.parametrize('operation', (operator.lt, operator.gt, operator.le, operator.ge))
     def test_mask_comparison(self, operation):
@@ -491,22 +546,26 @@ class TestFilters(BaseTest):
         assert np.all(c.with_mask(cmask).mask.include() == dmask)
         np.testing.assert_almost_equal(c.with_mask(cmask).sum().value,
                                        d[dmask].sum())
+        self.c = self.d = None
 
     def test_flatten(self):
         c, d = self.c, self.d
         expected = d[d > 0.5]
         assert_allclose(c.flattened(), expected)
+        self.c = self.d = None
 
     def test_flatten_weights(self):
         c, d = self.c, self.d
         expected = d[d > 0.5] ** 2
         assert_allclose(c.flattened(weights=d), expected)
+        self.c = self.d = None
 
     def test_slice(self):
         c, d = self.c, self.d
         expected = d[:3, :2, ::2]
         expected = expected[expected > 0.5]
         assert_allclose(c[0:3, 0:2, 0::2].flattened(), expected)
+        self.c = self.d = None
 
 
 class TestNumpyMethods(BaseTest):
@@ -525,22 +584,27 @@ class TestNumpyMethods(BaseTest):
         # axis keyword being passed (regression test for issue introduced in
         # 150)
         assert np.all(self.c.sum().value == np.nansum(d))
+        self.c = self.d = None
 
     def test_max(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
         self._check_numpy(self.c.max, d, np.nanmax)
+        self.c = self.d = None
 
     def test_min(self):
         d = np.where(self.d > 0.5, self.d, np.nan)
         self._check_numpy(self.c.min, d, np.nanmin)
+        self.c = self.d = None
 
     def test_argmax(self):
         d = np.where(self.d > 0.5, self.d, -10)
         self._check_numpy(self.c.argmax, d, np.nanargmax)
+        self.c = self.d = None
 
     def test_argmin(self):
         d = np.where(self.d > 0.5, self.d, 10)
         self._check_numpy(self.c.argmin, d, np.nanargmin)
+        self.c = self.d = None
 
     @pytest.mark.parametrize('iterate_rays', (True,False))
     def test_median(self, iterate_rays):
@@ -556,6 +620,7 @@ class TestNumpyMethods(BaseTest):
         assert_allclose(scmed, m)
         assert not np.any(np.isnan(scmed.value))
         assert scmed.unit == self.c.unit
+        self.c = self.d = None
 
     @pytest.mark.skipif('NUMPY_LT_19')
     def test_bad_median_apply(self):
@@ -583,6 +648,7 @@ class TestNumpyMethods(BaseTest):
         m2 = self.c>0.74*self.c.unit
         scmed = self.c.with_mask(m2).apply_numpy_function(np.nanmedian, axis=0)
         assert np.count_nonzero(np.isnan(scmed)) == 1
+        self.c = self.d = None
 
     @pytest.mark.parametrize('iterate_rays', (True,False))
     def test_bad_median(self, iterate_rays):
@@ -594,6 +660,7 @@ class TestNumpyMethods(BaseTest):
         m2 = self.c>0.74*self.c.unit
         scmed = self.c.with_mask(m2).median(axis=0, iterate_rays=iterate_rays)
         assert np.count_nonzero(np.isnan(scmed)) == 1
+        self.c = self.d = None
 
     @pytest.mark.parametrize(('pct', 'iterate_rays'),
                              (zip((3,25,50,75,97)*2,(True,)*5 + (False,)*5)))
@@ -608,6 +675,7 @@ class TestNumpyMethods(BaseTest):
         assert_allclose(scpct, m)
         assert not np.any(np.isnan(scpct.value))
         assert scpct.unit == self.c.unit
+        self.c = self.d = None
 
     @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
                                         'median', 'argmin', 'argmax'))
@@ -620,6 +688,7 @@ class TestNumpyMethods(BaseTest):
             # check that all these accept progressbar kwargs
             assert_allclose(getattr(c1, method)(axis=axis, progressbar=True),
                             getattr(c2, method)(axis=axis, progressbar=True))
+        self.c = self.d = None
 
 
 class TestSlab(BaseTest):
@@ -634,28 +703,33 @@ class TestSlab(BaseTest):
         assert c.closest_spectral_channel(-320000 * ms) == 1
         assert c.closest_spectral_channel(-340000 * ms) == 0
         assert c.closest_spectral_channel(0 * ms) == 3
+        self.c = self.d = None
 
     def test_spectral_channel_bad_units(self):
 
-        with pytest.raises(u.UnitsError) as exc:
+        with pytest.raises(u.UnitsError,
+                           match=re.escape("'value' should be in frequency equivalent or velocity units (got s)")):
             self.c.closest_spectral_channel(1 * u.s)
-        assert exc.value.args[0] == "'value' should be in frequency equivalent or velocity units (got s)"
 
-        with pytest.raises(u.UnitsError) as exc:
+        with pytest.raises(u.UnitsError,
+                           match=re.escape("Spectral axis is in velocity units and 'value' is in frequency-equivalent units - use SpectralCube.with_spectral_unit first to convert the cube to frequency-equivalent units, or search for a velocity instead")):
             self.c.closest_spectral_channel(1. * u.Hz)
-        assert exc.value.args[0] == "Spectral axis is in velocity units and 'value' is in frequency-equivalent units - use SpectralCube.with_spectral_unit first to convert the cube to frequency-equivalent units, or search for a velocity instead"
+
+        self.c = self.d = None
 
     def test_slab(self):
         ms = u.m / u.s
         c2 = self.c.spectral_slab(-320000 * ms, -318600 * ms)
         assert_allclose(c2._data, self.d[1:3])
         assert c2._mask is not None
+        self.c = self.d = None
 
     def test_slab_reverse_limits(self):
         ms = u.m / u.s
         c2 = self.c.spectral_slab(-318600 * ms, -320000 * ms)
         assert_allclose(c2._data, self.d[1:3])
         assert c2._mask is not None
+        self.c = self.d = None
 
     def test_slab_preserves_wcs(self):
         # regression test
@@ -663,6 +737,7 @@ class TestSlab(BaseTest):
         crpix = list(self.c._wcs.wcs.crpix)
         self.c.spectral_slab(-318600 * ms, -320000 * ms)
         assert list(self.c._wcs.wcs.crpix) == crpix
+        self.c = self.d = None
 
 class TestSlabMultiBeams(BaseTestMultiBeams, TestSlab):
     """ same tests with multibeams """
@@ -678,6 +753,7 @@ SpectralCube with shape=(4, 3, 2) and unit=K:
  n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
  n_s:      4  type_s: VOPT      unit_s: km / s  range:     -321.215 km / s:    -317.350 km / s
         """.strip()
+        self.c = self.d = None
 
     def test_repr_withunit(self):
         self.c._unit = u.Jy
@@ -687,6 +763,7 @@ SpectralCube with shape=(4, 3, 2) and unit=Jy:
  n_y:      3  type_y: DEC--SIN  unit_y: deg    range:    29.934094 deg:   29.935209 deg
  n_s:      4  type_s: VOPT      unit_s: km / s  range:     -321.215 km / s:    -317.350 km / s
         """.strip()
+        self.c = self.d = None
 
 
 @pytest.mark.skipif('not YT_INSTALLED')
@@ -728,6 +805,8 @@ class TestYt():
         ds2.quan(1.0,unit2)
         ds3.quan(1.0,unit3)
 
+        self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
+
     @pytest.mark.skipif('YT_LT_301', reason='yt 3.0 has a FITS-related bug')
     def test_yt_fluxcompare(self):
         # Now check that we can compute quantities of the flux
@@ -749,6 +828,7 @@ class TestYt():
         assert flux1_min == flux3_min
         assert flux1_max == flux2_max
         assert flux1_max == flux3_max
+        self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
 
     def test_yt_roundtrip_wcs(self):
         # Now test round-trip conversions between yt and world coordinates
@@ -763,6 +843,7 @@ class TestYt():
         yt_coord3 = ds3.domain_left_edge + np.random.random(size=3)*ds3.domain_width
         world_coord3 = ytc3.yt2world(yt_coord3)
         assert_allclose(ytc3.world2yt(world_coord3), yt_coord3.value)
+        self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
 
 def test_read_write_rountrip(tmpdir, data_adv):
     cube = SpectralCube.read(data_adv)
@@ -866,6 +947,8 @@ class TestMasks(BaseTest):
         expected = self.d[op(self.d, thresh)]
         actual = self.c.flattened()
         assert_allclose(actual, expected)
+
+        self.c = self.d = None
 
 
 def test_preserve_spectral_unit(data_advs):
@@ -1062,23 +1145,24 @@ def test_invalid_spectral_unit_conventions(data_advs):
 
     cube, data = cube_and_raw(data_advs)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError,
+                       match=("Velocity convention must be radio, optical, "
+                              "or relativistic.")):
         cube.with_spectral_unit(u.km/u.s,
                                 velocity_convention='invalid velocity convention')
-    assert exc.value.args[0] == ("Velocity convention must be radio, optical, "
-                                 "or relativistic.")
+
 
 @pytest.mark.parametrize('rest', (50, 50*u.K))
 def test_invalid_rest(rest, data_advs):
 
     cube, data = cube_and_raw(data_advs)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError,
+                       match=("Rest value must be specified as an astropy "
+                              "quantity with spectral equivalence.")):
         cube.with_spectral_unit(u.km/u.s,
                                 velocity_convention='radio',
                                 rest_value=rest)
-    assert exc.value.args[0] == ("Rest value must be specified as an astropy "
-                                 "quantity with spectral equivalence.")
 
 def test_airwave_to_wave(data_advs):
 
@@ -1298,12 +1382,15 @@ def test_preserve_bunit(data_advs):
 
     assert cube.header['BUNIT'] == 'K'
 
-    hdu = fits.open(data_advs)[0]
+    hdul = fits.open(data_advs)
+    hdu = hdul[0]
     hdu.header['BUNIT'] = 'Jy'
     cube = SpectralCube.read(hdu)
 
     assert cube.unit == u.Jy
     assert cube.header['BUNIT'] == 'Jy'
+
+    hdul.close()
 
 
 def test_preserve_beam(data_advs):
@@ -1425,6 +1512,7 @@ def test_multibeam_custom(data_vda_beams):
         assert new_beams == newcube.beams
 
 
+@pytest.mark.openfiles_ignore
 @pytest.mark.xfail(raises=ValueError, strict=True)
 def test_multibeam_custom_wrongshape(data_vda_beams):
 
@@ -1773,12 +1861,10 @@ def test_convolve_to_with_bad_beams(data_vda_beams):
     convolved = cube.convolve_to(Beam(0.5*u.arcsec))
 
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError,
+                       match="Beam could not be deconvolved"):
         # should not work: biggest beam is 0.4"
         convolved = cube.convolve_to(Beam(0.35*u.arcsec))
-
-    assert exc.value.args[0] == "Beam could not be deconvolved"
-
 
     # middle two beams are smaller than 0.4
     masked_cube = cube.mask_channels([False, True, True, False])
@@ -1838,13 +1924,13 @@ def test_mad_std_params(data_adv):
     np.testing.assert_almost_equal(cube.mad_std(axis=0, how='cube').value, result)
     np.testing.assert_almost_equal(cube.mad_std(axis=0, how='ray').value, result)
 
-    with pytest.raises(NotImplementedError) as exc:
+    with pytest.raises(NotImplementedError):
         cube.mad_std(axis=0, how='slice')
 
-    with pytest.raises(NotImplementedError) as exc:
+    with pytest.raises(NotImplementedError):
         cube.mad_std(axis=1, how='slice')
 
-    with pytest.raises(NotImplementedError) as exc:
+    with pytest.raises(NotImplementedError):
         cube.mad_std(axis=(1,2), how='ray')
 
     # stats.mad_std(data, axis=(1,2))
@@ -2024,13 +2110,13 @@ def test_parallel_bad_params(data_adv):
 
     cube, data = cube_and_raw(data_adv)
 
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError,
+                       match=("parallel execution was not requested, but "
+                              "multiple cores were: these are incompatible "
+                              "options.  Either specify num_cores=1 or "
+                              "parallel=True")):
         cube.spectral_smooth_median(3, num_cores=2, parallel=False,
                                     update_function=update_function)
-    assert exc.value.args[0] == ("parallel execution was not requested, but "
-                                 "multiple cores were: these are incompatible "
-                                 "options.  Either specify num_cores=1 or "
-                                 "parallel=True")
 
     with warnings.catch_warnings(record=True) as wrn:
         cube.spectral_smooth_median(3, num_cores=1, parallel=True,

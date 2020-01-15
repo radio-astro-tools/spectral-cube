@@ -90,10 +90,8 @@ def test_ds9region_new(regfile, result, data_adv):
     regionlist = regions.read_ds9(path(regfile))
 
     if isinstance(result, type) and issubclass(result, Exception):
-        with pytest.raises(result) as exc:
+        with pytest.raises(result):
             sc = cube.subcube_from_regions(regionlist)
-        # this assertion is redundant, I think...
-        assert exc.errisinstance(result)
     else:
         sc = cube.subcube_from_regions(regionlist)
         scsum = sc.sum()

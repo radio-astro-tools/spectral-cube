@@ -143,10 +143,10 @@ def test_catch_kernel_with_units(data_522_delta):
 
     cube, data = cube_and_raw(data_522_delta)
 
-    with pytest.raises(u.UnitsError) as exc:
-        cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0 * u.dimensionless_unscaled),
+    with pytest.raises(u.UnitsError,
+                       match="The convolution kernel should be defined without a unit."):
+        cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0 * u.one),
                              use_memmap=False)
-    assert exc.value.args[0] == "The convolution kernel should be defined without a unit."
 
 
 def test_spectral_smooth_4cores(data_522_delta):
@@ -172,13 +172,13 @@ def test_spectral_smooth_4cores(data_522_delta):
 
     # num_cores = 4 is a contradiction with parallel=False, so we want to make
     # sure it fails
-    with pytest.raises(ValueError) as exc:
-        result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0),
-                                      num_cores=4, parallel=False)
-    assert exc.value.args[0] == ("parallel execution was not requested, but "
+    with pytest.raises(ValueError,
+                       match=("parallel execution was not requested, but "
                                  "multiple cores were: these are incompatible "
                                  "options.  Either specify num_cores=1 or "
-                                 "parallel=True")
+                                 "parallel=True")):
+        result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0),
+                                      num_cores=4, parallel=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    convolution.Gaussian1DKernel(1.0,
@@ -190,13 +190,12 @@ def test_spectral_smooth_fail(data_522_delta_beams):
 
     cube, data = cube_and_raw(data_522_delta_beams)
 
-    with pytest.raises(AttributeError) as exc:
+    with pytest.raises(AttributeError,
+                       match=("VaryingResolutionSpectralCubes can't be "
+                              "spectrally smoothed.  Convolve to a "
+                              "common resolution with `convolve_to` before "
+                              "attempting spectral smoothed.")):
         cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0))
-
-    assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
-                                 "spectrally smoothed.  Convolve to a "
-                                 "common resolution with `convolve_to` before "
-                                 "attempting spectral smoothed.")
 
 
 def test_spectral_interpolate(data_522_delta):
@@ -234,18 +233,18 @@ def test_spectral_interpolate_fail(data_522_delta_beams):
 
     cube, data = cube_and_raw(data_522_delta_beams)
 
-    with pytest.raises(AttributeError) as exc:
+    with pytest.raises(AttributeError,
+                       match=("VaryingResolutionSpectralCubes can't be "
+                              "spectrally interpolated.  Convolve to a "
+                              "common resolution with `convolve_to` before "
+                              "attempting spectral interpolation.")):
         cube.spectral_interpolate(5)
-
-    assert exc.value.args[0] == ("VaryingResolutionSpectralCubes can't be "
-                                 "spectrally interpolated.  Convolve to a "
-                                 "common resolution with `convolve_to` before "
-                                 "attempting spectral interpolation.")
 
 
 def test_spectral_interpolate_with_mask(data_522_delta):
 
-    hdu = fits.open(data_522_delta)[0]
+    hdul = fits.open(data_522_delta)
+    hdu = hdul[0]
 
     # Swap the velocity axis so indiff < 0 in spectral_interpolate
     hdu.header["CDELT3"] = - hdu.header["CDELT3"]
@@ -270,6 +269,8 @@ def test_spectral_interpolate_with_mask(data_522_delta):
                                    [0.0, 0.5, np.NaN, np.NaN])
 
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
+
+    hdul.close()
 
 
 def test_spectral_interpolate_reversed(data_522_delta):
@@ -317,10 +318,9 @@ def test_nocelestial_convolution_2D_fail(data_255_delta):
 
     test_beam = Beam(1.0 * u.arcsec)
 
-    with pytest.raises(WCSCelestialError) as exc:
+    with pytest.raises(WCSCelestialError,
+                       match="WCS does not contain two spatial axes."):
         proj.convolve_to(test_beam)
-
-    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
 
 
 def test_reproject_2D(data_55):
@@ -360,10 +360,9 @@ def test_nocelestial_reproject_2D_fail(data_255_delta):
 
     proj = cube.moment0(axis=1)
 
-    with pytest.raises(WCSCelestialError) as exc:
+    with pytest.raises(WCSCelestialError,
+                       match="WCS does not contain two spatial axes."):
         proj.reproject(cube.header)
-
-    assert exc.value.args[0] == ("WCS does not contain two spatial axes.")
 
 
 @pytest.mark.parametrize('use_memmap', (True,False))

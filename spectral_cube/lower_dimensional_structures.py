@@ -770,7 +770,7 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         """
 
         if self._wcs is None:
-            spec_axis = np.arange(self.size) * u.dimensionless_unscaled
+            spec_axis = np.arange(self.size) * u.one
         else:
             spec_axis = self.wcs.wcs_pix2world(np.arange(self.size), 0)[0] * \
                 u.Unit(self.wcs.wcs.cunit[0])
