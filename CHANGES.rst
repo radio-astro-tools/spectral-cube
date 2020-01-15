@@ -6,6 +6,8 @@
 
 - Refactor package infrastructure to no longer use astropy-helpers. #599
 
+- Switch to using unified I/O infrastructure from Astropy. #600
+
 0.4.5 (unreleased)
 ------------------
  - Added support for casatools-based io in #541 and beam reading from CASA
