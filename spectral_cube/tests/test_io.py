@@ -3,7 +3,6 @@ from __future__ import print_function, absolute_import, division
 import numpy as np
 from astropy.io import fits as pyfits
 from astropy import units as u
-from ..io import class_lmv, fits
 from .. import SpectralCube, StokesSpectralCube
 from ..lower_dimensional_structures import (OneDSpectrum,
                                             VaryingResolutionOneDSpectrum)

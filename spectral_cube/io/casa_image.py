@@ -9,14 +9,16 @@ from astropy.wcs import WCS
 from astropy import units as u
 from astropy.wcs.wcsapi.sliced_low_level_wcs import sanitize_slices
 from astropy import log
+from astropy.io import registry as io_registry
 import numpy as np
 from radio_beam import Beam, Beams
 
 import dask.array
 
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
+from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from .. utils import BeamWarning, cached
+from .. utils import BeamWarning, cached, StokesWarning
 from .. import wcs_utils
 
 # Read and write from a CASA image. This has a few
@@ -29,11 +31,8 @@ from .. import wcs_utils
 # yield the same array in memory that we would get from astropy.
 
 
-def is_casa_image(input, **kwargs):
-    if isinstance(input, six.string_types):
-        if input.endswith('.image'):
-            return True
-    return False
+def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
+    return filepath is not None and filepath.lower().endswith('.image')
 
 
 def wcs_casa2astropy(ia, coordsys):
@@ -174,7 +173,7 @@ class ArraylikeCasaData:
 
 
 def load_casa_image(filename, skipdata=False,
-                    skipvalid=False, skipcs=False, **kwargs):
+                    skipvalid=False, skipcs=False, target_cls=None, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can
@@ -343,5 +342,10 @@ def load_casa_image(filename, skipdata=False,
         raise ValueError("CASA image has {0} dimensions, and therefore "
                          "is not readable by spectral-cube.".format(wcs.naxis))
 
+    from .core import normalize_cube_stokes
+    return normalize_cube_stokes(cube, target_cls=target_cls)
 
-    return cube
+
+io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)
+io_registry.register_reader('casa_image', BaseSpectralCube, load_casa_image)
+io_registry.register_identifier('casa', BaseSpectralCube, is_casa_image)

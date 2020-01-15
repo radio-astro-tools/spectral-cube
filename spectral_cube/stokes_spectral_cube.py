@@ -3,6 +3,8 @@ from __future__ import print_function, absolute_import, division
 import six
 import numpy as np
 
+from astropy.io.registry import UnifiedReadWriteMethod
+from .io.core import StokesSpectralCubeRead, StokesSpectralCubeWrite
 from .spectral_cube import SpectralCube, BaseSpectralCube
 from . import wcs_utils
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
@@ -152,46 +154,5 @@ class StokesSpectralCube(object):
 
         return self._new_cube_with(stokes_data=stokes_data)
 
-    @classmethod
-    def read(cls, filename, format=None, hdu=None, **kwargs):
-        """
-        Read a spectral cube from a file.
-
-        If the file contains Stokes axes, they will be read in. If you are
-        only interested in the unpolarized emission (I), you can use
-        :meth:`~spectral_cube.SpectralCube.read` instead.
-
-        Parameters
-        ----------
-        filename : str
-            The file to read the cube from
-        format : str
-            The format of the file to read. (Currently limited to 'fits' and 'casa_image')
-        hdu : int or str
-            For FITS files, the HDU to read in (can be the ID or name of an
-            HDU).
-
-        Returns
-        -------
-        cube : :class:`SpectralCube`
-        """
-        from .io.core import read
-        cube = read(filename, format=format, hdu=hdu)
-        if isinstance(cube, BaseSpectralCube):
-            cube = StokesSpectralCube({'I': cube})
-        return cube
-
-    def write(self, filename, overwrite=False, format=None):
-        """
-        Write the spectral cube to a file.
-
-        Parameters
-        ----------
-        filename : str
-            The path to write the file to
-        format : str
-            The format of the file to write. (Currently limited to 'fits')
-        overwrite : bool
-            If True, overwrite ``filename`` if it exists
-        """
-        raise NotImplementedError("")
+    read = UnifiedReadWriteMethod(StokesSpectralCubeRead)
+    write = UnifiedReadWriteMethod(StokesSpectralCubeWrite)

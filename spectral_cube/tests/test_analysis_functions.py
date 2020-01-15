@@ -7,7 +7,7 @@ import astropy.units as u
 
 from ..analysis_utilities import stack_spectra, fourier_shift
 from .utilities import generate_gaussian_cube, gaussian
-
+from ..utils import BadVelocitiesWarning
 
 def test_shift():
 
@@ -106,7 +106,8 @@ def test_stacking_badvels():
 
     test_vels[12,11] = 500*u.km/u.s
 
-    with warnings.catch_warnings(record=True) as wrn:
+    with pytest.warns(BadVelocitiesWarning,
+                      match='Some velocities are outside the allowed range and will be'):
         # Stack the spectra in the cube
         stacked = \
             stack_spectra(test_cube, test_vels, v0=v0,
@@ -114,7 +115,6 @@ def test_stacking_badvels():
                           xy_posns=None, num_cores=1,
                           chunk_size=-1,
                           progressbar=False, pad_edges=False)
-        assert 'Some velocities are outside the allowed range and will be' in str(wrn[-1].message)
 
     # Calculate residuals (the one bad value shouldn't have caused a problem)
     resid = np.abs(stacked.value - true_spectrum)

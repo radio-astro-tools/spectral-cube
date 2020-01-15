@@ -4,11 +4,13 @@ import six
 import warnings
 
 from astropy.io import fits
+from astropy.io import registry as io_registry
 import astropy.wcs
 from astropy import wcs
 from astropy.wcs import WCS
 from collections import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
+from astropy.io.fits.connect import FITS_SIGNATURE
 
 import numpy as np
 import datetime
@@ -20,29 +22,40 @@ except ImportError:
     SPECTRAL_CUBE_VERSION = 'dev'
 
 from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpectralCube
+from ..lower_dimensional_structures import LowerDimensionalObject
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from ..utils import FITSWarning, FITSReadError
+from ..utils import FITSWarning, FITSReadError, StokesWarning
 
 
 def first(iterable):
     return next(iter(iterable))
 
 
-# FITS registry code - once Astropy includes a proper extensible I/O base
-# class, we can use that instead. The following code takes care of
-# interpreting string input (filename), HDU, and HDUList.
+def is_fits(origin, filepath, fileobj, *args, **kwargs):
+    """
+    Determine whether `origin` is a FITS file.
 
-def is_fits(input, **kwargs):
+    Parameters
+    ----------
+    origin : str or readable file-like object
+        Path or file object containing a potential FITS file.
+
+    Returns
+    -------
+    is_fits : bool
+        Returns `True` if the given file is a FITS file.
     """
-    Determine whether input is in FITS format
-    """
-    if isinstance(input, six.string_types):
-        if input.lower().endswith(('.fits', '.fits.gz',
-                                   '.fit', '.fit.gz',
-                                   '.fits.Z', '.fit.Z')):
+    if fileobj is not None:
+        pos = fileobj.tell()
+        sig = fileobj.read(30)
+        fileobj.seek(pos)
+        return sig == FITS_SIGNATURE
+    elif filepath is not None:
+        if filepath.lower().endswith(('.fits', '.fits.gz', '.fit', '.fit.gz',
+                                      '.fts', '.fts.gz')):
             return True
-    elif isinstance(input, (fits.HDUList, fits.PrimaryHDU, fits.ImageHDU)):
+    elif isinstance(args[0], (fits.HDUList, fits.ImageHDU, fits.PrimaryHDU)):
         return True
     else:
         return False
@@ -111,13 +124,16 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
 
     else:
 
+        if hasattr(input, 'read'):
+            mode = None
+
         with fits_open(input, mode=mode, **kwargs) as hdulist:
             return read_data_fits(hdulist, hdu=hdu)
 
     return array_hdu.data, array_hdu.header, beam_table
 
 
-def load_fits_cube(input, hdu=0, meta=None, **kwargs):
+def load_fits_cube(input, hdu=0, meta=None, target_cls=None, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
 
@@ -193,10 +209,11 @@ def load_fits_cube(input, hdu=0, meta=None, **kwargs):
 
         raise FITSReadError("Data should be 3- or 4-dimensional")
 
-    return cube
+    from .core import normalize_cube_stokes
+    return normalize_cube_stokes(cube, target_cls=target_cls)
 
 
-def write_fits_cube(filename, cube, overwrite=False,
+def write_fits_cube(cube, filename, overwrite=False,
                     include_origin_notes=True):
     """
     Write a FITS cube with a WCS to a filename
@@ -215,3 +232,32 @@ def write_fits_cube(filename, cube, overwrite=False,
             hdulist.writeto(filename, clobber=overwrite)
     else:
         raise NotImplementedError()
+
+
+def write_fits_ldo(data, filename, overwrite=False):
+    # Spectra may have HDUList objects instead of HDUs because they
+    # have a beam table attached, so we want to try that first
+    # (a more elegant way to write this might be to do "self._hdu_general.write"
+    # and create a property `self._hdu_general` that selects the right one...)
+    if hasattr(data, 'hdulist'):
+        try:
+            data.hdulist.writeto(filename, overwrite=overwrite)
+        except TypeError:
+            data.hdulist.writeto(filename, clobber=overwrite)
+    elif hasattr(data, 'hdu'):
+        try:
+            data.hdu.writeto(filename, overwrite=overwrite)
+        except TypeError:
+            data.hdu.writeto(filename, clobber=overwrite)
+
+
+io_registry.register_reader('fits', BaseSpectralCube, load_fits_cube)
+io_registry.register_writer('fits', BaseSpectralCube, write_fits_cube)
+io_registry.register_identifier('fits', BaseSpectralCube, is_fits)
+
+io_registry.register_reader('fits', StokesSpectralCube, load_fits_cube)
+io_registry.register_writer('fits', StokesSpectralCube, write_fits_cube)
+io_registry.register_identifier('fits', StokesSpectralCube, is_fits)
+
+io_registry.register_writer('fits', LowerDimensionalObject, write_fits_ldo)
+io_registry.register_identifier('fits', LowerDimensionalObject, is_fits)

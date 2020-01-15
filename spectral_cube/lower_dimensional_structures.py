@@ -11,9 +11,10 @@ from astropy import wcs
 #from astropy import log
 from astropy.io.fits import Header, HDUList, PrimaryHDU, BinTableHDU, FITS_rec
 from radio_beam import Beam, Beams
+from astropy.io.registry import UnifiedReadWriteMethod
 
-from .io.core import determine_format
 from . import spectral_axis
+from .io.core import LowerDimensionalObjectWrite
 from .utils import SliceWarning, BeamWarning, SmoothingWarning, FITSWarning
 from .cube_utils import convert_bunit
 from . import wcs_utils
@@ -27,8 +28,6 @@ from .base_class import (BaseNDClass, SpectralAxisMixinClass,
 from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
-
-
 class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
     """
     Generic class for 1D and 2D objects.
@@ -47,40 +46,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
 
         return hdu
 
-    def write(self, filename, format=None, overwrite=False):
-        """
-        Write the lower dimensional object to a file.
+    def read(self, *args, **kwargs):
+        raise NotImplementedError()
 
-        Parameters
-        ----------
-        filename : str
-            The path to write the file to
-        format : str
-            The kind of file to write. (Currently limited to 'fits')
-        overwrite : bool
-            If True, overwrite ``filename`` if it exists
-        """
-        if format is None:
-            format = determine_format(filename)
-        if format == 'fits':
-            # Spectra may have HDUList objects instead of HDUs because they
-            # have a beam table attached, so we want to try that first
-            # (a more elegant way to write this might be to do "self._hdu_general.write"
-            # and create a property `self._hdu_general` that selects the right one...)
-            if hasattr(self, 'hdulist'):
-                try:
-                    self.hdulist.writeto(filename, overwrite=overwrite)
-                except TypeError:
-                    self.hdulist.writeto(filename, clobber=overwrite)
-            elif hasattr(self, 'hdu'):
-                try:
-                    self.hdu.writeto(filename, overwrite=overwrite)
-                except TypeError:
-                    self.hdu.writeto(filename, clobber=overwrite)
-        else:
-            raise ValueError("Unknown format '{0}' - the only available "
-                             "format at this time is 'fits'")
-
+    write = UnifiedReadWriteMethod(LowerDimensionalObjectWrite)
 
     def __getslice__(self, start, end, increment=None):
         # I don't know why this is needed, but apparently one of the inherited

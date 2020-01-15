@@ -11,6 +11,14 @@ from .masks import (MaskBase, InvertedMask, CompositeMask,
                     FunctionMask)
 from .lower_dimensional_structures import (OneDSpectrum, Projection, Slice)
 
+# Import the following sub-packages to make sure the I/O functions are registered
+from .io import casa_image
+del casa_image
+from .io import class_lmv
+del class_lmv
+from .io import fits
+del fits
+
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube',
             'StokesSpectralCube', 'CompositeMask', 'LazyComparisonMask',
             'LazyMask', 'BooleanArrayMask', 'FunctionMask',
