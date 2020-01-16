@@ -32,6 +32,12 @@ from .. import wcs_utils
 
 
 def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
+
+    # See note before StringWrapper definition
+    from .core import StringWrapper
+    if len(args) > 0 and isinstance(args[0], StringWrapper):
+        filepath = args[0].value
+
     return filepath is not None and filepath.lower().endswith('.image')
 
 
@@ -180,6 +186,10 @@ def load_casa_image(filename, skipdata=False,
     be suppressed. The object holds the coordsys object from the image in
     memory.
     """
+
+    from .core import StringWrapper
+    if isinstance(filename, StringWrapper):
+        filename = filename.value
 
     try:
         import casatools

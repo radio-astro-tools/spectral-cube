@@ -78,7 +78,7 @@ def test_casa_read(filename, tmp_path):
 
     make_casa_testimage(filename, tmp_path / 'casa.image')
 
-    casacube = SpectralCube.read(tmp_path / 'casa.image', format='casa_image')
+    casacube = SpectralCube.read(tmp_path / 'casa.image')
 
     assert casacube.shape == cube.shape
     # what other equalities should we check?

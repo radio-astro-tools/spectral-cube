@@ -90,6 +90,15 @@ Notes
 """
 
 
+# Due to a bug in the astropy I/O infrastructure which causes an exception
+# for directories (which we need for .image), we need to wrap the filenames in
+# a custom string so that astropy doesn't try and call get_readable_fileobj on
+# them.
+class StringWrapper:
+    def __init__(self, value):
+        self.value = value
+
+
 class SpectralCubeRead(registry.UnifiedReadWrite):
 
     __doc__ = DOCSTRING_READ_TEMPLATE.format(clsname='SpectralCube',
@@ -105,7 +114,10 @@ class SpectralCubeRead(registry.UnifiedReadWrite):
         if isinstance(filename, PosixPath):
             filename = str(filename)
         kwargs['target_cls'] = BaseSpectralCube
-        return registry.read(BaseSpectralCube, filename, *args, **kwargs)
+        try:
+            return registry.read(BaseSpectralCube, filename, *args, **kwargs)
+        except IsADirectoryError:  # See note above StringWrapper
+            return registry.read(BaseSpectralCube, StringWrapper(filename), *args, **kwargs)
 
 
 class SpectralCubeWrite(registry.UnifiedReadWrite):
@@ -134,7 +146,10 @@ class StokesSpectralCubeRead(registry.UnifiedReadWrite):
         if isinstance(filename, PosixPath):
             filename = str(filename)
         kwargs['target_cls'] = StokesSpectralCube
-        return registry.read(StokesSpectralCube, filename, *args, **kwargs)
+        try:
+            return registry.read(StokesSpectralCube, filename, *args, **kwargs)
+        except IsADirectoryError:  # See note above StringWrapper
+            return registry.read(StokesSpectralCube, StringWrapper(filename), *args, **kwargs)
 
 
 class StokesSpectralCubeWrite(registry.UnifiedReadWrite):
