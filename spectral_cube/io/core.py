@@ -174,6 +174,6 @@ def normalize_cube_stokes(cube, target_cls=None):
             raise ValueError("Spectral cube is a Stokes cube that "
                             "does not have an I component")
     elif target_cls is StokesSpectralCube and isinstance(cube, BaseSpectralCube):
-        cube = StokesSpectralCube({'I': cube})
+        return StokesSpectralCube({'I': cube})
     else:
         return cube

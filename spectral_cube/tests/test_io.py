@@ -44,6 +44,15 @@ def test_4d_stokes(data_advs):
     f.close()
 
 
+def test_4d_stokes_read_3d(data_adv):
+    # Regression test for a bug that caused StokesSpectralCube.read to not work
+    # correctly when reading in a 3D FITS file.
+    f = pyfits.open(data_adv)
+    c = StokesSpectralCube.read(f)
+    assert isinstance(c, StokesSpectralCube)
+    f.close()
+
+
 def test_3d_beams(data_vda_beams):
     c = SpectralCube.read(data_vda_beams)
     np.testing.assert_almost_equal(c.beams[0].major.value, 0.4)
