@@ -84,6 +84,7 @@ def test_casa_read(filename, tmp_path):
     # what other equalities should we check?
 
 
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 def test_casa_read_stokes(data_advs, tmp_path):
 
     cube = StokesSpectralCube.read(data_advs)
