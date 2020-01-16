@@ -359,3 +359,7 @@ def load_casa_image(filename, skipdata=False,
 io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)
 io_registry.register_reader('casa_image', BaseSpectralCube, load_casa_image)
 io_registry.register_identifier('casa', BaseSpectralCube, is_casa_image)
+
+io_registry.register_reader('casa', StokesSpectralCube, load_casa_image)
+io_registry.register_reader('casa_image', StokesSpectralCube, load_casa_image)
+io_registry.register_identifier('casa', StokesSpectralCube, is_casa_image)

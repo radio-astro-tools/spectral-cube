@@ -9,7 +9,7 @@ from astropy import units as u
 
 from ..io.casa_masks import make_casa_mask
 from ..io.casa_image import wcs_casa2astropy
-from .. import SpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
+from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
 from . import path
 
 try:
@@ -82,6 +82,17 @@ def test_casa_read(filename, tmp_path):
 
     assert casacube.shape == cube.shape
     # what other equalities should we check?
+
+
+def test_casa_read_stokes(data_advs, tmp_path):
+
+    cube = StokesSpectralCube.read(data_advs)
+
+    make_casa_testimage(data_advs, tmp_path / 'casa.image')
+
+    casacube = StokesSpectralCube.read(tmp_path / 'casa.image')
+
+    assert casacube.I.shape == cube.I.shape
 
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
