@@ -869,8 +869,9 @@ class TestYt():
         cam.switch_orientation(normal_vector=direction)
         cam.set_resolution(32)
         im1 = sc.render()
-        im1_gold = np.load(os.path.join(filepath, "data", "yt_vr1.npz"))
-        assert_array_equal(im1, im1_gold['arr_0'])
+        yt_vr1 = os.path.join(filepath, "data", "yt_vr1.npz")
+        with np.load(yt_vr1) as i1:
+            assert_array_equal(im1, i1['arr_0'])
 
         # Test movie
         im2 = self.ytc1.quick_render_movie('.', size=32, nframes=4,
@@ -879,8 +880,9 @@ class TestYt():
                                            north_vector=(0.0, 1.0, 0.0),
                                            run_ffmpeg=False)
         im2 = np.array(im2)
-        im2_gold = np.load(os.path.join(filepath, "data", "yt_vr2.npz"))
-        assert_array_equal(im2, im2_gold['arr_0'])
+        yt_vr2 = os.path.join(filepath, "data", "yt_vr2.npz")
+        with np.load(yt_vr2) as i2:
+            assert_array_equal(im2, i2['arr_0'])
         self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
 
 def test_read_write_rountrip(tmpdir, data_adv):
