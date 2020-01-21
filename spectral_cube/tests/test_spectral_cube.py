@@ -881,7 +881,7 @@ class TestYt():
         im2 = np.array(im2)
         im2_gold = np.load(os.path.join(filepath, "data", "yt_vr2.npz"))
         assert_array_equal(im2, im2_gold['arr_0'])
-
+        self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
 
 def test_read_write_rountrip(tmpdir, data_adv):
     cube = SpectralCube.read(data_adv)
