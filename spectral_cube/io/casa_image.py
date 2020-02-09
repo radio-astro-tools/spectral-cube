@@ -369,7 +369,7 @@ def casa_image_array_reader(imagename):
     tb.close()
 
     # chunkshape definse how the chunks (array subsets) are written to disk
-    chunkshape = dminfo['*1']['SPEC']['DEFAULTTILESHAPE']
+    chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
     chunksize = np.product(chunkshape)
     # the total size defines the final output array size
     totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
@@ -378,11 +378,11 @@ def casa_image_array_reader(imagename):
     stacks = totalshape / chunkshape
     nchunks = np.product(totalshape) // np.product(chunkshape)
 
-    with open(f'{imagename}/table.f0_TSM0', 'rb') as fh:
-        # each of the chunks is stored in order on disk in fortran-order
-        chunks = [np.fromfile(fh, dtype='float32',
-                              count=chunksize).reshape(chunkshape, order='F')
-                  for ii in range(nchunks)]
+    img_fn = f'{imagename}/table.f0_TSM0'
+    # each of the chunks is stored in order on disk in fortran-order
+    chunks = [np.memmap(img_fn, dtype='float32', offset=ii*chunksize,
+                        shape=chunkshape, order='F')
+              for ii in range(nchunks)]
 
     # with all of the chunks stored in the above list, we then need to concatenate
     # the resulting pieces into a final array
@@ -405,6 +405,21 @@ def casa_image_array_reader(imagename):
             cut = int(cut)
             rslt = [np.concatenate(rslt[ii::cut], kk) for ii in range(cut)]
         jj += 1
+
+    # this alternative approach puts the chunks in their appropriate spots
+    # but I haven't figured out a way to turn them into the correct full-sized
+    # array.  You could do it by creating a full-sized array with a
+    # rightly-sized memmap, or something like that, but... that's not what
+    # we're trying to accomplish here.  I want an in-memory object that points
+    # to the right things with the right shape, not a copy in memory or on disk
+    #stacks = list(map(int, stacks))
+    #chunk_inds = np.arange(np.product(stacks)).reshape(stacks, order='F')
+
+    #def recursive_relist(x):
+    #    if isinstance(x, list) or isinstance(x, np.ndarray) and len(x) > 0:
+    #        return [recursive_relist(y) for y in x]
+    #    else:
+    #        return chunks[x]
 
     return rslt
 
