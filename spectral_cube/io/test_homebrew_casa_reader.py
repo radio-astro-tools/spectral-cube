@@ -57,6 +57,8 @@ def test_casa_image_reader():
     size = np.product(shape)
     im = np.arange(size).reshape(shape)
 
+    
+
     shutil.rmtree('test.image')
     ia.fromarray(outfile='test.image', pixels=im, overwrite=True)
     ia.close()

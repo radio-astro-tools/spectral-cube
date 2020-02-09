@@ -355,6 +355,60 @@ def load_casa_image(filename, skipdata=False,
     from .core import normalize_cube_stokes
     return normalize_cube_stokes(cube, target_cls=target_cls)
 
+def casa_image_array_reader(imagename):
+    """
+    Read a CASA image (a folder containing a ``table.f0_TSM0`` file) into a
+    numpy array.
+    """
+    from casatools import table
+    tb = table()
+
+    # load the metadata from the image table
+    tb.open(imagename)
+    dminfo = tb.getdminfo()
+    tb.close()
+
+    # chunkshape definse how the chunks (array subsets) are written to disk
+    chunkshape = dminfo['*1']['SPEC']['DEFAULTTILESHAPE']
+    chunksize = np.product(chunkshape)
+    # the total size defines the final output array size
+    totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
+    # the ratio between these tells you how many chunks must be combined
+    # to create a final stack
+    stacks = totalshape / chunkshape
+    nchunks = np.product(totalshape) // np.product(chunkshape)
+
+    with open(f'{imagename}/table.f0_TSM0', 'rb') as fh:
+        # each of the chunks is stored in order on disk in fortran-order
+        chunks = [np.fromfile(fh, dtype='float32',
+                              count=chunksize).reshape(chunkshape, order='F')
+                  for ii in range(nchunks)]
+
+    # with all of the chunks stored in the above list, we then need to concatenate
+    # the resulting pieces into a final array
+    # this process was arrived at empirically, but in short:
+    # (1) stack the cubes along the last dimension first
+    # (2) then stack along each dimension until you get to the first
+    rslt = chunks
+    rstacks = list(stacks)
+    jj = 0
+    while len(rstacks) > 0:
+        rstacks.pop()
+        kk = len(stacks) - jj - 1
+        remaining_dims = rstacks
+        if len(remaining_dims) == 0:
+            assert kk == 0
+            rslt = np.concatenate(rslt, 0)
+        else:
+            cut = np.product(remaining_dims)
+            assert cut % 1 == 0
+            cut = int(cut)
+            rslt = [np.concatenate(rslt[ii::cut], kk) for ii in range(cut)]
+        jj += 1
+
+    return rslt
+
+
 
 io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)
 io_registry.register_reader('casa_image', BaseSpectralCube, load_casa_image)

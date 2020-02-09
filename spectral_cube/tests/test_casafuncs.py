@@ -8,16 +8,17 @@ import os
 from astropy import units as u
 
 from ..io.casa_masks import make_casa_mask
-from ..io.casa_image import wcs_casa2astropy
+from ..io.casa_image import wcs_casa2astropy, casa_image_array_reader
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
 from . import path
 
 try:
     import casatools
+    from casatools import image
     casaOK = True
 except ImportError:
     try:
-        from taskinit import ia
+        from taskinit import ia as image
         casaOK = True
     except ImportError:
         print("Run in CASA environment.")
@@ -33,7 +34,7 @@ def make_casa_testimage(infile, outname):
         raise Exception("Attempted to make a CASA test image in a non-CASA "
                         "environment")
 
-    ia = casatools.image()
+    ia = image()
 
     ia.fromfits(infile=infile, outfile=outname, overwrite=True)
     ia.unlock()
@@ -61,6 +62,16 @@ def make_casa_testimage(infile, outname):
         ia.unlock()
         ia.close()
         ia.done()
+
+
+def make_casa_testimage_of_shape(shape, outfile):
+    ia = image()
+
+    size = np.product(shape)
+    im = np.arange(size).reshape(shape)
+
+    ia.fromarray(outfile=outfile, pixels=im, overwrite=True)
+    ia.close()
 
 
 @pytest.fixture
@@ -94,6 +105,45 @@ def test_casa_read_stokes(data_advs, tmp_path):
     casacube = StokesSpectralCube.read(tmp_path / 'casa.image')
 
     assert casacube.I.shape == cube.I.shape
+
+
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.parametrize('filename', ('data_adv', 'data_advs', 'data_sdav',
+                                      'data_vad', 'data_vsad'),
+                         indirect=['filename'])
+def test_casa_numpyreader_read(filename, tmp_path):
+
+    cube = SpectralCube.read(filename)
+
+    make_casa_testimage(filename, tmp_path / 'casa.image')
+
+    casacube = SpectralCube.read(tmp_path / 'casa.image')
+
+    assert casacube.shape == cube.shape
+
+    arr = casa_image_array_reader(tmp_path / 'casa.image')
+
+    assert np.all(arr == casacube.unmasked_data[:])
+
+
+@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.parametrize('shape', ((129,128,130), (513,128,128), (128,513,128),
+                                   (128,128,513), (512,64,64)),
+                         )
+def test_casa_numpyreader_read_shape(shape, tmp_path):
+
+    cube = SpectralCube.read(filename)
+
+    make_casa_testimage_of_shape(shape, tmp_path / 'casa.image')
+
+    casacube = SpectralCube.read(tmp_path / 'casa.image')
+
+    assert casacube.shape == cube.shape
+
+    arr = casa_image_array_reader(tmp_path / 'casa.image')
+
+    assert np.all(arr == casacube.unmasked_data[:])
+
 
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
