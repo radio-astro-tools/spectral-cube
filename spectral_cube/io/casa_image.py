@@ -368,6 +368,9 @@ def casa_image_array_reader(imagename):
     dminfo = tb.getdminfo()
     tb.close()
 
+    from pprint import pprint
+    pprint(dminfo)
+
     # chunkshape definse how the chunks (array subsets) are written to disk
     chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
     chunksize = np.product(chunkshape)
@@ -380,7 +383,7 @@ def casa_image_array_reader(imagename):
 
     img_fn = f'{imagename}/table.f0_TSM0'
     # each of the chunks is stored in order on disk in fortran-order
-    chunks = [np.memmap(img_fn, dtype='float32', offset=ii*chunksize,
+    chunks = [np.memmap(img_fn, dtype='float32', offset=ii*chunksize * 4,
                         shape=chunkshape, order='F')
               for ii in range(nchunks)]
 
@@ -422,6 +425,54 @@ def casa_image_array_reader(imagename):
     #        return chunks[x]
 
     return rslt
+
+
+
+def casa_image_dask_reader(imagename):
+    """
+    Read a CASA image (a folder containing a ``table.f0_TSM0`` file) into a
+    numpy array.
+    """
+    from casatools import table
+    tb = table()
+
+    # load the metadata from the image table
+    tb.open(imagename)
+    dminfo = tb.getdminfo()
+    tb.close()
+
+    # chunkshape definse how the chunks (array subsets) are written to disk
+    chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
+    chunksize = np.product(chunkshape)
+    # the total size defines the final output array size
+    totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
+    # the ratio between these tells you how many chunks must be combined
+    # to create a final stack
+    stacks = totalshape // chunkshape
+    nchunks = np.product(totalshape) // np.product(chunkshape)
+
+    img_fn = f'{imagename}/table.f0_TSM0'
+    # each of the chunks is stored in order on disk in fortran-order
+    chunks = [np.memmap(img_fn, dtype='float32', offset=ii*chunksize*4,
+                        shape=chunkshape, order='F')
+              for ii in range(nchunks)]
+
+    # TODO: there might be room for optimization in the following, since
+    # currently the following can result in a fair number of calls to
+    # concatenate, but for now this does work.
+    for idim in list(range(len(stacks))):
+
+        if stacks[idim] == 1:
+            continue
+
+        chunks_new = []
+        for i in range(nchunks // stacks[idim]):
+            sub = chunks[i * stacks[idim]:(i+1) * stacks[idim]]
+            chunks_new.append(dask.array.concatenate(sub, axis=idim))
+        chunks = chunks_new
+        nchunks //= stacks[idim]
+
+    return chunks[0].transpose()
 
 
 
