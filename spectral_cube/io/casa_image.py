@@ -454,25 +454,19 @@ def casa_image_dask_reader(imagename):
     img_fn = f'{imagename}/table.f0_TSM0'
     # each of the chunks is stored in order on disk in fortran-order
     chunks = [np.memmap(img_fn, dtype='float32', offset=ii*chunksize*4,
-                        shape=chunkshape, order='F')
+                        shape=chunkshape, order='F').T
               for ii in range(nchunks)]
 
-    # TODO: there might be room for optimization in the following, since
-    # currently the following can result in a fair number of calls to
-    # concatenate, but for now this does work.
-    for idim in list(range(len(stacks))):
+    def make_nested_list(chunks, stacks):
+        chunks = [chunks[i*stacks[0]:(i+1)*stacks[0]] for i in range(len(chunks) // stacks[0])]
+        if len(stacks) > 1:
+            return make_nested_list(chunks, stacks[1:])
+        else:
+            return chunks
 
-        if stacks[idim] == 1:
-            continue
+    chunks = make_nested_list(chunks, stacks)
 
-        chunks_new = []
-        for i in range(nchunks // stacks[idim]):
-            sub = chunks[i * stacks[idim]:(i+1) * stacks[idim]]
-            chunks_new.append(dask.array.concatenate(sub, axis=idim))
-        chunks = chunks_new
-        nchunks //= stacks[idim]
-
-    return chunks[0].transpose()
+    return dask.array.block(chunks[0])
 
 
 
