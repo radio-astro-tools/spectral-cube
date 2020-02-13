@@ -427,7 +427,6 @@ def casa_image_array_reader(imagename):
     return rslt
 
 
-
 def casa_image_dask_reader(imagename):
     """
     Read a CASA image (a folder containing a ``table.f0_TSM0`` file) into a
@@ -454,8 +453,16 @@ def casa_image_dask_reader(imagename):
     img_fn = f'{imagename}/table.f0_TSM0'
     # each of the chunks is stored in order on disk in fortran-order
     chunks = [np.memmap(img_fn, dtype='float32', offset=ii*chunksize*4,
-                        shape=chunkshape, order='F').T
+                        shape=chunkshape, order='F').T.copy()
               for ii in range(nchunks)]
+
+    # convert each chunk to a dask array, and make sure meta is set for performance
+    meta = np.zeros((0,), dtype='float32', order='F')
+    chunks = [dask.array.from_array(chunk,
+                                    meta=meta,
+                                    name=False,
+                                    asarray=False,
+                                    chunks=chunk.shape) for chunk in chunks]
 
     def make_nested_list(chunks, stacks):
         chunks = [chunks[i*stacks[0]:(i+1)*stacks[0]] for i in range(len(chunks) // stacks[0])]
@@ -467,7 +474,6 @@ def casa_image_dask_reader(imagename):
     chunks = make_nested_list(chunks, stacks)
 
     return dask.array.block(chunks[0])
-
 
 
 io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)
