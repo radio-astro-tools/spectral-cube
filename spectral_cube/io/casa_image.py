@@ -1,6 +1,8 @@
 from __future__ import print_function, absolute_import, division
 
+import os
 import six
+import uuid
 import warnings
 import tempfile
 import shutil
@@ -64,120 +66,6 @@ def wcs_casa2astropy(ia, coordsys):
     return WCS(tmpfitsfile)
 
 
-class ArraylikeCasaData:
-
-    def __init__(self, filename, ia_kwargs={}):
-
-        try:
-            import casatools
-            self.iatool = casatools.image
-            tb = casatools.table()
-        except ImportError:
-            try:
-                from taskinit import iatool, tbtool
-                self.iatool = iatool
-                tb = tbtool()
-            except ImportError:
-                raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
-
-
-        self.ia_kwargs = ia_kwargs
-
-        self.filename = filename
-
-        self._cache = {}
-
-        log.debug("Creating ArrayLikeCasa object")
-
-        # try to trick CASA into destroying the ia object
-        def getshape():
-            ia = self.iatool()
-            # use the ia tool to get the file contents
-            try:
-                ia.open(self.filename, cache=False)
-            except AssertionError as ex:
-                if 'must be of cReqPath type' in str(ex):
-                    raise IOError("File {0} not found.  Error was: {1}"
-                                  .format(self.filename, str(ex)))
-                else:
-                    raise ex
-
-            self.shape = tuple(ia.shape()[::-1])
-            self.dtype = np.dtype(ia.pixeltype())
-
-            ia.done()
-            ia.close()
-
-        getshape()
-
-        self.ndim = len(self.shape)
-
-        tb.open(self.filename)
-        dminfo = tb.getdminfo()
-        tb.done()
-
-        # unclear if this is always the correct callspec!!!
-        # (transpose requires this be backwards)
-        self.chunksize = dminfo['*1']['SPEC']['DEFAULTTILESHAPE'][::-1]
-
-
-        log.debug("Finished with initialization of ArrayLikeCasa object")
-
-
-
-    def __getitem__(self, value):
-
-
-        log.debug(f"Retrieving slice {value} from {self}")
-
-        value = sanitize_slices(value[::-1], self.ndim)
-
-        # several cases:
-        # integer: just use an integer
-        # slice starting w/number: start number
-        # slice starting w/None: use -1
-        blc = [(-1 if slc.start is None else slc.start)
-               if hasattr(slc, 'start') else slc
-               for slc in value]
-        # slice ending w/number >= 1: end number -1 (CASA is end-inclusive)
-        # slice ending w/zero: use zero, not -1.
-        # slice ending w/negative: use it, but ?????
-        # slice ending w/None: use -1
-        trc = [((slc.stop-1 if slc.stop >= 1 else slc.stop)
-                if slc.stop is not None else -1)
-               if hasattr(slc, 'stop') else slc for slc in value]
-        inc = [(slc.step or 1) if hasattr(slc, 'step') else 1 for slc in value]
-
-
-        ia = self.iatool()
-        # use the ia tool to get the file contents
-        try:
-            ia.open(self.filename, cache=False)
-        except AssertionError as ex:
-            if 'must be of cReqPath type' in str(ex):
-                raise IOError("File {0} not found.  Error was: {1}"
-                              .format(self.filename, str(ex)))
-            else:
-                raise ex
-
-        log.debug(f'blc={blc}, trc={trc}, inc={inc}, kwargs={self.ia_kwargs}')
-        data = ia.getchunk(blc=blc, trc=trc, inc=inc, **self.ia_kwargs)
-        ia.done()
-        ia.close()
-
-        log.debug(f"Done retrieving slice {value} from {self}")
-
-        # keep all sliced axes but drop all integer axes
-        new_view = [slice(None) if isinstance(slc, slice) else 0
-                    for slc in value]
-
-        transposed_data = data[tuple(new_view)].transpose()
-
-        log.debug(f"Done transposing data with view {new_view}")
-
-        return transposed_data
-
-
 def load_casa_image(filename, skipdata=False,
                     skipvalid=False, skipcs=False, target_cls=None, **kwargs):
     """
@@ -214,19 +102,11 @@ def load_casa_image(filename, skipdata=False,
 
     # read in the data
     if not skipdata:
-        arrdata = ArraylikeCasaData(filename)
-        # CASA data are apparently transposed.
-        data = dask.array.from_array(arrdata,
-                                     chunks=arrdata.chunksize,
-                                     name=filename
-                                    )
+        data = casa_image_dask_reader(filename)
 
     # CASA stores validity of data as a mask
     if not skipvalid:
-        boolarr = ArraylikeCasaData(filename, ia_kwargs={'getmask': True})
-        valid = dask.array.from_array(boolarr, chunks=boolarr.chunksize,
-                                      name=filename+".mask"
-                                     )
+        valid = casa_image_dask_reader(filename, mask=True)
 
     # transpose is dealt with within the cube object
 
@@ -355,7 +235,51 @@ def load_casa_image(filename, skipdata=False,
     from .core import normalize_cube_stokes
     return normalize_cube_stokes(cube, target_cls=target_cls)
 
-def casa_image_array_reader(imagename):
+
+class MemmapWrapper:
+    """
+    A wrapper class for dask that opens memmap only when __getitem__ is called,
+    which prevents issues with too many open files if opening a memmap for all
+    chunks at the same time.
+    """
+
+    def __init__(self, filename, **kwargs):
+        self._filename = filename
+        self._kwargs = kwargs
+        self.shape = kwargs['shape'][::-1]
+        self.dtype = kwargs['dtype']
+        self.ndim = len(self.shape)
+
+    def __getitem__(self, item):
+        # We open a file manually and return an in-memory copy of the array
+        # otherwise the file doesn't get closed properly.
+        with open(self._filename) as f:
+            return np.memmap(f, mode='readonly', **self._kwargs).T[item].copy()
+
+
+def from_array_fast(arrays, asarray=None, lock=False):
+    """
+    This is a more efficient alternative to doing::
+
+        [dask.array.from_array(array) for array in arrays]
+
+    that avoids a lot of the overhead in from_array by using the Array
+    initializer directly.
+    """
+    slices = tuple(slice(0, size) for size in arrays[0].shape)
+    chunk = tuple((size,) for size in arrays[0].shape)
+    meta = np.zeros((0,), dtype=arrays[0].dtype)
+    dask_arrays = []
+    for array in arrays:
+        name = str(uuid.uuid4())
+        dask_arrays.append(dask.array.Array({(name,) + (0,) * array.ndim: (dask.array.core.getter, name,
+                                                                           slices, asarray, lock),
+                                             name: array},
+                                            name, chunk, meta=meta))
+    return dask_arrays
+
+
+def casa_image_dask_reader(imagename, memmap=True, mask=False):
     """
     Read a CASA image (a folder containing a ``table.f0_TSM0`` file) into a
     numpy array.
@@ -364,116 +288,56 @@ def casa_image_array_reader(imagename):
     tb = table()
 
     # load the metadata from the image table
-    tb.open(imagename)
-    dminfo = tb.getdminfo()
-    tb.close()
-
-    from pprint import pprint
-    pprint(dminfo)
-
-    # chunkshape definse how the chunks (array subsets) are written to disk
-    chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
-    chunksize = np.product(chunkshape)
-    # the total size defines the final output array size
-    totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
-    # the ratio between these tells you how many chunks must be combined
-    # to create a final stack
-    stacks = totalshape / chunkshape
-    nchunks = np.product(totalshape) // np.product(chunkshape)
-
-    img_fn = f'{imagename}/table.f0_TSM0'
-    # each of the chunks is stored in order on disk in fortran-order
-    chunks = [np.memmap(img_fn, dtype='float32', offset=ii*chunksize * 4,
-                        shape=chunkshape, order='F')
-              for ii in range(nchunks)]
-
-    # with all of the chunks stored in the above list, we then need to concatenate
-    # the resulting pieces into a final array
-    # this process was arrived at empirically, but in short:
-    # (1) stack the cubes along the last dimension first
-    # (2) then stack along each dimension until you get to the first
-    rslt = chunks
-    rstacks = list(stacks)
-    jj = 0
-    while len(rstacks) > 0:
-        rstacks.pop()
-        kk = len(stacks) - jj - 1
-        remaining_dims = rstacks
-        if len(remaining_dims) == 0:
-            assert kk == 0
-            rslt = np.concatenate(rslt, 0)
-        else:
-            cut = np.product(remaining_dims)
-            assert cut % 1 == 0
-            cut = int(cut)
-            rslt = [np.concatenate(rslt[ii::cut], kk) for ii in range(cut)]
-        jj += 1
-
-    # this alternative approach puts the chunks in their appropriate spots
-    # but I haven't figured out a way to turn them into the correct full-sized
-    # array.  You could do it by creating a full-sized array with a
-    # rightly-sized memmap, or something like that, but... that's not what
-    # we're trying to accomplish here.  I want an in-memory object that points
-    # to the right things with the right shape, not a copy in memory or on disk
-    #stacks = list(map(int, stacks))
-    #chunk_inds = np.arange(np.product(stacks)).reshape(stacks, order='F')
-
-    #def recursive_relist(x):
-    #    if isinstance(x, list) or isinstance(x, np.ndarray) and len(x) > 0:
-    #        return [recursive_relist(y) for y in x]
-    #    else:
-    #        return chunks[x]
-
-    return rslt
-
-
-def casa_image_dask_reader(imagename):
-    """
-    Read a CASA image (a folder containing a ``table.f0_TSM0`` file) into a
-    numpy array.
-    """
-    from casatools import table
-    tb = table()
-
-    # load the metadata from the image table
-    tb.open(imagename)
+    tb.open(str(imagename))
     dminfo = tb.getdminfo()
     tb.close()
 
     # chunkshape definse how the chunks (array subsets) are written to disk
     chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
     chunksize = np.product(chunkshape)
+
     # the total size defines the final output array size
     totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
+    totalsize = np.product(totalshape)
+
     # the ratio between these tells you how many chunks must be combined
     # to create a final stack
     stacks = totalshape // chunkshape
     nchunks = np.product(totalshape) // np.product(chunkshape)
 
-    img_fn = f'{imagename}/table.f0_TSM0'
-    # each of the chunks is stored in order on disk in fortran-order
-    chunks = [np.memmap(img_fn, dtype='float32', offset=ii*chunksize*4,
-                        shape=chunkshape, order='F').T.copy()
-              for ii in range(nchunks)]
+    # the data is stored in the following binary file
+    # each of the chunks is stored on disk in fortran-order
+    if mask:
+        img_fn = os.path.join(str(imagename), 'mask0', 'table.f0_TSM0')
+    else:
+        img_fn = os.path.join(str(imagename), 'table.f0_TSM0')
 
-    # convert each chunk to a dask array, and make sure meta is set for performance
-    meta = np.zeros((0,), dtype='float32', order='F')
-    chunks = [dask.array.from_array(chunk,
-                                    meta=meta,
-                                    name=False,
-                                    asarray=False,
-                                    chunks=chunk.shape) for chunk in chunks]
+    if memmap:
+        chunks = [MemmapWrapper(img_fn, dtype='float32', offset=ii*chunksize*4,
+                                shape=chunkshape, order='F')
+                  for ii in range(nchunks)]
+    else:
+        full_array = np.fromfile(img_fn, dtype='float32', count=totalsize)
+        chunks = [full_array[ii*chunksize:(ii+1)*chunksize].reshape(chunkshape, order='F').T
+                  for ii in range(nchunks)]
 
+    # convert all chunks to dask arrays - and set name and meta appropriately
+    # to prevent dask trying to access the data to determine these
+    # automatically.
+    chunks = from_array_fast(chunks)
+
+    # make a nested list of all chunks then use block() to construct the final
+    # dask array.
     def make_nested_list(chunks, stacks):
         chunks = [chunks[i*stacks[0]:(i+1)*stacks[0]] for i in range(len(chunks) // stacks[0])]
         if len(stacks) > 1:
             return make_nested_list(chunks, stacks[1:])
         else:
-            return chunks
+            return chunks[0]
 
     chunks = make_nested_list(chunks, stacks)
 
-    return dask.array.block(chunks[0])
+    return dask.array.block(chunks)
 
 
 io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)

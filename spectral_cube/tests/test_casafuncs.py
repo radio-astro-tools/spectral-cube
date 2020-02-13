@@ -8,7 +8,7 @@ import os
 from astropy import units as u
 
 from ..io.casa_masks import make_casa_mask
-from ..io.casa_image import wcs_casa2astropy, casa_image_array_reader
+from ..io.casa_image import wcs_casa2astropy, casa_image_dask_reader
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
 from . import path
 
@@ -68,9 +68,9 @@ def make_casa_testimage_of_shape(shape, outfile):
     ia = image()
 
     size = np.product(shape)
-    im = np.arange(size).reshape(shape)
+    im = np.arange(size).reshape(shape).T
 
-    ia.fromarray(outfile=outfile, pixels=im, overwrite=True)
+    ia.fromarray(outfile=str(outfile), pixels=im, overwrite=True)
     ia.close()
 
 
@@ -121,10 +121,6 @@ def test_casa_numpyreader_read(filename, tmp_path):
 
     assert casacube.shape == cube.shape
 
-    arr = casa_image_array_reader(tmp_path / 'casa.image')
-
-    assert np.all(arr == casacube.unmasked_data[:])
-
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
 @pytest.mark.parametrize('shape', ((129,128,130), (513,128,128), (128,513,128),
@@ -132,18 +128,11 @@ def test_casa_numpyreader_read(filename, tmp_path):
                          )
 def test_casa_numpyreader_read_shape(shape, tmp_path):
 
-    cube = SpectralCube.read(filename)
-
     make_casa_testimage_of_shape(shape, tmp_path / 'casa.image')
 
     casacube = SpectralCube.read(tmp_path / 'casa.image')
 
-    assert casacube.shape == cube.shape
-
-    arr = casa_image_array_reader(tmp_path / 'casa.image')
-
-    assert np.all(arr == casacube.unmasked_data[:])
-
+    assert casacube.shape == shape
 
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
