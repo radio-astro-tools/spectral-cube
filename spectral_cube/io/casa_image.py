@@ -2,6 +2,7 @@ from __future__ import print_function, absolute_import, division
 
 import os
 import six
+from math import ceil, floor
 import uuid
 import warnings
 import tempfile
@@ -254,7 +255,34 @@ class MemmapWrapper:
         # We open a file manually and return an in-memory copy of the array
         # otherwise the file doesn't get closed properly.
         with open(self._filename) as f:
-            return np.memmap(f, mode='readonly', **self._kwargs).T[item].copy()
+            return np.memmap(f, mode='readonly', order='F', **self._kwargs).T[item].copy()
+
+
+class MaskWrapper:
+    """
+    A wrapper class for dask that opens binary masks from file and returns
+    a chunk from it on-the-fly.
+    """
+
+    def __init__(self, filename, offset, count, shape):
+        self._filename = filename
+        self._offset = offset
+        self._count = count
+        self.shape = shape[::-1]
+        self.dtype = np.bool_
+        self.ndim = len(self.shape)
+
+    def __getitem__(self, item):
+        # The offset is in the final bit array - but fromfile needs to operate
+        # by reading in uint8, so we need to make sure we align what we read
+        # in to the bytes.
+        start = floor(self._offset / 8)
+        end = ceil((self._offset + self._count) / 8)
+        array_uint8 = np.fromfile(self._filename, dtype=np.uint8,
+                                  offset=start, count=end - start)
+        array_bits = np.unpackbits(array_uint8, bitorder='little')
+        chunk = array_bits[self._offset - start * 8:self._offset + self._count - start * 8]
+        return chunk.astype(np.bool_).reshape(self.shape[::-1], order='F').T
 
 
 def from_array_fast(arrays, asarray=None, lock=False):
@@ -287,6 +315,20 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     from casatools import table
     tb = table()
 
+    # the data is stored in the following binary file
+    # each of the chunks is stored on disk in fortran-order
+    if mask:
+        if mask is True:
+            mask = 'mask0'
+        imagename = os.path.join(str(imagename), mask)
+
+    if not os.path.exists(imagename):
+        raise FileNotFoundError(imagename)
+
+    # the data is stored in the following binary file
+    # each of the chunks is stored on disk in fortran-order
+    img_fn = os.path.join(str(imagename), 'table.f0_TSM0')
+
     # load the metadata from the image table
     tb.open(str(imagename))
     dminfo = tb.getdminfo()
@@ -300,24 +342,43 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
     totalsize = np.product(totalshape)
 
+    # the bucket size helps us figure out what the dtype of the array is
+    bucketsize = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['BucketSize']
+
+    # check that the bucket size is as expected and determine the data dtype
+    if mask:
+        if bucketsize != ceil(totalsize / 8):
+            raise ValueError("Unexpected bucket size for mask, found {0} but "
+                             "expected {1}".format(bucketsize, ceil(totalsize / 8)))
+    else:
+        if bucketsize == totalsize * 4:
+            dtype = np.float32
+        elif bucketsize == totalsize * 8:
+            dtype = np.float64
+        else:
+            raise ValueError("Unexpected bucket size for data, found {0} but "
+                             "expected {1} or {2}".format(bucketsize, totalsize * 4, totalsize * 8))
+
     # the ratio between these tells you how many chunks must be combined
     # to create a final stack
     stacks = totalshape // chunkshape
     nchunks = np.product(totalshape) // np.product(chunkshape)
 
-    # the data is stored in the following binary file
-    # each of the chunks is stored on disk in fortran-order
-    if mask:
-        img_fn = os.path.join(str(imagename), 'mask0', 'table.f0_TSM0')
-    else:
-        img_fn = os.path.join(str(imagename), 'table.f0_TSM0')
-
     if memmap:
-        chunks = [MemmapWrapper(img_fn, dtype='float32', offset=ii*chunksize*4,
-                                shape=chunkshape, order='F')
-                  for ii in range(nchunks)]
+        if mask:
+            chunks = [MaskWrapper(img_fn, offset=ii*chunksize, count=chunksize,
+                                  shape=chunkshape)
+                      for ii in range(nchunks)]
+        else:
+            chunks = [MemmapWrapper(img_fn, dtype=dtype, offset=ii*chunksize*4,
+                                    shape=chunkshape)
+                      for ii in range(nchunks)]
     else:
-        full_array = np.fromfile(img_fn, dtype='float32', count=totalsize)
+        if mask:
+            full_array = np.fromfile(img_fn, dtype='uint8')
+            full_array = np.unpackbits(full_array, bitorder='little').astype(np.bool_)
+        else:
+            full_array = np.fromfile(img_fn, dtype=dtype)
         chunks = [full_array[ii*chunksize:(ii+1)*chunksize].reshape(chunkshape, order='F').T
                   for ii in range(nchunks)]
 
