@@ -223,34 +223,6 @@ def test_casa_beams(data_adv, data_adv_beams, tmp_path):
 
 
 @pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
-def test_casa_arrayslicer(data_adv, tmp_path):
-    """
-    """
-
-    make_casa_testimage(data_adv, tmp_path / 'casa_adv.image')
-
-    from spectral_cube.io.casa_image import ArraylikeCasaData
-
-    arr = ArraylikeCasaData(str(tmp_path / 'casa_adv.image'))
-
-    assert arr.shape == (4,3,2)
-    assert arr.ndim == 3
-    assert arr.dtype == np.float64
-
-    assert arr[:,0,0].size == 4
-    assert arr[:,:,0].shape == (4,3)
-
-    assert arr[:3,:2,:1].shape == (3,2,1)
-    assert arr[:3,:2,0].shape == (3,2,)
-    assert arr[:3,:2,1].shape == (3,2,)
-
-    cube = SpectralCube.read(tmp_path / 'casa_adv.image', format='casa_image')
-
-    assert cube[:3,:2,:1].shape == (3,2,1)
-    assert np.array(cube.filled_data[:3,:2,:1]).shape == (3,2,1)
-    assert np.array(cube[:3,:2,:1].mask.include()).shape == (3,2,1)
-
-
 @pytest.mark.parametrize('memmap', [False, True])
 def test_casa_image_dask_reader(tmpdir, memmap):
 
@@ -271,6 +243,9 @@ def test_casa_image_dask_reader(tmpdir, memmap):
     array1 = casa_image_dask_reader('basic.image', memmap=memmap)
     assert array1.dtype == np.float32
     assert_allclose(array1, reference)
+
+    # Check slicing
+    assert_allclose(array1[:2, :1, :3], reference[:2, :1, :3])
 
     # Try and get a mask - this should fail since there isn't one.
 
@@ -304,6 +279,9 @@ def test_casa_image_dask_reader(tmpdir, memmap):
 
     mask3 = casa_image_dask_reader('array_mask.image', mask=True, memmap=memmap)
     assert_allclose(mask3, reference > 0.5)
+
+    # Check slicing
+    assert_allclose(mask3[:2, :1, :3], (reference > 0.5)[:2, :1, :3])
 
     # Test specifying the mask name
 

@@ -106,8 +106,13 @@ def load_casa_image(filename, skipdata=False,
         data = casa_image_dask_reader(filename)
 
     # CASA stores validity of data as a mask
-    if not skipvalid:
-        valid = casa_image_dask_reader(filename, mask=True)
+    if skipvalid:
+        valid = None
+    else:
+        try:
+            valid = casa_image_dask_reader(filename, mask=True)
+        except FileNotFoundError:
+            valid = None
 
     # transpose is dealt with within the cube object
 
@@ -186,9 +191,13 @@ def load_casa_image(filename, skipdata=False,
 
     if wcs.naxis == 3:
         data, wcs_slice = cube_utils._orient(data, wcs)
-        valid, _ = cube_utils._orient(valid, wcs)
 
-        mask = BooleanArrayMask(valid, wcs_slice)
+        if valid is not None:
+            valid, _ = cube_utils._orient(valid, wcs)
+            mask = BooleanArrayMask(valid, wcs_slice)
+        else:
+            mask = None
+
         if 'beam' in locals():
             cube = SpectralCube(data, wcs_slice, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
@@ -199,16 +208,21 @@ def load_casa_image(filename, skipdata=False,
         # we've already loaded the cube into memory because of CASA
         # limitations, so there's no reason to disallow operations
         # cube.allow_huge_operations = True
-        assert cube.mask.shape == cube.shape
+        if mask is not None:
+            assert cube.mask.shape == cube.shape
 
     elif wcs.naxis == 4:
-        valid, _ = cube_utils._split_stokes(valid, wcs)
+        if valid is not None:
+            valid, _ = cube_utils._split_stokes(valid, wcs)
         data, wcs = cube_utils._split_stokes(data, wcs)
         mask = {}
         for component in data:
             data_, wcs_slice = cube_utils._orient(data[component], wcs)
-            valid_, _ = cube_utils._orient(valid[component], wcs)
-            mask[component] = BooleanArrayMask(valid_, wcs_slice)
+            if valid is not None:
+                valid_, _ = cube_utils._orient(valid[component], wcs)
+                mask[component] = BooleanArrayMask(valid_, wcs_slice)
+            else:
+                mask[component] = None
 
             if 'beam' in locals():
                 data[component] = SpectralCube(data_, wcs_slice, mask[component],
@@ -227,8 +241,9 @@ def load_casa_image(filename, skipdata=False,
 
 
         cube = StokesSpectralCube(stokes_data=data)
-        assert cube.I.mask.shape == cube.shape
-        assert wcs_utils.check_equality(cube.I.mask._wcs, cube.wcs)
+        if mask is not None:
+            assert cube.I.mask.shape == cube.shape
+            assert wcs_utils.check_equality(cube.I.mask._wcs, cube.wcs)
     else:
         raise ValueError("CASA image has {0} dimensions, and therefore "
                          "is not readable by spectral-cube.".format(wcs.naxis))
@@ -282,10 +297,10 @@ class MaskWrapper:
                                   offset=start, count=end - start)
         array_bits = np.unpackbits(array_uint8, bitorder='little')
         chunk = array_bits[self._offset - start * 8:self._offset + self._count - start * 8]
-        return chunk.astype(np.bool_).reshape(self.shape[::-1], order='F').T
+        return chunk.astype(np.bool_).reshape(self.shape[::-1], order='F').T[item]
 
 
-def from_array_fast(arrays, asarray=None, lock=False):
+def from_array_fast(arrays, asarray=False, lock=False):
     """
     This is a more efficient alternative to doing::
 
@@ -299,11 +314,12 @@ def from_array_fast(arrays, asarray=None, lock=False):
     meta = np.zeros((0,), dtype=arrays[0].dtype)
     dask_arrays = []
     for array in arrays:
-        name = str(uuid.uuid4())
-        dask_arrays.append(dask.array.Array({(name,) + (0,) * array.ndim: (dask.array.core.getter, name,
-                                                                           slices, asarray, lock),
-                                             name: array},
-                                            name, chunk, meta=meta))
+        name1 = str(uuid.uuid4())
+        name2 = str(uuid.uuid4())
+        dsk = {(name1,) + (0,) * array.ndim: (dask.array.core.getter, name2,
+                                              slices, asarray, lock),
+               name2: array}
+        dask_arrays.append(dask.array.Array(dsk, name1, chunk, meta=meta, dtype=array.dtype))
     return dask_arrays
 
 
@@ -342,22 +358,22 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
     totalsize = np.product(totalshape)
 
-    # the bucket size helps us figure out what the dtype of the array is
-    bucketsize = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['BucketSize']
+    # the file size helps us figure out what the dtype of the array is
+    filesize = os.stat(img_fn).st_size
 
-    # check that the bucket size is as expected and determine the data dtype
+    # check that the file size is as expected and determine the data dtype
     if mask:
-        if bucketsize != ceil(totalsize / 8):
-            raise ValueError("Unexpected bucket size for mask, found {0} but "
-                             "expected {1}".format(bucketsize, ceil(totalsize / 8)))
+        if filesize != ceil(totalsize / 8):
+            raise ValueError("Unexpected file size for mask, found {0} but "
+                             "expected {1}".format(filesize, ceil(totalsize / 8)))
     else:
-        if bucketsize == totalsize * 4:
+        if filesize == totalsize * 4:
             dtype = np.float32
-        elif bucketsize == totalsize * 8:
+        elif filesize == totalsize * 8:
             dtype = np.float64
         else:
-            raise ValueError("Unexpected bucket size for data, found {0} but "
-                             "expected {1} or {2}".format(bucketsize, totalsize * 4, totalsize * 8))
+            raise ValueError("Unexpected file size for data, found {0} but "
+                             "expected {1} or {2}".format(filesize, totalsize * 4, totalsize * 8))
 
     # the ratio between these tells you how many chunks must be combined
     # to create a final stack
