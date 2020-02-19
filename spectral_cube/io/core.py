@@ -146,7 +146,6 @@ class StokesSpectralCubeRead(registry.UnifiedReadWrite):
         if isinstance(filename, PosixPath):
             filename = str(filename)
         kwargs['target_cls'] = StokesSpectralCube
-        print(filename, type(filename))
         try:
             return registry.read(StokesSpectralCube, filename, *args, **kwargs)
         except IsADirectoryError:  # See note above StringWrapper
