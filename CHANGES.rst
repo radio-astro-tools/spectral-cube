@@ -10,6 +10,8 @@
 
 - Switch to using unified I/O infrastructure from Astropy. #600
 
+- Refactor CASA I/O to use dask to access the array/mask data directly. #607
+
 0.4.5 (unreleased)
 ------------------
  - Added support for casatools-based io in #541 and beam reading from CASA
