@@ -109,6 +109,9 @@ def test_casa_read_stokes(data_advs, tmp_path):
 @pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask(data_adv, tmp_path):
 
+    # This tests the make_casa_mask function which can be used to create a mask
+    # file in an existing image.
+
     cube = SpectralCube.read(data_adv)
 
     mask_array = np.array([[True, False], [False, False], [True, True]])
@@ -157,6 +160,8 @@ def test_casa_mask(data_adv, tmp_path):
 @pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask_append(data_adv, tmp_path):
 
+    # This tests the append option for the make_casa_mask function
+
     cube = SpectralCube.read(data_adv)
 
     mask_array = np.array([[True, False], [False, False], [True, True]])
@@ -175,10 +180,9 @@ def test_casa_mask_append(data_adv, tmp_path):
 
 @pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 def test_casa_beams(data_adv, data_adv_beams, tmp_path):
-    """
-    test both ``make_casa_testimage`` and the beam reading tools using casa's
-    image reader
-    """
+
+    # Test both make_casa_testimage and the beam reading tools using casa's
+    # image reader
 
     make_casa_testimage(data_adv, tmp_path / 'casa_adv.image')
     make_casa_testimage(data_adv_beams, tmp_path / 'casa_adv_beams.image')
@@ -195,6 +199,7 @@ def test_casa_beams(data_adv, data_adv_beams, tmp_path):
 
 SHAPES = [(3, 4, 5), (129, 128, 130), (513, 128, 128), (128, 513, 128),
           (128, 128, 513), (512, 64, 64)]
+
 
 @pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 @pytest.mark.parametrize(('memmap', 'shape'), product([False, True], SHAPES))
