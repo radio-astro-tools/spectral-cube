@@ -38,8 +38,11 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
 
     # See note before StringWrapper definition
     from .core import StringWrapper
-    if len(args) > 0 and isinstance(args[0], StringWrapper):
-        filepath = args[0].value
+    if filepath is None and len(args) > 0:
+        if isinstance(args[0], StringWrapper):
+            filepath = args[0].value
+        elif isinstance(args[0], str):
+            filepath = args[0]
 
     return filepath is not None and filepath.lower().endswith('.image')
 
