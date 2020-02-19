@@ -1,5 +1,6 @@
 from __future__ import print_function, absolute_import, division
 
+from itertools import product
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
@@ -15,14 +16,13 @@ from . import path
 try:
     import casatools
     from casatools import image
-    casaOK = True
+    CASA_INSTALLED = True
 except ImportError:
     try:
         from taskinit import ia as image
-        casaOK = True
+        CASA_INSTALLED = True
     except ImportError:
-        print("Run in CASA environment.")
-        casaOK = False
+        CASA_INSTALLED = False
 
 
 def make_casa_testimage(infile, outname):
@@ -30,7 +30,7 @@ def make_casa_testimage(infile, outname):
     infile = str(infile)
     outname = str(outname)
 
-    if not casaOK:
+    if not CASA_INSTALLED:
         raise Exception("Attempted to make a CASA test image in a non-CASA "
                         "environment")
 
@@ -64,26 +64,19 @@ def make_casa_testimage(infile, outname):
         ia.done()
 
 
-def make_casa_testimage_of_shape(shape, outfile):
-    ia = image()
-
-    size = np.product(shape)
-    im = np.arange(size).reshape(shape).T
-
-    ia.fromarray(outfile=str(outfile), pixels=im, overwrite=True)
-    ia.close()
-
-
 @pytest.fixture
 def filename(request):
     return request.getfixturevalue(request.param)
 
 
-@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 @pytest.mark.parametrize('filename', ('data_adv', 'data_advs', 'data_sdav',
                                       'data_vad', 'data_vsad'),
                          indirect=['filename'])
 def test_casa_read(filename, tmp_path):
+
+    # Check that SpectralCube.read returns data with the same shape and values
+    # if read from CASA as if read from FITS.
 
     cube = SpectralCube.read(filename)
 
@@ -92,11 +85,15 @@ def test_casa_read(filename, tmp_path):
     casacube = SpectralCube.read(tmp_path / 'casa.image')
 
     assert casacube.shape == cube.shape
-    # what other equalities should we check?
+    assert_allclose(casacube.unmasked_data[:].value,
+                    cube.unmasked_data[:].value)
 
 
-@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 def test_casa_read_stokes(data_advs, tmp_path):
+
+    # Check that StokesSpectralCube.read returns data with the same shape and values
+    # if read from CASA as if read from FITS.
 
     cube = StokesSpectralCube.read(data_advs)
 
@@ -105,37 +102,11 @@ def test_casa_read_stokes(data_advs, tmp_path):
     casacube = StokesSpectralCube.read(tmp_path / 'casa.image')
 
     assert casacube.I.shape == cube.I.shape
+    assert_allclose(casacube.I.unmasked_data[:].value,
+                    cube.I.unmasked_data[:].value)
 
 
-@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
-@pytest.mark.parametrize('filename', ('data_adv', 'data_advs', 'data_sdav',
-                                      'data_vad', 'data_vsad'),
-                         indirect=['filename'])
-def test_casa_numpyreader_read(filename, tmp_path):
-
-    cube = SpectralCube.read(filename)
-
-    make_casa_testimage(filename, tmp_path / 'casa.image')
-
-    casacube = SpectralCube.read(tmp_path / 'casa.image')
-
-    assert casacube.shape == cube.shape
-
-
-@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
-@pytest.mark.parametrize('shape', ((129,128,130), (513,128,128), (128,513,128),
-                                   (128,128,513), (512,64,64)),
-                         )
-def test_casa_numpyreader_read_shape(shape, tmp_path):
-
-    make_casa_testimage_of_shape(shape, tmp_path / 'casa.image')
-
-    casacube = SpectralCube.read(tmp_path / 'casa.image')
-
-    assert casacube.shape == shape
-
-
-@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask(data_adv, tmp_path):
 
     cube = SpectralCube.read(data_adv)
@@ -183,7 +154,7 @@ def test_casa_mask(data_adv, tmp_path):
                     atol=1.0)
 
 
-@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 def test_casa_mask_append(data_adv, tmp_path):
 
     cube = SpectralCube.read(data_adv)
@@ -202,7 +173,7 @@ def test_casa_mask_append(data_adv, tmp_path):
     assert os.path.exists(tmp_path / 'casa.image/casa.mask')
 
 
-@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 def test_casa_beams(data_adv, data_adv_beams, tmp_path):
     """
     test both ``make_casa_testimage`` and the beam reading tools using casa's
@@ -222,14 +193,24 @@ def test_casa_beams(data_adv, data_adv_beams, tmp_path):
     assert isinstance(cube_beams, VaryingResolutionSpectralCube)
 
 
-@pytest.mark.skipif(not casaOK, reason='CASA tests must be run in a CASA environment.')
-@pytest.mark.parametrize('memmap', [False, True])
-def test_casa_image_dask_reader(tmpdir, memmap):
+SHAPES = [(3, 4, 5), (129, 128, 130), (513, 128, 128), (128, 513, 128),
+          (128, 128, 513), (512, 64, 64)]
+
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.parametrize(('memmap', 'shape'), product([False, True], SHAPES))
+def test_casa_image_dask_reader(tmpdir, memmap, shape):
 
     # Unit tests for the low-level casa_image_dask_reader function which can
     # read a CASA image or mask to a Dask array.
 
-    reference = np.random.random((3, 4, 5))
+    reference = np.random.random(shape).astype(np.float32)
+
+    # CASA seems to have precision issues when computing masks with values
+    # very close to e.g. 0.5 in >0.5. To avoid this, we filter out random
+    # values close to the boundaries that we use below.
+    reference[np.isclose(reference, 0.2)] += 0.05
+    reference[np.isclose(reference, 0.5)] += 0.05
+    reference[np.isclose(reference, 0.8)] += 0.05
 
     os.chdir(tmpdir.strpath)
 
@@ -278,6 +259,7 @@ def test_casa_image_dask_reader(tmpdir, memmap):
     assert_allclose(array3, reference)
 
     mask3 = casa_image_dask_reader('array_mask.image', mask=True, memmap=memmap)
+    keep = mask3 != (reference > 0.5)
     assert_allclose(mask3, reference > 0.5)
 
     # Check slicing
@@ -308,6 +290,8 @@ def test_casa_image_dask_reader(tmpdir, memmap):
     assert_allclose(mask7, reference > 0.8)
 
     # Check that things still work if we write the array out with doubles
+
+    reference = np.random.random(shape).astype(np.float64)
 
     ia = image()
     ia.fromarray('double.image', pixels=reference.T, type='d')

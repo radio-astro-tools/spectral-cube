@@ -372,8 +372,10 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     else:
         if filesize == totalsize * 4:
             dtype = np.float32
+            itemsize = 4
         elif filesize == totalsize * 8:
             dtype = np.float64
+            itemsize = 8
         else:
             raise ValueError("Unexpected file size for data, found {0} but "
                              "expected {1} or {2}".format(filesize, totalsize * 4, totalsize * 8))
@@ -389,7 +391,7 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
                                   shape=chunkshape)
                       for ii in range(nchunks)]
         else:
-            chunks = [MemmapWrapper(img_fn, dtype=dtype, offset=ii*chunksize*4,
+            chunks = [MemmapWrapper(img_fn, dtype=dtype, offset=ii*chunksize*itemsize,
                                     shape=chunkshape)
                       for ii in range(nchunks)]
     else:
