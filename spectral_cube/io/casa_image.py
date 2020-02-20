@@ -244,7 +244,7 @@ def load_casa_image(filename, skipdata=False,
 
 
         cube = StokesSpectralCube(stokes_data=data)
-        if mask is not None:
+        if mask['I'] is not None:
             assert cube.I.mask.shape == cube.shape
             assert wcs_utils.check_equality(cube.I.mask._wcs, cube.wcs)
     else:
