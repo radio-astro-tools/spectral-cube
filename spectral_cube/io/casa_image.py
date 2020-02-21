@@ -23,6 +23,7 @@ from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
 from .. utils import BeamWarning, cached, StokesWarning
 from .. import wcs_utils
+from .casa_dminfo import getdminfo
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -353,7 +354,7 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     # tb.open(str(imagename))
     # dminfo = tb.getdminfo()
     # tb.close()
-    dminfo = getdminfo(str(filename))
+    dminfo = getdminfo(str(imagename))
 
     # chunkshape definse how the chunks (array subsets) are written to disk
     chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
