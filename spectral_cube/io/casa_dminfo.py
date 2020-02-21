@@ -154,7 +154,7 @@ def read_tiled_st_man(f):
     bucket['CubeShape'] = bucket['CellShape'] = _read_iposition(f)
     bucket['TileShape'] = _read_iposition(f)
     bucket['ID'] = {}
-    bucket['BucketSize'] = int(total_cube_size * np.product(bucket['TileShape']) / np.product(bucket['CubeShape']))
+    bucket['BucketSize'] = int(total_cube_size / np.product(np.ceil(bucket['CubeShape'] / bucket['TileShape'])))
 
 
     unknown = read_int(f)  # noqa
