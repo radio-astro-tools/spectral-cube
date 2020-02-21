@@ -331,8 +331,6 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     Read a CASA image (a folder containing a ``table.f0_TSM0`` file) into a
     numpy array.
     """
-    from casatools import table
-    tb = table()
 
     # the data is stored in the following binary file
     # each of the chunks is stored on disk in fortran-order
@@ -348,10 +346,14 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     # each of the chunks is stored on disk in fortran-order
     img_fn = os.path.join(str(imagename), 'table.f0_TSM0')
 
-    # load the metadata from the image table
-    tb.open(str(imagename))
-    dminfo = tb.getdminfo()
-    tb.close()
+    # load the metadata from the image table. Note that this uses our own
+    # implementation of getdminfo, which is equivalent to
+    # from casatools import table
+    # tb = table()
+    # tb.open(str(imagename))
+    # dminfo = tb.getdminfo()
+    # tb.close()
+    dminfo = getdminfo(str(filename))
 
     # chunkshape definse how the chunks (array subsets) are written to disk
     chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
