@@ -8,24 +8,28 @@ import struct
 import numpy as np
 
 
-def read_int(f):
+def read_int32(f):
     return np.int32(struct.unpack('>I', f.read(4))[0])
 
 
+def read_int64(f):
+    return np.int64(struct.unpack('>Q', f.read(8))[0])
+
+
 def read_string(f):
-    value = read_int(f)
+    value = read_int32(f)
     return f.read(int(value))
 
 
 def read_vector(f):
-    nelem = read_int(f)
-    return np.array([read_int(f) for i in range(nelem)])
+    nelem = read_int32(f)
+    return np.array([read_int32(f) for i in range(nelem)])
 
 
 def with_nbytes_prefix(func):
     def wrapper(f):
         start = f.tell()
-        nbytes = read_int(f)
+        nbytes = read_int32(f)
         result = func(f)
         end = f.tell()
         if end - start != nbytes:
@@ -43,7 +47,7 @@ def _read_iposition(f):
 
     # Not sure what the next value is, seems to always be one.
     # Maybe number of dimensions?
-    number = read_int(f)
+    number = read_int32(f)
     assert number == 1
 
     return read_vector(f)
@@ -51,7 +55,7 @@ def _read_iposition(f):
 
 def read_type(f):
     tp = read_string(f)
-    version = read_int(f)
+    version = read_int32(f)
     return tp, version
 
 
@@ -66,7 +70,7 @@ def read_record(f):
     read_record_desc(f)
 
     # Not sure what the following value is
-    read_int(f)
+    read_int32(f)
 
 
 @with_nbytes_prefix
@@ -78,7 +82,7 @@ def read_record_desc(f):
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
     # Not sure what the following value is
-    read_int(f)
+    read_int32(f)
 
 
 @with_nbytes_prefix
@@ -97,33 +101,33 @@ def read_tiled_st_man(f):
 
     big_endian = f.read(1)  # noqa
 
-    seqnr = read_int(f)
+    seqnr = read_int32(f)
     if seqnr != 0:
         raise ValueError("Expected seqnr to be 0, got {0}".format(seqnr))
     st_man['SEQNR'] = seqnr
     st_man['SPEC']['SEQNR'] = seqnr
 
-    nrows = read_int(f)
+    nrows = read_int32(f)
     if nrows != 1:
         raise ValueError("Expected nrows to be 1, got {0}".format(nrows))
 
-    ncols = read_int(f)
+    ncols = read_int32(f)
     if ncols != 1:
         raise ValueError("Expected ncols to be 1, got {0}".format(ncols))
 
-    dtype = read_int(f)  # noqa
+    dtype = read_int32(f)  # noqa
 
     column_name = read_string(f).decode('ascii')
     st_man['COLUMNS'] = np.array([column_name], dtype='<U16')
     st_man['NAME'] = column_name
 
-    max_cache_size = read_int(f)
+    max_cache_size = read_int32(f)
     st_man['SPEC']['MAXIMUMCACHESIZE'] = max_cache_size
     st_man['SPEC']['MaxCacheSize'] = max_cache_size
 
-    ndim = read_int(f)
+    ndim = read_int32(f)
 
-    nrfile = read_int(f)  # 1
+    nrfile = read_int32(f)  # 1
     if nrfile != 1:
         raise ValueError("Expected nrfile to be 1, got {0}".format(nrfile))
 
@@ -134,22 +138,27 @@ def read_tiled_st_man(f):
     # The following two values are unknown, but are likely relevant when there
     # are more that one field in the image.
 
-    unknown = read_int(f)  # 0
-    unknown = read_int(f)  # 0
+    mode = read_int32(f)
+    unknown = read_int32(f)  # 0
 
     bucket = st_man['SPEC']['HYPERCUBES'] = {}
     bucket = st_man['SPEC']['HYPERCUBES']['*1'] = {}
 
-    total_cube_size = read_int(f)  # noqa
+    if mode == 1:
+        total_cube_size = read_int32(f)
+    elif mode == 2:
+        total_cube_size = read_int64(f)
+    else:
+        raise ValueError('Unexpected value {0} at position {1}'.format(mode, f.tell() - 8))
 
-    unknown = read_int(f)  # 1
-    unknown = read_int(f)  # 1
+    unknown = read_int32(f)  # 1
+    unknown = read_int32(f)  # 1
 
     read_record(f)
 
     flag = f.read(1)  # noqa
 
-    ndim = read_int(f)  # noqa
+    ndim = read_int32(f)  # noqa
 
     bucket['CubeShape'] = bucket['CellShape'] = _read_iposition(f)
     bucket['TileShape'] = _read_iposition(f)
@@ -157,8 +166,8 @@ def read_tiled_st_man(f):
     bucket['BucketSize'] = int(total_cube_size / np.product(np.ceil(bucket['CubeShape'] / bucket['TileShape'])))
 
 
-    unknown = read_int(f)  # noqa
-    unknown = read_int(f)  # noqa
+    unknown = read_int32(f)  # noqa
+    unknown = read_int32(f)  # noqa
 
     st_man['TYPE'] = 'TiledCellStMan'
 

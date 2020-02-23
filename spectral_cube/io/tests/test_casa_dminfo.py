@@ -1,7 +1,9 @@
 from __future__ import print_function, absolute_import, division
 
+import os
 import pytest
 import numpy as np
+from numpy.testing import assert_equal
 from pprint import pformat
 
 from ..casa_dminfo import getdminfo
@@ -12,6 +14,7 @@ try:
 except ImportError:
     CASATOOLS_INSTALLED = False
 
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 SHAPES = [(3,), (5, 3), (8, 4, 2), (4, 8, 3, 1), (133, 400), (100, 211, 201),
           (50, 61, 72, 83), (4, 8, 10, 20, 40)]
@@ -26,7 +29,7 @@ def test_getdminfo(tmp_path, shape):
     data = np.random.random(shape)
 
     ia = image()
-    ia.fromarray(outfile=filename, pixels=data)
+    ia.fromarray(outfile=filename, pixels=data, log=False)
     ia.close()
 
     tb = table()
@@ -40,3 +43,18 @@ def test_getdminfo(tmp_path, shape):
     # from pformat (checking for dictionary equality doesn't work because of
     # the Numpy arrays inside).
     assert pformat(actual) == pformat(reference)
+
+
+def test_getdminfo_large():
+
+    # Check that things continue to work fine when we cross the threshold from
+    # a dataset with a size that can be represented by a 32-bit integer to one
+    # where the size requires a 64-bit integer. We use pre-generated
+    # table.f0 files here since generating these kinds of datasets is otherwise
+    # slow and consumes a lot of memory.
+
+    lt32bit = getdminfo(os.path.join(DATA, 'lt32bit.image'))
+    assert_equal(lt32bit['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape'], (320, 320, 1, 1920))
+
+    gt32bit = getdminfo(os.path.join(DATA, 'gt32bit.image'))
+    assert_equal(gt32bit['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape'], (640, 640, 1, 1920))

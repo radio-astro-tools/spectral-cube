@@ -223,7 +223,7 @@ def test_casa_image_dask_reader(tmpdir, memmap, shape):
     # the array to be transposed in order to match what we would expect.
 
     ia = image()
-    ia.fromarray('basic.image', pixels=reference.T)
+    ia.fromarray('basic.image', pixels=reference.T, log=False)
     ia.close()
 
     array1 = casa_image_dask_reader('basic.image', memmap=memmap)
@@ -241,7 +241,7 @@ def test_casa_image_dask_reader(tmpdir, memmap, shape):
     # Now create an array with a simple uniform mask.
 
     ia = image()
-    ia.fromarray('scalar_mask.image', pixels=reference.T)
+    ia.fromarray('scalar_mask.image', pixels=reference.T, log=False)
     ia.calcmask(mask='T')
     ia.close()
 
@@ -256,7 +256,7 @@ def test_casa_image_dask_reader(tmpdir, memmap, shape):
     # Check with a full 3-d mask
 
     ia = image()
-    ia.fromarray('array_mask.image', pixels=reference.T)
+    ia.fromarray('array_mask.image', pixels=reference.T, log=False)
     ia.calcmask(mask='array_mask.image>0.5')
     ia.close()
 
@@ -273,7 +273,7 @@ def test_casa_image_dask_reader(tmpdir, memmap, shape):
     # Test specifying the mask name
 
     ia = image()
-    ia.fromarray('array_masks.image', pixels=reference.T)
+    ia.fromarray('array_masks.image', pixels=reference.T, log=False)
     ia.calcmask(mask='array_masks.image>0.5')
     ia.calcmask(mask='array_masks.image>0.2')
     ia.calcmask(mask='array_masks.image>0.8', name='gt08')
@@ -299,7 +299,7 @@ def test_casa_image_dask_reader(tmpdir, memmap, shape):
     reference = np.random.random(shape).astype(np.float64)
 
     ia = image()
-    ia.fromarray('double.image', pixels=reference.T, type='d')
+    ia.fromarray('double.image', pixels=reference.T, type='d', log=False)
     ia.close()
 
     array8 = casa_image_dask_reader('double.image', memmap=memmap)
