@@ -362,16 +362,25 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
 
     # the total size defines the final output array size
     totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
-    totalsize = np.product(totalshape)
+
+    # we expect that the total size of the array will be determined by finding
+    # the number of chunks along each dimension rounded up
+    totalsize = np.product(np.ceil(totalshape / chunkshape)) * chunksize
 
     # the file size helps us figure out what the dtype of the array is
     filesize = os.stat(img_fn).st_size
 
+    # the ratio between these tells you how many chunks must be combined
+    # to create a final stack
+    stacks = np.ceil(totalshape / chunkshape).astype(int)
+    nchunks = int(np.product(stacks))
+
     # check that the file size is as expected and determine the data dtype
     if mask:
-        if filesize != ceil(totalsize / 8):
+        expected = nchunks * ceil(chunksize / 8)
+        if filesize != expected:
             raise ValueError("Unexpected file size for mask, found {0} but "
-                             "expected {1}".format(filesize, ceil(totalsize / 8)))
+                             "expected {1}".format(filesize, expected))
     else:
         if filesize == totalsize * 4:
             dtype = np.float32
@@ -383,14 +392,9 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
             raise ValueError("Unexpected file size for data, found {0} but "
                              "expected {1} or {2}".format(filesize, totalsize * 4, totalsize * 8))
 
-    # the ratio between these tells you how many chunks must be combined
-    # to create a final stack
-    stacks = totalshape // chunkshape
-    nchunks = np.product(totalshape) // np.product(chunkshape)
-
     if memmap:
         if mask:
-            chunks = [MaskWrapper(img_fn, offset=ii*chunksize, count=chunksize,
+            chunks = [MaskWrapper(img_fn, offset=ii*ceil(chunksize / 8) * 8, count=chunksize,
                                   shape=chunkshape)
                       for ii in range(nchunks)]
         else:
@@ -401,10 +405,13 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
         if mask:
             full_array = np.fromfile(img_fn, dtype='uint8')
             full_array = np.unpackbits(full_array, bitorder='little').astype(np.bool_)
+            ceil_chunksize = int(ceil(chunksize / 8)) * 8
+            chunks = [full_array[ii*ceil_chunksize:(ii+1)*ceil_chunksize][:chunksize].reshape(chunkshape, order='F').T
+                    for ii in range(nchunks)]
         else:
             full_array = np.fromfile(img_fn, dtype=dtype)
-        chunks = [full_array[ii*chunksize:(ii+1)*chunksize].reshape(chunkshape, order='F').T
-                  for ii in range(nchunks)]
+            chunks = [full_array[ii*chunksize:(ii+1)*chunksize].reshape(chunkshape, order='F').T
+                    for ii in range(nchunks)]
 
     # convert all chunks to dask arrays - and set name and meta appropriately
     # to prevent dask trying to access the data to determine these
@@ -422,7 +429,14 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
 
     chunks = make_nested_list(chunks, stacks)
 
-    return dask.array.block(chunks)
+    dask_array = dask.array.block(chunks)
+
+    # Since the chunks may not divide the array exactly, all the chunks put
+    # together may be larger than the array, so we need to get rid of any
+    # extraneous padding.
+    final_slice = tuple([slice(dim) for dim in totalshape[::-1]])
+
+    return dask_array[final_slice]
 
 
 io_registry.register_reader('casa', BaseSpectralCube, load_casa_image)

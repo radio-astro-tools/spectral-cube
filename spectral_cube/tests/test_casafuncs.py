@@ -197,8 +197,11 @@ def test_casa_beams(data_adv, data_adv_beams, tmp_path):
     assert isinstance(cube_beams, VaryingResolutionSpectralCube)
 
 
+# NOTE: the (127, 337, 109) example is to make sure that things work correctly
+# when the shape isn't a mulitple of the chunk size along any
+# dimension.
 SHAPES = [(3, 4, 5), (129, 128, 130), (513, 128, 128), (128, 513, 128),
-          (128, 128, 513), (512, 64, 64)]
+          (128, 128, 513), (512, 64, 64), (127, 337, 109)]
 
 
 @pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
