@@ -93,7 +93,49 @@ def test_getdesc(tmp_path, filename):
 
     desc_actual = getdesc(casa_filename)
 
-    # The easiest way to compare the output is simply to compare the output
-    # from pformat (checking for dictionary equality doesn't work because of
-    # the Numpy arrays inside).
+    assert pformat(desc_actual) == pformat(desc_reference)
+
+
+# TYPES = ['bool', 'char', 'uchar', 'short', 'ushort', 'int', 'uint', 'float',
+#          'double', 'complex', 'dcomplex', 'str', 'table', 'arraybool',
+#          'arraychar', 'arrayuchar', 'arrayshort', 'arrayushort', 'arrayint',
+#          'arrayuint', 'arrayfloat', 'arraydouble', 'arraycomplex',
+#          'arraydcomplex', 'arraystr', 'record', 'other']
+
+
+@pytest.mark.skipif('not CASATOOLS_INSTALLED')
+def test_generic_table_read(tmp_path):
+
+    import numpy as np
+    from astropy.table import Table
+
+    filename_fits = str(tmp_path / 'generic.fits')
+    filename_casa = str(tmp_path / 'generic.image')
+
+    t = Table()
+    t['short'] = np.arange(3, dtype=np.int16)
+    t['ushort'] = np.arange(3, dtype=np.uint16)
+    t['int'] = np.arange(3, dtype=np.int32)
+    t['uint'] = np.arange(3, dtype=np.uint32)
+    t['float'] = np.arange(3, dtype=np.float32)
+    t['double'] = np.arange(3, dtype=np.float64)
+    t['complex'] = np.arange(3, dtype=np.complex64)
+    t['dcomplex'] = np.arange(3, dtype=np.complex128)
+
+    # Repeat this at the end to make sure we correctly finished reading
+    # the complex column metadata
+    t['int2'] = np.arange(3, dtype=np.int32)
+
+    t.write(filename_fits)
+
+    tb = table()
+    tb.fromfits(filename_casa, filename_fits)
+    tb.close()
+
+    desc_actual = getdesc(filename_casa)
+
+    tb.open(filename_casa)
+    desc_reference = tb.getdesc()
+    tb.close()
+
     assert pformat(desc_actual) == pformat(desc_reference)

@@ -213,23 +213,22 @@ def read_table(f, image_path):
     if stype != 'Table' or sversion != 2:
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
-    read_int32(f)
-    read_int32(f)
-    name = read_string(f)
+    nrow = read_int32(f)
+    unknown = read_int32(f)  # noqa
+    name = read_string(f)  # noqa
 
-    table_desc = read_table_desc(f, image_path)
+    table_desc = read_table_desc(f, nrow, image_path)
 
     return table_desc
 
 
-def read_array_column_desc(f, image_path):
+def read_column_desc(f, image_path):
 
-    read_int32(f)
-    read_int32(f)
+    unknown = read_int32(f)
 
     stype, sversion = read_type(f)
 
-    if stype != 'ArrayColumnDesc<float   ' or sversion != 1:
+    if not stype.startswith(('ScalarColumnDesc', 'ArrayColumnDesc')) or sversion != 1:
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
     desc = {}
@@ -239,43 +238,57 @@ def read_array_column_desc(f, image_path):
     desc['dataManagerGroup'] = read_string(f)
     desc['valueType'] = TYPES[read_int32(f)]
     desc['maxlen'] = read_int32(f)
-    desc['ndim'] = read_int32(f)
-    ipos = read_iposition(f)  # noqa
+    ndim = read_int32(f)
+    if ndim > 0:
+        ipos = read_iposition(f)  # noqa
+        desc['ndim'] = ndim
     desc['option'] = read_int32(f)
     desc['keywords'] = read_table_record(f, image_path)
-    # TODO: the following doesn't work because the file gets truncated
-    # desc['dataManagerType'] = read_string(f)
-    # desc['dataManagerGroup'] = read_string(f)
+    if desc['valueType'] in ('ushort', 'short'):
+        f.read(2)
+    if desc['valueType'] in ('uint', 'int', 'float'):
+        f.read(4)
+    elif desc['valueType'] in ('double', 'complex'):
+        f.read(8)
+    elif desc['valueType'] in ('dcomplex'):
+        f.read(16)
     return {name: desc}
 
 
 @with_nbytes_prefix
-def read_table_desc(f, image_path):
+def read_table_desc(f, nrow, image_path):
 
     stype, sversion = read_type(f)
 
     if stype != 'TableDesc' or sversion != 2:
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
-    read_int32(f)
-    read_int32(f)
-    read_int32(f)
+    unknown1 = read_int32(f)  # noqa
+    unknown2 = read_int32(f)  # noqa
+    unknown3 = read_int32(f)  # noqa
 
-    keywords = read_table_record(f, image_path)
+    desc = {}
+
+    desc['_keywords_'] = read_table_record(f, image_path)
+    desc['_define_hypercolumn_'] = {}
+
     hypercolumn = read_table_record(f, image_path)
+    desc['_private_keywords_'] = hypercolumn
+    if hypercolumn:
+        name = list(hypercolumn)[0].split('_')[1]
+        value = list(hypercolumn.values())[0]
+        desc['_define_hypercolumn_'][name] = {'HCcoordnames': value['coord'],
+                                                'HCdatanames': value['data'],
+                                                'HCidnames': value['id'],
+                                                'HCndim': value['ndim']}
 
-    name = list(hypercolumn)[0].split('_')[1]
-    value = list(hypercolumn.values())[0]
+    ncol = read_int32(f)
 
-    array_column_desc = read_array_column_desc(f, image_path)
-
-    desc = {'_define_hypercolumn_': {name: {'HCcoordnames': value['coord'],
-                   'HCdatanames': value['data'],
-                   'HCidnames': value['id'],
-                   'HCndim': value['ndim']}},
-            '_keywords_': keywords,
-             '_private_keywords_': hypercolumn}
-    desc.update(array_column_desc)
+    for icol in range(ncol):
+        if icol > 0:
+            read_int32(f)
+        array_column_desc = read_column_desc(f, image_path)
+        desc.update(array_column_desc)
 
     return desc
 
