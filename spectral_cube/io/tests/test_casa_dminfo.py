@@ -4,6 +4,7 @@ import os
 import pytest
 import numpy as np
 from numpy.testing import assert_equal
+from astropy.table import Table
 from pprint import pformat
 
 from ..casa_dminfo import getdminfo, getdesc
@@ -96,18 +97,11 @@ def test_getdesc(tmp_path, filename):
     assert pformat(desc_actual) == pformat(desc_reference)
 
 
-# TYPES = ['bool', 'char', 'uchar', 'short', 'ushort', 'int', 'uint', 'float',
-#          'double', 'complex', 'dcomplex', 'str', 'table', 'arraybool',
-#          'arraychar', 'arrayuchar', 'arrayshort', 'arrayushort', 'arrayint',
-#          'arrayuint', 'arrayfloat', 'arraydouble', 'arraycomplex',
-#          'arraydcomplex', 'arraystr', 'record', 'other']
-
-
 @pytest.mark.skipif('not CASATOOLS_INSTALLED')
 def test_generic_table_read(tmp_path):
 
-    import numpy as np
-    from astropy.table import Table
+    # NOTE: for now, this doesn't check that we can read the data - just
+    # the metadata about the table.
 
     filename_fits = str(tmp_path / 'generic.fits')
     filename_casa = str(tmp_path / 'generic.image')
@@ -119,8 +113,9 @@ def test_generic_table_read(tmp_path):
     t['uint'] = np.arange(3, dtype=np.uint32)
     t['float'] = np.arange(3, dtype=np.float32)
     t['double'] = np.arange(3, dtype=np.float64)
-    t['complex'] = np.arange(3, dtype=np.complex64)
-    t['dcomplex'] = np.arange(3, dtype=np.complex128)
+    t['complex'] = np.array([1 + 2j, 3.3 + 8.2j, -1.2 - 4.2j], dtype=np.complex64)
+    t['dcomplex'] = np.array([3.33 + 4.22j, 3.3 + 8.2j, -1.2 - 4.2j], dtype=np.complex128)
+    t['str'] = np.array(['reading', 'casa', 'images'])
 
     # Repeat this at the end to make sure we correctly finished reading
     # the complex column metadata
@@ -130,6 +125,17 @@ def test_generic_table_read(tmp_path):
 
     tb = table()
     tb.fromfits(filename_casa, filename_fits)
+    tb.close()
+
+    # Use the arrays in the table to also generate keywords of various types
+    keywords = {'scalars': {}, 'arrays': {}}
+    for name in t.colnames:
+        keywords['scalars']['s_' + name] = t[name][0]
+        keywords['arrays']['a_' + name] = t[name]
+
+    tb.open(filename_casa)
+    tb.putkeywords(keywords)
+    tb.flush()
     tb.close()
 
     desc_actual = getdesc(filename_casa)

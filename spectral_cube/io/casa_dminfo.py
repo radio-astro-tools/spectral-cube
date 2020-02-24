@@ -10,7 +10,7 @@ import numpy as np
 
 
 TYPES = ['bool', 'char', 'uchar', 'short', 'ushort', 'int', 'uint', 'float',
-         'double', 'complex', 'dcomplex', 'str', 'table', 'arraybool',
+         'double', 'complex', 'dcomplex', 'string', 'table', 'arraybool',
          'arraychar', 'arrayuchar', 'arrayshort', 'arrayushort', 'arrayint',
          'arrayuint', 'arrayfloat', 'arraydouble', 'arraycomplex',
          'arraydcomplex', 'arraystr', 'record', 'other']
@@ -52,6 +52,14 @@ def read_float64(f):
     return np.float64(struct.unpack('>d', f.read(8))[0])
 
 
+def read_complex128(f):
+    return np.complex128(read_float64(f) + 1j * read_float64(f))
+
+
+def read_complex64(f):
+    return np.complex64(read_float32(f) + 1j * read_float32(f))
+
+
 def read_string(f):
     value = read_int32(f)
     return f.read(int(value)).decode('ascii')
@@ -73,7 +81,8 @@ def read_iposition(f):
 ARRAY_ITEM_READERS = {
     'float': ('float', read_float32, np.float32),
     'double': ('double', read_float64, np.float64),
-    'str': ('String', read_string, '<U16'),
+    'dcomplex': ('void', read_complex128, np.complex128),
+    'string': ('String', read_string, '<U16'),
     'int': ('Int', read_int32, np.int32)
 }
 
@@ -142,21 +151,26 @@ def read_record_desc(f):
             records[name]['value'] = read_int32(f)
         elif rectype == 'double':
             records[name]['value'] = read_float32(f)
-        elif rectype == 'str':  # string
+        elif rectype == 'dcomplex':
+            records[name]['value'] = read_float32(f)
+        elif rectype == 'string':
             records[name]['value'] = read_string(f)
-        elif rectype == 'table':  # table
+        elif rectype == 'table':
             read_int32(f)
             records[name]['value'] = read_string(f)
-        elif rectype == 'arrayint':  # double array
+        elif rectype == 'arrayint':
             records[name]['value'] = read_iposition(f)
             read_int32(f)
-        elif rectype == 'arraydouble':  # double array
+        elif rectype == 'arraydouble':
+            records[name]['value'] = read_iposition(f)
+            read_int32(f)
+        elif rectype == 'arraydcomplex':
             records[name]['value'] = read_iposition(f)
             read_int32(f)
         elif rectype == 'arraystr':
             records[name]['value'] = read_iposition(f)
             read_int32(f)
-        elif rectype == 'record':  # record
+        elif rectype == 'record':
             records[name]['value'] = read_record_desc(f)
             read_int32(f)
         else:
@@ -179,9 +193,10 @@ def read_table_record(f, image_path):
 
     for name, values in records.items():
         rectype = values['type']
+        value = values['value']
         if rectype == 'bool':
             records[name] = read_bool(f)
-        elif rectype == 'str':
+        elif rectype == 'string':
             records[name] = read_string(f)
         elif rectype == 'table':
             records[name] = 'Table: ' + os.path.abspath(os.path.join(image_path, read_string(f)))
@@ -193,12 +208,16 @@ def read_table_record(f, image_path):
             records[name] = read_int32(f)
         elif rectype == 'double':
             records[name] = read_float64(f)
+        elif rectype == 'dcomplex':
+            records[name] = read_complex128(f)
         elif rectype == 'arrayint':
             records[name] = read_array(f, 'int')
         elif rectype == 'arraydouble':
             records[name] = read_array(f, 'double')
+        elif rectype == 'arraydcomplex':
+            records[name] = read_array(f, 'dcomplex')
         elif rectype == 'arraystr':
-            records[name] = read_array(f, 'str')
+            records[name] = read_array(f, 'string')
         else:
             raise NotImplementedError("Support for type {0} in TableRecord not implemented".format(rectype))
 
@@ -224,7 +243,7 @@ def read_table(f, image_path):
 
 def read_column_desc(f, image_path):
 
-    unknown = read_int32(f)
+    unknown = read_int32(f)  # noqa
 
     stype, sversion = read_type(f)
 
@@ -246,7 +265,7 @@ def read_column_desc(f, image_path):
     desc['keywords'] = read_table_record(f, image_path)
     if desc['valueType'] in ('ushort', 'short'):
         f.read(2)
-    if desc['valueType'] in ('uint', 'int', 'float'):
+    if desc['valueType'] in ('uint', 'int', 'float', 'string'):
         f.read(4)
     elif desc['valueType'] in ('double', 'complex'):
         f.read(8)
