@@ -2,10 +2,38 @@
 # for reading metadata about .image files
 
 import os
-import sys
 import struct
+from io import BytesIO
+from collections import OrderedDict
 
 import numpy as np
+
+
+TYPES = ['bool', 'char', 'uchar', 'short', 'ushort', 'int', 'uint', 'float',
+         'double', 'complex', 'dcomplex', 'str', 'table', 'arraybool',
+         'arraychar', 'arrayuchar', 'arrayshort', 'arrayushort', 'arrayint',
+         'arrayuint', 'arrayfloat', 'arraydouble', 'arraycomplex',
+         'arraydcomplex', 'arraystr', 'record', 'other']
+
+
+def with_nbytes_prefix(func):
+    def wrapper(f, *args):
+        start = f.tell()
+        nbytes = int(read_int32(f))
+        if nbytes == 0:
+            return
+        b = BytesIO(f.read(nbytes - 4))
+        result = func(b, *args)
+        end = f.tell()
+        if end - start != nbytes:
+            raise IOError('Function {0} read {1} bytes instead of {2}'
+                          .format(func, end - start, nbytes))
+        return result
+    return wrapper
+
+
+def read_bool(f):
+    return f.read(1) == b'\x01'
 
 
 def read_int32(f):
@@ -16,41 +44,57 @@ def read_int64(f):
     return np.int64(struct.unpack('>Q', f.read(8))[0])
 
 
+def read_float32(f):
+    return np.float32(struct.unpack('>f', f.read(4))[0])
+
+
+def read_float64(f):
+    return np.float64(struct.unpack('>d', f.read(8))[0])
+
+
 def read_string(f):
     value = read_int32(f)
-    return f.read(int(value))
-
-
-def read_vector(f):
-    nelem = read_int32(f)
-    return np.array([read_int32(f) for i in range(nelem)])
-
-
-def with_nbytes_prefix(func):
-    def wrapper(f):
-        start = f.tell()
-        nbytes = read_int32(f)
-        result = func(f)
-        end = f.tell()
-        if end - start != nbytes:
-            raise IOError('Function {0} read {1} bytes instead of {2}'
-                          .format(func, end - start, nbytes))
-        return result
-    return wrapper
+    return f.read(int(value)).decode('ascii')
 
 
 @with_nbytes_prefix
-def _read_iposition(f):
+def read_iposition(f):
 
-    title = read_string(f)
-    assert title == b'IPosition'
+    stype, sversion = read_type(f)
 
-    # Not sure what the next value is, seems to always be one.
-    # Maybe number of dimensions?
-    number = read_int32(f)
-    assert number == 1
+    if stype != 'IPosition' or sversion != 1:
+        raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
-    return read_vector(f)
+    nelem = read_int32(f)
+
+    return np.array([read_int32(f) for i in range(nelem)])
+
+
+ARRAY_ITEM_READERS = {
+    'float': ('float', read_float32, np.float32),
+    'double': ('double', read_float64, np.float64),
+    'str': ('String', read_string, '<U16'),
+    'int': ('Int', read_int32, np.int32)
+}
+
+
+@with_nbytes_prefix
+def read_array(f, arraytype):
+
+    typerepr, reader, dtype = ARRAY_ITEM_READERS[arraytype]
+
+    stype, sversion = read_type(f)
+
+    if stype != f'Array<{typerepr}>' or sversion != 3:
+        raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
+
+    ndim = read_int32(f)
+    shape = [read_int32(f) for i in range(ndim)]
+    size = read_int32(f)
+
+    values = [reader(f) for i in range(size)]
+
+    return np.array(values, dtype=dtype).reshape(shape)
 
 
 def read_type(f):
@@ -64,7 +108,7 @@ def read_record(f):
 
     stype, sversion = read_type(f)
 
-    if stype != b'Record' or sversion != 1:
+    if stype != 'Record' or sversion != 1:
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
     read_record_desc(f)
@@ -78,11 +122,162 @@ def read_record_desc(f):
 
     stype, sversion = read_type(f)
 
-    if stype != b'RecordDesc' or sversion != 2:
+    if stype != 'RecordDesc' or sversion != 2:
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
     # Not sure what the following value is
+    nrec = read_int32(f)
+
+    records = OrderedDict()
+
+    for i in range(nrec):
+        name = read_string(f)
+        rectype = TYPES[read_int32(f)]
+        records[name] = {'type': rectype}
+        if rectype == 'bool':
+            records[name]['value'] = read_int32(f)
+        elif rectype == 'int':
+            records[name]['value'] = read_int32(f)
+        elif rectype == 'uint':
+            records[name]['value'] = read_int32(f)
+        elif rectype == 'double':
+            records[name]['value'] = read_float32(f)
+        elif rectype == 'str':  # string
+            records[name]['value'] = read_string(f)
+        elif rectype == 'table':  # table
+            read_int32(f)
+            records[name]['value'] = read_string(f)
+        elif rectype == 'arrayint':  # double array
+            records[name]['value'] = read_iposition(f)
+            read_int32(f)
+        elif rectype == 'arraydouble':  # double array
+            records[name]['value'] = read_iposition(f)
+            read_int32(f)
+        elif rectype == 'arraystr':
+            records[name]['value'] = read_iposition(f)
+            read_int32(f)
+        elif rectype == 'record':  # record
+            records[name]['value'] = read_record_desc(f)
+            read_int32(f)
+        else:
+            raise NotImplementedError("Support for type {0} in RecordDesc not implemented".format(rectype))
+
+    return records
+
+
+@with_nbytes_prefix
+def read_table_record(f, image_path):
+
+    stype, sversion = read_type(f)
+
+    if stype != 'TableRecord' or sversion != 1:
+        raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
+
+    records = read_record_desc(f)
+
+    unknown = read_int32(f)  # noqa
+
+    for name, values in records.items():
+        rectype = values['type']
+        if rectype == 'bool':
+            records[name] = read_bool(f)
+        elif rectype == 'str':
+            records[name] = read_string(f)
+        elif rectype == 'table':
+            records[name] = 'Table: ' + os.path.abspath(os.path.join(image_path, read_string(f)))
+        elif rectype == 'record':
+            records[name] = read_table_record(f, image_path)
+        elif rectype == 'uint':
+            records[name] = read_int32(f)
+        elif rectype == 'int':
+            records[name] = read_int32(f)
+        elif rectype == 'double':
+            records[name] = read_float64(f)
+        elif rectype == 'arrayint':
+            records[name] = read_array(f, 'int')
+        elif rectype == 'arraydouble':
+            records[name] = read_array(f, 'double')
+        elif rectype == 'arraystr':
+            records[name] = read_array(f, 'str')
+        else:
+            raise NotImplementedError("Support for type {0} in TableRecord not implemented".format(rectype))
+
+    return dict(records)
+
+
+@with_nbytes_prefix
+def read_table(f, image_path):
+
+    stype, sversion = read_type(f)
+
+    if stype != 'Table' or sversion != 2:
+        raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
+
     read_int32(f)
+    read_int32(f)
+    name = read_string(f)
+
+    table_desc = read_table_desc(f, image_path)
+
+    return table_desc
+
+
+def read_array_column_desc(f, image_path):
+
+    read_int32(f)
+    read_int32(f)
+
+    stype, sversion = read_type(f)
+
+    if stype != 'ArrayColumnDesc<float   ' or sversion != 1:
+        raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
+
+    desc = {}
+    name = read_string(f)
+    desc['comment'] = read_string(f)
+    desc['dataManagerType'] = read_string(f).replace('Shape', 'Cell')
+    desc['dataManagerGroup'] = read_string(f)
+    desc['valueType'] = TYPES[read_int32(f)]
+    desc['maxlen'] = read_int32(f)
+    desc['ndim'] = read_int32(f)
+    ipos = read_iposition(f)  # noqa
+    desc['option'] = read_int32(f)
+    desc['keywords'] = read_table_record(f, image_path)
+    # TODO: the following doesn't work because the file gets truncated
+    # desc['dataManagerType'] = read_string(f)
+    # desc['dataManagerGroup'] = read_string(f)
+    return {name: desc}
+
+
+@with_nbytes_prefix
+def read_table_desc(f, image_path):
+
+    stype, sversion = read_type(f)
+
+    if stype != 'TableDesc' or sversion != 2:
+        raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
+
+    read_int32(f)
+    read_int32(f)
+    read_int32(f)
+
+    keywords = read_table_record(f, image_path)
+    hypercolumn = read_table_record(f, image_path)
+
+    name = list(hypercolumn)[0].split('_')[1]
+    value = list(hypercolumn.values())[0]
+
+    array_column_desc = read_array_column_desc(f, image_path)
+
+    desc = {'_define_hypercolumn_': {name: {'HCcoordnames': value['coord'],
+                   'HCdatanames': value['data'],
+                   'HCidnames': value['id'],
+                   'HCndim': value['ndim']}},
+            '_keywords_': keywords,
+             '_private_keywords_': hypercolumn}
+    desc.update(array_column_desc)
+
+    return desc
 
 
 @with_nbytes_prefix
@@ -160,11 +355,10 @@ def read_tiled_st_man(f):
 
     ndim = read_int32(f)  # noqa
 
-    bucket['CubeShape'] = bucket['CellShape'] = _read_iposition(f)
-    bucket['TileShape'] = _read_iposition(f)
+    bucket['CubeShape'] = bucket['CellShape'] = read_iposition(f)
+    bucket['TileShape'] = read_iposition(f)
     bucket['ID'] = {}
     bucket['BucketSize'] = int(total_cube_size / np.product(np.ceil(bucket['CubeShape'] / bucket['TileShape'])))
-
 
     unknown = read_int32(f)  # noqa
     unknown = read_int32(f)  # noqa
@@ -182,7 +376,7 @@ def read_tiled_cell_st_man(f):
     if stype != b'TiledCellStMan' or sversion != 1:
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
-    default_tile_shape = _read_iposition(f)
+    default_tile_shape = read_iposition(f)
 
     st_man = read_tiled_st_man(f)
 
@@ -204,3 +398,18 @@ def getdminfo(filename):
             raise ValueError('Incorrect magic code: {0}'.format(magic))
 
         return read_tiled_cell_st_man(f)
+
+
+def getdesc(filename):
+    """
+    Return the same output as CASA's getdesc() function, namely a dictionary
+    with metadata about the .image file, parsed from the ``table.dat`` file.
+    """
+
+    with open(os.path.join(filename, 'table.dat'), 'rb') as f:
+
+        magic = f.read(4)
+        if magic != b'\xbe\xbe\xbe\xbe':
+            raise ValueError('Incorrect magic code: {0}'.format(magic))
+
+        return read_table(f, filename)
