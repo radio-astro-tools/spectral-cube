@@ -7,7 +7,7 @@ from numpy.testing import assert_equal
 from astropy.table import Table
 from pprint import pformat
 
-from ..casa_dminfo import getdminfo, getdesc
+from ..casa_low_level_io import getdminfo, getdesc
 from ...tests.test_casafuncs import make_casa_testimage
 
 try:

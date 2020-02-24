@@ -1,5 +1,5 @@
-# Pure Python + Numpy implementation of CASA's getdminfo() function
-# for reading metadata about .image files
+# Pure Python + Numpy implementation of CASA's getdminfo() and getdesc()
+# functions for reading metadata about .image files.
 
 import os
 import struct
@@ -8,6 +8,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+__all__ = ['getdminfo', 'getdesc']
 
 TYPES = ['bool', 'char', 'uchar', 'short', 'ushort', 'int', 'uint', 'float',
          'double', 'complex', 'dcomplex', 'string', 'table', 'arraybool',
@@ -193,23 +194,20 @@ def read_table_record(f, image_path):
 
     for name, values in records.items():
         rectype = values['type']
-        value = values['value']
         if rectype == 'bool':
             records[name] = read_bool(f)
-        elif rectype == 'string':
-            records[name] = read_string(f)
-        elif rectype == 'table':
-            records[name] = 'Table: ' + os.path.abspath(os.path.join(image_path, read_string(f)))
-        elif rectype == 'record':
-            records[name] = read_table_record(f, image_path)
-        elif rectype == 'uint':
-            records[name] = read_int32(f)
         elif rectype == 'int':
+            records[name] = read_int32(f)
+        elif rectype == 'uint':
             records[name] = read_int32(f)
         elif rectype == 'double':
             records[name] = read_float64(f)
         elif rectype == 'dcomplex':
             records[name] = read_complex128(f)
+        elif rectype == 'string':
+            records[name] = read_string(f)
+        elif rectype == 'table':
+            records[name] = 'Table: ' + os.path.abspath(os.path.join(image_path, read_string(f)))
         elif rectype == 'arrayint':
             records[name] = read_array(f, 'int')
         elif rectype == 'arraydouble':
@@ -218,6 +216,8 @@ def read_table_record(f, image_path):
             records[name] = read_array(f, 'dcomplex')
         elif rectype == 'arraystr':
             records[name] = read_array(f, 'string')
+        elif rectype == 'record':
+            records[name] = read_table_record(f, image_path)
         else:
             raise NotImplementedError("Support for type {0} in TableRecord not implemented".format(rectype))
 
