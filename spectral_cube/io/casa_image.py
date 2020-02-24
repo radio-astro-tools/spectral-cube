@@ -23,7 +23,7 @@ from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
 from .. utils import BeamWarning, cached, StokesWarning
 from .. import wcs_utils
-from .casa_dminfo import getdminfo
+from .casa_dminfo import getdminfo, getdesc
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -48,7 +48,7 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
     return filepath is not None and filepath.lower().endswith('.image')
 
 
-def wcs_casa2astropy(ia, coordsys):
+def wcs_casa2astropy(ndim, coordsys):
     """
     Convert a casac.coordsys object into an astropy.wcs.WCS object
     """
@@ -57,11 +57,20 @@ def wcs_casa2astropy(ia, coordsys):
     # to CASA by getting it to write out a FITS file and reading back in
     # using WCS
 
+    try:
+        from casatools import image
+    except ImportError:
+        try:
+            from taskinit import iatool as image
+        except ImportError:
+            raise ImportError("Could not import CASA (casac) and therefore cannot convert csys to WCS")
+
     tmpimagefile = tempfile.mktemp() + '.image'
     tmpfitsfile = tempfile.mktemp() + '.fits'
+    ia = image()
     ia.fromarray(outfile=tmpimagefile,
-                 pixels=np.ones([1] * coordsys.naxes()),
-                 csys=coordsys.torecord(), log=False)
+                 pixels=np.ones([1] * ndim),
+                 csys=coordsys, log=False)
     ia.done()
 
     ia.open(tmpimagefile)
@@ -84,27 +93,6 @@ def load_casa_image(filename, skipdata=False,
     if isinstance(filename, StringWrapper):
         filename = filename.value
 
-    try:
-        import casatools
-        iatool = casatools.image
-    except ImportError:
-        try:
-            from taskinit import iatool
-        except ImportError:
-            raise ImportError("Could not import CASA (casac) and therefore cannot read CASA .image files")
-
-    ia = iatool()
-
-    # use the ia tool to get the file contents
-    try:
-        ia.open(filename, cache=False)
-    except AssertionError as ex:
-        if 'must be of cReqPath type' in str(ex):
-            raise IOError("File {0} not found.  Error was: {1}"
-                          .format(filename, str(ex)))
-        else:
-            raise ex
-
     # read in the data
     if not skipdata:
         data = casa_image_dask_reader(filename)
@@ -121,20 +109,24 @@ def load_casa_image(filename, skipdata=False,
     # transpose is dealt with within the cube object
 
     # read in coordinate system object
-    casa_cs = ia.coordsys()
 
-    unit = ia.brightnessunit()
+    desc = getdesc(filename)
 
-    beam_ = ia.restoringbeam()
+    casa_cs = desc['_keywords_']['coords']
 
-    ia.done()
-    ia.close()
+    unit = desc['_keywords_']['units']
 
-    wcs = wcs_casa2astropy(ia, casa_cs)
+    if 'perplanebeams' in desc['_keywords_']['imageinfo']:
+        beam_ = {'beams': desc['_keywords_']['imageinfo']['perplanebeams']}
+        beam_['nStokes'] = beam_['beams'].pop('nStokes')
+        beam_['nChannels'] = beam_['beams'].pop('nChannels')
+        beam_['beams'] = {key: {'*0': value} for key, value in list(beam_['beams'].items())}
+    else:
+        beam_ = desc['_keywords_']['imageinfo']['restoringbeam']
+
+    wcs = wcs_casa2astropy(data.ndim, casa_cs)
 
     del casa_cs
-    del ia
-
 
     if 'major' in beam_:
         beam = Beam(major=u.Quantity(beam_['major']['value'], unit=beam_['major']['unit']),

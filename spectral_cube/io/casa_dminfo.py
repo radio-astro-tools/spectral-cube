@@ -288,7 +288,7 @@ def read_tiled_st_man(f):
 
     stype, sversion = read_type(f)
 
-    if stype != b'TiledStMan' or sversion != 2:
+    if stype != 'TiledStMan' or sversion != 2:
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
     st_man = {}
@@ -312,7 +312,7 @@ def read_tiled_st_man(f):
 
     dtype = read_int32(f)  # noqa
 
-    column_name = read_string(f).decode('ascii')
+    column_name = read_string(f)
     st_man['COLUMNS'] = np.array([column_name], dtype='<U16')
     st_man['NAME'] = column_name
 
@@ -373,7 +373,7 @@ def read_tiled_cell_st_man(f):
 
     stype, sversion = read_type(f)
 
-    if stype != b'TiledCellStMan' or sversion != 1:
+    if stype != 'TiledCellStMan' or sversion != 1:
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
     default_tile_shape = read_iposition(f)

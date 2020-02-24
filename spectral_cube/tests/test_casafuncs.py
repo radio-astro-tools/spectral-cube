@@ -143,7 +143,7 @@ def test_casa_mask(data_adv, tmp_path):
     # Test WCS info
 
     # Convert back to an astropy wcs object so transforms are dealt with.
-    casa_wcs = wcs_casa2astropy(ia, coords)
+    casa_wcs = wcs_casa2astropy(coords.naxes(), coords.torecord())
     header = casa_wcs.to_header()  # Invokes transform
 
     # Compare some basic properties EXCLUDING the spectral axis
