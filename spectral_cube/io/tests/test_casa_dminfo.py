@@ -145,3 +145,7 @@ def test_generic_table_read(tmp_path):
     tb.close()
 
     assert pformat(desc_actual) == pformat(desc_reference)
+
+    # TODO: for now the following fails because we haven't implemented
+    # non-tiled data I/O
+    # getdminfo(filename_casa)
