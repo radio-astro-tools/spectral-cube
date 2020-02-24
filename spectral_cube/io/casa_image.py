@@ -1,27 +1,20 @@
 from __future__ import print_function, absolute_import, division
 
 import os
-import six
 from math import ceil, floor
 import uuid
 import warnings
-import tempfile
-import shutil
-from astropy.io import fits
-from astropy.wcs import WCS
 from astropy import units as u
-from astropy.wcs.wcsapi.sliced_low_level_wcs import sanitize_slices
-from astropy import log
 from astropy.io import registry as io_registry
 import numpy as np
 from radio_beam import Beam, Beams
 
 import dask.array
 
-from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, LazyMask, VaryingResolutionSpectralCube
+from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from .. utils import BeamWarning, cached, StokesWarning
+from .. utils import BeamWarning
 from .. import wcs_utils
 from .casa_low_level_io import getdminfo, getdesc
 from .casa_wcs import wcs_casa2astropy
