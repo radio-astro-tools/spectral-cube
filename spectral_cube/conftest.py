@@ -280,7 +280,7 @@ def prepare_255_header():
 @pytest.fixture
 def data_255(tmp_path):
     h = prepare_255_header()
-    d = np.arange(2*5*5).reshape((2,5,5))
+    d = np.arange(2*5*5, dtype='float').reshape((2,5,5))
     fits.writeto(tmp_path / '255.fits', d, h)
     return tmp_path / '255.fits'
 
@@ -355,7 +355,7 @@ def prepare_55_header():
 def data_55(tmp_path):
     # Make a 2D spatial version
     h = prepare_55_header()
-    d = np.arange(5 * 5).reshape((5, 5))
+    d = np.arange(5 * 5, dtype='float').reshape((5, 5))
     fits.writeto(tmp_path / '55.fits', d, h)
     return tmp_path / '55.fits'
 
