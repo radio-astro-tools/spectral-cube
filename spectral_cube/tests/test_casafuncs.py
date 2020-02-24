@@ -9,7 +9,8 @@ import os
 from astropy import units as u
 
 from ..io.casa_masks import make_casa_mask
-from ..io.casa_image import wcs_casa2astropy, casa_image_dask_reader
+from ..io.casa_image import casa_image_dask_reader
+from ..io.casa_wcs import wcs_casa2astropy
 from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
 from . import path
 

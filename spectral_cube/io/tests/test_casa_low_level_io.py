@@ -5,6 +5,7 @@ import pytest
 import numpy as np
 from numpy.testing import assert_equal
 from astropy.table import Table
+from astropy.io import fits
 from pprint import pformat
 
 from ..casa_low_level_io import getdminfo, getdesc
@@ -17,6 +18,19 @@ except ImportError:
     CASATOOLS_INSTALLED = False
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
+
+ALL_DATA_FIXTURES = ('data_advs', 'data_dvsa', 'data_vsad',
+                     'data_sadv', 'data_sdav', 'data_sdav_beams',
+                     'data_advs_nobeam', 'data_adv',
+                     'data_adv_jybeam_upper', 'data_adv_jybeam_lower',
+                     'data_adv_jybeam_whitespace', 'data_adv_beams',
+                     'data_vad', 'data_vda', 'data_vda_jybeam_upper',
+                     'data_vda_jybeam_lower', 'data_vda_jybeam_whitespace',
+                     'data_vda_beams', 'data_255', 'data_255_delta',
+                     # 'data_455_delta_beams',
+                     'data_522_delta',
+                     # 'data_522_delta_beams'
+                     )
 
 SHAPES = [(3,), (5, 3), (8, 4, 2), (4, 8, 3, 1), (133, 400), (100, 211, 201),
           (50, 61, 72, 83), (4, 8, 10, 20, 40)]
@@ -68,19 +82,7 @@ def filename(request):
 
 
 @pytest.mark.skipif('not CASATOOLS_INSTALLED')
-@pytest.mark.parametrize('filename', ('data_advs', 'data_dvsa', 'data_vsad',
-                                      'data_sadv', 'data_sdav', 'data_sdav_beams',
-                                      'data_advs_nobeam', 'data_adv',
-                                      'data_adv_jybeam_upper', 'data_adv_jybeam_lower',
-                                      'data_adv_jybeam_whitespace', 'data_adv_beams',
-                                      'data_vad', 'data_vda', 'data_vda_jybeam_upper',
-                                      'data_vda_jybeam_lower', 'data_vda_jybeam_whitespace',
-                                      'data_vda_beams', 'data_255', 'data_255_delta',
-                                      # 'data_455_delta_beams',
-                                      'data_522_delta',
-                                      # 'data_522_delta_beams'
-                                      ),
-                         indirect=['filename'])
+@pytest.mark.parametrize('filename', ALL_DATA_FIXTURES, indirect=['filename'])
 def test_getdesc(tmp_path, filename):
 
     casa_filename = str(tmp_path / 'casa.image')
