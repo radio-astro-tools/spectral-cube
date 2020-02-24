@@ -23,7 +23,7 @@ from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
 from .. utils import BeamWarning, cached, StokesWarning
 from .. import wcs_utils
-from .casa_dminfo import getdminfo, getdesc
+from .casa_low_level_io import getdminfo, getdesc
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
