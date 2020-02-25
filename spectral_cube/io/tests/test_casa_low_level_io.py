@@ -99,6 +99,7 @@ def test_getdesc(tmp_path, filename):
     assert pformat(desc_actual) == pformat(desc_reference)
 
 
+@pytest.mark.openfiles_ignore
 @pytest.mark.skipif('not CASATOOLS_INSTALLED')
 def test_generic_table_read(tmp_path):
 
