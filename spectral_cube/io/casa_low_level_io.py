@@ -197,13 +197,13 @@ def read_table_record(f, image_path):
         if rectype == 'bool':
             records[name] = read_bool(f)
         elif rectype == 'int':
-            records[name] = read_int32(f)
+            records[name] = int(read_int32(f))
         elif rectype == 'uint':
-            records[name] = read_int32(f)
+            records[name] = int(read_int32(f))
         elif rectype == 'double':
-            records[name] = read_float64(f)
+            records[name] = float(read_float64(f))
         elif rectype == 'dcomplex':
-            records[name] = read_complex128(f)
+            records[name] = complex(read_complex128(f))
         elif rectype == 'string':
             records[name] = read_string(f)
         elif rectype == 'table':
