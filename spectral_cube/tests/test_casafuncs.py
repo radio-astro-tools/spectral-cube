@@ -1,6 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import os
+import shutil
 
 import pytest
 import numpy as np
@@ -80,6 +81,27 @@ def test_casa_read(filename, tmp_path):
     cube = SpectralCube.read(filename)
 
     make_casa_testimage(filename, tmp_path / 'casa.image')
+
+    casacube = SpectralCube.read(tmp_path / 'casa.image')
+
+    assert casacube.shape == cube.shape
+    assert_allclose(casacube.unmasked_data[:].value,
+                    cube.unmasked_data[:].value)
+
+
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.parametrize('filename', ('data_adv', 'data_advs', 'data_sdav',
+                                      'data_vad', 'data_vsad'),
+                         indirect=['filename'])
+def test_casa_read_nomask(filename, tmp_path):
+
+    # As for test_casa_read, but we remove the mask to make sure
+    # that we can still read in the cubes
+
+    cube = SpectralCube.read(filename)
+
+    make_casa_testimage(filename, tmp_path / 'casa.image')
+    shutil.rmtree(tmp_path / 'casa.image' / 'mask0')
 
     casacube = SpectralCube.read(tmp_path / 'casa.image')
 
