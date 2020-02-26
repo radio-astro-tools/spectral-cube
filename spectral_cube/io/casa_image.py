@@ -72,15 +72,22 @@ def load_casa_image(filename, skipdata=False,
 
     casa_cs = desc['_keywords_']['coords']
 
-    unit = desc['_keywords_']['units']
+    if 'units' in desc['_keywords_']:
+        unit = desc['_keywords_']['units']
+    else:
+        unit = ''
 
-    if 'perplanebeams' in desc['_keywords_']['imageinfo']:
-        beam_ = {'beams': desc['_keywords_']['imageinfo']['perplanebeams']}
+    imageinfo = desc['_keywords_']['imageinfo']
+
+    if 'perplanebeams' in imageinfo:
+        beam_ = {'beams': imageinfo['perplanebeams']}
         beam_['nStokes'] = beam_['beams'].pop('nStokes')
         beam_['nChannels'] = beam_['beams'].pop('nChannels')
         beam_['beams'] = {key: {'*0': value} for key, value in list(beam_['beams'].items())}
+    elif 'restoringbeam' in imageinfo:
+        beam_ = imageinfo['restoringbeam']
     else:
-        beam_ = desc['_keywords_']['imageinfo']['restoringbeam']
+        beam_ = {}
 
     wcs = wcs_casa2astropy(data.ndim, casa_cs)
 
