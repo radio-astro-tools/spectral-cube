@@ -20,7 +20,7 @@ except ImportError:
         CASA_INSTALLED = False
 
 # NOTE: the (127, 337, 109) example is to make sure that things work correctly
-# when the shape isn't a mulitple of the chunk size along any
+# when the shape isn't a multiple of the chunk size along any
 # dimension.
 SHAPES = [(3, 4, 5), (129, 128, 130), (513, 128, 128), (128, 513, 128),
           (128, 128, 513), (512, 64, 64), (127, 337, 109)]

@@ -114,11 +114,11 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     # tb.close()
     dminfo = getdminfo(str(imagename))
 
-    # chunkshape definse how the chunks (array subsets) are written to disk
+    # chunkshape defines how the chunks (array subsets) are written to disk
     chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
     chunksize = np.product(chunkshape)
 
-    # the total size defines the final output array size
+    # the total shape defines the final output array shape
     totalshape = dminfo['*1']['SPEC']['HYPERCUBES']['*1']['CubeShape']
 
     # we expect that the total size of the array will be determined by finding
