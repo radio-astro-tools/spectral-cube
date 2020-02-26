@@ -59,7 +59,7 @@ class MaskWrapper:
                                   offset=start, count=end - start)
         array_bits = np.unpackbits(array_uint8, bitorder='little')
         chunk = array_bits[self._offset - start * 8:self._offset + self._count - start * 8]
-        return chunk.astype(np.bool_).reshape(self.shape[::-1], order='F').T[item]
+        return chunk.reshape(self.shape[::-1], order='F').T[item].astype(np.bool_)
 
 
 def from_array_fast(arrays, asarray=False, lock=False):
