@@ -144,41 +144,18 @@ def read_record_desc(f):
         name = read_string(f)
         rectype = TYPES[read_int32(f)]
         records[name] = {'type': rectype}
-        if rectype == 'bool':
-            records[name]['value'] = read_int32(f)
-        elif rectype == 'int':
-            records[name]['value'] = read_int32(f)
-        elif rectype == 'uint':
-            records[name]['value'] = read_int32(f)
-        elif rectype == 'double':
-            records[name]['value'] = read_float32(f)
-        elif rectype == 'dcomplex':
-            records[name]['value'] = read_float32(f)
-        elif rectype == 'string':
-            records[name]['value'] = read_string(f)
+        # Here we don't actually load in the data for may of the types - hence
+        # why we don't do anything with the values we read in.
+        if rectype in ('bool', 'int', 'uint', 'float', 'double',
+                       'complex', 'dcomplex', 'string'):
+            f.read(4)
         elif rectype == 'table':
-            read_int32(f)
-            records[name]['value'] = read_string(f)
-        elif rectype == 'arrayint':
-            records[name]['value'] = read_iposition(f)
-            read_int32(f)
-        elif rectype == 'arrayfloat':
-            records[name]['value'] = read_iposition(f)
-            read_int32(f)
-        elif rectype == 'arraydouble':
-            records[name]['value'] = read_iposition(f)
-            read_int32(f)
-        elif rectype == 'arraycomplex':
-            records[name]['value'] = read_iposition(f)
-            read_int32(f)
-        elif rectype == 'arraydcomplex':
-            records[name]['value'] = read_iposition(f)
-            read_int32(f)
-        elif rectype == 'arraystr':
-            records[name]['value'] = read_iposition(f)
-            read_int32(f)
+            f.read(8)
+        elif rectype.startswith('array'):
+            read_iposition(f)
+            f.read(4)
         elif rectype == 'record':
-            records[name]['value'] = read_record_desc(f)
+            read_record_desc(f)
             read_int32(f)
         else:
             raise NotImplementedError("Support for type {0} in RecordDesc not implemented".format(rectype))
