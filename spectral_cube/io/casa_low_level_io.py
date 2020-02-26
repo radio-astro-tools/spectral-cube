@@ -53,12 +53,12 @@ def read_float64(f):
     return np.float64(struct.unpack('>d', f.read(8))[0])
 
 
-def read_complex128(f):
-    return np.complex128(read_float64(f) + 1j * read_float64(f))
-
-
 def read_complex64(f):
     return np.complex64(read_float32(f) + 1j * read_float32(f))
+
+
+def read_complex128(f):
+    return np.complex128(read_float64(f) + 1j * read_float64(f))
 
 
 def read_string(f):
@@ -162,7 +162,13 @@ def read_record_desc(f):
         elif rectype == 'arrayint':
             records[name]['value'] = read_iposition(f)
             read_int32(f)
+        elif rectype == 'arrayfloat':
+            records[name]['value'] = read_iposition(f)
+            read_int32(f)
         elif rectype == 'arraydouble':
+            records[name]['value'] = read_iposition(f)
+            read_int32(f)
+        elif rectype == 'arraycomplex':
             records[name]['value'] = read_iposition(f)
             read_int32(f)
         elif rectype == 'arraydcomplex':
@@ -200,8 +206,12 @@ def read_table_record(f, image_path):
             records[name] = int(read_int32(f))
         elif rectype == 'uint':
             records[name] = int(read_int32(f))
+        elif rectype == 'float':
+            records[name] = float(read_float32(f))
         elif rectype == 'double':
             records[name] = float(read_float64(f))
+        elif rectype == 'complex':
+            records[name] = complex(read_complex64(f))
         elif rectype == 'dcomplex':
             records[name] = complex(read_complex128(f))
         elif rectype == 'string':
@@ -210,8 +220,12 @@ def read_table_record(f, image_path):
             records[name] = 'Table: ' + os.path.abspath(os.path.join(image_path, read_string(f)))
         elif rectype == 'arrayint':
             records[name] = read_array(f, 'int')
+        elif rectype == 'arrayfloat':
+            records[name] = read_array(f, 'float')
         elif rectype == 'arraydouble':
             records[name] = read_array(f, 'double')
+        elif rectype == 'arraycomplex':
+            records[name] = read_array(f, 'complex')
         elif rectype == 'arraydcomplex':
             records[name] = read_array(f, 'dcomplex')
         elif rectype == 'arraystr':

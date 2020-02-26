@@ -152,3 +152,16 @@ def test_generic_table_read(tmp_path):
     # TODO: for now the following fails because we haven't implemented
     # non-tiled data I/O
     # getdminfo(filename_casa)
+
+
+def test_getdesc_floatarray():
+
+    # There doesn't seem to be an easy way to create CASA images
+    # with float (not double) arrays. In test_getdesc, all the floats
+    # end up getting converted to double. So instead we use a table.dat
+    # file that was found in the wild.
+
+    desc = getdesc(os.path.join(DATA, 'floatarray.image'))
+    trc = desc['_keywords_']['masks']['mask0']['box']['trc']
+    assert trc.dtype == np.float32
+    assert_equal(trc, [512, 512, 1, 100])
