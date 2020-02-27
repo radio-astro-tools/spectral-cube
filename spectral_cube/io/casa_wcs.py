@@ -1,4 +1,3 @@
-import tempfile
 import numpy as np
 from astropy.wcs import WCS
 from astropy.io import fits
