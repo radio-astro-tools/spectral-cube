@@ -37,6 +37,7 @@ def test_wcs_casa2astropy(tmp_path, filename):
     ia.open(casa_filename)
     ia.tofits(fits_filename, stokeslast=False)
     ia.done()
+    ia.close()
 
     # Parse header with WCS - for the purposes of this function
     # we are not interested in keywords/values not in WCS

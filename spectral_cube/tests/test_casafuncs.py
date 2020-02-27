@@ -164,18 +164,16 @@ def test_casa_mask(data_adv, tmp_path):
     # Test WCS info
 
     # Convert back to an astropy wcs object so transforms are dealt with.
-    casa_wcs = wcs_casa2astropy(coords.naxes(), coords.torecord())
+    casa_wcs = wcs_casa2astropy(coords.torecord())
     header = casa_wcs.to_header()  # Invokes transform
 
     # Compare some basic properties EXCLUDING the spectral axis
-    assert np.allclose(cube.wcs.wcs.crval[:2], casa_wcs.wcs.crval[:2])
-    assert np.all(cube.wcs.wcs.cdelt[:2] == casa_wcs.wcs.cdelt[:2])
+    assert_allclose(cube.wcs.wcs.crval[:2], casa_wcs.wcs.crval[:2])
+    assert_allclose(cube.wcs.wcs.cdelt[:2], casa_wcs.wcs.cdelt[:2])
     assert np.all(list(cube.wcs.wcs.cunit)[:2] == list(casa_wcs.wcs.cunit)[:2])
     assert np.all(list(cube.wcs.wcs.ctype)[:2] == list(casa_wcs.wcs.ctype)[:2])
 
-    # Reference pixels in CASA are 1 pixel off.
-    assert_allclose(cube.wcs.wcs.crpix, casa_wcs.wcs.crpix,
-                    atol=1.0)
+    assert_allclose(cube.wcs.wcs.crpix, casa_wcs.wcs.crpix)
 
 
 @pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')

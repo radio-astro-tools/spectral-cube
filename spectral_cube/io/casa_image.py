@@ -89,7 +89,7 @@ def load_casa_image(filename, skipdata=False,
     else:
         beam_ = {}
 
-    wcs = wcs_casa2astropy(data.ndim, casa_cs)
+    wcs = wcs_casa2astropy(casa_cs)
 
     del casa_cs
 
