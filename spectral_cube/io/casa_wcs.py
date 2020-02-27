@@ -22,9 +22,6 @@ def wcs_casa2astropy(coordsys):
     # to CASA by getting it to write out a FITS file and reading back in
     # using WCS
 
-    from pprint import pprint
-    pprint(coordsys)
-
     header = fits.Header()
 
     # Observer information (ObsInfo.cc)
@@ -86,6 +83,7 @@ def wcs_casa2astropy(coordsys):
 
         SYSTEM_TO_SPECSYS = {}
         SYSTEM_TO_SPECSYS['BARY'] = 'BARYCENT'
+        SYSTEM_TO_SPECSYS['TOPO'] = 'TOPOCENT'
         SYSTEM_TO_SPECSYS['LSRK'] = 'LSRK'
 
         RADESYS = {}
