@@ -1,9 +1,8 @@
 from __future__ import print_function, absolute_import, division
 
 import pytest
-from astropy.io import fits
+import numpy as np
 from astropy.wcs import WCS
-from pprint import pformat
 
 from numpy.testing import assert_allclose
 
@@ -27,11 +26,6 @@ def filename(request):
 @pytest.mark.skipif('not CASATOOLS_INSTALLED')
 @pytest.mark.parametrize('filename', ALL_DATA_FIXTURES, indirect=['filename'])
 def test_wcs_casa2astropy(tmp_path, filename):
-
-    # NOTE: for now this test isn't testing much since wcs_casa2astropy uses
-    # tofits behind the scenes - but the purpose of this test is to have a
-    # test ready for when we swap out the implementation of wcs_casa2astropy
-    # with a pure-Python one.
 
     casa_filename = str(tmp_path / 'casa.image')
     fits_filename = str(tmp_path / 'casa.fits')
@@ -66,3 +60,45 @@ def test_wcs_casa2astropy(tmp_path, filename):
                 assert_allclose(actual_header[key], reference_header[key], rtol=1.e-4)
             else:
                 assert_allclose(actual_header[key], reference_header[key])
+
+
+@pytest.mark.skipif('not CASATOOLS_INSTALLED')
+def test_wcs_casa2astropy_linear(tmp_path):
+
+    # Test that things work properly when the WCS coordinates aren't set
+
+    casa_filename = str(tmp_path / 'test.image')
+    fits_filename = str(tmp_path / 'test.fits')
+
+    data = np.random.random((3, 4, 5, 6, 7))
+
+    ia = image()
+    ia.fromarray(outfile=casa_filename, pixels=data, log=False)
+    ia.close()
+
+    # Use CASA to convert back to FITS and use that header as the reference
+
+    ia = image()
+    ia.open(casa_filename)
+    ia.tofits(fits_filename, stokeslast=False)
+    ia.done()
+
+    # Parse header with WCS - for the purposes of this function
+    # we are not interested in keywords/values not in WCS
+    reference_wcs = WCS(fits_filename)
+    reference_header = reference_wcs.to_header()
+
+    # Now use our wcs_casa2astropy function to create the header and compare
+    # the results.
+    desc = getdesc(casa_filename)
+    actual_wcs = wcs_casa2astropy(desc['_keywords_']['coords'])
+    actual_header = actual_wcs.to_header()
+
+    assert sorted(actual_header) == sorted(reference_header)
+
+    for key in reference_header:
+        print(key)
+        if isinstance(actual_header[key], str):
+            assert actual_header[key] == reference_header[key]
+        else:
+            assert_allclose(actual_header[key], reference_header[key])
