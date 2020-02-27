@@ -5,6 +5,8 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from pprint import pformat
 
+from numpy.testing import assert_allclose
+
 from ..casa_low_level_io import getdesc
 from ..casa_wcs import wcs_casa2astropy
 from ...tests.test_casafuncs import make_casa_testimage
@@ -23,7 +25,7 @@ def filename(request):
 
 
 @pytest.mark.skipif('not CASATOOLS_INSTALLED')
-@pytest.mark.parametrize('filename', ALL_DATA_FIXTURES[:1], indirect=['filename'])
+@pytest.mark.parametrize('filename', ALL_DATA_FIXTURES, indirect=['filename'])
 def test_wcs_casa2astropy(tmp_path, filename):
 
     # NOTE: for now this test isn't testing much since wcs_casa2astropy uses
@@ -42,12 +44,21 @@ def test_wcs_casa2astropy(tmp_path, filename):
     ia.tofits(fits_filename, stokeslast=False)
     ia.done()
 
-    reference_header = WCS(fits_filename).to_header()
+    # Parse header with WCS - for the purposes of this function
+    # we are not interested in keywords/values not in WCS
+    reference_wcs = WCS(fits_filename)
+    reference_header = reference_wcs.to_header()
 
     # Now use our wcs_casa2astropy function to create the header and compare
     # the results.
-    naxes = fits.getval(fits_filename, 'NAXIS')
     desc = getdesc(casa_filename)
-    actual_header = wcs_casa2astropy(naxes, desc['_keywords_']['coords']).to_header()
+    actual_wcs = wcs_casa2astropy(desc['_keywords_']['coords'])
+    actual_header = actual_wcs.to_header()
 
-    assert pformat(actual_header) == pformat(reference_header)
+    assert sorted(actual_header) == sorted(reference_header)
+
+    for key in reference_header:
+        if isinstance(actual_header[key], str):
+            assert actual_header[key] == reference_header[key]
+        else:
+            assert_allclose(actual_header[key], reference_header[key])
