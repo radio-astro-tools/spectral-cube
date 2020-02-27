@@ -106,8 +106,11 @@ def wcs_casa2astropy(coordsys):
             header['RADESYS'] = RADESYS[data['conversionSystem']]
             if data['conversionSystem'] in EQUINOX:
                 header['EQUINOX'] = EQUINOX[data['conversionSystem']]
-            header[f'PV{idx2}_{idx1}'] = 0.
-            header[f'PV{idx2}_{idx2}'] = 0.
+            # NOTE: unclear if it is deliberate that the following is always
+            # ?_2 and ?_1 or whether it should depend on the index of the
+            # longitude.
+            header[f'PV{idx2}_1'] = 0.
+            header[f'PV{idx2}_2'] = 0.
             header[f'PC{idx1}_{idx1}'] = data['pc'][0, 0]
             header[f'PC{idx1}_{idx2}'] = data['pc'][0, 1]
             header[f'PC{idx2}_{idx1}'] = data['pc'][1, 0]
