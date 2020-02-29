@@ -5,6 +5,44 @@ from astropy.time import Time
 
 __all__ = ['wcs_casa2astropy']
 
+EQUATORIAL_SYSTEMS = ['B1950', 'B1950_VLA', 'J2000', 'ICRS']
+
+SPECSYS = {}
+SPECSYS['BARY'] = 'BARYCENT'
+SPECSYS['TOPO'] = 'TOPOCENT'
+SPECSYS['LSRK'] = 'LSRK'
+SPECSYS['LSRD'] = 'LSRD'
+SPECSYS['GEO'] = 'GEOCENTR'
+SPECSYS['GALACTO'] = 'GALACTOC'
+SPECSYS['LGROUP'] = 'LOCALGRP'
+SPECSYS['CMB'] = 'CMBDIPOL'
+SPECSYS['REST'] = 'SOURCE'
+
+RADESYS = {}
+RADESYS['J2000'] = 'FK5'
+RADESYS['B1950'] = 'FK4'
+RADESYS['B1950_VLA'] = 'FK4'
+RADESYS['ICRS'] = 'ICRS'
+
+EQUINOX = {}
+EQUINOX['J2000'] = 2000.
+EQUINOX['B1950'] = 1950.
+EQUINOX['B1950_VLA'] = 1979.9
+
+AXES_TO_CTYPE = {
+    'Frequency': 'FREQ',
+    'GALACTIC': {'Longitude': 'GLON',
+                 'Latitude': 'GLAT'},
+    'SUPERGAL': {'Longitude': 'SLON',
+                 'Latitude': 'SLAT'},
+    'ECLIPTIC': {'Longitude': 'ELON',
+                 'Latitude': 'ELAT'}
+}
+
+for system in EQUATORIAL_SYSTEMS:
+    AXES_TO_CTYPE[system] = {'Right Ascension': 'RA--',
+                             'Declination': 'DEC-'}
+
 
 def sanitize_unit(unit):
     if unit == "'":
@@ -84,50 +122,10 @@ def wcs_casa2astropy(coordsys):
 
         data = coordsys[f'{coord_type}{index}']
 
-        EQUATORIAL_SYSTEMS = ['B1950', 'B1950_VLA', 'J2000', 'ICRS']
-
-        AXES_TO_CTYPE = {}
-        AXES_TO_CTYPE['Stokes'] = 'STOKES'
-        AXES_TO_CTYPE['Frequency'] = 'FREQ'
-        if data.get('system') == 'GALACTIC':
-            AXES_TO_CTYPE['Longitude'] = 'GLON'
-            AXES_TO_CTYPE['Latitude'] = 'GLAT'
-        if data.get('system') == 'SUPERGAL':
-            AXES_TO_CTYPE['Longitude'] = 'SLON'
-            AXES_TO_CTYPE['Latitude'] = 'SLAT'
-        if data.get('system') == 'ECLIPTIC':
-            AXES_TO_CTYPE['Longitude'] = 'ELON'
-            AXES_TO_CTYPE['Latitude'] = 'ELAT'
-        else:
-            AXES_TO_CTYPE['Right Ascension'] = 'RA--'
-            AXES_TO_CTYPE['Declination'] = 'DEC-'
-
-        SPECSYS = {}
-        SPECSYS['BARY'] = 'BARYCENT'
-        SPECSYS['TOPO'] = 'TOPOCENT'
-        SPECSYS['LSRK'] = 'LSRK'
-        SPECSYS['LSRD'] = 'LSRD'
-        SPECSYS['GEO'] = 'GEOCENTR'
-        SPECSYS['GALACTO'] = 'GALACTOC'
-        SPECSYS['LGROUP'] = 'LOCALGRP'
-        SPECSYS['CMB'] = 'CMBDIPOL'
-        SPECSYS['REST'] = 'SOURCE'
-
-        RADESYS = {}
-        RADESYS['J2000'] = 'FK5'
-        RADESYS['B1950'] = 'FK4'
-        RADESYS['B1950_VLA'] = 'FK4'
-        RADESYS['ICRS'] = 'ICRS'
-
-        EQUINOX = {}
-        EQUINOX['J2000'] = 2000.
-        EQUINOX['B1950'] = 1950.
-        EQUINOX['B1950_VLA'] = 1979.9
-
         if coord_type == 'direction':
             idx1, idx2 = worldmap[index] + 1
-            header[f'CTYPE{idx1}'] = AXES_TO_CTYPE[data['axes'][0]] + '-' + data['projection']
-            header[f'CTYPE{idx2}'] = AXES_TO_CTYPE[data['axes'][1]] + '-' + data['projection']
+            header[f'CTYPE{idx1}'] = AXES_TO_CTYPE[data['system']][data['axes'][0]] + '-' + data['projection']
+            header[f'CTYPE{idx2}'] = AXES_TO_CTYPE[data['system']][data['axes'][1]] + '-' + data['projection']
             header[f'CRPIX{idx1}'] = data['crpix'][0] + 1
             header[f'CRPIX{idx2}'] = data['crpix'][1] + 1
             header[f'CRVAL{idx1}'] = data['crval'][0]
@@ -154,7 +152,7 @@ def wcs_casa2astropy(coordsys):
             header[f'PC{idx2}_{idx2}'] = data['pc'][1, 1]
         elif coord_type == 'stokes':
             idx = worldmap[index][0] + 1
-            header[f'CTYPE{idx}'] = AXES_TO_CTYPE[data['axes'][0]]
+            header[f'CTYPE{idx}'] = 'STOKES'
             header[f'CRVAL{idx}'] = data['crval'][0]
             header[f'CRPIX{idx}'] = data['crpix'][0] + 1
             header[f'CDELT{idx}'] = data['cdelt'][0]
