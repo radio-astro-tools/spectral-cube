@@ -28,22 +28,31 @@ def wcs_casa2astropy(coordsys):
 
     header['OBSERVER'] = coordsys['observer']
     header['TELESCOP'] = coordsys['telescope']
-    header['TIMESYS'] = coordsys['obsdate']['refer']
-    header['MJD-OBS'] = coordsys['obsdate']['m0']['value']
 
-    dateobs = Time(header['MJD-OBS'],
-                   format='mjd',
-                   scale=coordsys['obsdate']['refer'].lower())
-    dateobs.precision = 6
-    header['DATE-OBS'] = dateobs.isot
+    if coordsys['obsdate']['refer'] == 'LAST':
 
-    obsgeo_lon = coordsys['telescopeposition']['m0']['value']
-    obsgeo_lat = coordsys['telescopeposition']['m1']['value']
-    obsgeo_alt = coordsys['telescopeposition']['m2']['value']
+        header['TIMESYS'] = 'UTC'
 
-    header['OBSGEO-X'] = obsgeo_alt * np.cos(obsgeo_lon) * np.cos(obsgeo_lat)
-    header['OBSGEO-Y'] = obsgeo_alt * np.sin(obsgeo_lon) * np.cos(obsgeo_lat)
-    header['OBSGEO-Z'] = obsgeo_alt * np.sin(obsgeo_lat)
+    else:
+
+        header['TIMESYS'] = coordsys['obsdate']['refer']
+        header['MJD-OBS'] = coordsys['obsdate']['m0']['value']
+
+        dateobs = Time(header['MJD-OBS'],
+                       format='mjd',
+                       scale=coordsys['obsdate']['refer'].lower())
+        dateobs.precision = 6
+        header['DATE-OBS'] = dateobs.isot
+
+    if 'telescopeposition' in coordsys:
+
+        obsgeo_lon = coordsys['telescopeposition']['m0']['value']
+        obsgeo_lat = coordsys['telescopeposition']['m1']['value']
+        obsgeo_alt = coordsys['telescopeposition']['m2']['value']
+
+        header['OBSGEO-X'] = obsgeo_alt * np.cos(obsgeo_lon) * np.cos(obsgeo_lat)
+        header['OBSGEO-Y'] = obsgeo_alt * np.sin(obsgeo_lon) * np.cos(obsgeo_lat)
+        header['OBSGEO-Z'] = obsgeo_alt * np.sin(obsgeo_lat)
 
     # World coordinates
 
@@ -75,16 +84,34 @@ def wcs_casa2astropy(coordsys):
 
         data = coordsys[f'{coord_type}{index}']
 
+        EQUATORIAL_SYSTEMS = ['B1950', 'B1950_VLA', 'J2000', 'ICRS']
+
         AXES_TO_CTYPE = {}
-        AXES_TO_CTYPE['Right Ascension'] = 'RA--'
-        AXES_TO_CTYPE['Declination'] = 'DEC-'
         AXES_TO_CTYPE['Stokes'] = 'STOKES'
         AXES_TO_CTYPE['Frequency'] = 'FREQ'
+        if data.get('system') == 'GALACTIC':
+            AXES_TO_CTYPE['Longitude'] = 'GLON'
+            AXES_TO_CTYPE['Latitude'] = 'GLAT'
+        if data.get('system') == 'SUPERGAL':
+            AXES_TO_CTYPE['Longitude'] = 'SLON'
+            AXES_TO_CTYPE['Latitude'] = 'SLAT'
+        if data.get('system') == 'ECLIPTIC':
+            AXES_TO_CTYPE['Longitude'] = 'ELON'
+            AXES_TO_CTYPE['Latitude'] = 'ELAT'
+        else:
+            AXES_TO_CTYPE['Right Ascension'] = 'RA--'
+            AXES_TO_CTYPE['Declination'] = 'DEC-'
 
-        SYSTEM_TO_SPECSYS = {}
-        SYSTEM_TO_SPECSYS['BARY'] = 'BARYCENT'
-        SYSTEM_TO_SPECSYS['TOPO'] = 'TOPOCENT'
-        SYSTEM_TO_SPECSYS['LSRK'] = 'LSRK'
+        SPECSYS = {}
+        SPECSYS['BARY'] = 'BARYCENT'
+        SPECSYS['TOPO'] = 'TOPOCENT'
+        SPECSYS['LSRK'] = 'LSRK'
+        SPECSYS['LSRD'] = 'LSRD'
+        SPECSYS['GEO'] = 'GEOCENTR'
+        SPECSYS['GALACTO'] = 'GALACTOC'
+        SPECSYS['LGROUP'] = 'LOCALGRP'
+        SPECSYS['CMB'] = 'CMBDIPOL'
+        SPECSYS['REST'] = 'SOURCE'
 
         RADESYS = {}
         RADESYS['J2000'] = 'FK5'
@@ -111,14 +138,16 @@ def wcs_casa2astropy(coordsys):
             header[f'CUNIT{idx2}'] = sanitize_unit(data['units'][1])
             header['LONPOLE'] = data['longpole']
             header['LATPOLE'] = data['latpole']
-            header['RADESYS'] = RADESYS[data['conversionSystem']]
-            if data['conversionSystem'] in EQUINOX:
-                header['EQUINOX'] = EQUINOX[data['conversionSystem']]
+            if data.get('system') in EQUATORIAL_SYSTEMS:
+                header['RADESYS'] = RADESYS[data['conversionSystem']]
+                if data['conversionSystem'] in EQUINOX:
+                    header['EQUINOX'] = EQUINOX[data['conversionSystem']]
             # NOTE: unclear if it is deliberate that the following is always
             # ?_2 and ?_1 or whether it should depend on the index of the
             # longitude.
-            header[f'PV{idx2}_1'] = 0.
-            header[f'PV{idx2}_2'] = 0.
+            if data.get('system') in EQUATORIAL_SYSTEMS:
+                header[f'PV{idx2}_1'] = 0.
+                header[f'PV{idx2}_2'] = 0.
             header[f'PC{idx1}_{idx1}'] = data['pc'][0, 0]
             header[f'PC{idx1}_{idx2}'] = data['pc'][0, 1]
             header[f'PC{idx2}_{idx1}'] = data['pc'][1, 0]
@@ -147,23 +176,20 @@ def wcs_casa2astropy(coordsys):
                 header[f'CUNIT{idx}'] = data['unit']
             header[f'PC{idx}_{idx}'] = 1.0
             header[f'RESTFRQ'] = data['restfreq']
-            header[f'SPECSYS'] = SYSTEM_TO_SPECSYS[data['system']]
+            header[f'SPECSYS'] = SPECSYS[data['system']]
         elif coord_type == 'linear':
-            idx1, idx2 = worldmap[index] + 1
-            header[f'CTYPE{idx1}'] = data['axes'][0].upper()
-            header[f'CTYPE{idx2}'] = data['axes'][1].upper()
-            header[f'CRVAL{idx1}'] = data['crval'][0]
-            header[f'CRVAL{idx2}'] = data['crval'][1]
-            header[f'CRPIX{idx1}'] = data['crpix'][0] + 1
-            header[f'CRPIX{idx2}'] = data['crpix'][1] + 1
-            header[f'CDELT{idx1}'] = data['cdelt'][0]
-            header[f'CDELT{idx2}'] = data['cdelt'][1]
-            header[f'CUNIT{idx1}'] = data['units'][0]
-            header[f'CUNIT{idx2}'] = data['units'][1]
-            header[f'PC{idx1}_{idx1}'] = data['pc'][0, 0]
-            header[f'PC{idx1}_{idx2}'] = data['pc'][0, 1]
-            header[f'PC{idx2}_{idx1}'] = data['pc'][1, 0]
-            header[f'PC{idx2}_{idx2}'] = data['pc'][1, 1]
+            indices = worldmap[index] + 1
+            for idx1 in range(len(indices)):
+                header[f'CTYPE{indices[idx1]}'] = data['axes'][idx1].upper()
+                header[f'CRVAL{indices[idx1]}'] = data['crval'][idx1]
+                header[f'CRPIX{indices[idx1]}'] = data['crpix'][idx1] + 1
+                header[f'CDELT{indices[idx1]}'] = data['cdelt'][idx1]
+                header[f'CUNIT{indices[idx1]}'] = data['units'][idx1]
+                for idx2 in range(len(indices)):
+                    header[f'PC{indices[idx1]}_{indices[idx1]}'] = data['pc'][idx1, idx1]
+                    header[f'PC{indices[idx1]}_{indices[idx2]}'] = data['pc'][idx1, idx2]
+                    header[f'PC{indices[idx2]}_{indices[idx1]}'] = data['pc'][idx2, idx1]
+                    header[f'PC{indices[idx2]}_{indices[idx2]}'] = data['pc'][idx2, idx2]
         else:
             raise NotImplementedError(f'coord_type is {coord_type}')
 
