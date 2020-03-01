@@ -164,7 +164,14 @@ def wcs_casa2astropy(coordsys):
                 header[f'CTYPE{idx}'] = AXES_TO_CTYPE[data['tabular']['axes'][0]]
                 header[f'CRVAL{idx}'] = data['tabular']['crval'][0]
                 header[f'CRPIX{idx}'] = data['tabular']['crpix'][0] + 1
-                header[f'CDELT{idx}'] = data['tabular']['cdelt'][0]
+                # It looks like we can't just use:
+                # header[f'CDELT{idx}'] = data['tabular']['cdelt'][0]
+                # because this doesn't match what appears in a FITS header
+                # exported from CASA. Instead we use the interval between the
+                # first two tabulated values. See
+                # https://github.com/radio-astro-tools/spectral-cube/issues/614
+                # for more information.
+                header[f'CDELT{idx}'] = np.diff(data['tabular']['worldvalues'][:2])[0]
                 header[f'CUNIT{idx}'] = data['tabular']['units'][0]
             else:
                 header[f'CTYPE{idx}'] = data['wcs']['ctype']

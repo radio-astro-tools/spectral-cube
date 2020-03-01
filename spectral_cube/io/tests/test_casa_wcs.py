@@ -56,11 +56,7 @@ def assert_header_correct(casa_filename):
         if isinstance(actual_header[key], str):
             assert actual_header[key] == reference_header[key]
         else:
-            if 'CDELT' in key:
-                # FIXME:For some reason the CDELT for spectral axes disagree
-                assert_allclose(actual_header[key], reference_header[key], rtol=1.e-2)
-            else:
-                assert_allclose(actual_header[key], reference_header[key])
+            assert_allclose(actual_header[key], reference_header[key])
 
 
 @pytest.mark.skipif('not CASATOOLS_INSTALLED')
