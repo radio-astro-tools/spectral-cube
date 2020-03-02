@@ -15,6 +15,7 @@ import textwrap
 from pathlib import PosixPath
 import six
 from six.moves import zip, range
+import dask.array
 
 import astropy.wcs
 from astropy import units as u
@@ -1315,7 +1316,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         data : Quantity instance
             The unmasked data
         """
-        return u.Quantity(self._data[view], self.unit, copy=False)
+        values = self._data[view]
+        # Astropy Quantities don't play well with dask arrays with shape ()
+        if isinstance(values, dask.array.core.Array) and values.shape == ():
+            values = values.compute()
+        return u.Quantity(values, self.unit, copy=False)
 
     def unmasked_copy(self):
         """
