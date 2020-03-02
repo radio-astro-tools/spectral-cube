@@ -63,7 +63,7 @@ def read_complex128(f):
 
 def read_string(f):
     value = read_int32(f)
-    return f.read(int(value)).decode('ascii')
+    return f.read(int(value)).replace(b'\x00', b'').decode('ascii')
 
 
 @with_nbytes_prefix

@@ -6,7 +6,8 @@
 - Refactor package infrastructure to no longer use astropy-helpers. #599
 - Switch to using unified I/O infrastructure from Astropy. #600
 - Refactor CASA I/O to use dask to access the array/mask data directly
-  and to use only Python and Numpy to access image metadata. #607, #609
+  and to use only Python and Numpy to access image metadata. CASA images
+  can now be read without CASA installed. #607, #609, #613
 
 0.4.5 (unreleased)
 ------------------
