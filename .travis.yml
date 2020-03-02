@@ -43,11 +43,13 @@ matrix:
           env: TOXENV='py38-test-all-dev'
           name: "Python 3.8, all dependencies, and dev versions of key dependencies"
 
-        - os: osx
+        - language: c
+          os: osx
           env: PYTHON_VERSION=3.7 TOXENV='py37-test-all'
           name: "Python 3.7 with all dependencies (except CASA) on MacOS X"
 
-        - os: windows
+        - language: c
+          os: windows
           env: PYTHON_VERSION=3.7 TOXENV='py37-test-all'
           name: "Python 3.7 with all dependencies (except CASA) on Windows"
 
