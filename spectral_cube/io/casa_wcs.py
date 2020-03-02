@@ -108,9 +108,9 @@ def wcs_casa2astropy(coordsys):
     header['WCSAXES'] = np.max([np.max(idx) + 1 for idx in worldmap.values()])
 
     # Initialize PC
-    for i in range(header['WCSAXES']):
-        for j in range(header['WCSAXES']):
-            header[f'PC{i+1}_{j+1}'] = 0.
+    for ii in range(header['WCSAXES']):
+        for jj in range(header['WCSAXES']):
+            header[f'PC{ii+1}_{jj+1}'] = 0.
 
     for coord_type in ('direction', 'spectral', 'stokes', 'linear'):
 
