@@ -90,6 +90,7 @@ def header_copy_with(**kwargs):
 
 
 ALL_HEADERS = [
+    header_copy_with(),
     header_copy_with(CTYPE1='GLON-TAN', CTYPE2='GLAT-TAN'),
     header_copy_with(CTYPE1='SLON-TAN', CTYPE2='SLAT-TAN'),
     header_copy_with(CTYPE1='ELON-TAN', CTYPE2='ELAT-TAN'),
