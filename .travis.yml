@@ -63,8 +63,10 @@ before_install:
     - git fetch --unshallow .
     - git fetch --depth=1000000
 
-    - export DISPLAY=:99.0
-    - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX +render -noreset
+    - if [[ $TRAVIS_OS_NAME == linux ]]; then
+        export DISPLAY=:99.0;
+        /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX +render -noreset;
+      fi
 
 install:
     # language: python is only available for Linux, so for other platforms
