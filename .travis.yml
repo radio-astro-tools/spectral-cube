@@ -50,7 +50,7 @@ matrix:
 
         - language: c
           os: windows
-          env: PYTHON_VERSION=3.7 TOXENV='py37-test-all'
+          env: PYTHON_VERSION=3.7 TOXENV='py37-test-all-dev'
           name: "Python 3.7 with all dependencies (except CASA) on Windows"
 
         - python: 3.8
