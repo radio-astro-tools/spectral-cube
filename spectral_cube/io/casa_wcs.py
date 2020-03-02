@@ -47,6 +47,8 @@ for system in EQUATORIAL_SYSTEMS:
 def sanitize_unit(unit):
     if unit == "'":
         return 'arcmin'
+    elif unit == '"':
+        return 'arcsec'
     else:
         return unit
 
@@ -114,13 +116,18 @@ def wcs_casa2astropy(coordsys):
 
     for coord_type in ('direction', 'spectral', 'stokes', 'linear'):
 
+        # Each coordinate type is stored with a numerical index,
+        # so for example a cube might have direction0 and
+        # spectral1, or spectral0, direction1, stokes2. The actual
+        # index is irrelevant for the rest of the loop.
         for index in range(len(worldmap)):
             if f'{coord_type}{index}' in coordsys:
+                data = coordsys[f'{coord_type}{index}']
                 break
         else:
+            # Skip the rest of the loop for the current coord_type
+            # since the coord_type wasn't found with any index.
             continue
-
-        data = coordsys[f'{coord_type}{index}']
 
         if coord_type == 'direction':
             idx1, idx2 = worldmap[index] + 1

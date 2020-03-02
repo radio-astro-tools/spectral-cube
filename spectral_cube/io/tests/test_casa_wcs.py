@@ -115,7 +115,7 @@ ALL_HEADERS = [
     header_copy_with(CTYPE3='FREQ', CUNIT3='GHz', CRVAL3=100., CDELT3=1.),
     header_copy_with(CTYPE3='WAVE', CUNIT3='m', CRVAL3=1e-6, CDELT3=1e-8),
     header_copy_with(CTYPE3='VOPT'),
-    header_copy_with(CTYPE3='VRAD'),
+    header_copy_with(CTYPE3='VRAD')
 ]
 
 @pytest.mark.skipif('not CASATOOLS_INSTALLED')
