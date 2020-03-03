@@ -2886,10 +2886,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                  )
 
     @parallel_docstring
-    def sigma_clip(self, threshold, verbose=0, use_memmap=True,
-                   num_cores=None, **kwargs):
+    def sigma_clip_spectrally(self, threshold, verbose=0, use_memmap=True,
+                              num_cores=None, **kwargs):
         """
-        Run astropy's sigma clipper, converting all bad values to NaN.
+        Run astropy's sigma clipper along the spectral axis, converting all bad
+        (excluded) values to NaN.
 
         Parameters
         ----------
