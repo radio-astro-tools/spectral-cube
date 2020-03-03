@@ -158,7 +158,7 @@ def _apply_spectral_function(arguments, outcube, function, shape=None,
 
     if np.any(includemask):
         outcube[:, jj, ii] = function(spec, **kwargs)
-    else:              
+    else:
         outcube[:, jj, ii] = spec
 
     if return_vals:
@@ -3345,6 +3345,49 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                      use_memmap=use_memmap,
                                                      verbose=verbose,
                                                      **kwargs)
+
+    @parallel_docstring
+    def sigma_clip_spectrally_dask(self, threshold, verbose=0, use_memmap=True,
+                                   num_cores=None, **kwargs):
+        """
+        Run astropy's sigma clipper along the spectral axis, converting all bad
+        (excluded) values to NaN.
+
+        Parameters
+        ----------
+        threshold : float
+            The ``sigma`` parameter in `astropy.stats.sigma_clip`, which refers
+            to the number of sigma above which to cut.
+        verbose : int
+            Verbosity level to pass to joblib
+
+        """
+
+        import dask.array as da
+        from functools import partial
+
+        # Convert to Dask array if needed
+        data = da.asarray(self.unitless_filled_data)
+
+        # Rechunk so that there is only one chunk spectrally and let dask
+        # decide for the rest
+        data = data.rechunk((-1, 'auto', 'auto'))
+
+        # Apply sigma clipping
+        def spectral_sigma_clip(array):
+            result = stats.sigma_clip(array, stdfunc=stats.mad_std, axis=0)
+            return result.filled(np.nan)
+
+        newdata = data.map_blocks(spectral_sigma_clip)
+
+        # Create final output cube
+        newcube = self._new_cube_with(data=newdata,
+                                      wcs=self.wcs,
+                                      mask=self.mask,
+                                      meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
 
     @parallel_docstring
     def spectral_smooth(self, kernel,
