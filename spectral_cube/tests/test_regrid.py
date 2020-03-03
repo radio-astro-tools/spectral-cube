@@ -29,6 +29,8 @@ from .test_spectral_cube import cube_and_raw
 from .test_projection import load_projection
 from . import path, utilities
 
+WINDOWS = sys.platform == "win32"
+
 
 def test_convolution(data_255_delta):
     cube, data = cube_and_raw(data_255_delta)
@@ -149,6 +151,7 @@ def test_catch_kernel_with_units(data_522_delta):
                              use_memmap=False)
 
 
+@pytest.mark.skipif('WINDOWS')
 def test_spectral_smooth_4cores(data_522_delta):
 
     pytest.importorskip('joblib')

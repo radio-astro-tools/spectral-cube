@@ -44,6 +44,8 @@ except ImportError:
     except ImportError:
         casaOK = False
 
+WINDOWS = sys.platform == "win32"
+
 
 # needed to test for warnings later
 warnings.simplefilter('always', UserWarning)
@@ -2054,6 +2056,7 @@ def test_spectral_smooth_median(num_cores, data_adv):
     np.testing.assert_almost_equal(cube_spectral_median[:,1,1].value, result)
 
 
+@pytest.mark.skipif('WINDOWS')
 def test_spectral_smooth_median_4cores(data_adv):
 
     pytest.importorskip('joblib')
@@ -2072,6 +2075,7 @@ def update_function():
     print("Update Function Call")
 
 
+@pytest.mark.skipif('WINDOWS')
 def test_smooth_update_function_parallel(capsys, data_adv):
 
     pytest.importorskip('joblib')

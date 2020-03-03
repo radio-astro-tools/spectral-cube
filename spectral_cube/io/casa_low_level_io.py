@@ -38,11 +38,11 @@ def read_bool(f):
 
 
 def read_int32(f):
-    return np.int32(struct.unpack('>I', f.read(4))[0])
+    return np.int32(struct.unpack('>i', f.read(4))[0])
 
 
 def read_int64(f):
-    return np.int64(struct.unpack('>Q', f.read(8))[0])
+    return np.int64(struct.unpack('>q', f.read(8))[0])
 
 
 def read_float32(f):

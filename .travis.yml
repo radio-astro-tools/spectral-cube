@@ -43,6 +43,16 @@ matrix:
           env: TOXENV='py38-test-all-dev'
           name: "Python 3.8, all dependencies, and dev versions of key dependencies"
 
+        - language: c
+          os: osx
+          env: PYTHON_VERSION=3.7 TOXENV='py37-test-all'
+          name: "Python 3.7 with all dependencies (except CASA) on MacOS X"
+
+        - language: c
+          os: windows
+          env: PYTHON_VERSION=3.7 TOXENV='py37-test-all-dev'
+          name: "Python 3.7, all dependencies, and dev versions of key dependencies on Windows"
+
         - python: 3.8
           env: TOXENV='build_docs'
           name: "Documentation"
@@ -53,8 +63,19 @@ before_install:
     - git fetch --unshallow .
     - git fetch --depth=1000000
 
-    - export DISPLAY=:99.0
-    - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX +render -noreset
+    - if [[ $TRAVIS_OS_NAME == linux ]]; then
+        export DISPLAY=:99.0;
+        /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX +render -noreset;
+      fi
+
+install:
+    # language: python is only available for Linux, so for other platforms
+    # we need to use ci-helpers to set up Python.
+    - if [[ $TRAVIS_OS_NAME == osx || $TRAVIS_OS_NAME == windows ]]; then
+        git clone git://github.com/astropy/ci-helpers.git;
+        source ci-helpers/travis/setup_conda.sh;
+      fi
+
 
 script:
     - pip install tox

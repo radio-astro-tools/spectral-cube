@@ -29,6 +29,9 @@ from . import utilities
 
 from astropy import convolution, units as u
 
+WINDOWS = sys.platform == "win32"
+
+
 def find_base_nbytes(obj):
     # from http://stackoverflow.com/questions/34637875/size-of-numpy-strided-array-broadcast-array-in-memory
     if obj.base is not None:
@@ -125,7 +128,7 @@ def test_parallel_performance_smoothing():
             print(rslt)
 
 # python 2.7 doesn't have tracemalloc
-@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK')
+@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK or WINDOWS')
 def test_memory_usage():
     """
     Make sure that using memmaps happens where expected, for the most part, and

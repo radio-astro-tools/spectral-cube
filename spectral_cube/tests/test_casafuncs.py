@@ -6,6 +6,7 @@ import shutil
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
+from astropy.tests.helper import assert_quantity_allclose
 
 from astropy import units as u
 
@@ -23,6 +24,8 @@ except ImportError:
         CASA_INSTALLED = True
     except ImportError:
         CASA_INSTALLED = False
+
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 
 def make_casa_testimage(infile, outname):
@@ -67,6 +70,29 @@ def make_casa_testimage(infile, outname):
 @pytest.fixture
 def filename(request):
     return request.getfixturevalue(request.param)
+
+
+def test_casa_read_basic():
+
+    # Check that SpectralCube.read works for an example CASA dataset stored
+    # in the tests directory. This test should NOT require CASA, whereas a
+    # number of tests below require CASA to generate test datasets. The present
+    # test is to ensure CASA is not required for reading.
+
+    cube = SpectralCube.read(os.path.join(DATA, 'basic.image'))
+    assert cube.shape == (3, 4, 5)
+    assert_allclose(cube.wcs.pixel_to_world_values(1, 2, 3),
+                    [2.406271e+01, 2.993521e+01, 1.421911e+09])
+
+    # Carry out an operation to make sure the underlying data array works
+
+    cube.moment0()
+
+    # Slice the dataset
+
+    assert_quantity_allclose(cube.unmasked_data[0, 0, :],
+                             [1, 1, 1, 1, 1] * u.Jy / u.beam)
+    assert_quantity_allclose(cube.unmasked_data[0, 1, 2], 1 * u.Jy / u.beam)
 
 
 @pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
