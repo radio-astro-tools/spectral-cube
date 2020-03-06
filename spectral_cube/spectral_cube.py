@@ -3374,8 +3374,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         data = data.rechunk((-1, 'auto', 'auto'))
 
         # Apply sigma clipping
+
         def spectral_sigma_clip(array):
-            result = stats.sigma_clip(array, stdfunc=stats.mad_std, axis=0)
+            result = stats.sigma_clip(array, sigma=threshold, stdfunc=stats.mad_std, axis=0)
             return result.filled(np.nan)
 
         newdata = data.map_blocks(spectral_sigma_clip)
