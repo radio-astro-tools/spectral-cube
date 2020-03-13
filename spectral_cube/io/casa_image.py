@@ -38,7 +38,7 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
     return filepath is not None and filepath.lower().endswith('.image')
 
 
-def load_casa_image(filename, skipdata=False,
+def load_casa_image(filename, skipdata=False, memmap=True,
                     skipvalid=False, skipcs=False, target_cls=None, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
@@ -53,14 +53,14 @@ def load_casa_image(filename, skipdata=False,
 
     # read in the data
     if not skipdata:
-        data = casa_image_dask_reader(filename)
+        data = casa_image_dask_reader(filename, memmap=memmap)
 
     # CASA stores validity of data as a mask
     if skipvalid:
         valid = None
     else:
         try:
-            valid = casa_image_dask_reader(filename, mask=True)
+            valid = casa_image_dask_reader(filename, memmap=memmap, mask=True)
         except FileNotFoundError:
             valid = None
 

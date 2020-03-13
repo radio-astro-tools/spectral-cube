@@ -72,14 +72,15 @@ def filename(request):
     return request.getfixturevalue(request.param)
 
 
-def test_casa_read_basic():
+@pytest.mark.parametrize('memmap', (False, True))
+def test_casa_read_basic(memmap):
 
     # Check that SpectralCube.read works for an example CASA dataset stored
     # in the tests directory. This test should NOT require CASA, whereas a
     # number of tests below require CASA to generate test datasets. The present
     # test is to ensure CASA is not required for reading.
 
-    cube = SpectralCube.read(os.path.join(DATA, 'basic.image'))
+    cube = SpectralCube.read(os.path.join(DATA, 'basic.image'), memmap=memmap)
     assert cube.shape == (3, 4, 5)
     assert_allclose(cube.wcs.pixel_to_world_values(1, 2, 3),
                     [2.406271e+01, 2.993521e+01, 1.421911e+09])
