@@ -16,6 +16,7 @@ from pathlib import PosixPath
 import six
 from six.moves import zip, range
 import dask.array
+import dask.array as da
 
 import astropy.wcs
 from astropy import units as u
@@ -3363,9 +3364,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         """
 
-        import dask.array as da
-        from functools import partial
-
         # Convert to Dask array if needed
         data = da.asarray(self.unitless_filled_data)
 
@@ -3376,7 +3374,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Apply sigma clipping
 
         def spectral_sigma_clip(array):
-            result = stats.sigma_clip(array, sigma=threshold, stdfunc=stats.mad_std, axis=0)
+            result = stats.sigma_clip(array, sigma=threshold, axis=0, **kwargs)
             return result.filled(np.nan)
 
         newdata = data.map_blocks(spectral_sigma_clip)
@@ -4280,7 +4278,11 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         """
         HDUList version of self
         """
-        hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
+        if isinstance(self._data, da.Array):
+            # TODO: this should be filled data
+            hdu = PrimaryHDU(self._data, header=self.header)
+        else:
+            hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
 
         from .cube_utils import beams_to_bintable
         # use unmasked beams because, even if the beam is masked out, we should
