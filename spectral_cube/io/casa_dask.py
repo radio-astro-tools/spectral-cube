@@ -114,6 +114,9 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
     # tb.close()
     dminfo = getdminfo(str(imagename))
 
+    # Determine whether file is big endian
+    big_endian = dminfo['*1']['BIGENDIAN']
+
     # chunkshape defines how the chunks (array subsets) are written to disk
     chunkshape = tuple(dminfo['*1']['SPEC']['DEFAULTTILESHAPE'])
     chunksize = np.product(chunkshape)
@@ -141,10 +144,16 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
                              "expected {1}".format(filesize, expected))
     else:
         if filesize == totalsize * 4:
-            dtype = np.float32
+            if big_endian:
+                dtype = '>f4'
+            else:
+                dtype = '<f4'
             itemsize = 4
         elif filesize == totalsize * 8:
-            dtype = np.float64
+            if big_endian:
+                dtype = '>f8'
+            else:
+                dtype = '<f8'
             itemsize = 8
         else:
             raise ValueError("Unexpected file size for data, found {0} but "
@@ -165,11 +174,11 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
             full_array = np.unpackbits(full_array, bitorder='little').astype(np.bool_)
             ceil_chunksize = int(ceil(chunksize / 8)) * 8
             chunks = [full_array[ii*ceil_chunksize:(ii+1)*ceil_chunksize][:chunksize].reshape(chunkshape, order='F').T
-                    for ii in range(nchunks)]
+                      for ii in range(nchunks)]
         else:
             full_array = np.fromfile(img_fn, dtype=dtype)
             chunks = [full_array[ii*chunksize:(ii+1)*chunksize].reshape(chunkshape, order='F').T
-                    for ii in range(nchunks)]
+                      for ii in range(nchunks)]
 
     # convert all chunks to dask arrays - and set name and meta appropriately
     # to prevent dask trying to access the data to determine these
