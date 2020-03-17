@@ -2,6 +2,7 @@ from __future__ import print_function, absolute_import, division
 
 import os
 import shutil
+from itertools import product
 
 import pytest
 import numpy as np
@@ -72,15 +73,19 @@ def filename(request):
     return request.getfixturevalue(request.param)
 
 
-@pytest.mark.parametrize('memmap', (False, True))
-def test_casa_read_basic(memmap):
+@pytest.mark.parametrize(('memmap', 'bigendian'), product((False, True), (False, True)))
+def test_casa_read_basic(memmap, bigendian):
 
     # Check that SpectralCube.read works for an example CASA dataset stored
     # in the tests directory. This test should NOT require CASA, whereas a
     # number of tests below require CASA to generate test datasets. The present
     # test is to ensure CASA is not required for reading.
 
-    cube = SpectralCube.read(os.path.join(DATA, 'basic.image'), memmap=memmap)
+    if bigendian:
+        cube = SpectralCube.read(os.path.join(DATA, 'basic_bigendian.image'), memmap=memmap)
+    else:
+        cube = SpectralCube.read(os.path.join(DATA, 'basic.image'), memmap=memmap)
+
     assert cube.shape == (3, 4, 5)
     assert_allclose(cube.wcs.pixel_to_world_values(1, 2, 3),
                     [2.406271e+01, 2.993521e+01, 1.421911e+09])
