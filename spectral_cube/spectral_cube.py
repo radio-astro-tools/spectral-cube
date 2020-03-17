@@ -3348,8 +3348,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                      **kwargs)
 
     @parallel_docstring
-    def sigma_clip_spectrally_dask(self, threshold, verbose=0, use_memmap=True,
-                                   num_cores=None, **kwargs):
+    def sigma_clip_spectrally_dask(self,
+                                   threshold,
+                                   verbose=0,
+                                   num_cores=None,
+                                   **kwargs):
         """
         Run astropy's sigma clipper along the spectral axis, converting all bad
         (excluded) values to NaN.
@@ -3389,7 +3392,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return newcube
 
     @parallel_docstring
-    def spectral_smooth(self, kernel,
+    def spectral_smooth(self,
+                        kernel,
                         convolve=convolution.convolve,
                         verbose=0,
                         use_memmap=True,
@@ -3425,6 +3429,63 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                      use_memmap=use_memmap,
                                                      verbose=verbose,
                                                      **kwargs)
+
+    @parallel_docstring
+    def spectral_smooth_dask(self,
+                             kernel,
+                             convolve=convolution.convolve,
+                             verbose=0,
+                             num_cores=None,
+                             **kwargs):
+        """
+        Smooth the cube along the spectral dimension
+
+        Note that the mask is left unchanged in this operation.
+
+        Parameters
+        ----------
+        kernel : `~astropy.convolution.Kernel1D`
+            A 1D kernel from astropy
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        verbose : int
+            Verbosity level to pass to joblib
+        kwargs : dict
+            Passed to the convolve function
+        """
+
+        if isinstance(kernel.array, u.Quantity):
+            raise u.UnitsError("The convolution kernel should be defined "
+                               "without a unit.")
+
+        # Convert to Dask array if needed
+        data = da.asarray(self.unitless_filled_data)
+
+        # Rechunk so that there is only one chunk spectrally and let dask
+        # decide for the rest
+        data = data.rechunk((-1, 'auto', 'auto'))
+
+        # Apply sigma clipping
+
+        def spectral_smooth(array):
+            if array.size > 0:
+                kernel_3d = kernel.array.reshape((len(kernel.array), 1, 1))
+                return convolve(array, kernel_3d, normalize_kernel=True)
+            else:
+                return array
+
+        newdata = data.map_blocks(spectral_smooth)
+
+        # Create final output cube
+        newcube = self._new_cube_with(data=newdata,
+                                      wcs=self.wcs,
+                                      mask=self.mask,
+                                      meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
