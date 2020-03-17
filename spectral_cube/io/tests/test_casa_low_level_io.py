@@ -55,6 +55,9 @@ def test_getdminfo(tmp_path, shape):
 
     actual = getdminfo(filename)
 
+    # We include information about endian-ness in the dminfo but CASA doesn't
+    actual['*1'].pop('BIGENDIAN')
+
     # The easiest way to compare the output is simply to compare the output
     # from pformat (checking for dictionary equality doesn't work because of
     # the Numpy arrays inside).

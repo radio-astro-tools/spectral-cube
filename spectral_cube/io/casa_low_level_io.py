@@ -224,8 +224,10 @@ def read_table(f, image_path):
         raise NotImplementedError('Support for {0} version {1} not implemented'.format(stype, sversion))
 
     nrow = read_int32(f)
-    unknown = read_int32(f)  # noqa
+    fmt = read_int32(f)  # noqa
     name = read_string(f)  # noqa
+
+    big_endian = fmt == 0  # noqa
 
     table_desc = read_table_desc(f, nrow, image_path)
 
@@ -317,7 +319,7 @@ def read_tiled_st_man(f):
     st_man = {}
     st_man['SPEC'] = {}
 
-    big_endian = f.read(1)  # noqa
+    st_man['BIGENDIAN'] = f.read(1) == b'\x01'  # noqa
 
     seqnr = read_int32(f)
     if seqnr != 0:
