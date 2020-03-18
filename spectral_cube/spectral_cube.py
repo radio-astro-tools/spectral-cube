@@ -3646,6 +3646,70 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return newcube
 
+    def convolve_to_dask(self, beam, convolve=convolution.convolve, update_function=None, **kwargs):
+        """
+        Convolve each channel in the cube to a specified beam
+
+        .. warning::
+            The current implementation of ``convolve_to`` creates an in-memory
+            copy of the whole cube to store the convolved data.  Issue #506
+            notes that this is a problem, and it is on our to-do list to fix.
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        kwargs : dict
+            Keyword arguments to pass to the convolution function
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A SpectralCube with a single ``beam``
+        """
+
+        Check if the beams are the same.
+        if beam == self.beam:
+            warnings.warn("The given beam is identical to the current beam. "
+                          "Skipping convolution.")
+            return self
+
+        pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
+
+        convolution_kernel = beam.as_kernel(pixscale)
+        kernel = convolution_kernel.array.reshape((1,) + convolution_kernel.array.shape)
+
+        def convfunc(img):
+            if img.size > 0:
+                return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
+            else:
+                return img
+
+        # Convert to Dask array if needed
+        data = da.asarray(self.unitless_filled_data)
+
+        # Rechunk so that there is only one chunk spectrally and let dask
+        # decide for the rest
+        data = data.rechunk(('auto', -1, -1))
+
+        newdata = data.map_blocks(convfunc)
+
+        # Create final output cube
+        newcube = self._new_cube_with(data=newdata,
+                                      wcs=self.wcs,
+                                      mask=self.mask,
+                                      meta=self.meta,
+                                      fill_value=self.fill_value)#.with_beam(beam)
+
+        return newcube
+
     def mask_channels(self, goodchannels):
         """
         Helper function to mask out channels.  This function is equivalent to
