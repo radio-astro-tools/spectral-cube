@@ -16,7 +16,7 @@ from astropy import stats
 from astropy import convolution
 
 from .spectral_cube import SpectralCube
-from .utils import warn_slow
+from .utils import warn_slow, VarianceWarning
 
 __all__ = ['DaskSpectralCube']
 
@@ -263,3 +263,100 @@ class DaskSpectralCube(SpectralCube):
         # dask decide for the rest
         return self._map_blocks_to_cube(convfunc,
                                         rechunk=('auto', -1, -1))
+
+    def moment(self, order=0, axis=0, **kwargs):
+        """
+        Compute moments along the spectral axis.
+
+        Moments are defined as follows:
+
+        Moment 0:
+
+        .. math:: M_0 \\int I dl
+
+        Moment 1:
+
+        .. math:: M_1 = \\frac{\\int I l dl}{M_0}
+
+        Moment N:
+
+        .. math:: M_N = \\frac{\\int I (l - M_1)^N dl}{M_0}
+
+        .. warning:: Note that these follow the mathematical definitions of
+                     moments, and therefore the second moment will return a
+                     variance map. To get linewidth maps, you can instead use
+                     the :meth:`~SpectralCube.linewidth_fwhm` or
+                     :meth:`~SpectralCube.linewidth_sigma` methods.
+
+        Parameters
+        ----------
+        order : int
+           The order of the moment to take. Default=0
+
+        axis : int
+           The axis along which to compute the moment. Default=0
+
+        Returns
+        -------
+        map [, wcs]
+           The moment map (numpy array) and, if wcs=True, the WCS object
+           describing the map
+
+        Notes
+        -----
+        For the first moment, the result for axis=1, 2 is the angular
+        offset *relative to the cube face*. For axis=0, it is the
+        *absolute* velocity/frequency of the first moment.
+        """
+
+        if axis == 0 and order == 2:
+            warnings.warn("Note that the second moment returned will be a "
+                          "variance map. To get a linewidth map, use the "
+                          "SpectralCube.linewidth_fwhm() or "
+                          "SpectralCube.linewidth_sigma() methods instead.",
+                          VarianceWarning)
+
+        data = self._nan_filled_dask_array
+
+        pix_size = cube._pix_size_slice(axis)
+        pix_cen = cube._pix_cen()[axis]
+
+        if order == 0:
+            out = da.nansum(data * pix_size, axis=axis)
+        else:
+            mom1 = (da.nansum(data * pix_size * pix_cen, axis=axis) /
+                    da.nansum(data * pix_size, axis=axis)
+            if order > 1:
+                out = (da.nansum(data * pix_size * (pix_cen - mom1) ** order, axis=axis) /
+                       da.nansum(data * pix_size, axis=axis)
+            else:
+                out = mom1
+
+        # apply units
+        if order == 0:
+            if axis == 0 and self._spectral_unit is not None:
+                axunit = unit = self._spectral_unit
+            else:
+                axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
+            out = u.Quantity(out, self.unit * axunit, copy=False)
+        else:
+            if axis == 0 and self._spectral_unit is not None:
+                unit = self._spectral_unit ** max(order, 1)
+            else:
+                unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
+            out = u.Quantity(out, unit, copy=False)
+
+        # special case: for order=1, axis=0, you usually want
+        # the absolute velocity and not the offset
+        if order == 1 and axis == 0:
+            out += self.world[0, :, :][0]
+
+        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+        meta = {'moment_order': order,
+                'moment_axis': axis,
+                'moment_method': how}
+        meta.update(self._meta)
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                          header=self._nowcs_header)
