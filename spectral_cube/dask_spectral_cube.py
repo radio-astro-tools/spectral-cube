@@ -15,8 +15,10 @@ import dask.array as da
 from astropy import stats
 from astropy import convolution
 
-from .spectral_cube import SpectralCube
+from . import wcs_utils
+from .spectral_cube import SpectralCube, SIGMA2FWHM, np2wcs
 from .utils import warn_slow, VarianceWarning
+from .lower_dimensional_structures import Projection
 
 __all__ = ['DaskSpectralCube']
 
@@ -318,17 +320,17 @@ class DaskSpectralCube(SpectralCube):
 
         data = self._nan_filled_dask_array
 
-        pix_size = cube._pix_size_slice(axis)
-        pix_cen = cube._pix_cen()[axis]
+        pix_size = self._pix_size_slice(axis)
+        pix_cen = self._pix_cen()[axis]
 
         if order == 0:
             out = da.nansum(data * pix_size, axis=axis)
         else:
             mom1 = (da.nansum(data * pix_size * pix_cen, axis=axis) /
-                    da.nansum(data * pix_size, axis=axis)
+                    da.nansum(data * pix_size, axis=axis))
             if order > 1:
                 out = (da.nansum(data * pix_size * (pix_cen - mom1) ** order, axis=axis) /
-                       da.nansum(data * pix_size, axis=axis)
+                       da.nansum(data * pix_size, axis=axis))
             else:
                 out = mom1
 
@@ -354,8 +356,7 @@ class DaskSpectralCube(SpectralCube):
         new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
         meta = {'moment_order': order,
-                'moment_axis': axis,
-                'moment_method': how}
+                'moment_axis': axis}
         meta.update(self._meta)
 
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
