@@ -11,6 +11,8 @@ from numpy.lib.stride_tricks import as_strided
 from astropy.wcs import InconsistentAxisTypesError
 from astropy.io import fits
 
+from dask import array as da
+
 from . import wcs_utils
 from .utils import WCSWarning
 
@@ -223,8 +225,10 @@ class MaskBase(object):
             sliced_data = data[view].astype(dt)
 
         ex = self.exclude(data=data, wcs=wcs, view=view, **kwargs)
-
-        return np.ma.masked_array(sliced_data, mask=ex).filled(fill)
+        if isinstance(sliced_data, da.Array):
+            return da.ma.filled(da.ma.masked_array(sliced_data, mask=ex), fill)
+        else:
+            return np.ma.masked_array(sliced_data, mask=ex).filled(fill)
 
     def __and__(self, other):
         return CompositeMask(self, other, operation='and')
