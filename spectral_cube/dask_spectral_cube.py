@@ -44,6 +44,26 @@ class DaskSpectralCube(SpectralCube):
         return da.nanmean(self._nan_filled_dask_array, axis=axis).compute()
 
     @warn_slow
+    def median(self, axis=None, **kwargs):
+        """
+        Return the median of the cube, optionally over an axis.
+        """
+        return da.nanmedian(self._nan_filled_dask_array, axis=axis).compute()
+
+    def percentile(self, q, axis=None, **kwargs):
+        """
+        Return percentiles of the data.
+
+        Parameters
+        ----------
+        q : float
+            The percentile to compute
+        axis : int, or None
+            Which axis to compute percentiles over
+        """
+        return da.nanpercentile(self._nan_filled_dask_array, q, axis=axis).compute()
+
+    @warn_slow
     def std(self, axis=None, ddof=0, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
