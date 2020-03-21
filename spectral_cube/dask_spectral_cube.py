@@ -22,6 +22,12 @@ from .lower_dimensional_structures import Projection
 
 __all__ = ['DaskSpectralCube']
 
+try:
+    from scipy import ndimage
+    SCIPY_INSTALLED = True
+except ImportError:
+    SCIPY_INSTALLED = False
+
 
 class DaskSpectralCube(SpectralCube):
 
@@ -130,7 +136,7 @@ class DaskSpectralCube(SpectralCube):
         """
         return da.nanargmin(self._nan_filled_dask_array, axis=axis).compute()
 
-    def _map_blocks_to_cube(self, function, rechunk=None):
+    def _map_blocks_to_cube(self, function, rechunk=None, **kwargs):
         """
         Call dask's map_blocks, returning a new spectral cube.
         """
@@ -140,7 +146,7 @@ class DaskSpectralCube(SpectralCube):
         else:
             data = self._nan_filled_dask_array.rechunk(rechunk)
 
-        newdata = data.map_blocks(function)
+        newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
 
         # Create final output cube
         newcube = self._new_cube_with(data=newdata,
@@ -215,10 +221,61 @@ class DaskSpectralCube(SpectralCube):
             else:
                 return array
 
-        # Rechunk so that there is only one chunk spectrally and let dask
-        # decide for the rest
+        # Rechunk so that there is only one chunk spectrally
         return self._map_blocks_to_cube(spectral_smooth,
                                         rechunk=(-1, 'auto', 'auto'))
+
+    def spatial_smooth(self, kernel,
+                       convolve=convolution.convolve,
+                       **kwargs):
+        """
+        Smooth the image in each spatial-spatial plane of the cube.
+
+        Parameters
+        ----------
+        kernel : `~astropy.convolution.Kernel2D`
+            A 2D kernel from astropy
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        kwargs : dict
+            Passed to the convolve function
+        """
+
+        kernel = kernel.array.reshape((1,) + kernel.array.shape)
+
+        def convolve_wrapper(img, **kwargs):
+            if img.size > 0:
+                return convolve(img, kernel, normalize_kernel=True, **kwargs)
+            else:
+                return img
+
+        # Rechunk so that there is only one chunk in the image plane
+        return self._map_blocks_to_cube(convolve_wrapper,
+                                        rechunk=('auto', -1, -1))
+
+    def spatial_smooth_median(self, ksize, **kwargs):
+        """
+        Smooth the image in each spatial-spatial plane of the cube using a median filter.
+
+        Parameters
+        ----------
+        ksize : int
+            Size of the median filter (scipy.ndimage.filters.median_filter)
+        kwargs : dict
+            Passed to the median_filter function
+        """
+
+        if not SCIPY_INSTALLED:
+            raise ImportError("Scipy could not be imported: this function won't work.")
+
+        def median_filter_wrapper(img, **kwargs):
+            return ndimage.median_filter(img, (1, ksize, ksize), **kwargs)
+
+        # Rechunk so that there is only one chunk in the image plane
+        return self._map_blocks_to_cube(median_filter_wrapper,
+                                        rechunk=('auto', -1, -1))
 
     def convolve_to(self, beam, convolve=convolution.convolve, update_function=None, **kwargs):
         """
@@ -261,8 +318,7 @@ class DaskSpectralCube(SpectralCube):
             else:
                 return img
 
-        # Rechunk so that there is only one chunk in the image plane and let
-        # dask decide for the rest
+        # Rechunk so that there is only one chunk in the image plane
         return self._map_blocks_to_cube(convfunc,
                                         rechunk=('auto', -1, -1))
 
