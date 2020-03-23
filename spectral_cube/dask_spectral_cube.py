@@ -225,6 +225,34 @@ class DaskSpectralCube(SpectralCube):
         return self._map_blocks_to_cube(spectral_smooth,
                                         rechunk=(-1, 'auto', 'auto'))
 
+    def spectral_smooth_median(self, ksize,
+                               use_memmap=True,
+                               verbose=0,
+                               num_cores=None,
+                               **kwargs):
+        """
+        Smooth the cube along the spectral dimension
+
+        Parameters
+        ----------
+        ksize : int
+            Size of the median filter (scipy.ndimage.filters.median_filter)
+        verbose : int
+            Verbosity level to pass to joblib
+        kwargs : dict
+            Not used at the moment.
+        """
+
+        if not SCIPY_INSTALLED:
+            raise ImportError("Scipy could not be imported: this function won't work.")
+
+        def median_filter_wrapper(img, **kwargs):
+            return ndimage.median_filter(img, (ksize, 1, 1), **kwargs)
+
+        # Rechunk so that there is only one chunk spectrally
+        return self._map_blocks_to_cube(median_filter_wrapper,
+                                        rechunk=(-1, 'auto', 'auto'))
+
     def spatial_smooth(self, kernel,
                        convolve=convolution.convolve,
                        **kwargs):
