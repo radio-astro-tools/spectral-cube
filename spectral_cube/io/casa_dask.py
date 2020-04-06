@@ -32,7 +32,7 @@ class MemmapWrapper:
     def __getitem__(self, item):
         return np.fromfile(self._filename, dtype=self.dtype,
                            offset=self._kwargs['offset'],
-                           count=self._count).reshape(self.shape[::-1]).T[item]
+                           count=self._count).reshape(self.shape[::-1], order='F').T[item]
 
 
 class MaskWrapper:
