@@ -18,7 +18,7 @@ from astropy import convolution
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import warn_slow, VarianceWarning
+from .utils import cached, warn_slow, VarianceWarning
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 
@@ -323,6 +323,49 @@ class DaskSpectralCubeMixin:
         # Rechunk so that there is only one chunk in the image plane
         return self._map_blocks_to_cube(median_filter_wrapper,
                                         rechunk=('auto', -1, -1))
+
+    @cached
+    def _pix_cen(self):
+        """
+        Offset of every pixel from the origin, along each direction
+
+        Returns
+        -------
+        tuple of spectral_offset, y_offset, x_offset, each 3D arrays
+        describing the distance from the origin
+
+        Notes
+        -----
+        These arrays are broadcast, and are not memory intensive
+
+        Each array is in the units of the corresponding wcs.cunit, but
+        this is implicit (e.g., they are not astropy Quantity arrays)
+        """
+        # Start off by extracting the world coordinates of the pixels
+        _, lat, lon = self.world[0, :, :]
+        spectral, _, _ = self.world[:, 0, 0]
+        spectral -= spectral[0] # offset from first pixel
+
+        # Convert to radians
+        lon = np.radians(lon)
+        lat = np.radians(lat)
+
+        # Find the dx and dy arrays
+        from astropy.coordinates.angle_utilities import angular_separation
+        dx = angular_separation(lon[:, :-1], lat[:, :-1],
+                                lon[:, 1:], lat[:, :-1])
+        dy = angular_separation(lon[:-1, :], lat[:-1, :],
+                                lon[1:, :], lat[1:, :])
+
+        # Find the cumulative offset - need to add a zero at the start
+        x = np.zeros(self._data.shape[1:])
+        y = np.zeros(self._data.shape[1:])
+        x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
+        y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
+
+        x, y, spectral = da.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+
+        return spectral, y, x
 
     def moment(self, order=0, axis=0, **kwargs):
         """
