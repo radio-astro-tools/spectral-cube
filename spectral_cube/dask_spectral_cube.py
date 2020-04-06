@@ -20,6 +20,7 @@ from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
 from .utils import warn_slow, VarianceWarning
 from .lower_dimensional_structures import Projection
+from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 
 __all__ = ['DaskSpectralCube', 'DaskVaryingResolutionSpectralCube']
 
@@ -421,6 +422,52 @@ class DaskSpectralCubeMixin:
 
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           header=self._nowcs_header)
+
+    def subcube_slices_from_mask(self, region_mask, spatial_only=False):
+        """
+        Given a mask, return the slices corresponding to the minimum subcube
+        that encloses the mask
+
+        Parameters
+        ----------
+        region_mask: `~spectral_cube.masks.MaskBase` or boolean `numpy.ndarray`
+            The mask with appropriate WCS or an ndarray with matched
+            coordinates
+        spatial_only: bool
+            Return only slices that affect the spatial dimensions; the spectral
+            dimension will be left unchanged
+        """
+
+        if isinstance(region_mask, np.ndarray):
+            if is_broadcastable_and_smaller(region_mask.shape, self.shape):
+                region_mask = BooleanArrayMask(region_mask, self._wcs)
+            else:
+                raise ValueError("Mask shape does not match cube shape.")
+
+        include = region_mask.include(self._data, self._wcs,
+                                      wcs_tolerance=self._wcs_tolerance)
+
+        include = da.broadcast_to(include, self.shape)
+
+        # NOTE: the approach in the base SpectralCube class is incorrect, if
+        # there are multiple 'islands' of valid values in the cube, as this will
+        # pick only the first one found by find_objects. Here we use a more
+        # robust approach.
+
+        slices = []
+        for axis in range(3):
+            collapse_axes = tuple(index for index in range(3) if index != axis)
+            valid = self._compute(da.any(include, axis=collapse_axes))
+            if np.any(valid):
+                indices = np.where(valid)[0]
+                slices.append(slice(np.min(indices), np.max(indices) + 1))
+            else:
+                slices.append(slice(0))
+
+        if spatial_only:
+            slices = (slice(None), slices[1], slices[2])
+
+        return tuple(slices)
 
 
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
