@@ -7,6 +7,7 @@ from __future__ import print_function, absolute_import, division
 import warnings
 
 from astropy import units as u
+from astropy.io.fits import PrimaryHDU, HDUList
 from astropy.wcs.utils import proj_plane_pixel_area
 
 import numpy as np
@@ -35,6 +36,15 @@ class DaskSpectralCubeMixin:
         # For now, always default to serial mode, but we could then expand this
         # to allow different modes.
         return array.compute(scheduler='synchronous')
+
+    @property
+    def _filled_dask_array(self):
+        if self._mask is None:
+            return self._data
+        else:
+            return da.asarray(self._mask._filled(data=self._data,
+                                                 wcs=self._wcs, fill=self.fill_value,
+                                                 wcs_tolerance=self._wcs_tolerance))
 
     @property
     def _nan_filled_dask_array(self):
@@ -436,6 +446,17 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
                                     allow_huge_operations=cube.allow_huge_operations,
                                     beam=cube.beam, wcs_tolerance=cube._wcs_tolerance)
 
+    @property
+    def hdu(self):
+        """
+        HDU version of self
+        """
+        return PrimaryHDU(self._filled_dask_array, header=self.header)
+
+    @property
+    def hdulist(self):
+        return HDUList(self.hdu)
+
     def convolve_to(self, beam, convolve=convolution.convolve, update_function=None, **kwargs):
         """
         Convolve each channel in the cube to a specified beam
@@ -483,4 +504,23 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
-    pass
+
+    @property
+    def hdu(self):
+        raise ValueError("For DaskVaryingResolutionSpectralCube's, use hdulist "
+                         "instead of hdu.")
+
+    @property
+    def hdulist(self):
+        """
+        HDUList version of self
+        """
+
+        hdu = PrimaryHDU(self._filled_dask_array, header=self.header)
+
+        from .cube_utils import beams_to_bintable
+        # use unmasked beams because, even if the beam is masked out, we should
+        # write it
+        bmhdu = beams_to_bintable(self.unmasked_beams)
+
+        return HDUList([hdu, bmhdu])
