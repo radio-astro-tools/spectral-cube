@@ -27,12 +27,12 @@ class MemmapWrapper:
         self.shape = kwargs['shape'][::-1]
         self.dtype = kwargs['dtype']
         self.ndim = len(self.shape)
+        self._count = np.product(self.shape)
 
     def __getitem__(self, item):
-        # We open a file manually and return an in-memory copy of the array
-        # otherwise the file doesn't get closed properly.
-        with open(self._filename) as f:
-            return np.memmap(f, mode='readonly', order='F', **self._kwargs).T[item].copy()
+        return np.fromfile(self._filename, dtype=self.dtype,
+                           offset=self._kwargs['offset'],
+                           count=self._count).reshape(self.shape[::-1]).T[item]
 
 
 class MaskWrapper:
