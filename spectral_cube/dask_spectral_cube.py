@@ -31,6 +31,11 @@ except ImportError:
 
 class DaskSpectralCubeMixin:
 
+    def _compute(self, array):
+        # For now, always default to serial mode, but we could then expand this
+        # to allow different modes.
+        return array.compute(scheduler='synchronous')
+
     @property
     def _nan_filled_dask_array(self):
         if self._mask is None:
@@ -45,21 +50,21 @@ class DaskSpectralCubeMixin:
         """
         Return the sum of the cube, optionally over an axis.
         """
-        return da.nansum(self._nan_filled_dask_array, axis=axis).compute()
+        return self._compute(da.nansum(self._nan_filled_dask_array, axis=axis))
 
     @warn_slow
     def mean(self, axis=None, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
         """
-        return da.nanmean(self._nan_filled_dask_array, axis=axis).compute()
+        return self._compute(da.nanmean(self._nan_filled_dask_array, axis=axis))
 
     @warn_slow
     def median(self, axis=None, **kwargs):
         """
         Return the median of the cube, optionally over an axis.
         """
-        return da.nanmedian(self._nan_filled_dask_array, axis=axis).compute()
+        return self._compute(da.nanmedian(self._nan_filled_dask_array, axis=axis))
 
     def percentile(self, q, axis=None, **kwargs):
         """
@@ -72,7 +77,7 @@ class DaskSpectralCubeMixin:
         axis : int, or None
             Which axis to compute percentiles over
         """
-        return da.nanpercentile(self._nan_filled_dask_array, q, axis=axis).compute()
+        return self._compute(da.nanpercentile(self._nan_filled_dask_array, q, axis=axis))
 
     @warn_slow
     def std(self, axis=None, ddof=0, **kwargs):
@@ -86,7 +91,7 @@ class DaskSpectralCubeMixin:
             is ``N - ddof``, where ``N`` represents the number of elements.  By
             default ``ddof`` is zero.
         """
-        return da.nanstd(self._nan_filled_dask_array, axis=axis, ddof=ddof).compute()
+        return self._compute(da.nanstd(self._nan_filled_dask_array, axis=axis, ddof=ddof))
 
     @warn_slow
     def mad_std(self, axis=None, **kwargs):
@@ -103,21 +108,21 @@ class DaskSpectralCubeMixin:
         else:
             # Rechunk so that there is only one chunk along the desired axis
             data = data.rechunk([-1 if i == axis else 'auto' for i in range(3)])
-            return data.map_blocks(stats.mad_std, drop_axis=axis, axis=axis).compute()
+            return self._compute(data.map_blocks(stats.mad_std, drop_axis=axis, axis=axis))
 
     @warn_slow
     def max(self, axis=None, **kwargs):
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
-        return da.nanmax(self._nan_filled_dask_array, axis=axis).compute()
+        return self._compute(da.nanmax(self._nan_filled_dask_array, axis=axis))
 
     @warn_slow
     def min(self, axis=None, **kwargs):
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
-        return da.nanmin(self._nan_filled_dask_array, axis=axis).compute()
+        return self._compute(da.nanmin(self._nan_filled_dask_array, axis=axis))
 
     @warn_slow
     def argmax(self, axis=None, **kwargs):
@@ -127,7 +132,7 @@ class DaskSpectralCubeMixin:
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask.
         """
-        return da.nanargmax(self._nan_filled_dask_array, axis=axis).compute()
+        return self._compute(da.nanargmax(self._nan_filled_dask_array, axis=axis))
 
     @warn_slow
     def argmin(self, axis=None, **kwargs):
@@ -137,7 +142,7 @@ class DaskSpectralCubeMixin:
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask.
         """
-        return da.nanargmin(self._nan_filled_dask_array, axis=axis).compute()
+        return self._compute(da.nanargmin(self._nan_filled_dask_array, axis=axis))
 
     def _map_blocks_to_cube(self, function, rechunk=None, **kwargs):
         """
@@ -376,6 +381,9 @@ class DaskSpectralCubeMixin:
             else:
                 out = mom1
 
+        # force computation
+        out = self._compute(out)
+
         # apply units
         if order == 0:
             if axis == 0 and self._spectral_unit is not None:
@@ -405,7 +413,7 @@ class DaskSpectralCubeMixin:
                           header=self._nowcs_header)
 
 
-class DaskSpectralCube(SpectralCube, DaskSpectralCubeMixin):
+class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
     @classmethod
     def read(cls, *args, **kwargs):
@@ -474,5 +482,5 @@ class DaskSpectralCube(SpectralCube, DaskSpectralCubeMixin):
                                         rechunk=('auto', -1, -1))
 
 
-class DaskVaryingResolutionSpectralCube(VaryingResolutionSpectralCube, DaskSpectralCubeMixin):
+class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
     pass
