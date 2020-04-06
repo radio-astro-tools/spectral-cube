@@ -149,7 +149,6 @@ def load_casa_image(filename, skipdata=False, memmap=True,
     meta = {'filename': filename,
             'BUNIT': unit}
 
-
     if wcs.naxis == 3:
         data, wcs_slice = cube_utils._orient(data, wcs)
 

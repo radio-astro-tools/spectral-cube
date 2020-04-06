@@ -159,10 +159,10 @@ class MaskBase(object):
         return self._exclude(data=data, wcs=wcs, view=view)
 
     def _exclude(self, data=None, wcs=None, view=()):
-        return np.logical_not(self._include(data=data, wcs=wcs, view=view))
+        return da.logical_not(self._include(data=data, wcs=wcs, view=view))
 
     def any(self):
-        return np.any(self.exclude())
+        return da.any(self.exclude())
 
     def _flattened(self, data, wcs=None, view=()):
         """
@@ -326,7 +326,7 @@ class InvertedMask(MaskBase):
         return self._mask.shape
 
     def _include(self, data=None, wcs=None, view=()):
-        return np.logical_not(self._mask.include(data=data, wcs=wcs, view=view))
+        return da.logical_not(self._mask.include(data=data, wcs=wcs, view=view))
 
     def __getitem__(self, view):
         return InvertedMask(self._mask[view])
@@ -408,11 +408,11 @@ class CompositeMask(MaskBase):
         result_mask_1 = self._mask1._include(data=data, wcs=wcs, view=view)
         result_mask_2 = self._mask2._include(data=data, wcs=wcs, view=view)
         if self._operation == 'and':
-            return np.bitwise_and(result_mask_1, result_mask_2)
+            return da.bitwise_and(result_mask_1, result_mask_2)
         elif self._operation == 'or':
-            return np.bitwise_or(result_mask_1, result_mask_2)
+            return da.bitwise_or(result_mask_1, result_mask_2)
         elif self._operation == 'xor':
-            return np.bitwise_xor(result_mask_1, result_mask_2)
+            return da.bitwise_xor(result_mask_1, result_mask_2)
         else:
             raise ValueError("Operation '{0}' not supported".format(self._operation))
 
@@ -536,11 +536,11 @@ class BooleanArrayMask(MaskBase):
 
     def _include(self, data=None, wcs=None, view=()):
         result_mask = self._mask[view]
-        return result_mask if self._mask_type == 'include' else np.logical_not(result_mask)
+        return result_mask if self._mask_type == 'include' else da.logical_not(result_mask)
 
     def _exclude(self, data=None, wcs=None, view=()):
         result_mask = self._mask[view]
-        return result_mask if self._mask_type == 'exclude' else np.logical_not(result_mask)
+        return result_mask if self._mask_type == 'exclude' else da.logical_not(result_mask)
 
     @property
     def shape(self):

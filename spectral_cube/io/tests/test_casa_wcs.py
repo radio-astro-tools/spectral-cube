@@ -95,6 +95,7 @@ ALL_HEADERS = [
     header_copy_with(CTYPE1='SLON-TAN', CTYPE2='SLAT-TAN'),
     header_copy_with(CTYPE1='ELON-TAN', CTYPE2='ELAT-TAN'),
     header_copy_with(CTYPE1='HLON-TAN', CTYPE2='HLAT-TAN'),
+    header_copy_with(SPECSYS=''),
     header_copy_with(SPECSYS='TOPOCENT'),
     header_copy_with(SPECSYS='GEOCENTR'),
     header_copy_with(SPECSYS='BARYCENT'),

@@ -16,11 +16,11 @@ from astropy import stats
 from astropy import convolution
 
 from . import wcs_utils
-from .spectral_cube import SpectralCube, SIGMA2FWHM, np2wcs
+from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
 from .utils import warn_slow, VarianceWarning
 from .lower_dimensional_structures import Projection
 
-__all__ = ['DaskSpectralCube']
+__all__ = ['DaskSpectralCube', 'DaskVaryingResolutionSpectralCube']
 
 try:
     from scipy import ndimage
@@ -29,13 +29,16 @@ except ImportError:
     SCIPY_INSTALLED = False
 
 
-class DaskSpectralCube(SpectralCube):
+class DaskSpectralCubeMixin:
 
     @property
     def _nan_filled_dask_array(self):
-        return da.asarray(self._mask._filled(data=self._data,
-                                             wcs=self._wcs, fill=np.nan,
-                                             wcs_tolerance=self._wcs_tolerance))
+        if self._mask is None:
+            return self._data
+        else:
+            return da.asarray(self._mask._filled(data=self._data,
+                                                 wcs=self._wcs, fill=np.nan,
+                                                 wcs_tolerance=self._wcs_tolerance))
 
     @warn_slow
     def sum(self, axis=None, **kwargs):
@@ -305,51 +308,6 @@ class DaskSpectralCube(SpectralCube):
         return self._map_blocks_to_cube(median_filter_wrapper,
                                         rechunk=('auto', -1, -1))
 
-    def convolve_to(self, beam, convolve=convolution.convolve, update_function=None, **kwargs):
-        """
-        Convolve each channel in the cube to a specified beam
-
-        Parameters
-        ----------
-        beam : `radio_beam.Beam`
-            The beam to convolve to
-        convolve : function
-            The astropy convolution function to use, either
-            `astropy.convolution.convolve` or
-            `astropy.convolution.convolve_fft`
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
-        kwargs : dict
-            Keyword arguments to pass to the convolution function
-
-        Returns
-        -------
-        cube : `SpectralCube`
-            A SpectralCube with a single ``beam``
-        """
-
-        # Check if the beams are the same.
-        if beam == self.beam:
-            warnings.warn("The given beam is identical to the current beam. "
-                          "Skipping convolution.")
-            return self
-
-        pixscale = proj_plane_pixel_area(self.wcs.celestial)**0.5 * u.deg
-
-        convolution_kernel = beam.as_kernel(pixscale)
-        kernel = convolution_kernel.array.reshape((1,) + convolution_kernel.array.shape)
-
-        def convfunc(img):
-            if img.size > 0:
-                return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
-            else:
-                return img
-
-        # Rechunk so that there is only one chunk in the image plane
-        return self._map_blocks_to_cube(convfunc,
-                                        rechunk=('auto', -1, -1))
-
     def moment(self, order=0, axis=0, **kwargs):
         """
         Compute moments along the spectral axis.
@@ -445,3 +403,76 @@ class DaskSpectralCube(SpectralCube):
 
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           header=self._nowcs_header)
+
+
+class DaskSpectralCube(SpectralCube, DaskSpectralCubeMixin):
+
+    @classmethod
+    def read(cls, *args, **kwargs):
+
+        cube = super().read(*args, **kwargs)
+
+        if not isinstance(cube._data, da.Array):
+            raise TypeError('SpectralCube._data is not a dask array')
+
+        if isinstance(cube, VaryingResolutionSpectralCube):
+            return DaskVaryingResolutionSpectralCube(cube._data, cube.wcs, mask=cube.mask,
+                                                     meta=cube.meta, fill_value=cube.fill_value,
+                                                     header=cube.header,
+                                                     allow_huge_operations=cube.allow_huge_operations,
+                                                     beams=cube.beams, wcs_tolerance=cube._wcs_tolerance)
+        else:
+            return DaskSpectralCube(cube._data, cube.wcs, mask=cube.mask,
+                                    meta=cube.meta, fill_value=cube.fill_value,
+                                    header=cube.header,
+                                    allow_huge_operations=cube.allow_huge_operations,
+                                    beam=cube.beam, wcs_tolerance=cube._wcs_tolerance)
+
+    def convolve_to(self, beam, convolve=convolution.convolve, update_function=None, **kwargs):
+        """
+        Convolve each channel in the cube to a specified beam
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        kwargs : dict
+            Keyword arguments to pass to the convolution function
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A SpectralCube with a single ``beam``
+        """
+
+        # Check if the beams are the same.
+        if beam == self.beam:
+            warnings.warn("The given beam is identical to the current beam. "
+                          "Skipping convolution.")
+            return self
+
+        pixscale = proj_plane_pixel_area(self.wcs.celestial)**0.5 * u.deg
+
+        convolution_kernel = beam.as_kernel(pixscale)
+        kernel = convolution_kernel.array.reshape((1,) + convolution_kernel.array.shape)
+
+        def convfunc(img):
+            if img.size > 0:
+                return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
+            else:
+                return img
+
+        # Rechunk so that there is only one chunk in the image plane
+        return self._map_blocks_to_cube(convfunc,
+                                        rechunk=('auto', -1, -1))
+
+
+class DaskVaryingResolutionSpectralCube(VaryingResolutionSpectralCube, DaskSpectralCubeMixin):
+    pass
