@@ -5,6 +5,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 from __future__ import print_function, absolute_import, division
 
 import warnings
+from functools import wraps
 
 from astropy import units as u
 from astropy.io.fits import PrimaryHDU, HDUList
@@ -15,10 +16,11 @@ import dask.array as da
 
 from astropy import stats
 from astropy import convolution
+from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, warn_slow, VarianceWarning
+from .utils import cached, warn_slow, VarianceWarning, SliceWarning
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 
@@ -29,6 +31,65 @@ try:
     SCIPY_INSTALLED = True
 except ImportError:
     SCIPY_INSTALLED = False
+
+
+def projection_if_needed(function):
+
+    @wraps(function)
+    def wrapper(self, *args, **kwargs):
+
+        out = function(self, *args, **kwargs)
+
+        axis = kwargs.get('axis')
+
+        if axis is not None and self._naxes_dropped(axis) in (1, 2):
+
+            meta = {'collapse_axis': axis}
+            meta.update(self._meta)
+
+            if hasattr(axis, '__len__') and len(axis) == 2:
+                # if operation is over two spatial dims
+                if set(axis) == set((1, 2)):
+                    new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
+                    header = self._nowcs_header
+                    # check whether the cube has beams at all
+                    # (note that "hasattr(self, 'beam') on an object with no
+                    # _beam will result in an exception....?!?!?!?)
+                    if hasattr(self, '_beam') and self._beam is not None:
+                        bmarg = {'beam': self.beam}
+                    elif hasattr(self, '_beams') and self._beams is not None:
+                        bmarg = {'beams': self.unmasked_beams}
+                    else:
+                        bmarg = {}
+                    return self._oned_spectrum(value=out,
+                                               wcs=new_wcs,
+                                               copy=False,
+                                               unit=self.unit,
+                                               header=header,
+                                               meta=meta,
+                                               spectral_unit=self._spectral_unit,
+                                               **bmarg
+                                              )
+                else:
+                    warnings.warn("Averaging over a spatial and a spectral "
+                                  "dimension cannot produce a Projection "
+                                  "quantity (no units or WCS are preserved).",
+                                  SliceWarning)
+                    return u.Quantity(out, unit=self.unit)
+
+            else:
+                new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+                header = self._nowcs_header
+
+            return Projection(out, copy=False, wcs=new_wcs,
+                              meta=meta,  unit=self.unit,
+                              header=header)
+
+        else:
+
+            return u.Quantity(out, unit=self.unit)
+
+    return wrapper
 
 
 class DaskSpectralCubeMixin:
@@ -57,6 +118,7 @@ class DaskSpectralCubeMixin:
                                                  wcs_tolerance=self._wcs_tolerance))
 
     @warn_slow
+    @projection_if_needed
     def sum(self, axis=None, **kwargs):
         """
         Return the sum of the cube, optionally over an axis.
@@ -64,6 +126,7 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nansum(self._nan_filled_dask_array, axis=axis))
 
     @warn_slow
+    @projection_if_needed
     def mean(self, axis=None, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
@@ -71,6 +134,7 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nanmean(self._nan_filled_dask_array, axis=axis))
 
     @warn_slow
+    @projection_if_needed
     def median(self, axis=None, **kwargs):
         """
         Return the median of the cube, optionally over an axis.
@@ -91,6 +155,7 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nanpercentile(self._nan_filled_dask_array, q, axis=axis))
 
     @warn_slow
+    @projection_if_needed
     def std(self, axis=None, ddof=0, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
@@ -105,6 +170,7 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nanstd(self._nan_filled_dask_array, axis=axis, ddof=ddof))
 
     @warn_slow
+    @projection_if_needed
     def mad_std(self, axis=None, **kwargs):
         """
         Use astropy's mad_std to compute the standard deviation
@@ -122,6 +188,7 @@ class DaskSpectralCubeMixin:
             return self._compute(data.map_blocks(stats.mad_std, drop_axis=axis, axis=axis))
 
     @warn_slow
+    @projection_if_needed
     def max(self, axis=None, **kwargs):
         """
         Return the maximum data value of the cube, optionally over an axis.
@@ -129,6 +196,7 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nanmax(self._nan_filled_dask_array, axis=axis))
 
     @warn_slow
+    @projection_if_needed
     def min(self, axis=None, **kwargs):
         """
         Return the minimum data value of the cube, optionally over an axis.
