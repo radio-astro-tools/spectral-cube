@@ -20,7 +20,7 @@ from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, warn_slow, VarianceWarning, SliceWarning
+from .utils import cached, warn_slow, VarianceWarning, SliceWarning, BeamWarning
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 from .np_compat import allbadtonan
@@ -232,7 +232,7 @@ class DaskSpectralCubeMixin:
         """
         return self._compute(da.nanargmin(self._nan_filled_dask_array, axis=axis))
 
-    def _map_blocks_to_cube(self, function, rechunk=None, **kwargs):
+    def _map_blocks_to_cube(self, function, additional_arrays=None, rechunk=None, **kwargs):
         """
         Call dask's map_blocks, returning a new spectral cube.
         """
@@ -242,7 +242,10 @@ class DaskSpectralCubeMixin:
         else:
             data = self._nan_filled_dask_array.rechunk(rechunk)
 
-        newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
+        if additional_arrays is None:
+            newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
+        else:
+            newdata = da.map_blocks(function, data, *additional_arrays, dtype=data.dtype, **kwargs)
 
         # Create final output cube
         newcube = self._new_cube_with(data=newdata,
@@ -691,3 +694,92 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         bmhdu = beams_to_bintable(self.unmasked_beams)
 
         return HDUList([hdu, bmhdu])
+
+    def convolve_to(self, beam, allow_smaller=False,
+                    convolve=convolution.convolve_fft,
+                    update_function=None, **kwargs):
+        """
+        Convolve each channel in the cube to a specified beam
+
+        .. warning::
+            The current implementation of ``convolve_to`` creates an in-memory
+            copy of the whole cube to store the convolved data.  Issue #506
+            notes that this is a problem, and it is on our to-do list to fix.
+
+        .. warning::
+            Note that if there is any misaligment between the cube's spatial
+            pixel axes and the WCS's spatial axes *and* the beams are not
+            round, the convolution kernels used here may be incorrect.  Be wary
+            in such cases!
+
+        Parameters
+        ----------
+        beam : `radio_beam.Beam`
+            The beam to convolve to
+        allow_smaller : bool
+            If the specified target beam is smaller than the beam in a channel
+            in any dimension and this is ``False``, it will raise an exception.
+        convolve : function
+            The astropy convolution function to use, either
+            `astropy.convolution.convolve` or
+            `astropy.convolution.convolve_fft`
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
+
+        Returns
+        -------
+        cube : `SpectralCube`
+            A SpectralCube with a single ``beam``
+        """
+
+        if ((self.wcs.celestial.wcs.get_pc()[0,1] != 0 or
+             self.wcs.celestial.wcs.get_pc()[1,0] != 0)):
+            warnings.warn("The beams will produce convolution kernels "
+                          "that are not aware of any misaligment "
+                          "between pixel and world coordinates, "
+                          "and there are off-diagonal elements of the "
+                          "WCS spatial transformation matrix.  "
+                          "Unexpected results are likely.",
+                          BeamWarning
+                         )
+
+        pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
+
+        convolution_kernels = []
+        for bm,valid in zip(self.unmasked_beams, self.goodbeams_mask):
+            if not valid:
+                # just skip masked-out beams
+                convolution_kernels.append(None)
+                continue
+            elif beam == bm:
+                # Point response when beams are equal, don't convolve.
+                convolution_kernels.append(None)
+                continue
+            try:
+                cb = beam.deconvolve(bm)
+                ck = cb.as_kernel(pixscale)
+                convolution_kernels.append(ck)
+            except ValueError:
+                if allow_smaller:
+                    convolution_kernels.append(None)
+                else:
+                    raise
+
+        # We need to pass in the kernels to dask as an original array - however
+        # since each kernel array may be a different size, we hide it inside an
+        # object array.
+        convolution_kernels = da.from_array(np.array(convolution_kernels, dtype=np.object)
+                                            .reshape((len(convolution_kernels), 1, 1)), chunks=(1,-1,-1))
+
+        def convfunc(img, kernel):
+            if img.size > 0:
+                kernel = kernel[0, 0, 0]
+                return convolve(img[0], kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
+            else:
+                return img
+
+        # Rechunk so that there is only one chunk in the image plane
+        return self._map_blocks_to_cube(convfunc,
+                                        additional_arrays=(convolution_kernels,),
+                                        rechunk=(1, -1, -1))
