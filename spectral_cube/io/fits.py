@@ -1,6 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import six
+import dask
 import warnings
 
 from astropy.io import fits
@@ -226,8 +227,9 @@ def write_fits_cube(cube, filename, overwrite=False,
         hdulist[0].header.add_history("Written by spectral_cube v{version} on "
                                       "{date}".format(version=SPECTRAL_CUBE_VERSION,
                                                       date=now))
-        with open(filename, "wb+") as fobj:
-            hdulist.writeto(fobj)
+        with dask.config.set(scheduler='synchronous'):
+            with open(filename, "wb+") as fobj:
+                hdulist.writeto(fobj)
     else:
         raise NotImplementedError()
 
