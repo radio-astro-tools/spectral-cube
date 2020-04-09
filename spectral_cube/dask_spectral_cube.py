@@ -515,7 +515,7 @@ class DaskSpectralCubeMixin:
             else:
                 out = mom1
 
-        # force computation
+        # force computation, and convert back to original dtype (but native)
         out = self._compute(out)
 
         # apply units
@@ -600,8 +600,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
         cube = super().read(*args, **kwargs)
 
-        if not isinstance(cube._data, da.Array):
-            raise TypeError('SpectralCube._data is not a dask array')
+        cube._data = da.asarray(cube._data)
 
         if isinstance(cube, VaryingResolutionSpectralCube):
             return DaskVaryingResolutionSpectralCube(cube._data, cube.wcs, mask=cube.mask,
@@ -747,7 +746,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
-        for bm,valid in zip(self.unmasked_beams, self.goodbeams_mask):
+        for bm, valid in zip(self.unmasked_beams, self.goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
                 convolution_kernels.append(None)
@@ -780,6 +779,16 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                 return img
 
         # Rechunk so that there is only one chunk in the image plane
-        return self._map_blocks_to_cube(convfunc,
+        cube = self._map_blocks_to_cube(convfunc,
                                         additional_arrays=(convolution_kernels,),
                                         rechunk=(1, -1, -1))
+
+        # Result above is a DaskVaryingResolutionSpectralCube, convert to DaskSpectralCube
+        newcube = DaskSpectralCube(data=cube._data,
+                                   beam=beam,
+                                   wcs=cube.wcs,
+                                   mask=cube.mask,
+                                   meta=cube.meta,
+                                   fill_value=cube.fill_value)
+
+        return newcube
