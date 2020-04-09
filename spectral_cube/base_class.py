@@ -7,6 +7,7 @@ import abc
 import astropy
 from astropy.io.fits import Card
 from radio_beam import Beam, Beams
+import dask.array as da
 
 from . import wcs_utils
 from . import cube_utils

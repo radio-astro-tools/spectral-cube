@@ -23,6 +23,7 @@ from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FW
 from .utils import cached, warn_slow, VarianceWarning, SliceWarning
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
+from .np_compat import allbadtonan
 
 __all__ = ['DaskSpectralCube', 'DaskVaryingResolutionSpectralCube']
 
@@ -31,6 +32,14 @@ try:
     SCIPY_INSTALLED = True
 except ImportError:
     SCIPY_INSTALLED = False
+
+
+def nansum_allbadtonan(dask_array, axis=None, keepdims=None):
+    return da.reduction(dask_array,
+                        allbadtonan(np.nansum),
+                        allbadtonan(np.nansum),
+                        axis=axis,
+                        dtype=dask_array.dtype)
 
 
 def projection_if_needed(function):
@@ -487,19 +496,19 @@ class DaskSpectralCubeMixin:
                           "SpectralCube.linewidth_sigma() methods instead.",
                           VarianceWarning)
 
-        data = self._nan_filled_dask_array
+        data = self._nan_filled_dask_array.astype(np.float64)
 
         pix_size = self._pix_size_slice(axis)
         pix_cen = self._pix_cen()[axis]
 
         if order == 0:
-            out = da.nansum(data * pix_size, axis=axis)
+            out = nansum_allbadtonan(data * pix_size, axis=axis)
         else:
-            mom1 = (da.nansum(data * pix_size * pix_cen, axis=axis) /
-                    da.nansum(data * pix_size, axis=axis))
+            mom1 = (nansum_allbadtonan(data * pix_size * pix_cen, axis=axis) /
+                    nansum_allbadtonan(data * pix_size, axis=axis))
             if order > 1:
-                out = (da.nansum(data * pix_size * (pix_cen - mom1) ** order, axis=axis) /
-                       da.nansum(data * pix_size, axis=axis))
+                out = (nansum_allbadtonan(data * pix_size * (pix_cen - mom1) ** order, axis=axis) /
+                       nansum_allbadtonan(data * pix_size, axis=axis))
             else:
                 out = mom1
 
