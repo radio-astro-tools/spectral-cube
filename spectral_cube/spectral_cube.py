@@ -1132,7 +1132,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return result
 
-    def with_mask(self, mask, inherit_mask=True, wcs_tolerance=None):
+    def with_mask(self, mask, inherit_mask=True, wcs_tolerance=None, **kwargs):
         """
         Return a new SpectralCube instance that contains a composite mask of
         the current SpectralCube and the new ``mask``.  Values of the mask that
@@ -1179,7 +1179,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         new_mask._validate_wcs(new_data=self._data, new_wcs=self._wcs,
                                wcs_tolerance=wcs_tolerance or self._wcs_tolerance)
 
-        return self._new_cube_with(mask=new_mask, wcs_tolerance=wcs_tolerance)
+        return self._new_cube_with(mask=new_mask, wcs_tolerance=wcs_tolerance, **kwargs)
 
     def __getitem__(self, view):
 
@@ -3974,10 +3974,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         mask = BooleanArrayMask(goodchannels[:,None,None], self._wcs,
                                 shape=self._data.shape)
 
-        return self._new_cube_with(mask=mask,
-                                   goodbeams_mask=np.logical_and(goodchannels,
-                                                                 self.goodbeams_mask))
-
+        return self.with_mask(goodchannels[:,None,None],
+                              goodbeams_mask=np.logical_and(goodchannels, self.goodbeams_mask))
 
 
     def spectral_interpolate(self, *args, **kwargs):
