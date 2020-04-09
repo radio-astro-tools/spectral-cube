@@ -5,6 +5,7 @@
   run a script to generate test files. #598
 - Refactor package infrastructure to no longer use astropy-helpers. #599
 - Switch to using unified I/O infrastructure from Astropy. #600
+- Bugfix: fix slicing of cubes with mask set to None. #621
 - Refactor CASA I/O to use dask to access the array/mask data directly
   and to use only Python and Numpy to access image metadata. CASA images
   can now be read without CASA installed. #607, #609, #613

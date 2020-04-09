@@ -95,6 +95,31 @@ def test_casa_read_basic():
     assert_quantity_allclose(cube.unmasked_data[0, 1, 2], 1 * u.Jy / u.beam)
 
 
+def test_casa_read_basic_nomask():
+
+    # Make sure things work well if there is no mask in the data
+
+    cube = SpectralCube.read(os.path.join(DATA, 'nomask.image'))
+    assert cube.shape == (3, 4, 5)
+    assert_allclose(cube.wcs.pixel_to_world_values(1, 2, 3),
+                    [2.406271e+01, 2.993521e+01, 1.421911e+09])
+
+    # Carry out an operation to make sure the underlying data array works
+
+    cube.moment0()
+
+    # Slice the dataset
+
+    assert_quantity_allclose(cube.unmasked_data[0, 0, :],
+                             [1, 1, 1, 1, 1] * u.Jy / u.beam)
+    assert_quantity_allclose(cube.unmasked_data[0, 1, 2], 1 * u.Jy / u.beam)
+
+    # Slice the cube
+
+    assert_quantity_allclose(cube[:, 0, 0],
+                             [1, 1, 1] * u.Jy / u.beam)
+
+
 @pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
 @pytest.mark.parametrize('filename', ('data_adv', 'data_advs', 'data_sdav',
                                       'data_vad', 'data_vsad'),

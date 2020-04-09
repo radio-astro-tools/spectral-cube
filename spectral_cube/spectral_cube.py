@@ -1223,7 +1223,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                            copy=False,
                                            unit=self.unit,
                                            spectral_unit=self._spectral_unit,
-                                           mask=self.mask[view],
+                                           mask=self.mask[view] if self.mask is not None else None,
                                            meta=meta,
                                            **bmarg
                                           )
@@ -1239,7 +1239,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 header['CUNIT3'] = self._spectral_unit.to_string(format='FITS')
 
             return Slice(value=self.filled_data[view],
-                         mask=self.mask[view],
+                         mask=self.mask[view] if self.mask is not None else None,
                          wcs=newwcs,
                          copy=False,
                          unit=self.unit,
