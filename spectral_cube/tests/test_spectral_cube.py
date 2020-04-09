@@ -2207,3 +2207,20 @@ def test_varyres_mask(data_vda_beams):
         assert mcube[:5].unmasked_beams == cube[:5].beams
     except ValueError:
         assert np.all(mcube[:5].unmasked_beams == cube[:5].beams)
+
+
+def test_mask_none():
+
+    # Regression test for issues that occur when mask is None
+
+    data = np.arange(24).reshape((2, 3, 4))
+
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
+
+    cube = SpectralCube(data * u.Jy / u.beam, wcs=wcs)
+
+    assert_quantity_allclose(cube[0, :, :],
+                             [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]] * u.Jy / u.beam)
+    assert_quantity_allclose(cube[:, 0, 0],
+                             [0, 12] * u.Jy / u.beam)
