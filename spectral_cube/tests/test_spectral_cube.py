@@ -2224,3 +2224,25 @@ def test_mask_none():
                              [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]] * u.Jy / u.beam)
     assert_quantity_allclose(cube[:, 0, 0],
                              [0, 12] * u.Jy / u.beam)
+
+
+@pytest.mark.parametrize('filename', ['data_vda', 'data_vda_beams'],
+                            indirect=['filename'])
+def test_mask_channels_preserve_mask(filename):
+
+    # Regression test for a bug that caused the mask to not be preserved.
+
+    cube, data = cube_and_raw(filename)
+
+    # Add a mask to the cube
+    mask = np.ones(cube.shape, dtype=bool)
+    mask[:, ::2, ::2] = False
+    cube = cube.with_mask(mask)
+
+    # Mask by channels
+    cube = cube.mask_channels([False, True, False, True])
+
+    # Check final mask is a combination of both
+    expected_mask = mask.copy()
+    expected_mask[::2] = False
+    np.testing.assert_equal(cube.mask.include(), expected_mask)

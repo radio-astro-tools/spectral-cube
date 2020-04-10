@@ -3971,14 +3971,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             raise ValueError("goodchannels must have a length equal to the "
                              "cube's spectral dimension.")
 
-        mask = BooleanArrayMask(goodchannels[:,None,None], self._wcs,
-                                shape=self._data.shape)
+        cube = self.with_mask(goodchannels[:,None,None])
+        cube.goodbeams_mask = np.logical_and(goodchannels, self.goodbeams_mask)
 
-        return self._new_cube_with(mask=mask,
-                                   goodbeams_mask=np.logical_and(goodchannels,
-                                                                 self.goodbeams_mask))
-
-
+        return cube
 
     def spectral_interpolate(self, *args, **kwargs):
         raise AttributeError("VaryingResolutionSpectralCubes can't be "
