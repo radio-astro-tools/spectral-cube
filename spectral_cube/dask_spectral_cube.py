@@ -743,7 +743,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
         pixscale = proj_plane_pixel_area(self.wcs.celestial)**0.5 * u.deg
 
-        convolution_kernel = beam.as_kernel(pixscale)
+        convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
         kernel = convolution_kernel.array.reshape((1,) + convolution_kernel.array.shape)
 
         def convfunc(img):
@@ -754,7 +754,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
         # Rechunk so that there is only one chunk in the image plane
         return self._map_blocks_to_cube(convfunc,
-                                        rechunk=('auto', -1, -1))
+                                        rechunk=('auto', -1, -1)).with_beam(beam)
 
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
@@ -877,3 +877,15 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                                    fill_value=cube.fill_value)
 
         return newcube
+
+    def spectral_interpolate(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally interpolated.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral interpolation.")
+
+    def spectral_smooth(self, *args, **kwargs):
+        raise AttributeError("VaryingResolutionSpectralCubes can't be "
+                             "spectrally smoothed.  Convolve to a "
+                             "common resolution with `convolve_to` before "
+                             "attempting spectral smoothed.")
