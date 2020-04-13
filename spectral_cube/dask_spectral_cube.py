@@ -20,7 +20,7 @@ from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, warn_slow, VarianceWarning, SliceWarning, BeamWarning
+from .utils import cached, warn_slow, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 from .np_compat import allbadtonan
@@ -761,6 +761,106 @@ class DaskSpectralCubeMixin:
 
         return self._new_cube_with(data=data, wcs=newwcs,
                                    mask=BooleanArrayMask(mask, wcs=newwcs))
+
+    def spectral_interpolate(self, spectral_grid,
+                             suppress_smooth_warning=False,
+                             fill_value=None,
+                             update_function=None):
+        """Resample the cube spectrally onto a specific grid
+
+        Parameters
+        ----------
+        spectral_grid : array
+            An array of the spectral positions to regrid onto
+        suppress_smooth_warning : bool
+            If disabled, a warning will be raised when interpolating onto a
+            grid that does not nyquist sample the existing grid.  Disable this
+            if you have already appropriately smoothed the data.
+        fill_value : float
+            Value for extrapolated spectral values that lie outside of
+            the spectral range defined in the original data.  The
+            default is to use the nearest spectral channel in the
+            cube.
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
+
+        Returns
+        -------
+        cube : SpectralCube
+
+        """
+
+        inaxis = self.spectral_axis.to(spectral_grid.unit)
+
+        indiff = np.mean(np.diff(inaxis))
+        outdiff = np.mean(np.diff(spectral_grid))
+
+        reverse_in = indiff < 0
+        reverse_out = outdiff < 0
+
+        # account for reversed axes
+
+        if reverse_in:
+            inaxis = inaxis[::-1]
+            indiff = np.mean(np.diff(inaxis))
+
+        if reverse_out:
+            spectral_grid = spectral_grid[::-1]
+            outdiff = np.mean(np.diff(spectral_grid))
+
+        cubedata = self._get_filled_data(fill=np.nan)
+
+        # insanity checks
+        if indiff < 0 or outdiff < 0:
+            raise ValueError("impossible.")
+
+        assert np.all(np.diff(spectral_grid) > 0)
+        assert np.all(np.diff(inaxis) > 0)
+
+        np.testing.assert_allclose(np.diff(spectral_grid), outdiff,
+                                   err_msg="Output grid must be linear")
+
+        if outdiff > 2 * indiff and not suppress_smooth_warning:
+            warnings.warn("Input grid has too small a spacing. The data should "
+                          "be smoothed prior to resampling.", SmoothingWarning)
+
+        def interp_wrapper(y, args):
+            print(y, args[0], args[1])
+            if y.size == 1:
+                return y
+            else:
+                return np.interp(args[0], args[1], y[:, 0, 0],
+                                 left=fill_value, right=fill_value).reshape((-1, 1, 1))
+
+        if reverse_in:
+            cubedata = cubedata[::-1, :, :]
+
+        cubedata = cubedata.rechunk((-1, 1, 1))
+
+        newcube = cubedata.map_blocks(interp_wrapper,
+                                      args=(spectral_grid.value, inaxis.value),
+                                      chunks=(len(spectral_grid), 1, 1))
+
+        newwcs = self.wcs.deepcopy()
+        newwcs.wcs.crpix[2] = 1
+        newwcs.wcs.crval[2] = spectral_grid[0].value if not reverse_out \
+            else spectral_grid[-1].value
+        newwcs.wcs.cunit[2] = spectral_grid.unit.to_string('FITS')
+        newwcs.wcs.cdelt[2] = outdiff.value if not reverse_out \
+            else -outdiff.value
+        newwcs.wcs.set()
+
+        newbmask = BooleanArrayMask(~np.isnan(newcube), wcs=newwcs)
+
+        if reverse_out:
+            newcube = newcube[::-1, :, :]
+
+        newcube = self._new_cube_with(data=newcube, wcs=newwcs, mask=newbmask,
+                                      meta=self.meta,
+                                      fill_value=self.fill_value)
+
+        return newcube
 
 
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
