@@ -681,6 +681,74 @@ class DaskSpectralCubeMixin:
         else:
             return u.Quantity(data, self.unit, copy=False)
 
+    @warn_slow
+    def downsample_axis(self, factor, axis, estimator=np.nanmean,
+                        truncate=False, use_memmap=True, progressbar=True):
+        """
+        Downsample the cube by averaging over *factor* pixels along an axis.
+        Crops right side if the shape is not a multiple of factor.
+
+        The WCS will be 'downsampled' by the specified factor as well.
+        If the downsample factor is odd, there will be an offset in the WCS.
+
+        There is both an in-memory and a memory-mapped implementation; the
+        default is to use the memory-mapped version.  Technically, the 'large
+        data' warning doesn't apply when using the memory-mapped version, but
+        the warning is still there anyway.
+
+        Parameters
+        ----------
+        myarr : `~numpy.ndarray`
+            The array to downsample
+        factor : int
+            The factor to downsample by
+        axis : int
+            The axis to downsample along
+        estimator : function
+            defaults to mean.  You can downsample by summing or
+            something else if you want a different estimator
+            (e.g., downsampling error: you want to sum & divide by sqrt(n))
+        truncate : bool
+            Whether to truncate the last chunk or average over a smaller number.
+            e.g., if you downsample [1,2,3,4] by a factor of 3, you could get either
+            [2] or [2,4] if truncate is True or False, respectively.
+        """
+
+        data = self._filled_dask_array()
+        mask = da.asarray(self.mask.include())
+
+        if not truncate and data.shape[axis] % factor != 0:
+            padding_shape = list(data.shape)
+            padding_shape[axis] = factor - data.shape[axis] % factor
+            data_padding = da.ones(padding_shape) * np.nan
+            mask_padding = da.zeros(padding_shape, dtype=bool)
+            data = da.concatenate([data, data_padding], axis=axis)
+            mask = da.concatenate([mask, mask_padding], axis=axis).rechunk()
+
+        if data.chunksize[axis] % factor != 0:
+            chunksize = list(data.chunksize)
+            chunksize[axis] = chunksize[axis] + factor - chunksize[axis] % factor
+            data = data.rechunk(chunksize)
+
+        if mask.chunksize[axis] % factor != 0:
+            chunksize = list(mask.chunksize)
+            chunksize[axis] = chunksize[axis] + factor - chunksize[axis] % factor
+            mask = mask.rechunk(chunksize)
+
+        data = da.coarsen(estimator, data, {axis: factor}, trim_excess=truncate)
+        mask = da.coarsen(estimator, mask, {axis: factor}, trim_excess=truncate)
+
+        view = [slice(None, None, factor) if ii == axis else slice(None) for ii in range(self.ndim)]
+        newwcs = wcs_utils.slice_wcs(self.wcs, view, shape=self.shape)
+        newwcs._naxis = list(self.shape)
+
+        # this is an assertion to ensure that the WCS produced is valid
+        # (this is basically a regression test for #442)
+        assert newwcs[:, slice(None), slice(None)]
+        assert len(newwcs._naxis) == 3
+
+        return self._new_cube_with(data=data, wcs=newwcs,
+                                   mask=BooleanArrayMask(mask, wcs=newwcs))
 
 
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
