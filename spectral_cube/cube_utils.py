@@ -8,6 +8,7 @@ except ImportError:
     # python2
     import __builtin__ as builtins
 
+import dask.array as da
 import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
@@ -220,7 +221,10 @@ class SliceIndexer(object):
         self._other = _other
 
     def __getitem__(self, view):
-        return self._func(self._other, view)
+        result = self._func(self._other, view)
+        if isinstance(result, da.Array):
+            result = result.compute()
+        return result
 
     def __iter__(self):
         raise Exception("You need to specify a slice (e.g. ``[:]`` or "

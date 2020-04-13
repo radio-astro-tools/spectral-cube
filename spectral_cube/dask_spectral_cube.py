@@ -144,12 +144,24 @@ class DaskSpectralCubeMixin:
         # to allow different modes.
         return array.compute(scheduler='synchronous')
 
-    def _filled_dask_array(self, fill=None):
-        if self._mask is None:
-            return self._data
+    def _get_filled_data(self, view=(), fill=np.nan, check_endian=None, use_memmap=None):
+
+        if check_endian:
+            if not self._data.dtype.isnative:
+                kind = str(self._data.dtype.kind)
+                sz = str(self._data.dtype.itemsize)
+                dt = '=' + kind + sz
+                data = self._data.astype(dt)
+            else:
+                data = self._data
         else:
-            return da.asarray(self._mask._filled(data=self._data,
-                                                 wcs=self._wcs, fill=fill or self.fill_value,
+            data = self._data
+
+        if self._mask is None:
+            return data[view]
+        else:
+            return da.asarray(self._mask._filled(data=data, view=view,
+                                                 wcs=self._wcs, fill=fill,
                                                  wcs_tolerance=self._wcs_tolerance))
 
     @warn_slow
@@ -159,7 +171,7 @@ class DaskSpectralCubeMixin:
         """
         Return the sum of the cube, optionally over an axis.
         """
-        return self._compute(nansum_allbadtonan(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
+        return self._compute(nansum_allbadtonan(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
     @projection_if_needed
@@ -168,7 +180,7 @@ class DaskSpectralCubeMixin:
         """
         Return the mean of the cube, optionally over an axis.
         """
-        return self._compute(da.nanmean(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
+        return self._compute(da.nanmean(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
     @projection_if_needed
@@ -177,12 +189,12 @@ class DaskSpectralCubeMixin:
         """
         Return the median of the cube, optionally over an axis.
         """
-        data = self._filled_dask_array(fill=np.nan)
+        data = self._get_filled_data(fill=np.nan)
 
         if axis is None:
             return np.nanmedian(data.compute(), **kwargs)
         else:
-            return self._compute(da.nanmedian(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
+            return self._compute(da.nanmedian(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
     @projection_if_needed
@@ -199,7 +211,7 @@ class DaskSpectralCubeMixin:
             Which axis to compute percentiles over
         """
 
-        data = self._filled_dask_array(fill=np.nan)
+        data = self._get_filled_data(fill=np.nan)
 
         if axis is None:
             return np.nanpercentile(data, q, **kwargs)
@@ -208,7 +220,7 @@ class DaskSpectralCubeMixin:
             data = data.rechunk([-1 if i == axis else 'auto' for i in range(3)])
             return self._compute(data.map_blocks(np.nanpercentile, q=q, drop_axis=axis, axis=axis, **kwargs))
 
-        return self._compute(da.nanpercentile(self._filled_dask_array(fill=np.nan), q, axis=axis))
+        return self._compute(da.nanpercentile(self._get_filled_data(fill=np.nan), q, axis=axis))
 
     @warn_slow
     @projection_if_needed
@@ -224,7 +236,7 @@ class DaskSpectralCubeMixin:
             is ``N - ddof``, where ``N`` represents the number of elements.  By
             default ``ddof`` is zero.
         """
-        return self._compute(da.nanstd(self._filled_dask_array(fill=np.nan), axis=axis, ddof=ddof, **kwargs))
+        return self._compute(da.nanstd(self._get_filled_data(fill=np.nan), axis=axis, ddof=ddof, **kwargs))
 
     @warn_slow
     @projection_if_needed
@@ -234,7 +246,7 @@ class DaskSpectralCubeMixin:
         Use astropy's mad_std to compute the standard deviation
         """
 
-        data = self._filled_dask_array(fill=np.nan)
+        data = self._get_filled_data(fill=np.nan)
 
         if axis is None:
             # In this case we have to load the full data - even dask's
@@ -252,7 +264,7 @@ class DaskSpectralCubeMixin:
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
-        return self._compute(da.nanmax(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
+        return self._compute(da.nanmax(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
     @projection_if_needed
@@ -261,7 +273,7 @@ class DaskSpectralCubeMixin:
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
-        return self._compute(da.nanmin(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
+        return self._compute(da.nanmin(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
     @ignore_deprecated_kwargs
@@ -272,7 +284,7 @@ class DaskSpectralCubeMixin:
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask.
         """
-        return self._compute(da.nanargmax(self._filled_dask_array(fill=-np.inf), axis=axis, **kwargs))
+        return self._compute(da.nanargmax(self._get_filled_data(fill=-np.inf), axis=axis, **kwargs))
 
     @warn_slow
     @ignore_deprecated_kwargs
@@ -283,7 +295,7 @@ class DaskSpectralCubeMixin:
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask.
         """
-        return self._compute(da.nanargmin(self._filled_dask_array(fill=np.inf), axis=axis))
+        return self._compute(da.nanargmin(self._get_filled_data(fill=np.inf), axis=axis))
 
     def _map_blocks_to_cube(self, function, additional_arrays=None, rechunk=None, **kwargs):
         """
@@ -291,9 +303,9 @@ class DaskSpectralCubeMixin:
         """
 
         if rechunk is None:
-            data = self._filled_dask_array(fill=np.nan)
+            data = self._get_filled_data(fill=np.nan)
         else:
-            data = self._filled_dask_array(fill=np.nan).rechunk(rechunk)
+            data = self._get_filled_data(fill=np.nan).rechunk(rechunk)
 
         if additional_arrays is None:
             newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
@@ -557,7 +569,7 @@ class DaskSpectralCubeMixin:
                           "SpectralCube.linewidth_sigma() methods instead.",
                           VarianceWarning)
 
-        data = self._filled_dask_array(fill=np.nan).astype(np.float64)
+        data = self._get_filled_data(fill=np.nan).astype(np.float64)
 
         pix_size = self._pix_size_slice(axis)
         pix_cen = self._pix_cen()[axis]
@@ -714,7 +726,7 @@ class DaskSpectralCubeMixin:
             [2] or [2,4] if truncate is True or False, respectively.
         """
 
-        data = self._filled_dask_array()
+        data = self._get_filled_data(fill=self._fill_value)
         mask = da.asarray(self.mask.include())
 
         if not truncate and data.shape[axis] % factor != 0:
@@ -778,7 +790,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         """
         HDU version of self
         """
-        return PrimaryHDU(self._filled_dask_array(), header=self.header)
+        return PrimaryHDU(self._get_filled_data(fill=self._fill_value), header=self.header)
 
     @property
     def hdulist(self):
@@ -843,7 +855,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         HDUList version of self
         """
 
-        hdu = PrimaryHDU(self._filled_dask_array(), header=self.header)
+        hdu = PrimaryHDU(self._get_filled_data(fill=self._fill_value), header=self.header)
 
         from .cube_utils import beams_to_bintable
         # use unmasked beams because, even if the beam is masked out, we should
