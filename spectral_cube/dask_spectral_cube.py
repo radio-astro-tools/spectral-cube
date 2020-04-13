@@ -398,6 +398,11 @@ class DaskSpectralCubeMixin:
         if not SCIPY_INSTALLED:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
+        if float(ksize).is_integer():
+            ksize = int(ksize)
+        else:
+            raise TypeError('ksize should be an integer (got {0})'.format(ksize))
+
         def median_filter_wrapper(img, **kwargs):
             return ndimage.median_filter(img, (ksize, 1, 1), **kwargs)
 
