@@ -184,7 +184,13 @@ class MaskBase(object):
         -----
         This is an internal method used by :class:`SpectralCube`.
         """
-        return data[view][self.include(data=data, wcs=wcs, view=view)]
+
+        mask = self.include(data=data, wcs=wcs, view=view)
+
+        if isinstance(data, da.Array) and not isinstance(mask, da.Array):
+            mask = da.asarray(mask)
+
+        return data[view][mask]
 
     def _filled(self, data, wcs=None, fill=np.nan, view=(), use_memmap=False,
                 **kwargs):

@@ -172,6 +172,14 @@ def data_adv(tmp_path):
 
 
 @pytest.fixture
+def data_adv_simple(tmp_path):
+    d, h = prepare_adv_data()
+    d.flat[:] = np.arange(d.size)
+    fits.writeto(tmp_path / 'adv_simple.fits', d, h)
+    return tmp_path / 'adv_simple.fits'
+
+
+@pytest.fixture
 def data_adv_jybeam_upper(tmp_path):
     d, h = prepare_adv_data()
     h['BUNIT'] = 'JY/BEAM'

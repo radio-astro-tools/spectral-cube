@@ -84,7 +84,7 @@ def projection_if_needed(function):
                                   "dimension cannot produce a Projection "
                                   "quantity (no units or WCS are preserved).",
                                   SliceWarning)
-                    return u.Quantity(out, unit=self.unit)
+                    return out
 
             else:
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
@@ -101,6 +101,42 @@ def projection_if_needed(function):
     return wrapper
 
 
+def ignore_deprecated_kwargs(function):
+
+    @wraps(function)
+    def wrapper(self, *args, **kwargs):
+
+        if 'how' in kwargs:
+            kwargs.pop('how')
+            warnings.warn('The how= argument is ignored by methods of {0} '
+                          'since how the operations are carried out is '
+                          'controlled by the chunking of the underlying dask '
+                          'array.'.format(self.__class__.__name__))
+
+        if 'iterate_rays' in kwargs:
+            kwargs.pop('iterate_rays')
+            warnings.warn('The iterate_rays= argument is ignored by methods of {0} '
+                          'since how the operations are carried out is '
+                          'controlled by the chunking of the underlying dask '
+                          'array.'.format(self.__class__.__name__))
+
+        if 'progressbar' in kwargs:
+            kwargs.pop('progressbar')
+            warnings.warn('The progressbar= argument is ignored by methods of {0} '
+                          'since you can instead use dask\'s mechanism to '
+                          'create one.'.format(self.__class__.__name__))
+
+        if 'update_function' in kwargs:
+            kwargs.pop('update_function')
+            warnings.warn('The update_function= argument is ignored by methods of {0} '
+                          'since you can instead use dask\'s mechanism to '
+                          'create one.'.format(self.__class__.__name__))
+
+        return function(self, *args, **kwargs)
+
+    return wrapper
+
+
 class DaskSpectralCubeMixin:
 
     def _compute(self, array):
@@ -108,48 +144,49 @@ class DaskSpectralCubeMixin:
         # to allow different modes.
         return array.compute(scheduler='synchronous')
 
-    @property
-    def _filled_dask_array(self):
+    def _filled_dask_array(self, fill=None):
         if self._mask is None:
             return self._data
         else:
             return da.asarray(self._mask._filled(data=self._data,
-                                                 wcs=self._wcs, fill=self.fill_value,
-                                                 wcs_tolerance=self._wcs_tolerance))
-
-    @property
-    def _nan_filled_dask_array(self):
-        if self._mask is None:
-            return self._data
-        else:
-            return da.asarray(self._mask._filled(data=self._data,
-                                                 wcs=self._wcs, fill=np.nan,
+                                                 wcs=self._wcs, fill=fill or self.fill_value,
                                                  wcs_tolerance=self._wcs_tolerance))
 
     @warn_slow
     @projection_if_needed
+    @ignore_deprecated_kwargs
     def sum(self, axis=None, **kwargs):
         """
         Return the sum of the cube, optionally over an axis.
         """
-        return self._compute(da.nansum(self._nan_filled_dask_array, axis=axis))
+        return self._compute(nansum_allbadtonan(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
     @projection_if_needed
+    @ignore_deprecated_kwargs
     def mean(self, axis=None, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
         """
-        return self._compute(da.nanmean(self._nan_filled_dask_array, axis=axis))
+        return self._compute(da.nanmean(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
     @projection_if_needed
+    @ignore_deprecated_kwargs
     def median(self, axis=None, **kwargs):
         """
         Return the median of the cube, optionally over an axis.
         """
-        return self._compute(da.nanmedian(self._nan_filled_dask_array, axis=axis))
+        data = self._filled_dask_array(fill=np.nan)
 
+        if axis is None:
+            return np.nanmedian(data.compute(), **kwargs)
+        else:
+            return self._compute(da.nanmedian(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
+
+    @warn_slow
+    @projection_if_needed
+    @ignore_deprecated_kwargs
     def percentile(self, q, axis=None, **kwargs):
         """
         Return percentiles of the data.
@@ -161,10 +198,21 @@ class DaskSpectralCubeMixin:
         axis : int, or None
             Which axis to compute percentiles over
         """
-        return self._compute(da.nanpercentile(self._nan_filled_dask_array, q, axis=axis))
+
+        data = self._filled_dask_array(fill=np.nan)
+
+        if axis is None:
+            return np.nanpercentile(data, q, **kwargs)
+        else:
+            # Rechunk so that there is only one chunk along the desired axis
+            data = data.rechunk([-1 if i == axis else 'auto' for i in range(3)])
+            return self._compute(data.map_blocks(np.nanpercentile, q=q, drop_axis=axis, axis=axis, **kwargs))
+
+        return self._compute(da.nanpercentile(self._filled_dask_array(fill=np.nan), q, axis=axis))
 
     @warn_slow
     @projection_if_needed
+    @ignore_deprecated_kwargs
     def std(self, axis=None, ddof=0, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
@@ -176,43 +224,47 @@ class DaskSpectralCubeMixin:
             is ``N - ddof``, where ``N`` represents the number of elements.  By
             default ``ddof`` is zero.
         """
-        return self._compute(da.nanstd(self._nan_filled_dask_array, axis=axis, ddof=ddof))
+        return self._compute(da.nanstd(self._filled_dask_array(fill=np.nan), axis=axis, ddof=ddof, **kwargs))
 
     @warn_slow
     @projection_if_needed
+    @ignore_deprecated_kwargs
     def mad_std(self, axis=None, **kwargs):
         """
         Use astropy's mad_std to compute the standard deviation
         """
 
-        data = self._nan_filled_dask_array
+        data = self._filled_dask_array(fill=np.nan)
 
         if axis is None:
             # In this case we have to load the full data - even dask's
             # nanmedian doesn't work efficiently over the whole array.
-            return stats.mad_std(data)
+            return stats.mad_std(data, **kwargs)
         else:
             # Rechunk so that there is only one chunk along the desired axis
             data = data.rechunk([-1 if i == axis else 'auto' for i in range(3)])
-            return self._compute(data.map_blocks(stats.mad_std, drop_axis=axis, axis=axis))
+            return self._compute(data.map_blocks(stats.mad_std, drop_axis=axis, axis=axis, **kwargs))
 
     @warn_slow
     @projection_if_needed
+    @ignore_deprecated_kwargs
     def max(self, axis=None, **kwargs):
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
-        return self._compute(da.nanmax(self._nan_filled_dask_array, axis=axis))
+        return self._compute(da.nanmax(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
     @projection_if_needed
+    @ignore_deprecated_kwargs
     def min(self, axis=None, **kwargs):
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
-        return self._compute(da.nanmin(self._nan_filled_dask_array, axis=axis))
+        return self._compute(da.nanmin(self._filled_dask_array(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
+    @ignore_deprecated_kwargs
     def argmax(self, axis=None, **kwargs):
         """
         Return the index of the maximum data value.
@@ -220,9 +272,10 @@ class DaskSpectralCubeMixin:
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask.
         """
-        return self._compute(da.nanargmax(self._nan_filled_dask_array, axis=axis))
+        return self._compute(da.nanargmax(self._filled_dask_array(fill=-np.inf), axis=axis, **kwargs))
 
     @warn_slow
+    @ignore_deprecated_kwargs
     def argmin(self, axis=None, **kwargs):
         """
         Return the index of the minimum data value.
@@ -230,7 +283,7 @@ class DaskSpectralCubeMixin:
         The return value is arbitrary if all pixels along ``axis`` are
         excluded from the mask.
         """
-        return self._compute(da.nanargmin(self._nan_filled_dask_array, axis=axis))
+        return self._compute(da.nanargmin(self._filled_dask_array(fill=np.inf), axis=axis))
 
     def _map_blocks_to_cube(self, function, additional_arrays=None, rechunk=None, **kwargs):
         """
@@ -238,9 +291,9 @@ class DaskSpectralCubeMixin:
         """
 
         if rechunk is None:
-            data = self._nan_filled_dask_array
+            data = self._filled_dask_array(fill=np.nan)
         else:
-            data = self._nan_filled_dask_array.rechunk(rechunk)
+            data = self._filled_dask_array(fill=np.nan).rechunk(rechunk)
 
         if additional_arrays is None:
             newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
@@ -499,7 +552,7 @@ class DaskSpectralCubeMixin:
                           "SpectralCube.linewidth_sigma() methods instead.",
                           VarianceWarning)
 
-        data = self._nan_filled_dask_array.astype(np.float64)
+        data = self._filled_dask_array(fill=np.nan).astype(np.float64)
 
         pix_size = self._pix_size_slice(axis)
         pix_cen = self._pix_cen()[axis]
@@ -510,6 +563,10 @@ class DaskSpectralCubeMixin:
             mom1 = (nansum_allbadtonan(data * pix_size * pix_cen, axis=axis) /
                     nansum_allbadtonan(data * pix_size, axis=axis))
             if order > 1:
+                # insert an axis so it broadcasts properly
+                shp = list(mom1.shape)
+                shp.insert(axis, 1)
+                mom1 = mom1.reshape(shp)
                 out = (nansum_allbadtonan(data * pix_size * (pix_cen - mom1) ** order, axis=axis) /
                        nansum_allbadtonan(data * pix_size, axis=axis))
             else:
@@ -542,6 +599,8 @@ class DaskSpectralCubeMixin:
         meta = {'moment_order': order,
                 'moment_axis': axis}
         meta.update(self._meta)
+
+        print(out.shape)
 
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           header=self._nowcs_header)
@@ -592,6 +651,32 @@ class DaskSpectralCubeMixin:
 
         return tuple(slices)
 
+    def flattened(self, slice=(), weights=None):
+        """
+        Return a slice of the cube giving only the valid data (i.e., removing
+        bad values)
+
+        Parameters
+        ----------
+        slice: 3-tuple
+            A length-3 tuple of view (or any equivalent valid slice of a
+            cube)
+        weights: (optional) np.ndarray
+            An array with the same shape (or slicing abilities/results) as the
+            data cube
+        """
+        data = self._mask._flattened(data=self._data, wcs=self._wcs, view=slice)
+        # Quantity does not work well with lazily evaluated data with an
+        # unkonwn shape (which is the case when doing boolean indexing of arrays)
+        if isinstance(data, da.Array):
+            data = data.compute()
+        if weights is not None:
+            weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
+            return u.Quantity(data * weights, self.unit, copy=False)
+        else:
+            return u.Quantity(data, self.unit, copy=False)
+
+
 
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
@@ -613,14 +698,14 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
                                     meta=cube.meta, fill_value=cube.fill_value,
                                     header=cube.header,
                                     allow_huge_operations=cube.allow_huge_operations,
-                                    beam=cube.beam, wcs_tolerance=cube._wcs_tolerance)
+                                    beam=cube._beam, wcs_tolerance=cube._wcs_tolerance)
 
     @property
     def hdu(self):
         """
         HDU version of self
         """
-        return PrimaryHDU(self._filled_dask_array, header=self.header)
+        return PrimaryHDU(self._filled_dask_array(), header=self.header)
 
     @property
     def hdulist(self):
@@ -685,7 +770,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         HDUList version of self
         """
 
-        hdu = PrimaryHDU(self._filled_dask_array, header=self.header)
+        hdu = PrimaryHDU(self._filled_dask_array(), header=self.header)
 
         from .cube_utils import beams_to_bintable
         # use unmasked beams because, even if the beam is masked out, we should
