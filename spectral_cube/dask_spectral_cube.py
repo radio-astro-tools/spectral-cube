@@ -4,6 +4,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 from __future__ import print_function, absolute_import, division
 
+import inspect
 import warnings
 from functools import wraps
 
@@ -44,14 +45,44 @@ def nansum_allbadtonan(dask_array, axis=None, keepdims=None):
 
 def projection_if_needed(function):
 
+    # check if function defines default projection kwargs
+    parameters = inspect.signature(function).parameters
+
+    if 'projection' in parameters:
+        default_projection = parameters['projection'].default
+    else:
+        default_projection = True
+
+    if 'unit' in parameters:
+        default_unit = parameters['unit'].default
+    else:
+        default_unit = 'self'
+
     @wraps(function)
     def wrapper(self, *args, **kwargs):
+
+        projection = kwargs.get('projection', default_projection)
+        unit = kwargs.get('unit', default_unit)
+
+        if unit == 'self':
+            unit = self.unit
 
         out = function(self, *args, **kwargs)
 
         axis = kwargs.get('axis')
 
-        if axis is not None and self._naxes_dropped(axis) in (1, 2):
+        if isinstance(out, da.Array):
+            out = out.compute()
+
+        if axis is None:
+
+            # return is scalar
+            if unit is not None:
+                return u.Quantity(out, unit=unit)
+            else:
+                return out
+
+        elif projection and axis is not None and self._naxes_dropped(axis) in (1, 2):
 
             meta = {'collapse_axis': axis}
             meta.update(self._meta)
@@ -73,7 +104,7 @@ def projection_if_needed(function):
                     return self._oned_spectrum(value=out,
                                                wcs=new_wcs,
                                                copy=False,
-                                               unit=self.unit,
+                                               unit=unit,
                                                header=header,
                                                meta=meta,
                                                spectral_unit=self._spectral_unit,
@@ -90,16 +121,13 @@ def projection_if_needed(function):
                 new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
                 header = self._nowcs_header
 
-            return Projection(out, copy=False, wcs=new_wcs,
-                              meta=meta,  unit=self.unit,
-                              header=header)
+                return Projection(out, copy=False, wcs=new_wcs,
+                                  meta=meta,  unit=unit,
+                                  header=header)
 
         else:
 
-            if isinstance(out, da.Array):
-                out = out.compute()
-
-            return u.Quantity(out, unit=self.unit)
+            return out
 
     return wrapper
 
@@ -166,6 +194,59 @@ class DaskSpectralCubeMixin:
             return da.asarray(self._mask._filled(data=data, view=view,
                                                  wcs=self._wcs, fill=fill,
                                                  wcs_tolerance=self._wcs_tolerance))
+
+    @projection_if_needed
+    def apply_function(self, function, axis=None, weights=None, unit=None,
+                       projection=False, progressbar=False,
+                       update_function=None, keep_shape=False, **kwargs):
+        """
+        Apply a function to valid data along the specified axis or to the whole
+        cube, optionally using a weight array that is the same shape (or at
+        least can be sliced in the same way)
+
+        Parameters
+        ----------
+        function : function
+            A function that can be applied to a numpy array.  Does not need to
+            be nan-aware
+        axis : 1, 2, 3, or None
+            The axis to operate along.  If None, the return is scalar.
+        weights : (optional) np.ndarray
+            An array with the same shape (or slicing abilities/results) as the
+            data cube
+        unit : (optional) `~astropy.units.Unit`
+            The unit of the output projection or value.  Not all functions
+            should return quantities with units.
+        projection : bool
+            Return a projection if the resulting array is 2D?
+        keep_shape : bool
+            If `True`, the returned object will be the same dimensionality as
+            the cube.
+
+        Returns
+        -------
+        result : :class:`~spectral_cube.lower_dimensional_structures.Projection` or `~astropy.units.Quantity` or float
+            The result depends on the value of ``axis``, ``projection``, and
+            ``unit``.  If ``axis`` is None, the return will be a scalar with or
+            without units.  If axis is an integer, the return will be a
+            :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
+        """
+
+        if axis is None:
+            out = function(self.flattened(), **kwargs)
+            if unit is not None:
+                return u.Quantity(out, unit=unit)
+            else:
+                return out
+
+        data = self._get_filled_data(fill=self._fill_value)
+
+        if keep_shape:
+            newdata = da.apply_along_axis(function, axis, data, shape=(self.shape[axis],))
+        else:
+            newdata = da.apply_along_axis(function, axis, data)
+
+        return newdata
 
     @projection_if_needed
     def apply_numpy_function(self, function, fill=np.nan,
