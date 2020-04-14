@@ -96,6 +96,9 @@ def projection_if_needed(function):
 
         else:
 
+            if isinstance(out, da.Array):
+                out = out.compute()
+
             return u.Quantity(out, unit=self.unit)
 
     return wrapper
@@ -163,6 +166,167 @@ class DaskSpectralCubeMixin:
             return da.asarray(self._mask._filled(data=data, view=view,
                                                  wcs=self._wcs, fill=fill,
                                                  wcs_tolerance=self._wcs_tolerance))
+
+    @projection_if_needed
+    def apply_numpy_function(self, function, fill=np.nan,
+                             reduce=True, how='auto',
+                             projection=False,
+                             unit=None,
+                             check_endian=False,
+                             progressbar=False,
+                             includemask=False,
+                             **kwargs):
+        """
+        Apply a numpy function to the cube
+
+        Parameters
+        ----------
+        function : Numpy ufunc
+            A numpy ufunc to apply to the cube
+        fill : float
+            The fill value to use on the data
+        reduce : bool
+            reduce indicates whether this is a reduce-like operation,
+            that can be accumulated one slice at a time.
+            sum/max/min are like this. argmax/argmin/stddev are not
+        how : cube | slice | ray | auto
+           How to compute the moment. All strategies give the same
+           result, but certain strategies are more efficient depending
+           on data size and layout. Cube/slice/ray iterate over
+           decreasing subsets of the data, to conserve memory.
+           Default='auto'
+        projection : bool
+            Return a :class:`~spectral_cube.lower_dimensional_structures.Projection` if the resulting array is 2D or a
+            OneDProjection if the resulting array is 1D and the sum is over both
+            spatial axes?
+        unit : None or `astropy.units.Unit`
+            The unit to include for the output array.  For example,
+            `SpectralCube.max` calls
+            ``SpectralCube.apply_numpy_function(np.max, unit=self.unit)``,
+            inheriting the unit from the original cube.
+            However, for other numpy functions, e.g. `numpy.argmax`, the return
+            is an index and therefore unitless.
+        check_endian : bool
+            A flag to check the endianness of the data before applying the
+            function.  This is only needed for optimized functions, e.g. those
+            in the `bottleneck <https://pypi.python.org/pypi/Bottleneck>`_ package.
+        progressbar : bool
+            Show a progressbar while iterating over the slices through the
+            cube?
+        kwargs : dict
+            Passed to the numpy function.
+
+        Returns
+        -------
+        result : :class:`~spectral_cube.lower_dimensional_structures.Projection` or `~astropy.units.Quantity` or float
+            The result depends on the value of ``axis``, ``projection``, and
+            ``unit``.  If ``axis`` is None, the return will be a scalar with or
+            without units.  If axis is an integer, the return will be a
+            :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
+        """
+
+        # TODO: add support for includemask
+
+        data = self._get_filled_data(fill=fill, check_endian=check_endian)
+
+        # Numpy ufuncs know how to deal with dask arrays
+        if function.__module__.startswith('numpy'):
+            return function(data, **kwargs)
+        else:
+            # TODO: implement support for bottleneck? or arbitrary ufuncs?
+            raise NotImplementedError()
+
+    def apply_function_parallel_spatial(self,
+                                        function,
+                                        num_cores=None,
+                                        verbose=0,
+                                        use_memmap=True,
+                                        parallel=True,
+                                        **kwargs
+                                       ):
+        """
+        Apply a function in parallel along the spatial dimension.  The
+        function will be performed on data with masked values replaced with the
+        cube's fill value.
+
+        Parameters
+        ----------
+        function : function
+            The function to apply in the spatial dimension.  It must take
+            two arguments: an array representing an image and a boolean array
+            representing the mask.  It may also accept ``**kwargs``.  The
+            function must return an object with the same shape as the input
+            image.
+        num_cores : int or None
+            The number of cores to use if running in parallel
+        verbose : int
+            Verbosity level to pass to joblib
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        parallel : bool
+            If set to ``False``, will force the use of a single core without
+            using ``joblib``.
+        kwargs : dict
+            Passed to ``function``
+        """
+
+        def wrapper(data_slice, **kwargs):
+            # Dask doesn't drop the spectral dimension so this function is a
+            # wrapper to do that automatically.
+            if data_slice.size > 0:
+                return function(data_slice[0], **kwargs).reshape(data_slice.shape)
+            else:
+                return data_slice
+
+        # Rechunk so that there is only one chunk in the image plane
+        return self._map_blocks_to_cube(wrapper,
+                                        rechunk=(1, -1, -1), fill=self._fill_value, **kwargs)
+
+    def apply_function_parallel_spectral(self,
+                                         function,
+                                         num_cores=None,
+                                         verbose=0,
+                                         use_memmap=True,
+                                         parallel=True,
+                                         **kwargs
+                                        ):
+        """
+        Apply a function in parallel along the spectral dimension.  The
+        function will be performed on data with masked values replaced with the
+        cube's fill value.
+
+        Parameters
+        ----------
+        function : function
+            The function to apply in the spectral dimension.  It must take
+            two arguments: an array representing a spectrum and a boolean array
+            representing the mask.  It may also accept ``**kwargs``.  The
+            function must return an object with the same shape as the input
+            spectrum.
+        num_cores : int or None
+            The number of cores to use if running in parallel
+        verbose : int
+            Verbosity level to pass to joblib
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        parallel : bool
+            If set to ``False``, will force the use of a single core without
+            using ``joblib``.
+        kwargs : dict
+            Passed to ``function``
+        """
+
+        data = self._get_filled_data(fill=self._fill_value)
+
+        newdata = da.apply_along_axis(function, 0, data, shape=(self.shape[0],))
+
+        return self._new_cube_with(data=newdata,
+                                   wcs=self.wcs,
+                                   mask=self.mask,
+                                   meta=self.meta,
+                                   fill_value=self.fill_value)
 
     @warn_slow
     @projection_if_needed
@@ -297,19 +461,20 @@ class DaskSpectralCubeMixin:
         """
         return self._compute(da.nanargmin(self._get_filled_data(fill=np.inf), axis=axis))
 
-    def _map_blocks_to_cube(self, function, additional_arrays=None, rechunk=None, **kwargs):
+    def _map_blocks_to_cube(self, function, additional_arrays=None, fill=np.nan, rechunk=None, **kwargs):
         """
         Call dask's map_blocks, returning a new spectral cube.
         """
 
         if rechunk is None:
-            data = self._get_filled_data(fill=np.nan)
+            data = self._get_filled_data(fill=fill)
         else:
-            data = self._get_filled_data(fill=np.nan).rechunk(rechunk)
+            data = self._get_filled_data(fill=fill).rechunk(rechunk)
 
         if additional_arrays is None:
             newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
         else:
+            additional_arrays = [array.rechunk(rechunk) for array in additional_arrays]
             newdata = da.map_blocks(function, data, *additional_arrays, dtype=data.dtype, **kwargs)
 
         # Create final output cube
@@ -617,8 +782,6 @@ class DaskSpectralCubeMixin:
                 'moment_axis': axis}
         meta.update(self._meta)
 
-        print(out.shape)
-
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           header=self._nowcs_header)
 
@@ -826,7 +989,6 @@ class DaskSpectralCubeMixin:
                           "be smoothed prior to resampling.", SmoothingWarning)
 
         def interp_wrapper(y, args):
-            print(y, args[0], args[1])
             if y.size == 1:
                 return y
             else:
