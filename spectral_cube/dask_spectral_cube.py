@@ -581,7 +581,7 @@ class DaskSpectralCubeMixin:
         Call dask's map_blocks, returning a new spectral cube.
         """
 
-            data = self._get_filled_data(fill=fill)
+        data = self._get_filled_data(fill=fill)
 
         if rechunk is not None:
             data = self._get_filled_data(fill=fill).rechunk(rechunk)
