@@ -173,7 +173,10 @@ def _orient(array, wcs):
         raise ValueError("Input WCS should not contain stokes")
 
     t = [types.index('spectral'), nums.index(1), nums.index(0)]
-    result_array = array.transpose(t)
+    if t == [0, 1, 2]:
+        result_array = array
+    else:
+        result_array = array.transpose(t)
 
     result_wcs = wcs.sub([WCSSUB_LONGITUDE, WCSSUB_LATITUDE, WCSSUB_SPECTRAL])
 
