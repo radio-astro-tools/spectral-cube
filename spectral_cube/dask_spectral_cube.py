@@ -1151,9 +1151,12 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
         cube = super().read(*args, **kwargs)
 
-        # FIXME: don't hard-code chunk size but make sure it is efficient for FITS
-        cube._data = da.asarray(cube._data, name=str(uuid.uuid4()), chunks=(50,) + cube._data.shape[1:])
-        print(cube._data.chunksize)
+        if not isinstance(cube._data, da.Array):
+            # FIXME: this should happen in the FITS loader because that is where
+            # the data is guaranteed to be ordered as on disk. We choose the
+            # chunk size so that they are ~100-200Mb.
+            chunk_channels = max(1, int(100 * 1024 ** 2 / 4 / cube._data.shape[1] / cube._data.shape[1]))
+            cube._data = da.asarray(cube._data, name=str(uuid.uuid4()), chunks=(chunk_channels,) + cube._data.shape[1:])
 
         if isinstance(cube, VaryingResolutionSpectralCube):
             return DaskVaryingResolutionSpectralCube(cube._data, cube.wcs, mask=cube.mask,
