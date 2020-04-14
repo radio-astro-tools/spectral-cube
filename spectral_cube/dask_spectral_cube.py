@@ -4,6 +4,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 from __future__ import print_function, absolute_import, division
 
+import uuid
 import inspect
 import warnings
 from functools import wraps
@@ -72,7 +73,7 @@ def projection_if_needed(function):
         axis = kwargs.get('axis')
 
         if isinstance(out, da.Array):
-            out = out.compute()
+            out = self._compute(out)
 
         if axis is None:
 
@@ -168,6 +169,31 @@ def ignore_deprecated_kwargs(function):
     return wrapper
 
 
+class FilledArrayHandler:
+    """
+    """
+
+    def __init__(self, cube, fill=np.nan):
+        self._cube = cube
+        self._fill = fill
+        self.shape = cube._data.shape
+        self.dtype = cube._data.dtype
+        self.ndim = len(self.shape)
+
+    def __getitem__(self, view):
+        result = self._cube._mask._filled(data=self._cube._data,
+                                           view=view,
+                                           wcs=self._cube._wcs,
+                                           fill=self._fill,
+                                           wcs_tolerance=self._cube._wcs_tolerance)
+        if isinstance(result, da.Array):
+            if result.shape == (0, 0, 0):
+                return 0.
+            result = result.compute()
+
+        return result
+
+
 class DaskSpectralCubeMixin:
 
     def _compute(self, array):
@@ -191,9 +217,17 @@ class DaskSpectralCubeMixin:
         if self._mask is None:
             return data[view]
         else:
-            return da.asarray(self._mask._filled(data=data, view=view,
-                                                 wcs=self._wcs, fill=fill,
-                                                 wcs_tolerance=self._wcs_tolerance))
+            return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)
+
+    def get_mask_array(self):
+        """
+        Convert the mask to a boolean numpy array
+        """
+        result = self._mask.include(data=self._data, wcs=self._wcs,
+                                  wcs_tolerance=self._wcs_tolerance)
+        if isinstance(result, da.Array):
+            result = result.compute()
+        return result
 
     @projection_if_needed
     def apply_function(self, function, axis=None, weights=None, unit=None,
@@ -437,7 +471,7 @@ class DaskSpectralCubeMixin:
         data = self._get_filled_data(fill=np.nan)
 
         if axis is None:
-            return np.nanmedian(data.compute(), **kwargs)
+            return np.nanmedian(self._compute(data), **kwargs)
         else:
             return self._compute(da.nanmedian(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
@@ -547,15 +581,15 @@ class DaskSpectralCubeMixin:
         Call dask's map_blocks, returning a new spectral cube.
         """
 
-        if rechunk is None:
             data = self._get_filled_data(fill=fill)
-        else:
+
+        if rechunk is not None:
             data = self._get_filled_data(fill=fill).rechunk(rechunk)
 
         if additional_arrays is None:
             newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
         else:
-            additional_arrays = [array.rechunk(rechunk) for array in additional_arrays]
+            additional_arrays = [array.rechunk(data.chunksize) for array in additional_arrays]
             newdata = da.map_blocks(function, data, *additional_arrays, dtype=data.dtype, **kwargs)
 
         # Create final output cube
@@ -566,6 +600,10 @@ class DaskSpectralCubeMixin:
                                       fill_value=self.fill_value)
 
         return newcube
+
+    # NOTE: the following three methods could also be implemented spaxel by
+    # spaxel using apply_function_parallel_spectral but then take longer (but
+    # less memory)
 
     def sigma_clip_spectrally(self,
                               threshold,
@@ -930,7 +968,7 @@ class DaskSpectralCubeMixin:
         # Quantity does not work well with lazily evaluated data with an
         # unkonwn shape (which is the case when doing boolean indexing of arrays)
         if isinstance(data, da.Array):
-            data = data.compute()
+            data = self._compute(data)
         if weights is not None:
             weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
             return u.Quantity(data * weights, self.unit, copy=False)
@@ -971,7 +1009,7 @@ class DaskSpectralCubeMixin:
         """
 
         data = self._get_filled_data(fill=self._fill_value)
-        mask = da.asarray(self.mask.include())
+        mask = da.asarray(self.mask.include(), name=str(uuid.uuid4()))
 
         if not truncate and data.shape[axis] % factor != 0:
             padding_shape = list(data.shape)
@@ -1113,7 +1151,9 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
         cube = super().read(*args, **kwargs)
 
-        cube._data = da.asarray(cube._data)
+        # FIXME: don't hard-code chunk size but make sure it is efficient for FITS
+        cube._data = da.asarray(cube._data, name=str(uuid.uuid4()), chunks=(50,) + cube._data.shape[1:])
+        print(cube._data.chunksize)
 
         if isinstance(cube, VaryingResolutionSpectralCube):
             return DaskVaryingResolutionSpectralCube(cube._data, cube.wcs, mask=cube.mask,
@@ -1245,6 +1285,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
             A SpectralCube with a single ``beam``
         """
 
+
         if ((self.wcs.celestial.wcs.get_pc()[0,1] != 0 or
              self.wcs.celestial.wcs.get_pc()[1,0] != 0)):
             warnings.warn("The beams will produce convolution kernels "
@@ -1258,43 +1299,43 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
 
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
-        convolution_kernels = []
+        beams = []
         for bm, valid in zip(self.unmasked_beams, self.goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
-                convolution_kernels.append(None)
+                beams.append(None)
                 continue
             elif beam == bm:
                 # Point response when beams are equal, don't convolve.
-                convolution_kernels.append(None)
+                beams.append(None)
                 continue
             try:
-                cb = beam.deconvolve(bm)
-                ck = cb.as_kernel(pixscale)
-                convolution_kernels.append(ck)
+                beams.append(beam.deconvolve(bm))
             except ValueError:
                 if allow_smaller:
-                    convolution_kernels.append(None)
+                    beams.append(None)
                 else:
                     raise
 
-        # We need to pass in the kernels to dask as an original array - however
-        # since each kernel array may be a different size, we hide it inside an
-        # object array.
-        convolution_kernels = da.from_array(np.array(convolution_kernels, dtype=np.object)
-                                            .reshape((len(convolution_kernels), 1, 1)), chunks=(1,-1,-1))
+        # We need to pass in the beams to dask, so we hide them inside an object array
+        # that can then be chunked like the data.
+        beams = da.from_array(np.array(beams, dtype=np.object)
+                              .reshape((len(beams), 1, 1)), chunks=(-1, -1, -1))
 
-        def convfunc(img, kernel):
+        def convfunc(img, beam):
             if img.size > 0:
-                kernel = kernel[0, 0, 0]
-                return convolve(img[0], kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
+                out = np.zeros(img.shape, dtype=img.dtype)
+                for index in range(img.shape[0]):
+                    kernel = beam[index, 0, 0].as_kernel(pixscale)
+                    out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
+                return out
             else:
                 return img
 
         # Rechunk so that there is only one chunk in the image plane
         cube = self._map_blocks_to_cube(convfunc,
-                                        additional_arrays=(convolution_kernels,),
-                                        rechunk=(1, -1, -1))
+                                        additional_arrays=(beams,),
+                                        rechunk=('auto', -1, -1))
 
         # Result above is a DaskVaryingResolutionSpectralCube, convert to DaskSpectralCube
         newcube = DaskSpectralCube(data=cube._data,
