@@ -611,6 +611,7 @@ class TestNumpyMethods(BaseTest):
                 m[y, x] = np.median(ray)
         if use_dask:
             if iterate_rays:
+                self.c = self.d = None
                 pytest.skip()
             else:
                 scmed = self.c.median(axis=0)
@@ -656,6 +657,7 @@ class TestNumpyMethods(BaseTest):
 
         if use_dask:
             if iterate_rays:
+                self.c = self.d = None
                 pytest.skip()
             else:
                 scmed = self.c.median(axis=0)
@@ -685,6 +687,7 @@ class TestNumpyMethods(BaseTest):
 
         if use_dask:
             if iterate_rays:
+                self.c = self.d = None
                 pytest.skip()
             else:
                 scpct = self.c.percentile(pct, axis=0)
@@ -791,8 +794,11 @@ class TestYt():
 
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, request, data_adv, use_dask):
+        print("HERE")
         self.cube = SpectralCube.read(data_adv, use_dask=use_dask)
         # Without any special arguments
+        print(self.cube)
+        print(self.cube.to_yt)
         self.ytc1 = self.cube.to_yt()
         # With spectral factor = 0.5
         self.spectral_factor = 0.5
@@ -800,6 +806,7 @@ class TestYt():
         # With nprocs = 4
         self.nprocs = 4
         self.ytc3 = self.cube.to_yt(nprocs=self.nprocs)
+        print("DONE")
 
     def test_yt(self):
         # The following assertions just make sure everything is

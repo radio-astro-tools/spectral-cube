@@ -15,7 +15,7 @@ import textwrap
 from pathlib import PosixPath
 import six
 from six.moves import zip, range
-import dask.array
+import dask.array as da
 
 import astropy.wcs
 from astropy import units as u
@@ -1318,7 +1318,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         values = self._data[view]
         # Astropy Quantities don't play well with dask arrays with shape ()
-        if isinstance(values, dask.array.core.Array) and values.shape == ():
+        if isinstance(values, da.Array) and values.shape == ():
             values = values.compute()
         return u.Quantity(values, self.unit, copy=False)
 
@@ -2186,8 +2186,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 from yt.frontends.fits.api import FITSDataset
             from yt.units.unit_object import UnitParseError
 
-            hdu = PrimaryHDU(self._get_filled_data(fill=0.),
-                             header=self.wcs.to_header())
+            data = self._get_filled_data(fill=0.)
+
+            if isinstance(data, da.Array):
+                data = data.compute()
+
+            hdu = PrimaryHDU(data, header=self.wcs.to_header())
 
             units = str(self.unit.to_string())
 
