@@ -152,11 +152,11 @@ def test_catch_kernel_with_units(data_522_delta, use_dask):
 
 
 @pytest.mark.skipif('WINDOWS')
-def test_spectral_smooth_4cores(data_522_delta, use_dask):
+def test_spectral_smooth_4cores(data_522_delta):
 
     pytest.importorskip('joblib')
 
-    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
+    cube, data = cube_and_raw(data_522_delta, use_dask=False)
 
     result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=True)
 
