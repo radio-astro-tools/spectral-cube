@@ -181,16 +181,39 @@ class FilledArrayHandler:
         self.ndim = len(self.shape)
 
     def __getitem__(self, view):
+        if self._cube._data[view].size == 0:
+            return 0.
         result = self._cube._mask._filled(data=self._cube._data,
-                                           view=view,
-                                           wcs=self._cube._wcs,
-                                           fill=self._fill,
-                                           wcs_tolerance=self._cube._wcs_tolerance)
+                                          view=view,
+                                          wcs=self._cube._wcs,
+                                          fill=self._fill,
+                                          wcs_tolerance=self._cube._wcs_tolerance)
         if isinstance(result, da.Array):
             if result.shape == (0, 0, 0):
                 return 0.
             result = result.compute()
 
+        return result
+
+
+class MaskHandler:
+    """
+    """
+
+    def __init__(self, cube):
+        self._cube = cube
+        self._mask = cube.mask
+        self.shape = cube._data.shape
+        self.dtype = cube._data.dtype
+        self.ndim = len(self.shape)
+
+    def __getitem__(self, view):
+        if self._cube._data[view].size == 0:
+            return False
+        else:
+            result = self._mask.include(view=view)
+            if isinstance(result, da.Array):
+                result = result.compute()
         return result
 
 
@@ -217,14 +240,14 @@ class DaskSpectralCubeMixin:
         if self._mask is None:
             return data[view]
         else:
-            return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)
+            return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)[view]
 
     def get_mask_array(self):
         """
         Convert the mask to a boolean numpy array
         """
         result = self._mask.include(data=self._data, wcs=self._wcs,
-                                  wcs_tolerance=self._wcs_tolerance)
+                                    wcs_tolerance=self._wcs_tolerance)
         if isinstance(result, da.Array):
             result = result.compute()
         return result
@@ -386,17 +409,20 @@ class DaskSpectralCubeMixin:
             Passed to ``function``
         """
 
-        def wrapper(data_slice, **kwargs):
+        def wrapper(data_slices, **kwargs):
             # Dask doesn't drop the spectral dimension so this function is a
             # wrapper to do that automatically.
-            if data_slice.size > 0:
-                return function(data_slice[0], **kwargs).reshape(data_slice.shape)
+            if data_slices.size > 0:
+                out = np.zeros_like(data_slices)
+                for index in range(data_slices.shape[0]):
+                    out[index] = function(data_slices[index], **kwargs)
+                return out
             else:
-                return data_slice
+                return data_slices
 
         # Rechunk so that there is only one chunk in the image plane
         return self._map_blocks_to_cube(wrapper,
-                                        rechunk=(1, -1, -1), fill=self._fill_value, **kwargs)
+                                        rechunk=('auto', -1, -1), fill=self._fill_value, **kwargs)
 
     def apply_function_parallel_spectral(self,
                                          function,
@@ -434,6 +460,11 @@ class DaskSpectralCubeMixin:
         """
 
         data = self._get_filled_data(fill=self._fill_value)
+
+        # apply_along_axis returns an array with a single chunk, but we need to
+        # rechunk here to avoid issues when writing out the data even if it
+        # results in a poorer performance.
+        data = data.rechunk((-1, 50, 50))
 
         newdata = da.apply_along_axis(function, 0, data, shape=(self.shape[0],))
 
@@ -758,8 +789,7 @@ class DaskSpectralCubeMixin:
         return self._map_blocks_to_cube(median_filter_wrapper,
                                         rechunk=('auto', -1, -1))
 
-    @cached
-    def _pix_cen(self):
+    def _pix_cen(self, axis=None):
         """
         Offset of every pixel from the origin, along each direction
 
@@ -799,7 +829,12 @@ class DaskSpectralCubeMixin:
 
         x, y, spectral = da.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
 
-        return spectral, y, x
+        # NOTE: we need to rechunk these to the actual data size, otherwise
+        # the resulting arrays have a single chunk which can cause issues with
+        # da.store (which writes data out in chunks)
+        return (spectral.rechunk(self._data.chunksize),
+                y.rechunk(self._data.chunksize),
+                x.rechunk(self._data.chunksize))
 
     def moment(self, order=0, axis=0, **kwargs):
         """
@@ -854,22 +889,22 @@ class DaskSpectralCubeMixin:
                           VarianceWarning)
 
         data = self._get_filled_data(fill=np.nan).astype(np.float64)
-
         pix_size = self._pix_size_slice(axis)
         pix_cen = self._pix_cen()[axis]
 
         if order == 0:
             out = nansum_allbadtonan(data * pix_size, axis=axis)
         else:
+            denominator = self._compute(nansum_allbadtonan(data * pix_size, axis=axis))
             mom1 = (nansum_allbadtonan(data * pix_size * pix_cen, axis=axis) /
-                    nansum_allbadtonan(data * pix_size, axis=axis))
+                    denominator)
             if order > 1:
                 # insert an axis so it broadcasts properly
                 shp = list(mom1.shape)
                 shp.insert(axis, 1)
-                mom1 = mom1.reshape(shp)
+                mom1 = self._compute(mom1.reshape(shp))
                 out = (nansum_allbadtonan(data * pix_size * (pix_cen - mom1) ** order, axis=axis) /
-                       nansum_allbadtonan(data * pix_size, axis=axis))
+                       denominator)
             else:
                 out = mom1
 
@@ -1008,6 +1043,9 @@ class DaskSpectralCubeMixin:
             [2] or [2,4] if truncate is True or False, respectively.
         """
 
+        # FIXME: this does not work correctly currently due to
+        # https://github.com/dask/dask/issues/6102
+
         data = self._get_filled_data(fill=self._fill_value)
         mask = da.asarray(self.mask.include(), name=str(uuid.uuid4()))
 
@@ -1019,18 +1057,8 @@ class DaskSpectralCubeMixin:
             data = da.concatenate([data, data_padding], axis=axis)
             mask = da.concatenate([mask, mask_padding], axis=axis).rechunk()
 
-        if data.chunksize[axis] % factor != 0:
-            chunksize = list(data.chunksize)
-            chunksize[axis] = chunksize[axis] + factor - chunksize[axis] % factor
-            data = data.rechunk(chunksize)
-
-        if mask.chunksize[axis] % factor != 0:
-            chunksize = list(mask.chunksize)
-            chunksize[axis] = chunksize[axis] + factor - chunksize[axis] % factor
-            mask = mask.rechunk(chunksize)
-
-        data = da.coarsen(estimator, data, {axis: factor}, trim_excess=truncate)
-        mask = da.coarsen(estimator, mask, {axis: factor}, trim_excess=truncate)
+        data = da.coarsen(estimator, data, {axis: factor}, trim_excess=True)
+        mask = da.coarsen(estimator, mask, {axis: factor}, trim_excess=True)
 
         view = [slice(None, None, factor) if ii == axis else slice(None) for ii in range(self.ndim)]
         newwcs = wcs_utils.slice_wcs(self.wcs, view, shape=self.shape)
@@ -1152,11 +1180,9 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         cube = super().read(*args, **kwargs)
 
         if not isinstance(cube._data, da.Array):
-            # FIXME: this should happen in the FITS loader because that is where
-            # the data is guaranteed to be ordered as on disk. We choose the
-            # chunk size so that they are ~100-200Mb.
-            chunk_channels = max(1, int(100 * 1024 ** 2 / 4 / cube._data.shape[1] / cube._data.shape[1]))
-            cube._data = da.asarray(cube._data, name=str(uuid.uuid4()), chunks=(chunk_channels,) + cube._data.shape[1:])
+            # NOTE: don't be tempted to chunk this image-wise (following the data
+            # storage) because spectral operations will take forever.
+            cube._data = da.asarray(cube._data, name=str(uuid.uuid4()))
 
         if isinstance(cube, VaryingResolutionSpectralCube):
             return DaskVaryingResolutionSpectralCube(cube._data, cube.wcs, mask=cube.mask,
@@ -1361,3 +1387,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
+
+    @property
+    def _mask_include(self):
+        return da.from_array(MaskHandler(self), name='MaskHandler ' + str(uuid.uuid4()), chunks=self._data.chunksize)

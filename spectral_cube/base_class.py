@@ -577,15 +577,22 @@ class MultiBeamMixinClass(object):
         new_beam : radio_beam.Beam
             A new radio beam object that is the average of the unmasked beams
         """
+
+        use_dask = isinstance(self._data, da.Array)
+
         if mask == 'compute':
-            beam_mask = np.any(np.logical_and(self.mask.include(),
-                                              self.goodbeams_mask[:, None, None]),
-                               axis=(1, 2))
+            if use_dask:
             # If we are dealing with dask arrays, we compute the beam
             # mask once and for all since it is used multiple times in its
             # entirity in the remainder of this method.
-            if isinstance(beam_mask, da.Array):
+                beam_mask = da.any(da.logical_and(self._mask_include,
+                                                  self.goodbeams_mask[:, None, None]),
+                                   axis=(1, 2))
                 beam_mask = self._compute(beam_mask)
+        else:
+                beam_mask = np.any(np.logical_and(self.mask.include(),
+                                                  self.goodbeams_mask[:, None, None]),
+                                   axis=(1, 2))
         else:
             if mask.ndim > 1:
                 beam_mask = np.logical_and(mask, self.goodbeams_mask[:, None, None])
