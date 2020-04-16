@@ -901,7 +901,7 @@ def test_with_mask(use_dask):
 
 def test_with_mask_with_boolean_array(use_dask):
     cube = _dummy_cube(use_dask)
-    mask = cube._data > 2
+    mask = np.random.random(cube.shape) > 0.5
     cube2 = cube.with_mask(mask, inherit_mask=False)
     assert isinstance(cube2._mask, BooleanArrayMask)
     assert cube2._mask._wcs is cube._wcs
