@@ -133,42 +133,6 @@ def projection_if_needed(function):
     return wrapper
 
 
-def ignore_deprecated_kwargs(function):
-
-    @wraps(function)
-    def wrapper(self, *args, **kwargs):
-
-        if 'how' in kwargs:
-            kwargs.pop('how')
-            warnings.warn('The how= argument is ignored by methods of {0} '
-                          'since how the operations are carried out is '
-                          'controlled by the chunking of the underlying dask '
-                          'array.'.format(self.__class__.__name__))
-
-        if 'iterate_rays' in kwargs:
-            kwargs.pop('iterate_rays')
-            warnings.warn('The iterate_rays= argument is ignored by methods of {0} '
-                          'since how the operations are carried out is '
-                          'controlled by the chunking of the underlying dask '
-                          'array.'.format(self.__class__.__name__))
-
-        if 'progressbar' in kwargs:
-            kwargs.pop('progressbar')
-            warnings.warn('The progressbar= argument is ignored by methods of {0} '
-                          'since you can instead use dask\'s mechanism to '
-                          'create one.'.format(self.__class__.__name__))
-
-        if 'update_function' in kwargs:
-            kwargs.pop('update_function')
-            warnings.warn('The update_function= argument is ignored by methods of {0} '
-                          'since you can instead use dask\'s mechanism to '
-                          'create one.'.format(self.__class__.__name__))
-
-        return function(self, *args, **kwargs)
-
-    return wrapper
-
-
 class FilledArrayHandler:
     """
     """
@@ -254,8 +218,8 @@ class DaskSpectralCubeMixin:
 
     @projection_if_needed
     def apply_function(self, function, axis=None, weights=None, unit=None,
-                       projection=False, progressbar=False,
-                       update_function=None, keep_shape=False, **kwargs):
+                       projection=False,
+                       keep_shape=False, **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
@@ -289,6 +253,9 @@ class DaskSpectralCubeMixin:
             :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
         """
 
+        # FIXME: add support for keep_shape
+        # FIXME: add support for weights
+
         if axis is None:
             out = function(self.flattened(), **kwargs)
             if unit is not None:
@@ -307,11 +274,9 @@ class DaskSpectralCubeMixin:
 
     @projection_if_needed
     def apply_numpy_function(self, function, fill=np.nan,
-                             reduce=True, how='auto',
                              projection=False,
                              unit=None,
                              check_endian=False,
-                             progressbar=False,
                              includemask=False,
                              **kwargs):
         """
@@ -323,16 +288,6 @@ class DaskSpectralCubeMixin:
             A numpy ufunc to apply to the cube
         fill : float
             The fill value to use on the data
-        reduce : bool
-            reduce indicates whether this is a reduce-like operation,
-            that can be accumulated one slice at a time.
-            sum/max/min are like this. argmax/argmin/stddev are not
-        how : cube | slice | ray | auto
-           How to compute the moment. All strategies give the same
-           result, but certain strategies are more efficient depending
-           on data size and layout. Cube/slice/ray iterate over
-           decreasing subsets of the data, to conserve memory.
-           Default='auto'
         projection : bool
             Return a :class:`~spectral_cube.lower_dimensional_structures.Projection` if the resulting array is 2D or a
             OneDProjection if the resulting array is 1D and the sum is over both
@@ -348,9 +303,6 @@ class DaskSpectralCubeMixin:
             A flag to check the endianness of the data before applying the
             function.  This is only needed for optimized functions, e.g. those
             in the `bottleneck <https://pypi.python.org/pypi/Bottleneck>`_ package.
-        progressbar : bool
-            Show a progressbar while iterating over the slices through the
-            cube?
         kwargs : dict
             Passed to the numpy function.
 
@@ -363,7 +315,7 @@ class DaskSpectralCubeMixin:
             :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
         """
 
-        # TODO: add support for includemask
+        # FIXME: add support for includemask
 
         data = self._get_filled_data(fill=fill, check_endian=check_endian)
 
@@ -376,12 +328,7 @@ class DaskSpectralCubeMixin:
 
     def apply_function_parallel_spatial(self,
                                         function,
-                                        num_cores=None,
-                                        verbose=0,
-                                        use_memmap=True,
-                                        parallel=True,
-                                        **kwargs
-                                       ):
+                                        **kwargs):
         """
         Apply a function in parallel along the spatial dimension.  The
         function will be performed on data with masked values replaced with the
@@ -395,16 +342,6 @@ class DaskSpectralCubeMixin:
             representing the mask.  It may also accept ``**kwargs``.  The
             function must return an object with the same shape as the input
             image.
-        num_cores : int or None
-            The number of cores to use if running in parallel
-        verbose : int
-            Verbosity level to pass to joblib
-        use_memmap : bool
-            If specified, a memory mapped temporary file on disk will be
-            written to rather than storing the intermediate spectra in memory.
-        parallel : bool
-            If set to ``False``, will force the use of a single core without
-            using ``joblib``.
         kwargs : dict
             Passed to ``function``
         """
@@ -426,12 +363,7 @@ class DaskSpectralCubeMixin:
 
     def apply_function_parallel_spectral(self,
                                          function,
-                                         num_cores=None,
-                                         verbose=0,
-                                         use_memmap=True,
-                                         parallel=True,
-                                         **kwargs
-                                        ):
+                                         **kwargs):
         """
         Apply a function in parallel along the spectral dimension.  The
         function will be performed on data with masked values replaced with the
@@ -445,16 +377,6 @@ class DaskSpectralCubeMixin:
             representing the mask.  It may also accept ``**kwargs``.  The
             function must return an object with the same shape as the input
             spectrum.
-        num_cores : int or None
-            The number of cores to use if running in parallel
-        verbose : int
-            Verbosity level to pass to joblib
-        use_memmap : bool
-            If specified, a memory mapped temporary file on disk will be
-            written to rather than storing the intermediate spectra in memory.
-        parallel : bool
-            If set to ``False``, will force the use of a single core without
-            using ``joblib``.
         kwargs : dict
             Passed to ``function``
         """
@@ -476,7 +398,6 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     @projection_if_needed
-    @ignore_deprecated_kwargs
     def sum(self, axis=None, **kwargs):
         """
         Return the sum of the cube, optionally over an axis.
@@ -485,7 +406,6 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     @projection_if_needed
-    @ignore_deprecated_kwargs
     def mean(self, axis=None, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
@@ -494,7 +414,6 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     @projection_if_needed
-    @ignore_deprecated_kwargs
     def median(self, axis=None, **kwargs):
         """
         Return the median of the cube, optionally over an axis.
@@ -508,7 +427,6 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     @projection_if_needed
-    @ignore_deprecated_kwargs
     def percentile(self, q, axis=None, **kwargs):
         """
         Return percentiles of the data.
@@ -534,7 +452,6 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     @projection_if_needed
-    @ignore_deprecated_kwargs
     def std(self, axis=None, ddof=0, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
@@ -550,7 +467,6 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     @projection_if_needed
-    @ignore_deprecated_kwargs
     def mad_std(self, axis=None, **kwargs):
         """
         Use astropy's mad_std to compute the standard deviation
@@ -569,7 +485,6 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     @projection_if_needed
-    @ignore_deprecated_kwargs
     def max(self, axis=None, **kwargs):
         """
         Return the maximum data value of the cube, optionally over an axis.
@@ -578,7 +493,6 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     @projection_if_needed
-    @ignore_deprecated_kwargs
     def min(self, axis=None, **kwargs):
         """
         Return the minimum data value of the cube, optionally over an axis.
@@ -586,7 +500,6 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nanmin(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
     @warn_slow
-    @ignore_deprecated_kwargs
     def argmax(self, axis=None, **kwargs):
         """
         Return the index of the maximum data value.
@@ -597,7 +510,6 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nanargmax(self._get_filled_data(fill=-np.inf), axis=axis, **kwargs))
 
     @warn_slow
-    @ignore_deprecated_kwargs
     def argmin(self, axis=None, **kwargs):
         """
         Return the index of the minimum data value.
@@ -638,8 +550,6 @@ class DaskSpectralCubeMixin:
 
     def sigma_clip_spectrally(self,
                               threshold,
-                              verbose=0,
-                              num_cores=None,
                               **kwargs):
         """
         Run astropy's sigma clipper along the spectral axis, converting all bad
@@ -650,9 +560,6 @@ class DaskSpectralCubeMixin:
         threshold : float
             The ``sigma`` parameter in `astropy.stats.sigma_clip`, which refers
             to the number of sigma above which to cut.
-        verbose : int
-            Verbosity level to pass to joblib
-
         """
 
         def spectral_sigma_clip(array):
@@ -667,8 +574,6 @@ class DaskSpectralCubeMixin:
     def spectral_smooth(self,
                         kernel,
                         convolve=convolution.convolve,
-                        verbose=0,
-                        num_cores=None,
                         **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -683,8 +588,6 @@ class DaskSpectralCubeMixin:
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
-        verbose : int
-            Verbosity level to pass to joblib
         kwargs : dict
             Passed to the convolve function
         """
@@ -704,11 +607,7 @@ class DaskSpectralCubeMixin:
         return self._map_blocks_to_cube(spectral_smooth,
                                         rechunk=(-1, 'auto', 'auto'))
 
-    def spectral_smooth_median(self, ksize,
-                               use_memmap=True,
-                               verbose=0,
-                               num_cores=None,
-                               **kwargs):
+    def spectral_smooth_median(self, ksize, **kwargs):
         """
         Smooth the cube along the spectral dimension
 
@@ -716,8 +615,6 @@ class DaskSpectralCubeMixin:
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
-        verbose : int
-            Verbosity level to pass to joblib
         kwargs : dict
             Not used at the moment.
         """
@@ -737,9 +634,7 @@ class DaskSpectralCubeMixin:
         return self._map_blocks_to_cube(median_filter_wrapper,
                                         rechunk=(-1, 'auto', 'auto'))
 
-    def spatial_smooth(self, kernel,
-                       convolve=convolution.convolve,
-                       **kwargs):
+    def spatial_smooth(self, kernel, convolve=convolution.convolve, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
 
@@ -1003,7 +898,7 @@ class DaskSpectralCubeMixin:
 
     @warn_slow
     def downsample_axis(self, factor, axis, estimator=np.nanmean,
-                        truncate=False, use_memmap=True, progressbar=True):
+                        truncate=False):
         """
         Downsample the cube by averaging over *factor* pixels along an axis.
         Crops right side if the shape is not a multiple of factor.
@@ -1065,8 +960,7 @@ class DaskSpectralCubeMixin:
 
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
-                             fill_value=None,
-                             update_function=None):
+                             fill_value=None):
         """Resample the cube spectrally onto a specific grid
 
         Parameters
@@ -1082,9 +976,6 @@ class DaskSpectralCubeMixin:
             the spectral range defined in the original data.  The
             default is to use the nearest spectral channel in the
             cube.
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
 
         Returns
         -------
@@ -1194,7 +1085,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
     def hdulist(self):
         return HDUList(self.hdu)
 
-    def convolve_to(self, beam, convolve=convolution.convolve, update_function=None, **kwargs):
+    def convolve_to(self, beam, convolve=convolution.convolve, **kwargs):
         """
         Convolve each channel in the cube to a specified beam
 
@@ -1206,9 +1097,6 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
             Keyword arguments to pass to the convolution function
 
@@ -1276,7 +1164,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
 
     def convolve_to(self, beam, allow_smaller=False,
                     convolve=convolution.convolve_fft,
-                    update_function=None, **kwargs):
+                    **kwargs):
         """
         Convolve each channel in the cube to a specified beam
 
@@ -1302,9 +1190,6 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
-        update_function : method
-            Method that is called to update an external progressbar
-            If provided, it disables the default `astropy.utils.console.ProgressBar`
 
         Returns
         -------

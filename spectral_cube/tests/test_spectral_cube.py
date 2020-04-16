@@ -600,7 +600,7 @@ class TestNumpyMethods(BaseTest):
         self.c = self.d = None
 
     @pytest.mark.parametrize('iterate_rays', (True,False))
-    def test_median(self, iterate_rays):
+    def test_median(self, iterate_rays, use_dask):
         # Make sure that medians ignore empty/bad/NaN values
         m = np.empty(self.d.shape[1:])
         for y in range(m.shape[0]):
@@ -609,7 +609,13 @@ class TestNumpyMethods(BaseTest):
                 # the cube mask is for values >0.5
                 ray = ray[ray > 0.5]
                 m[y, x] = np.median(ray)
-        scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
+        if use_dask:
+            if iterate_rays:
+                pytest.skip()
+            else:
+                scmed = self.c.median(axis=0)
+        else:
+            scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
         assert_allclose(scmed, m)
         assert not np.any(np.isnan(scmed.value))
         assert scmed.unit == self.c.unit
@@ -644,27 +650,47 @@ class TestNumpyMethods(BaseTest):
         self.c = self.d = None
 
     @pytest.mark.parametrize('iterate_rays', (True,False))
-    def test_bad_median(self, iterate_rays):
+    def test_bad_median(self, iterate_rays, use_dask):
         # This should have the same result as np.nanmedian, though it might be
         # faster if bottleneck loads
-        scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
+
+        if use_dask:
+            if iterate_rays:
+                pytest.skip()
+            else:
+                scmed = self.c.median(axis=0)
+        else:
+            scmed = self.c.median(axis=0, iterate_rays=iterate_rays)
+
         assert np.count_nonzero(np.isnan(scmed)) == 0
 
         m2 = self.c>0.74*self.c.unit
-        scmed = self.c.with_mask(m2).median(axis=0, iterate_rays=iterate_rays)
+
+        if use_dask:
+            scmed = self.c.with_mask(m2).median(axis=0)
+        else:
+            scmed = self.c.with_mask(m2).median(axis=0, iterate_rays=iterate_rays)
         assert np.count_nonzero(np.isnan(scmed)) == 1
         self.c = self.d = None
 
     @pytest.mark.parametrize(('pct', 'iterate_rays'),
                              (zip((3,25,50,75,97)*2,(True,)*5 + (False,)*5)))
-    def test_percentile(self, pct, iterate_rays):
+    def test_percentile(self, pct, iterate_rays, use_dask):
         m = np.empty(self.d.sum(axis=0).shape)
         for y in range(m.shape[0]):
             for x in range(m.shape[1]):
                 ray = self.d[:, y, x]
                 ray = ray[ray > 0.5]
                 m[y, x] = np.percentile(ray, pct)
-        scpct = self.c.percentile(pct, axis=0, iterate_rays=iterate_rays)
+
+        if use_dask:
+            if iterate_rays:
+                pytest.skip()
+            else:
+                scpct = self.c.percentile(pct, axis=0)
+        else:
+            scpct = self.c.percentile(pct, axis=0, iterate_rays=iterate_rays)
+
         assert_allclose(scpct, m)
         assert not np.any(np.isnan(scpct.value))
         assert scpct.unit == self.c.unit
@@ -678,9 +704,10 @@ class TestNumpyMethods(BaseTest):
         for axis in [None, 0, 1, 2]:
             assert_allclose(getattr(c1, method)(axis=axis),
                             getattr(c2, method)(axis=axis))
-            # check that all these accept progressbar kwargs
-            assert_allclose(getattr(c1, method)(axis=axis, progressbar=True),
-                            getattr(c2, method)(axis=axis, progressbar=True))
+            if not use_dask:
+                # check that all these accept progressbar kwargs
+                assert_allclose(getattr(c1, method)(axis=axis, progressbar=True),
+                                getattr(c2, method)(axis=axis, progressbar=True))
         self.c = self.d = None
 
 
@@ -1194,7 +1221,14 @@ def test_twod_numpy(func, how, axis, filename, use_dask):
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
-    proj = getattr(cube,func)(axis=axis, how=how)
+    if use_dask:
+        if how != 'cube':
+            pytest.skip()
+        else:
+            proj = getattr(cube,func)(axis=axis)
+    else:
+        proj = getattr(cube,func)(axis=axis, how=how)
+
     # data has a redundant 1st axis
     dproj = getattr(data,func)(axis=(0,axis+1)).squeeze()
     assert isinstance(proj, Projection)
@@ -1216,13 +1250,18 @@ def test_twod_numpy_twoaxes(func, how, axis, filename, use_dask):
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
-    if func == 'mean' and axis != (1,2):
-        with warnings.catch_warnings(record=True) as wrn:
-            spec = getattr(cube,func)(axis=axis, how=how)
+    with warnings.catch_warnings(record=True) as wrn:
+        if use_dask:
+            if how != 'cube':
+                pytest.skip()
+            else:
+                spec = getattr(cube,func)(axis=axis)
+        else:
+             spec = getattr(cube,func)(axis=axis, how=how)
 
+    if func == 'mean' and axis != (1,2):
         assert 'Averaging over a spatial and a spectral' in str(wrn[-1].message)
 
-    spec = getattr(cube,func)(axis=axis, how=how)
     # data has a redundant 1st axis
     dspec = getattr(data.squeeze(),func)(axis=axis)
 
@@ -1241,7 +1280,11 @@ def test_preserves_header_values(data_advs, use_dask):
     cube._unit = u.K
     cube._header['OBJECT'] = 'TestName'
 
-    proj = cube.sum(axis=0, how='auto')
+    if use_dask:
+        proj = cube.sum(axis=0)
+    else:
+        proj = cube.sum(axis=0, how='auto')
+
     assert isinstance(proj, Projection)
     assert proj.header['OBJECT'] == 'TestName'
     assert proj.hdu.header['OBJECT'] == 'TestName'
@@ -1260,8 +1303,13 @@ def test_preserves_header_meta_values(data_advs, use_dask):
 
     assert 'too_long_keyword=too_long_information' in cube.header['COMMENT']
 
+    if use_dask:
+        proj = cube.sum(axis=0)
+    else:
+        proj = cube.sum(axis=0, how='auto')
+
     # Checks that the header is preserved when passed to LDOs
-    for ldo in (cube.sum(axis=0, how='auto'), cube[:,0,0]):
+    for ldo in (proj, cube[:,0,0]):
         assert isinstance(ldo, LowerDimensionalObject)
         assert ldo.header['FOO'] == 'bar'
         assert ldo.hdu.header['FOO'] == 'bar'
@@ -1351,7 +1399,14 @@ def test_oned_collapse(how, data_advs, use_dask):
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
-    spec = cube.mean(axis=(1,2), how=how)
+    if use_dask:
+        if how != 'cube':
+            pytest.skip()
+        else:
+            spec = cube.mean(axis=(1,2))
+    else:
+        spec = cube.mean(axis=(1,2), how=how)
+
     assert isinstance(spec, OneDSpectrum)
     # data has a redundant 1st axis
     np.testing.assert_equal(spec.value, data.mean(axis=(0,2,3)))
