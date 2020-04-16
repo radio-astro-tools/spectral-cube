@@ -17,7 +17,6 @@ SPECSYS['GALACTO'] = 'GALACTOC'
 SPECSYS['LGROUP'] = 'LOCALGRP'
 SPECSYS['CMB'] = 'CMBDIPOL'
 SPECSYS['REST'] = 'SOURCE'
-SPECSYS['Unknown'] = 'UKN'
 
 RADESYS = {}
 RADESYS['J2000'] = 'FK5'
@@ -189,7 +188,8 @@ def wcs_casa2astropy(coordsys):
                 header[f'CUNIT{idx}'] = data['unit']
             header[f'PC{idx}_{idx}'] = 1.0
             header[f'RESTFRQ'] = data['restfreq']
-            header[f'SPECSYS'] = SPECSYS[data['system']]
+            if data['system'] in SPECSYS:
+                header[f'SPECSYS'] = SPECSYS[data['system']]
         elif coord_type == 'linear':
             indices = worldmap[index] + 1
             for idx1 in range(len(indices)):

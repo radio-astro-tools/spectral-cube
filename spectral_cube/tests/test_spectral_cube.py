@@ -265,6 +265,8 @@ class TestSpectralCube(object):
     def test_with_spectral_unit(self, filename, masktype, unit, suffix, use_dask):
 
         if suffix == '.image':
+            if not use_dask:
+                pytest.skip()
             import casatasks
             filename = str(filename)
             casatasks.importfits(filename, filename.replace('.fits', '.image'))
@@ -2090,7 +2092,7 @@ def test_smooth_update_function_parallel(capsys, data_adv):
     pytest.importorskip('joblib')
     pytest.importorskip('scipy.ndimage')
 
-    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+    cube, data = cube_and_raw(data_adv, use_dask=False)
 
     # this is potentially a major disaster: if update_function can't be
     # pickled, it won't work, which is why update_function is (very badly)
