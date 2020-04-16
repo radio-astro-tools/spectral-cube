@@ -1174,28 +1174,18 @@ class DaskSpectralCubeMixin:
 
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
+    def __init__(self, data, *args, **kwargs):
+        if not isinstance(data, da.Array):
+            # NOTE: don't be tempted to chunk this image-wise (following the
+            # data storage) because spectral operations will take forever.
+            data = da.asarray(data, name=str(uuid.uuid4()))
+        super().__init__(data, *args, **kwargs)
+
     @classmethod
     def read(cls, *args, **kwargs):
-
-        cube = super().read(*args, **kwargs)
-
-        if not isinstance(cube._data, da.Array):
-            # NOTE: don't be tempted to chunk this image-wise (following the data
-            # storage) because spectral operations will take forever.
-            cube._data = da.asarray(cube._data, name=str(uuid.uuid4()))
-
-        if isinstance(cube, VaryingResolutionSpectralCube):
-            return DaskVaryingResolutionSpectralCube(cube._data, cube.wcs, mask=cube.mask,
-                                                     meta=cube.meta, fill_value=cube.fill_value,
-                                                     header=cube.header,
-                                                     allow_huge_operations=cube.allow_huge_operations,
-                                                     beams=cube.beams, wcs_tolerance=cube._wcs_tolerance)
-        else:
-            return DaskSpectralCube(cube._data, cube.wcs, mask=cube.mask,
-                                    meta=cube.meta, fill_value=cube.fill_value,
-                                    header=cube.header,
-                                    allow_huge_operations=cube.allow_huge_operations,
-                                    beam=cube._beam, wcs_tolerance=cube._wcs_tolerance)
+        if kwargs.get('use_dask') is None:
+            kwargs['use_dask'] = True
+        return super().read(*args, **kwargs)
 
     @property
     def hdu(self):
@@ -1255,6 +1245,13 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
+
+    def __init__(self, data, *args, **kwargs):
+        if not isinstance(data, da.Array):
+            # NOTE: don't be tempted to chunk this image-wise (following the
+            # data storage) because spectral operations will take forever.
+            data = da.asarray(data, name=str(uuid.uuid4()))
+        super().__init__(data, *args, **kwargs)
 
     @property
     def hdu(self):

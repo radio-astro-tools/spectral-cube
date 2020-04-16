@@ -582,14 +582,14 @@ class MultiBeamMixinClass(object):
 
         if mask == 'compute':
             if use_dask:
-            # If we are dealing with dask arrays, we compute the beam
-            # mask once and for all since it is used multiple times in its
-            # entirity in the remainder of this method.
+                # If we are dealing with dask arrays, we compute the beam
+                # mask once and for all since it is used multiple times in its
+                # entirity in the remainder of this method.
                 beam_mask = da.any(da.logical_and(self._mask_include,
                                                   self.goodbeams_mask[:, None, None]),
                                    axis=(1, 2))
                 beam_mask = self._compute(beam_mask)
-        else:
+            else:
                 beam_mask = np.any(np.logical_and(self.mask.include(),
                                                   self.goodbeams_mask[:, None, None]),
                                    axis=(1, 2))

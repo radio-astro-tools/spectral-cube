@@ -117,7 +117,10 @@ class MaskBase(object):
         kwargs are passed to _validate_wcs
         """
         self._validate_wcs(data, wcs, **kwargs)
-        return self._include(data=data, wcs=wcs, view=view)
+        inc = self._include(data=data, wcs=wcs, view=view)
+        if isinstance(inc, da.Array):
+            inc = inc.compute()
+        return inc
 
     # Commented out, but left as a possibility, because including this didn't fix any
     # of the problems we encountered with matplotlib plotting

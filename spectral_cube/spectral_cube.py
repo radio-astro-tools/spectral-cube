@@ -3406,9 +3406,16 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
 
     _oned_spectrum = OneDSpectrum
 
+    def __new__(cls, *args, **kwargs):
+        if kwargs.pop('use_dask', False):
+            from .dask_spectral_cube import DaskSpectralCube
+            return super().__new__(DaskSpectralCube)
+        else:
+            return super().__new__(cls)
+
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, beam=None,
-                 wcs_tolerance=0.0, **kwargs):
+                 wcs_tolerance=0.0, use_dask=False, **kwargs):
 
         super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
                                            meta=meta, fill_value=fill_value,

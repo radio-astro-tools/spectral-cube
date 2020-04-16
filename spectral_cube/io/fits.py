@@ -23,6 +23,7 @@ except ImportError:
     SPECTRAL_CUBE_VERSION = 'dev'
 
 from .. import SpectralCube, StokesSpectralCube, LazyMask, VaryingResolutionSpectralCube
+from ..dask_spectral_cube import DaskSpectralCube, DaskVaryingResolutionSpectralCube
 from ..lower_dimensional_structures import LowerDimensionalObject
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
@@ -134,7 +135,7 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
     return array_hdu.data, array_hdu.header, beam_table
 
 
-def load_fits_cube(input, hdu=0, meta=None, target_cls=None, **kwargs):
+def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
 
@@ -147,6 +148,13 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, **kwargs):
     meta: dict
         Metadata (can be inherited from other readers, for example)
     """
+
+    if use_dask:
+        SC = DaskSpectralCube
+        VRSC = DaskVaryingResolutionSpectralCube
+    else:
+        SC = SpectralCube
+        VRSC = VaryingResolutionSpectralCube
 
     data, header, beam_table = read_data_fits(input, hdu=hdu, **kwargs)
 
@@ -173,9 +181,9 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, **kwargs):
         mask = LazyMask(np.isfinite, data=data, wcs=wcs)
         assert data.shape == mask._data.shape
         if beam_table is None:
-            cube = SpectralCube(data, wcs, mask, meta=meta, header=header)
+            cube = SC(data, wcs, mask, meta=meta, header=header)
         else:
-            cube = VaryingResolutionSpectralCube(data, wcs, mask, meta=meta,
+            cube = VRSC(data, wcs, mask, meta=meta,
                                                  header=header,
                                                  beam_table=beam_table)
 
@@ -194,9 +202,9 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, **kwargs):
             comp_data, comp_wcs = cube_utils._orient(data[component], wcs)
             comp_mask = LazyMask(np.isfinite, data=comp_data, wcs=comp_wcs)
             if beam_table is None:
-                stokes_data[component] = SpectralCube(comp_data, wcs=comp_wcs,
-                                                      mask=comp_mask, meta=meta,
-                                                      header=header)
+                stokes_data[component] = SC(comp_data, wcs=comp_wcs,
+                                            mask=comp_mask, meta=meta,
+                                            header=header)
             else:
                 VRSC = VaryingResolutionSpectralCube
                 stokes_data[component] = VRSC(comp_data, wcs=comp_wcs,

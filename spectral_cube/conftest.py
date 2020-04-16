@@ -29,6 +29,13 @@ else:
     from pytest_astropy_header.display import PYTEST_HEADER_MODULES, TESTED_VERSIONS
 
 
+@pytest.fixture(params=[False, True])
+def use_dask(request):
+    # Fixture to run tests that use this fixture with both SpectralCube and
+    # DaskSpectralCube
+    return request.param
+
+
 def pytest_configure(config):
 
     config.option.astropy_header = True
