@@ -107,10 +107,8 @@ def test_arithmetic_warning(data_vda_jybeam_lower, recwarn):
     assert not cube._is_huge
 
     # make sure the small cube raises a warning about loading into memory
+    with pytest.warns(UserWarning, match='requires loading the entire'):
     cube + 5*cube.unit
-    w = recwarn.list[-1]
-
-    assert 'requires loading the entire cube into' in str(w.message)
 
 
 def test_huge_disallowed(data_vda_jybeam_lower):
@@ -433,12 +431,8 @@ class TestArithmetic(object):
     # gets done first. This is an issue that should be resolved in pytest-openfiles.
 
     @pytest.fixture(autouse=True)
-    def setup_method_fixture(self, request, data_adv):
-        self.c1, self.d1 = cube_and_raw(data_adv)
-
-        # make nice easy-to-test numbers
-        self.d1.flat[:] = np.arange(self.d1.size)
-        self.c1._data.flat[:] = np.arange(self.d1.size)
+    def setup_method_fixture(self, request, data_adv_simple):
+        self.c1, self.d1 = cube_and_raw(data_adv_simple)
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_add(self,value):
