@@ -44,7 +44,7 @@ def test_shift():
                                rtol=1e-4)
 
 
-def test_stacking():
+def test_stacking(use_dask):
     '''
     Use a set of identical Gaussian profiles randomly offset to ensure the
     shifted spectrum has the correct properties.
@@ -58,7 +58,7 @@ def test_stacking():
 
     test_cube, test_vels = \
         generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
-                               shape=shape)
+                               shape=shape, use_dask=use_dask)
 
     true_spectrum = gaussian(test_cube.spectral_axis.value,
                              amp, v0.value, sigma)
@@ -86,7 +86,7 @@ def test_stacking():
                                test_cube.spectral_axis.value)
 
 
-def test_stacking_badvels():
+def test_stacking_badvels(use_dask):
     '''
     Regression test for #493: don't include bad velocities when stacking
     '''
@@ -99,7 +99,7 @@ def test_stacking_badvels():
 
     test_cube, test_vels = \
         generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
-                               shape=shape)
+                               shape=shape, use_dask=use_dask)
 
     true_spectrum = gaussian(test_cube.spectral_axis.value,
                              amp, v0.value, sigma)
@@ -121,7 +121,7 @@ def test_stacking_badvels():
     assert np.std(resid) <= 1e-3
 
 
-def test_stacking_reversed_specaxis():
+def test_stacking_reversed_specaxis(use_dask):
     '''
     Use a set of identical Gaussian profiles randomly offset to ensure the
     shifted spectrum has the correct properties.
@@ -135,7 +135,7 @@ def test_stacking_reversed_specaxis():
 
     test_cube, test_vels = \
         generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
-                               shape=shape, spec_scale=-1. * u.km / u.s)
+                               shape=shape, spec_scale=-1. * u.km / u.s, use_dask=use_dask)
 
     true_spectrum = gaussian(test_cube.spectral_axis.value,
                              amp, v0.value, sigma)
@@ -157,7 +157,7 @@ def test_stacking_reversed_specaxis():
                                test_cube.spectral_axis.value)
 
 
-def test_stacking_wpadding():
+def test_stacking_wpadding(use_dask):
     '''
     Use a set of identical Gaussian profiles randomly offset to ensure the
     shifted spectrum has the correct properties.
@@ -170,7 +170,7 @@ def test_stacking_wpadding():
     shape = (100, 25, 25)
 
     test_cube, test_vels = \
-        generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise)
+        generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise, use_dask=use_dask)
 
     # Stack the spectra in the cube
     stacked = \
@@ -200,7 +200,7 @@ def test_stacking_wpadding():
         or (stacked.size == stack_shape + 1)
 
 
-def test_padding_direction():
+def test_padding_direction(use_dask):
 
     amp = 1.
     sigma = 8.
@@ -212,7 +212,7 @@ def test_padding_direction():
 
     test_cube, test_vels = \
         generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise,
-                               vel_surface=vel_surface)
+                               vel_surface=vel_surface, use_dask=use_dask)
 
     # Stack the spectra in the cube
     stacked = \
@@ -235,7 +235,7 @@ def test_padding_direction():
     assert np.std(resid) <= 1e-3
 
 
-def test_stacking_woffset():
+def test_stacking_woffset(use_dask):
     '''
     Use a set of identical Gaussian profiles randomly offset to ensure the
     shifted spectrum has the correct properties.
@@ -252,7 +252,7 @@ def test_stacking_woffset():
 
     test_cube, test_vels = \
         generate_gaussian_cube(shape=shape, amp=amp, sigma=sigma, noise=noise,
-                               v0=v0.value)
+                               v0=v0.value, use_dask=use_dask)
 
     # Stack the spectra in the cube
     stacked = \
@@ -276,7 +276,7 @@ def test_stacking_woffset():
         or (stacked.size == stack_shape + 1)
 
 
-def test_stacking_shape_failure():
+def test_stacking_shape_failure(use_dask):
     """
     Regression test for #466
     """
@@ -288,7 +288,7 @@ def test_stacking_shape_failure():
 
     test_cube, test_vels = \
         generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
-                               shape=shape)
+                               shape=shape, use_dask=use_dask)
 
     # make the test_vels array the wrong shape
     test_vels = test_vels[:-1, :-1]
@@ -315,7 +315,7 @@ def test_stacking_shape_failure():
     assert "velocity_surface contains no finite values" in exc.value.args[0]
 
 
-def test_stacking_noisy():
+def test_stacking_noisy(use_dask):
 
     # Test stack w/ S/N of 0.2
     # This is cheating b/c we know the correct peak velocities, but serves as
@@ -329,7 +329,7 @@ def test_stacking_noisy():
 
     test_cube, test_vels = \
         generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
-                               shape=shape)
+                               shape=shape, use_dask=use_dask)
 
     # Stack the spectra in the cube
     stacked = \

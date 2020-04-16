@@ -3484,6 +3484,13 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
     _oned_spectrum = VaryingResolutionOneDSpectrum
 
+    def __new__(cls, *args, **kwargs):
+        if kwargs.pop('use_dask', False):
+            from .dask_spectral_cube import DaskVaryingResolutionSpectralCube
+            return super().__new__(DaskVaryingResolutionSpectralCube)
+        else:
+            return super().__new__(cls)
+
     def __init__(self, *args, **kwargs):
         """
         Create a SpectralCube with an associated beam table.  The new

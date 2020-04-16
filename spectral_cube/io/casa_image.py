@@ -39,13 +39,19 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
 
 
 def load_casa_image(filename, skipdata=False, memmap=True,
-                    skipvalid=False, skipcs=False, target_cls=None, **kwargs):
+                    skipvalid=False, skipcs=False, target_cls=None, use_dask=None, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can
     be suppressed. The object holds the coordsys object from the image in
     memory.
     """
+
+    if use_dask is None:
+        use_dask = True
+
+    if not use_dask:
+        raise ValueError("Loading CASA datasets is not possible with use_dask=False")
 
     from .core import StringWrapper
     if isinstance(filename, StringWrapper):

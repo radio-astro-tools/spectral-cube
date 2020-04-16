@@ -84,6 +84,8 @@ NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
 
 
 def cube_and_raw(filename, use_dask=None):
+    if use_dask is None:
+        raise ValueError('use_dask should be explicitly set')
     p = path(filename)
     if os.path.splitext(p)[-1] == '.fits':
         with fits.open(p) as hdulist:
@@ -115,7 +117,7 @@ def test_arithmetic_warning(data_vda_jybeam_lower, recwarn, use_dask):
 
 def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
 
-    cube, data = cube_and_raw(data_vda_jybeam_lower)
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
 
     assert not cube._is_huge
 
@@ -159,7 +161,7 @@ class BaseTestMultiBeams(object):
 
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, request, data_adv_beams, use_dask):
-        c, d = cube_and_raw(data_adv_beams)
+        c, d = cube_and_raw(data_adv_beams, use_dask=use_dask)
         mask = BooleanArrayMask(d > 0.5, c._wcs)
         c._mask = mask
         self.c = c
@@ -191,7 +193,7 @@ class TestSpectralCube(object):
                              indirect=['filename'])
     def test_consistent_transposition(self, filename, trans, use_dask):
         """data() should return velocity axis first, then world 1, then world 0"""
-        c, d = cube_and_raw(filename)
+        c, d = cube_and_raw(filename, use_dask=use_dask)
         expected = np.squeeze(d.transpose(trans))
         assert_allclose(c._get_filled_data(), expected)
 
@@ -236,7 +238,7 @@ class TestSpectralCube(object):
                              np.s_[:2, :3, ::2]))
     def test_world_transposes_3d(self, view, data_adv, data_vad, use_dask):
         c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
-        c2, d2 = cube_and_raw(data_vad)
+        c2, d2 = cube_and_raw(data_vad, use_dask=use_dask)
 
         for w1, w2 in zip(c1.world[view], c2.world[view]):
             assert_allclose(w1, w2)
@@ -248,7 +250,7 @@ class TestSpectralCube(object):
                               np.s_[:], ))
     def test_world_transposes_4d(self, view, data_advs, data_sadv, use_dask):
         c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
-        c2, d2 = cube_and_raw(data_sadv)
+        c2, d2 = cube_and_raw(data_sadv, use_dask=use_dask)
         for w1, w2 in zip(c1.world[view], c2.world[view]):
             assert_allclose(w1, w2)
 
@@ -268,7 +270,7 @@ class TestSpectralCube(object):
             casatasks.importfits(filename, filename.replace('.fits', '.image'))
             filename = filename.replace('.fits', '.image')
 
-        cube, data = cube_and_raw(filename)
+        cube, data = cube_and_raw(filename, use_dask=use_dask)
         cube_freq = cube.with_spectral_unit(unit)
 
         if masktype == BooleanArrayMask:
@@ -336,7 +338,7 @@ class TestSpectralCube(object):
 
     @pytest.mark.parametrize(('filename', 'trans'), translist, indirect=['filename'])
     def test_getitem(self, filename, trans, use_dask):
-        c, d = cube_and_raw(filename)
+        c, d = cube_and_raw(filename, use_dask=use_dask)
 
         expected = np.squeeze(d.transpose(trans))
 
@@ -380,7 +382,7 @@ class TestSpectralCube(object):
 
     @pytest.mark.parametrize(('filename', 'trans'), translist_vrsc, indirect=['filename'])
     def test_getitem_vrsc(self, filename, trans, use_dask):
-        c, d = cube_and_raw(filename)
+        c, d = cube_and_raw(filename, use_dask=use_dask)
 
         expected = np.squeeze(d.transpose(trans))
 
@@ -425,7 +427,7 @@ class TestArithmetic(object):
 
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, request, data_adv_simple, use_dask):
-        self.c1, self.d1 = cube_and_raw(data_adv_simple)
+        self.c1, self.d1 = cube_and_raw(data_adv_simple, use_dask=use_dask)
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_add(self,value):
@@ -1277,7 +1279,7 @@ def test_preserves_header_meta_values(data_advs, use_dask):
 def test_oned_numpy(func, filename, use_dask):
     # Check that a numpy function returns an appropriate spectrum
 
-    cube, data = cube_and_raw(filename)
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
@@ -1924,15 +1926,26 @@ def test_mad_std_params(data_adv, use_dask):
     result = np.array([[0.3099842, 0.2576232],
                        [0.1822292, 0.6101782],
                        [0.2819404, 0.2084236]])
-    np.testing.assert_almost_equal(cube.mad_std(axis=0, how='cube').value, result)
-    np.testing.assert_almost_equal(cube.mad_std(axis=0, how='ray').value, result)
 
-    cube.mad_std(axis=0, how='slice')
-    cube.mad_std(axis=1, how='slice')
-    cube.mad_std(axis=(1,2), how='ray')
+    if use_dask:
 
-    # stats.mad_std(data, axis=(1,2))
-    np.testing.assert_almost_equal(cube.mad_std(axis=0, how='ray').value, result)
+        np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
+        cube.mad_std(axis=1)
+        cube.mad_std(axis=(1, 2))
+
+    else:
+
+        np.testing.assert_almost_equal(cube.mad_std(axis=0, how='cube').value, result)
+        np.testing.assert_almost_equal(cube.mad_std(axis=0, how='ray').value, result)
+
+        with pytest.raises(NotImplementedError):
+            cube.mad_std(axis=0, how='slice')
+
+        with pytest.raises(NotImplementedError):
+            cube.mad_std(axis=1, how='slice')
+
+        with pytest.raises(NotImplementedError):
+            cube.mad_std(axis=(1,2), how='ray')
 
 
 def test_caching(data_adv, use_dask):

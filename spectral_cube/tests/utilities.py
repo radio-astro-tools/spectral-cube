@@ -58,7 +58,8 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
                            beamfwhm=3 * u.arcsec,
                            v0=None,
                            vel_surface=None,
-                           seed=247825498):
+                           seed=247825498,
+                           use_dask=None):
     '''
     Generate a SpectralCube with Gaussian profiles.
 
@@ -106,7 +107,7 @@ def generate_gaussian_cube(shape=(100, 25, 25), sigma=8., amp=1.,
     test_hdu = generate_hdu(test_cube, pixel_scale, spec_scale, beamfwhm,
                             spec_inds[0] + v0)
 
-    spec_cube = SpectralCube.read(test_hdu)
+    spec_cube = SpectralCube.read(test_hdu, use_dask=use_dask)
 
     mean_positions = mean_positions * spec_scale.unit
 

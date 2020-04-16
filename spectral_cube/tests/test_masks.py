@@ -238,8 +238,8 @@ def filename(request):
                           ('data_vad'),
                           ('data_adv'),
                           ), indirect=['filename'])
-def test_mask_spectral_unit(filename):
-    cube, data = cube_and_raw(filename)
+def test_mask_spectral_unit(filename, use_dask):
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
     mask = BooleanArrayMask(data, cube._wcs)
     mask_freq = mask.with_spectral_unit(u.Hz)
 

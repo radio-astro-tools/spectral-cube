@@ -13,7 +13,9 @@ from astropy import units as u
 
 from ..io.casa_masks import make_casa_mask
 from ..io.casa_wcs import wcs_casa2astropy
-from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
+from .. import StokesSpectralCube, BooleanArrayMask
+
+from .. import SpectralCube, VaryingResolutionSpectralCube
 
 try:
     import casatools
@@ -99,6 +101,15 @@ def test_casa_read_basic(memmap, bigendian):
     assert_quantity_allclose(cube.unmasked_data[0, 0, :],
                              [1, 1, 1, 1, 1] * u.Jy / u.beam)
     assert_quantity_allclose(cube.unmasked_data[0, 1, 2], 1 * u.Jy / u.beam)
+
+
+def test_casa_read_basic_nodask():
+
+    # For CASA datasets, the default when reading cubes is use_dask=True.
+    # Here we check that setting use_dask=False explicitly raises an error.
+
+    with pytest.raises(ValueError, match='Loading CASA datasets is not possible with use_dask=False'):
+        SpectralCube.read(os.path.join(DATA, 'basic.image'), use_dask=False)
 
 
 def test_casa_read_basic_nomask():

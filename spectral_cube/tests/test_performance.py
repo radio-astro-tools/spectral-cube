@@ -1,5 +1,7 @@
 """
-Performance-related tests to make sure we don't use more memory than we should
+Performance-related tests to make sure we don't use more memory than we should.
+
+For now this is just for SpectralCube, not DaskSpectralCube.
 """
 
 from __future__ import print_function, absolute_import, division
@@ -38,6 +40,7 @@ def find_base_nbytes(obj):
         return find_base_nbytes(obj.base)
     return obj.nbytes
 
+
 def test_pix_size():
     mc_hdu = moment_cube()
     sc = SpectralCube.read(mc_hdu)
@@ -51,6 +54,7 @@ def test_pix_size():
     assert find_base_nbytes(y) == sc.shape[1]*sc.shape[2]*bytes_per_pix
     assert find_base_nbytes(x) == sc.shape[1]*sc.shape[2]*bytes_per_pix
 
+
 def test_compare_pix_size_approaches():
     mc_hdu = moment_cube()
     sc = SpectralCube.read(mc_hdu)
@@ -61,6 +65,7 @@ def test_compare_pix_size_approaches():
     assert_allclose(sa, s)
     assert_allclose(ya, y)
     assert_allclose(xa, x)
+
 
 def test_pix_cen():
     mc_hdu = moment_cube()
@@ -74,6 +79,7 @@ def test_pix_cen():
     assert find_base_nbytes(s) == sc.shape[0]*bytes_per_pix
     assert find_base_nbytes(y) == sc.shape[1]*sc.shape[2]*bytes_per_pix
     assert find_base_nbytes(x) == sc.shape[1]*sc.shape[2]*bytes_per_pix
+
 
 @pytest.mark.skipif('True')
 def test_parallel_performance_smoothing():
@@ -128,7 +134,7 @@ def test_parallel_performance_smoothing():
             print(rslt)
 
 # python 2.7 doesn't have tracemalloc
-@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK or WINDOWS')
+@pytest.mark.skipif('True or not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK or WINDOWS')
 def test_memory_usage():
     """
     Make sure that using memmaps happens where expected, for the most part, and
@@ -160,6 +166,7 @@ def test_memory_usage():
 
     # writing the cube should not occupy any more memory
     snap3 = tracemalloc.take_snapshot()
+
     diff = snap3.compare_to(snap2, 'lineno')
     assert sum([dd.size_diff for dd in diff])*u.B < 100*u.kB
 

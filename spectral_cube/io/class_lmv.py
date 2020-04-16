@@ -259,11 +259,11 @@ def read_lmv_tofits(fileobj):
     hdu = fits.PrimaryHDU(data=data, header=Header)
     return hdu
 
-def load_lmv_cube(fileobj, target_cls=None):
+def load_lmv_cube(fileobj, target_cls=None, use_dask=None):
     hdu = read_lmv_tofits(fileobj)
     meta = {'filename':fileobj.name}
 
-    return load_fits_cube(hdu, meta=meta)
+    return load_fits_cube(hdu, meta=meta, use_dask=use_dask)
 
 def _read_byte(f):
     '''Read a single byte (from idlsave)'''

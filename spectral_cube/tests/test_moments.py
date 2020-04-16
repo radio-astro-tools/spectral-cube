@@ -89,9 +89,9 @@ else:
 
 
 @axis_order
-def test_strategies_consistent(axis, order):
+def test_strategies_consistent(axis, order, use_dask):
     mc_hdu = moment_cube()
-    sc = SpectralCube.read(mc_hdu)
+    sc = SpectralCube.read(mc_hdu, use_dask=use_dask)
 
     cwise = sc.moment(axis=axis, order=order, how='cube')
     swise = sc.moment(axis=axis, order=order, how='slice')
@@ -105,17 +105,17 @@ def test_strategies_consistent(axis, order):
                           for o in [0, 1, 2]
                           for a in [0, 1, 2]
                           for h in ['cube', 'slice', 'auto', 'ray']])
-def test_reference(order, axis, how):
+def test_reference(order, axis, how, use_dask):
     mc_hdu = moment_cube()
-    sc = SpectralCube.read(mc_hdu)
+    sc = SpectralCube.read(mc_hdu, use_dask=use_dask)
     mom_sc = sc.moment(order=order, axis=axis, how=how)
     assert_allclose(mom_sc, MOMENTS[order][axis])
 
 
 @axis_order
-def test_consistent_mask_handling(axis, order):
+def test_consistent_mask_handling(axis, order, use_dask):
     mc_hdu = moment_cube()
-    sc = SpectralCube.read(mc_hdu)
+    sc = SpectralCube.read(mc_hdu, use_dask=use_dask)
     sc._mask = sc > 4*u.K
 
     cwise = sc.moment(axis=axis, order=order, how='cube')
@@ -125,18 +125,18 @@ def test_consistent_mask_handling(axis, order):
     assert_allclose(cwise, rwise, rtol=rtol, atol=atol)
 
 
-def test_convenience_methods():
+def test_convenience_methods(use_dask):
     mc_hdu = moment_cube()
-    sc = SpectralCube.read(mc_hdu)
+    sc = SpectralCube.read(mc_hdu, use_dask=use_dask)
 
     assert_allclose(sc.moment0(axis=0), MOMENTS[0][0])
     assert_allclose(sc.moment1(axis=2), MOMENTS[1][2])
     assert_allclose(sc.moment2(axis=1), MOMENTS[2][1])
 
 
-def test_linewidth():
+def test_linewidth(use_dask):
     mc_hdu = moment_cube()
-    sc = SpectralCube.read(mc_hdu)
+    sc = SpectralCube.read(mc_hdu, use_dask=use_dask)
 
     with warnings.catch_warnings(record=True) as w:
         assert_allclose(sc.moment2(), MOMENTS[2][0])
@@ -155,9 +155,9 @@ def test_linewidth():
     assert len(w) == 0
 
 
-def test_preserve_unit():
+def test_preserve_unit(use_dask):
     mc_hdu = moment_cube()
-    sc = SpectralCube.read(mc_hdu)
+    sc = SpectralCube.read(mc_hdu, use_dask=use_dask)
     sc_kms = sc.with_spectral_unit(u.km/u.s)
     m0 = sc_kms.moment0(axis=0)
     m1 = sc_kms.moment1(axis=0)
@@ -165,12 +165,13 @@ def test_preserve_unit():
     assert_allclose(m0, MOMENTS[0][0].to(u.K*u.km/u.s))
     assert_allclose(m1, MOMENTS[1][0].to(u.km/u.s))
 
-def test_with_flux_unit():
+
+def test_with_flux_unit(use_dask):
     """
     As of Issue 184, redundant with test_reference
     """
     mc_hdu = moment_cube()
-    sc = SpectralCube.read(mc_hdu)
+    sc = SpectralCube.read(mc_hdu, use_dask=use_dask)
     sc._unit = u.K
     sc_kms = sc.with_spectral_unit(u.km/u.s)
     m0 = sc_kms.moment0(axis=0)
@@ -182,19 +183,20 @@ def test_with_flux_unit():
     assert_allclose(m0, MOMENTS[0][0].to(u.K*u.km/u.s))
     assert_allclose(m1, MOMENTS[1][0].to(u.km/u.s))
 
+
 @pytest.mark.parametrize(('order', 'axis', 'how'),
                          [(o, a, h)
                           for o in [0, 1, 2]
                           for a in [0, 1, 2]
                           for h in ['cube', 'slice', 'auto', 'ray']])
-def test_how_withfluxunit(order, axis, how):
+def test_how_withfluxunit(order, axis, how, use_dask):
     """
     Regression test for issue 180
     As of issue 184, this is mostly redundant with test_reference except that
     it (kind of) checks that units are set
     """
     mc_hdu = moment_cube()
-    sc = SpectralCube.read(mc_hdu)
+    sc = SpectralCube.read(mc_hdu, use_dask=use_dask)
     sc._unit = u.K
     mom_sc = sc.moment(order=order, axis=axis, how=how)
 
