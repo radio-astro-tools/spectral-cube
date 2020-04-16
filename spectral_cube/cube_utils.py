@@ -229,6 +229,18 @@ class SliceIndexer(object):
             result = result.compute()
         return result
 
+    @property
+    def size(self):
+        return self._other.size
+
+    @property
+    def ndim(self):
+        return self._other.ndim
+
+    @property
+    def shape(self):
+        return self._other.shape
+
     def __iter__(self):
         raise Exception("You need to specify a slice (e.g. ``[:]`` or "
                         "``[0,:,:]`` in order to access this property.")
