@@ -755,11 +755,14 @@ class DaskSpectralCubeMixin:
             Passed to the convolve function
         """
 
-        kernel = kernel.array.reshape((1,) + kernel.array.shape)
+        kernel = kernel.array
 
-        def convolve_wrapper(img, **kwargs):
+        def convolve_wrapper(img):
             if img.size > 0:
-                return convolve(img, kernel, normalize_kernel=True, **kwargs)
+                out = np.zeros(img.shape, dtype=img.dtype)
+                for index in range(img.shape[0]):
+                    out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
+                return out
             else:
                 return img
 
