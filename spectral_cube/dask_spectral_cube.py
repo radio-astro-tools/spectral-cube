@@ -1175,11 +1175,16 @@ class DaskSpectralCubeMixin:
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
     def __init__(self, data, *args, **kwargs):
+        unit = None
         if not isinstance(data, da.Array):
+            if isinstance(data, u.Quantity):
+                data, unit = data.value, data.unit
             # NOTE: don't be tempted to chunk this image-wise (following the
             # data storage) because spectral operations will take forever.
             data = da.asarray(data, name=str(uuid.uuid4()))
         super().__init__(data, *args, **kwargs)
+        if self._unit is None and unit is not None:
+            self._unit = unit
 
     @classmethod
     def read(cls, *args, **kwargs):
@@ -1247,11 +1252,16 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
 
     def __init__(self, data, *args, **kwargs):
+        unit = None
         if not isinstance(data, da.Array):
+            if isinstance(data, u.Quantity):
+                data, unit = data.value, data.unit
             # NOTE: don't be tempted to chunk this image-wise (following the
             # data storage) because spectral operations will take forever.
             data = da.asarray(data, name=str(uuid.uuid4()))
         super().__init__(data, *args, **kwargs)
+        if self._unit is None and unit is not None:
+            self._unit = unit
 
     @property
     def hdu(self):
@@ -1352,8 +1362,11 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
             if img.size > 0:
                 out = np.zeros(img.shape, dtype=img.dtype)
                 for index in range(img.shape[0]):
-                    kernel = beam[index, 0, 0].as_kernel(pixscale)
-                    out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
+                    if beam[index, 0, 0] is None:
+                        out[index] = img[index]
+                    else:
+                        kernel = beam[index, 0, 0].as_kernel(pixscale)
+                        out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
                 return out
             else:
                 return img
