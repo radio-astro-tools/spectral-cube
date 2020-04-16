@@ -9,11 +9,10 @@ from six.moves import zip
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
+import dask.array as da
+
 from astropy.wcs import InconsistentAxisTypesError
 from astropy.io import fits
-
-import dask
-from dask import array as da
 
 from . import wcs_utils
 from .utils import WCSWarning
@@ -117,10 +116,7 @@ class MaskBase(object):
         kwargs are passed to _validate_wcs
         """
         self._validate_wcs(data, wcs, **kwargs)
-        inc = self._include(data=data, wcs=wcs, view=view)
-        if isinstance(inc, da.Array):
-            inc = inc.compute()
-        return inc
+        return self._include(data=data, wcs=wcs, view=view)
 
     # Commented out, but left as a possibility, because including this didn't fix any
     # of the problems we encountered with matplotlib plotting
@@ -164,11 +160,10 @@ class MaskBase(object):
         return self._exclude(data=data, wcs=wcs, view=view)
 
     def _exclude(self, data=None, wcs=None, view=()):
-        inc = self._include(data=data, wcs=wcs, view=view)
-        return da.logical_not(inc)
+        return np.logical_not(self._include(data=data, wcs=wcs, view=view))
 
     def any(self):
-        return da.any(self.exclude())
+        return np.any(self.exclude())
 
     def _flattened(self, data, wcs=None, view=()):
         """
@@ -193,11 +188,12 @@ class MaskBase(object):
 
         mask = self.include(data=data, wcs=wcs, view=view)
 
+        # Workaround for https://github.com/dask/dask/issues/6089
         if isinstance(data, da.Array) and not isinstance(mask, da.Array):
             mask = da.asarray(mask, name=str(uuid.uuid4()))
 
-        if not isinstance(data, da.Array) and isinstance(mask, da.Array):
-            mask = mask.compute()
+        # if not isinstance(data, da.Array) and isinstance(mask, da.Array):
+        #     mask = mask.compute()
 
         return data[view][mask]
 
@@ -240,10 +236,8 @@ class MaskBase(object):
             sliced_data = data[view].astype(dt)
 
         ex = self.exclude(data=data, wcs=wcs, view=view, **kwargs)
-        if isinstance(sliced_data, da.Array):
-            return da.ma.filled(da.ma.masked_array(sliced_data, mask=ex), fill)
-        else:
-            return np.ma.masked_array(sliced_data, mask=ex).filled(fill)
+
+        return np.ma.masked_array(sliced_data, mask=ex).filled(fill)
 
     def __and__(self, other):
         return CompositeMask(self, other, operation='and')
@@ -341,7 +335,7 @@ class InvertedMask(MaskBase):
         return self._mask.shape
 
     def _include(self, data=None, wcs=None, view=()):
-        return da.logical_not(self._mask.include(data=data, wcs=wcs, view=view))
+        return np.logical_not(self._mask.include(data=data, wcs=wcs, view=view))
 
     def __getitem__(self, view):
         return InvertedMask(self._mask[view])
@@ -423,11 +417,11 @@ class CompositeMask(MaskBase):
         result_mask_1 = self._mask1._include(data=data, wcs=wcs, view=view)
         result_mask_2 = self._mask2._include(data=data, wcs=wcs, view=view)
         if self._operation == 'and':
-            return da.bitwise_and(result_mask_1, result_mask_2)
+            return np.bitwise_and(result_mask_1, result_mask_2)
         elif self._operation == 'or':
-            return da.bitwise_or(result_mask_1, result_mask_2)
+            return np.bitwise_or(result_mask_1, result_mask_2)
         elif self._operation == 'xor':
-            return da.bitwise_xor(result_mask_1, result_mask_2)
+            return np.bitwise_xor(result_mask_1, result_mask_2)
         else:
             raise ValueError("Operation '{0}' not supported".format(self._operation))
 
@@ -490,7 +484,32 @@ class BooleanArrayMask(MaskBase):
         """
         # If a shape is given, we may need to broadcast to that shape
         if shape is not None:
-            self._mask = da.broadcast_to(da.asarray(mask, name=str(uuid.uuid4())), self.shape)
+            # these are dimensions that simply don't exist
+            n_empty_dims = (len(self._shape)-mask.ndim)
+
+            # these are dimensions of shape 1 that would be squeezed away but may
+            # be needed to make the arrays broadcastable (e.g., mask[:,None,None])
+            # Need to add n_empty_dims because (1,2) will broadcast to (3,1,2)
+            # and there will be no extra dims.
+            extra_dims = [ii
+                          for ii,(sh1,sh2) in
+                          enumerate(zip((0,)*n_empty_dims + mask.shape, shape))
+                          if sh1 == 1 and sh1 != sh2]
+
+
+            # Add the [None,]'s and the nonexistant
+            n_extra_dims =  n_empty_dims + len(extra_dims)
+
+            # if there are no extra dims, we're done, the original shape is fine
+            if n_extra_dims > 0:
+                strides = (0,)*n_empty_dims + mask.strides
+
+                for ed in extra_dims:
+                    # all of the [None,] dims should have 0 stride
+                    assert strides[ed] == 0,"Stride shape failure"
+
+                self._mask = as_strided(mask, shape=self.shape,
+                                        strides=strides)
 
         # Make sure the mask shape matches the Mask object shape
         assert self._mask.shape == self.shape,"Shape initialization failure"
@@ -525,12 +544,12 @@ class BooleanArrayMask(MaskBase):
                     self._wcs_whitelist.add(new_wcs)
 
     def _include(self, data=None, wcs=None, view=()):
-        result_mask = da.asarray(self._mask[view], name=str(uuid.uuid4()))
-        return result_mask if self._mask_type == 'include' else da.logical_not(result_mask)
+        result_mask = self._mask[view]
+        return result_mask if self._mask_type == 'include' else np.logical_not(result_mask)
 
     def _exclude(self, data=None, wcs=None, view=()):
-        result_mask = da.asarray(self._mask[view], name=str(uuid.uuid4()))
-        return result_mask if self._mask_type == 'exclude' else da.logical_not(result_mask)
+        result_mask = self._mask[view]
+        return result_mask if self._mask_type == 'exclude' else np.logical_not(result_mask)
 
     @property
     def shape(self):
@@ -620,9 +639,7 @@ class LazyMask(MaskBase):
 
     def _include(self, data=None, wcs=None, view=()):
         self._validate_wcs(data, wcs)
-        result = da.from_delayed(dask.delayed(self._function)(self._data[view]),
-                                 shape=self._data[view].shape, dtype=bool)
-        return result
+        return self._function(self._data[view])
 
     def __getitem__(self, view):
         return LazyMask(self._function, data=self._data[view],
