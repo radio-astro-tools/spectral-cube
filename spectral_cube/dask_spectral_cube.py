@@ -755,20 +755,10 @@ class DaskSpectralCubeMixin:
             Passed to the convolve function
         """
 
-        kernel = kernel.array
+        def convolve_wrapper(data, kernel=None, **kwargs):
+            return convolve(data, kernel, normalize_kernel=True, **kwargs)
 
-        def convolve_wrapper(img):
-            if img.size > 0:
-                out = np.zeros(img.shape, dtype=img.dtype)
-                for index in range(img.shape[0]):
-                    out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
-                return out
-            else:
-                return img
-
-        # Rechunk so that there is only one chunk in the image plane
-        return self._map_blocks_to_cube(convolve_wrapper,
-                                        rechunk=('auto', -1, -1))
+        return self.apply_function_parallel_spatial(convolve_wrapper, kernel=kernel.array)
 
     def spatial_smooth_median(self, ksize, **kwargs):
         """
@@ -785,12 +775,10 @@ class DaskSpectralCubeMixin:
         if not SCIPY_INSTALLED:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        def median_filter_wrapper(img, **kwargs):
-            return ndimage.median_filter(img, (1, ksize, ksize), **kwargs)
+        def median_filter_wrapper(data, ksize=None):
+            return ndimage.median_filter(data, ksize)
 
-        # Rechunk so that there is only one chunk in the image plane
-        return self._map_blocks_to_cube(median_filter_wrapper,
-                                        rechunk=('auto', -1, -1))
+        return self.apply_function_parallel_spatial(median_filter_wrapper, ksize=ksize)
 
     def _pix_cen(self, axis=None):
         """
