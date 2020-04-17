@@ -15,6 +15,8 @@ from astropy.io.fits import PrimaryHDU, HDUList
 from astropy.wcs.utils import proj_plane_pixel_area
 
 import numpy as np
+
+import dask
 import dask.array as da
 
 from astropy import stats
@@ -1122,6 +1124,10 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
             kwargs['use_dask'] = True
         return super().read(*args, **kwargs)
 
+    def write(self, *args, **kwargs):
+        with dask.config.set(scheduler=self._scheduler):
+            super().write(*args, **kwargs)
+
     @property
     def hdu(self):
         """
@@ -1189,6 +1195,10 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         super().__init__(data, *args, **kwargs)
         if self._unit is None and unit is not None:
             self._unit = unit
+
+    def write(self, *args, **kwargs):
+        with dask.config.set(scheduler=self._scheduler):
+            super().write(*args, **kwargs)
 
     @property
     def hdu(self):
