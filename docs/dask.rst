@@ -22,7 +22,7 @@ To read in a FITS cube using the dask-enabled classes, you can do::
 Most of the properties and methods that normally work with :class:`~spectral_cube.SpectralCube`
 should continue to work with :class:`~spectral_cube.DaskSpectralCube`.
 
-By default, we use the ``'synchronous'`` `dask scheduler <https://docs.dask.org/en/latest/scheduler-overview.html>`
+By default, we use the ``'synchronous'`` `dask scheduler <https://docs.dask.org/en/latest/scheduler-overview.html>`_
 which means that calculations are run in a single process/thread. However, you can control this using the
 :meth:`~spectral_cube.DaskSpectralCube.use_dask_scheduler` method:
 
@@ -33,3 +33,15 @@ as a context manager, to temporarily change the scheduler::
 
     >>> with cube.use_dask_scheduler('threads'):  # doctest: +IGNORE_OUTPUT
     ...     cube.max()
+
+If you want to see a progress bar when carrying out calculations, you can make use of the
+`dask.diagnostics <https://docs.dask.org/en/latest/diagnostics-local.html>`_ sub-package - run
+the following at the start of your script/session, and all subsequent calculations will display
+a progress bar:
+
+    >>> from dask.diagnostics import ProgressBar
+    >>> pbar = ProgressBar()
+    >>> pbar.register()
+    >>> cube.max()  # doctest: +IGNORE_OUTPUT
+    [########################################] | 100% Completed |  0.1s
+    <Quantity 0.01936739 Jy / beam>

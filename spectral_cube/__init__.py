@@ -21,6 +21,7 @@ from .io import fits
 del fits
 
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube',
+           'DaskSpectralCube', 'DaskVaryingResolutionSpectralCube',
             'StokesSpectralCube', 'CompositeMask', 'LazyComparisonMask',
             'LazyMask', 'BooleanArrayMask', 'FunctionMask',
             'OneDSpectrum', 'Projection', 'Slice'
