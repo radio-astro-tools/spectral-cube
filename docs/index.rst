@@ -72,6 +72,7 @@ Getting started
    continuum_subtraction.rst
    examples.rst
    visualization.rst
+   dask.rst
 
 There is also an `astropy tutorial
 <http://learn.astropy.org/rst-tutorials/FITS-cubes.html>`__ on accessing and
