@@ -22,7 +22,7 @@ from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, warn_slow, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning
+from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 from .np_compat import allbadtonan
@@ -42,6 +42,17 @@ def nansum_allbadtonan(dask_array, axis=None, keepdims=None):
                         allbadtonan(np.nansum),
                         axis=axis,
                         dtype=dask_array.dtype)
+
+
+def ignore_warnings(function):
+
+    @wraps(function)
+    def wrapper(self, *args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            return function(self, *args, **kwargs)
+
+    return wrapper
 
 
 def projection_if_needed(function):
@@ -187,6 +198,15 @@ class DaskSpectralCubeMixin:
         # For now, always default to serial mode, but we could then expand this
         # to allow different modes.
         return array.compute(scheduler='synchronous')
+
+    def _warn_slow(self, funcname):
+        if self._is_huge and not self.allow_huge_operations:
+            raise ValueError("This function ({0}) requires loading the entire "
+                             "cube into memory, and the cube is large ({1} "
+                             "pixels), so by default we disable this operation. "
+                             "To enable the operation, set "
+                             "`cube.allow_huge_operations=True` and try again."
+                             .format(funcname, self.size))
 
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=None, use_memmap=None):
 
@@ -396,24 +416,24 @@ class DaskSpectralCubeMixin:
                                    meta=self.meta,
                                    fill_value=self.fill_value)
 
-    @warn_slow
     @projection_if_needed
+    @ignore_warnings
     def sum(self, axis=None, **kwargs):
         """
         Return the sum of the cube, optionally over an axis.
         """
         return self._compute(nansum_allbadtonan(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
-    @warn_slow
     @projection_if_needed
+    @ignore_warnings
     def mean(self, axis=None, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
         """
         return self._compute(da.nanmean(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
-    @warn_slow
     @projection_if_needed
+    @ignore_warnings
     def median(self, axis=None, **kwargs):
         """
         Return the median of the cube, optionally over an axis.
@@ -421,12 +441,13 @@ class DaskSpectralCubeMixin:
         data = self._get_filled_data(fill=np.nan)
 
         if axis is None:
+            self._warn_slow('median')
             return np.nanmedian(self._compute(data), **kwargs)
         else:
             return self._compute(da.nanmedian(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
-    @warn_slow
     @projection_if_needed
+    @ignore_warnings
     def percentile(self, q, axis=None, **kwargs):
         """
         Return percentiles of the data.
@@ -442,6 +463,7 @@ class DaskSpectralCubeMixin:
         data = self._get_filled_data(fill=np.nan)
 
         if axis is None:
+            self._warn_slow('percentile')
             return np.nanpercentile(data, q, **kwargs)
         else:
             # Rechunk so that there is only one chunk along the desired axis
@@ -450,8 +472,8 @@ class DaskSpectralCubeMixin:
 
         return self._compute(da.nanpercentile(self._get_filled_data(fill=np.nan), q, axis=axis))
 
-    @warn_slow
     @projection_if_needed
+    @ignore_warnings
     def std(self, axis=None, ddof=0, **kwargs):
         """
         Return the mean of the cube, optionally over an axis.
@@ -465,8 +487,8 @@ class DaskSpectralCubeMixin:
         """
         return self._compute(da.nanstd(self._get_filled_data(fill=np.nan), axis=axis, ddof=ddof, **kwargs))
 
-    @warn_slow
     @projection_if_needed
+    @ignore_warnings
     def mad_std(self, axis=None, **kwargs):
         """
         Use astropy's mad_std to compute the standard deviation
@@ -477,29 +499,30 @@ class DaskSpectralCubeMixin:
         if axis is None:
             # In this case we have to load the full data - even dask's
             # nanmedian doesn't work efficiently over the whole array.
+            self._warn_slow('mad_std')
             return stats.mad_std(data, **kwargs)
         else:
             # Rechunk so that there is only one chunk along the desired axis
             data = data.rechunk([-1 if i == axis else 'auto' for i in range(3)])
             return self._compute(data.map_blocks(stats.mad_std, drop_axis=axis, axis=axis, **kwargs))
 
-    @warn_slow
     @projection_if_needed
+    @ignore_warnings
     def max(self, axis=None, **kwargs):
         """
         Return the maximum data value of the cube, optionally over an axis.
         """
         return self._compute(da.nanmax(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
-    @warn_slow
     @projection_if_needed
+    @ignore_warnings
     def min(self, axis=None, **kwargs):
         """
         Return the minimum data value of the cube, optionally over an axis.
         """
         return self._compute(da.nanmin(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
-    @warn_slow
+    @ignore_warnings
     def argmax(self, axis=None, **kwargs):
         """
         Return the index of the maximum data value.
@@ -509,7 +532,7 @@ class DaskSpectralCubeMixin:
         """
         return self._compute(da.nanargmax(self._get_filled_data(fill=-np.inf), axis=axis, **kwargs))
 
-    @warn_slow
+    @ignore_warnings
     def argmin(self, axis=None, **kwargs):
         """
         Return the index of the minimum data value.
@@ -896,7 +919,6 @@ class DaskSpectralCubeMixin:
         else:
             return u.Quantity(data, self.unit, copy=False)
 
-    @warn_slow
     def downsample_axis(self, factor, axis, estimator=np.nanmean,
                         truncate=False):
         """

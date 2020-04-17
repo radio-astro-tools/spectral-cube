@@ -134,8 +134,12 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
         with pytest.raises(ValueError, match='entire cube into memory'):
             cube + 5*cube.unit
 
-        with pytest.raises(ValueError, match='entire cube into memory'):
-            cube.max(how='cube')
+        if use_dask:
+            with pytest.raises(ValueError, match='entire cube into memory'):
+                cube.mad_std()
+        else:
+            with pytest.raises(ValueError, match='entire cube into memory'):
+                cube.max(how='cube')
 
         cube.allow_huge_operations = True
 
