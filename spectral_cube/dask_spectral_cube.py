@@ -161,17 +161,12 @@ class FilledArrayHandler:
     def __getitem__(self, view):
         if self._cube._data[view].size == 0:
             return 0.
-        result = self._cube._mask._filled(data=self._cube._data,
-                                          view=view,
-                                          wcs=self._cube._wcs,
-                                          fill=self._fill,
-                                          wcs_tolerance=self._cube._wcs_tolerance)
-        if isinstance(result, da.Array):
-            if result.shape == (0, 0, 0):
-                return 0.
-            result = result.compute()
-
-        return result
+        else:
+            return self._cube._mask._filled(data=self._cube._data,
+                                            view=view,
+                                            wcs=self._cube._wcs,
+                                            fill=self._fill,
+                                            wcs_tolerance=self._cube._wcs_tolerance)
 
 
 class MaskHandler:
@@ -278,11 +273,8 @@ class DaskSpectralCubeMixin:
         """
         Convert the mask to a boolean numpy array
         """
-        result = self._mask.include(data=self._data, wcs=self._wcs,
-                                    wcs_tolerance=self._wcs_tolerance)
-        if isinstance(result, da.Array):
-            result = result.compute()
-        return result
+        return self._mask.include(data=self._data, wcs=self._wcs,
+                                  wcs_tolerance=self._wcs_tolerance)
 
     @projection_if_needed
     def apply_function(self, function, axis=None, weights=None, unit=None,
@@ -517,8 +509,6 @@ class DaskSpectralCubeMixin:
             # Rechunk so that there is only one chunk along the desired axis
             data = data.rechunk([-1 if i == axis else 'auto' for i in range(3)])
             return self._compute(data.map_blocks(np.nanpercentile, q=q, drop_axis=axis, axis=axis, **kwargs))
-
-        return self._compute(da.nanpercentile(self._get_filled_data(fill=np.nan), q, axis=axis))
 
     @projection_if_needed
     @ignore_warnings
