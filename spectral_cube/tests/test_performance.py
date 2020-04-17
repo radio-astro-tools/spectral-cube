@@ -134,7 +134,7 @@ def test_parallel_performance_smoothing():
             print(rslt)
 
 # python 2.7 doesn't have tracemalloc
-@pytest.mark.skipif('True or not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK or WINDOWS')
+@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK or WINDOWS')
 def test_memory_usage():
     """
     Make sure that using memmaps happens where expected, for the most part, and
