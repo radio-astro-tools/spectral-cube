@@ -8,6 +8,7 @@ import uuid
 import inspect
 import warnings
 from functools import wraps
+from contextlib import contextmanager
 
 from astropy import units as u
 from astropy.io.fits import PrimaryHDU, HDUList
@@ -194,10 +195,35 @@ class MaskHandler:
 
 class DaskSpectralCubeMixin:
 
+    _scheduler = 'synchronous'
+
+    def use_dask_scheduler(self, scheduler):
+        """
+        Set the dask scheduler to use.
+
+        Can be used as a function or a context manager.
+        """
+        original_scheduler = self._scheduler
+        self._scheduler = scheduler
+
+        class SchedulerHandler:
+
+            def __init__(self, cube, original_scheduler):
+                self.cube = cube
+                self.original_scheduler = original_scheduler
+
+            def __enter__(self):
+                pass
+
+            def __exit__(self, *args):
+                self.cube._scheduler = self.original_scheduler
+
+        return SchedulerHandler(self, original_scheduler)
+
     def _compute(self, array):
         # For now, always default to serial mode, but we could then expand this
         # to allow different modes.
-        return array.compute(scheduler='synchronous')
+        return array.compute(scheduler=self._scheduler)
 
     def _warn_slow(self, funcname):
         if self._is_huge and not self.allow_huge_operations:
