@@ -206,7 +206,6 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
                                             mask=comp_mask, meta=meta,
                                             header=header)
             else:
-                VRSC = VaryingResolutionSpectralCube
                 stokes_data[component] = VRSC(comp_data, wcs=comp_wcs,
                                               mask=comp_mask, meta=meta,
                                               header=header,

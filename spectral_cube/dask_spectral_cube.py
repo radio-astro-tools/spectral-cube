@@ -1196,6 +1196,12 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         if self._unit is None and unit is not None:
             self._unit = unit
 
+    @classmethod
+    def read(cls, *args, **kwargs):
+        if kwargs.get('use_dask') is None:
+            kwargs['use_dask'] = True
+        return super().read(*args, **kwargs)
+
     def write(self, *args, **kwargs):
         with dask.config.set(scheduler=self._scheduler):
             super().write(*args, **kwargs)
