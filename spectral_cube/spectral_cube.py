@@ -2189,7 +2189,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             data = self._get_filled_data(fill=0.)
 
             if isinstance(data, da.Array):
-                data = data.compute()
+                # Note that >f8 can cause issues with yt, and for visualization
+                # we don't really need the full 64-bit of floating point
+                # precision, so we cast to float32.
+                data = data.astype(np.float32).compute()
 
             hdu = PrimaryHDU(data, header=self.wcs.to_header())
 
