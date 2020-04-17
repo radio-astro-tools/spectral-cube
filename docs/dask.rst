@@ -34,6 +34,14 @@ as a context manager, to temporarily change the scheduler::
     >>> with cube.use_dask_scheduler('threads'):  # doctest: +IGNORE_OUTPUT
     ...     cube.max()
 
+You can optionally specify the number of threads/processes to use with ``num_workers``::
+
+    >>> with cube.use_dask_scheduler('threads', num_threads=4):  # doctest: +IGNORE_OUTPUT
+    ...     cube.max()
+
+If you don't specify the number of threads, this could end up being quite large, and cause you to
+run out of memory for certain operations.
+
 If you want to see a progress bar when carrying out calculations, you can make use of the
 `dask.diagnostics <https://docs.dask.org/en/latest/diagnostics-local.html>`_ sub-package - run
 the following at the start of your script/session, and all subsequent calculations will display

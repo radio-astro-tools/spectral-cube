@@ -197,35 +197,55 @@ class MaskHandler:
 
 class DaskSpectralCubeMixin:
 
-    _scheduler = 'synchronous'
+    _scheduler_kwargs = {'scheduler': 'synchronous'}
 
-    def use_dask_scheduler(self, scheduler):
+    def _new_cube_with(self, *args, **kwargs):
+        # The scheduler should be preserved for cubes produced as a result
+        # of this one.
+        new_cube = super()._new_cube_with(*args, **kwargs)
+        new_cube._scheduler_kwargs = self._scheduler_kwargs
+        return new_cube
+
+    def use_dask_scheduler(self, scheduler, num_workers=None):
         """
         Set the dask scheduler to use.
 
         Can be used as a function or a context manager.
+
+        Parameters
+        ----------
+        scheduler : str
+            Any valid dask scheduler. See https://docs.dask.org/en/latest/scheduler-overview.html
+            for an overview of available schedulers.
+        num_workers : int
+            Number of workers to use for the 'threads' and 'processes' schedulers.
         """
-        original_scheduler = self._scheduler
-        self._scheduler = scheduler
+
+        original_scheduler_kwargs = self._scheduler_kwargs
+        self._scheduler_kwargs = {'scheduler': scheduler}
+        if num_workers is not None:
+            self._scheduler_kwargs['num_workers'] = num_workers
+
+        self._num_workers = num_workers
 
         class SchedulerHandler:
 
-            def __init__(self, cube, original_scheduler):
+            def __init__(self, cube, original_scheduler_kwargs):
                 self.cube = cube
-                self.original_scheduler = original_scheduler
+                self.original_scheduler_kwargs = original_scheduler_kwargs
 
             def __enter__(self):
                 pass
 
             def __exit__(self, *args):
-                self.cube._scheduler = self.original_scheduler
+                self.cube._scheduler_kwargs = self.original_scheduler_kwargs
 
-        return SchedulerHandler(self, original_scheduler)
+        return SchedulerHandler(self, original_scheduler_kwargs)
 
     def _compute(self, array):
         # For now, always default to serial mode, but we could then expand this
         # to allow different modes.
-        return array.compute(scheduler=self._scheduler)
+        return array.compute(**self._scheduler_kwargs)
 
     def _warn_slow(self, funcname):
         if self._is_huge and not self.allow_huge_operations:
@@ -1125,7 +1145,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         return super().read(*args, **kwargs)
 
     def write(self, *args, **kwargs):
-        with dask.config.set(scheduler=self._scheduler):
+        with dask.config.set(**self._scheduler_kwargs):
             super().write(*args, **kwargs)
 
     @property
@@ -1203,7 +1223,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         return super().read(*args, **kwargs)
 
     def write(self, *args, **kwargs):
-        with dask.config.set(scheduler=self._scheduler):
+        with dask.config.set(**self._scheduler_kwargs):
             super().write(*args, **kwargs)
 
     @property
@@ -1323,6 +1343,8 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                                    mask=cube.mask,
                                    meta=cube.meta,
                                    fill_value=cube.fill_value)
+
+        newcube._scheduler_kwargs = self._scheduler_kwargs
 
         return newcube
 

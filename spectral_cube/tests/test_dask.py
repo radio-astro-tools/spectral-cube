@@ -31,3 +31,10 @@ def test_scheduler(data_adv):
     cube.use_dask_scheduler('threads')
     cube._compute(fake_array)
     assert fake_array.kwargs == {'scheduler': 'threads'}
+
+    with cube.use_dask_scheduler('processes', num_workers=4):
+        cube._compute(fake_array)
+        assert fake_array.kwargs == {'scheduler': 'processes', 'num_workers': 4}
+
+    cube._compute(fake_array)
+    assert fake_array.kwargs == {'scheduler': 'threads'}
