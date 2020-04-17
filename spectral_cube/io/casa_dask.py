@@ -45,9 +45,14 @@ class CASAArrayWrapper:
 
     def __getitem__(self, item):
 
-        # TODO: potentially normalize item, for now assume list of slice objects
+        # TODO: potentially normalize item, for now assume it is a list of slice objects
 
-        indices = np.array([item[dim].start / self._chunkshape[dim] for dim in range(self.ndim)]).astype(int)
+        indices = []
+        for dim in range(self.ndim):
+            if isinstance(item[dim], slice):
+                indices.append(item[dim].start // self._chunkshape[dim])
+            else:
+                indices.append(item[dim] // self._chunkshape[dim])
 
         chunk_number = indices[0]
         for dim in range(1, self.ndim):
@@ -55,9 +60,15 @@ class CASAArrayWrapper:
 
         offset = chunk_number * self._chunksize * self._itemsize
 
-        item = tuple(slice(item[dim].start - indices[dim] * self._chunkshape[dim],
-                      item[dim].stop - indices[dim] * self._chunkshape[dim],
-                      item[dim].step) for dim in range(self.ndim))
+        item_in_chunk = []
+        for dim in range(self.ndim):
+            if isinstance(item[dim], slice):
+                item_in_chunk.append(slice(item[dim].start - indices[dim] * self._chunkshape[dim],
+                                      item[dim].stop - indices[dim] * self._chunkshape[dim],
+                                      item[dim].step))
+            else:
+                item_in_chunk.append(item[dim] - indices[dim] * self._chunkshape[dim])
+        item_in_chunk = tuple(item_in_chunk)
 
         if self._itemsize == 1:
 
@@ -69,19 +80,21 @@ class CASAArrayWrapper:
                                           offset=start, count=end - start)
                 array_bits = np.unpackbits(array_uint8, bitorder='little')
                 chunk = array_bits[offset - start * 8:offset + self._chunksize - start * 8]
-                return chunk.reshape(self._chunkshape[::-1], order='F').T[item].astype(np.bool_)
+                return chunk.reshape(self._chunkshape[::-1], order='F').T[item_in_chunk].astype(np.bool_)
             else:
                 ceil_chunksize = int(ceil(self._chunksize / 8)) * 8
-                return self._array[chunk_number*ceil_chunksize:(chunk_number+1)*ceil_chunksize][:self._chunksize].reshape(self._chunkshape[::-1], order='F').T[item]
+                return (self._array[chunk_number*ceil_chunksize:(chunk_number+1)*ceil_chunksize][:self._chunksize]
+                             .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
 
         else:
 
             if self._memmap:
                 return np.fromfile(self._filename, dtype=self.dtype,
                                    offset=offset,
-                                   count=self._chunksize).reshape(self._chunkshape[::-1], order='F').T[item]
+                                   count=self._chunksize).reshape(self._chunkshape[::-1], order='F').T[item_in_chunk]
             else:
-                return self._array[chunk_number*self._chunksize:(chunk_number+1)*self._chunksize].reshape(self._chunkshape[::-1], order='F').T[item]
+                return (self._array[chunk_number*self._chunksize:(chunk_number+1)*self._chunksize]
+                            .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
 
 
 def from_array_fast(arrays, asarray=False, lock=False):
