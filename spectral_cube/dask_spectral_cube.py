@@ -847,6 +847,10 @@ class DaskSpectralCubeMixin:
             dimension will be left unchanged
         """
 
+        # We need to use a slightly different approach to SpectralCube here
+        # because there isn't yet a dask-friendly version of find_objects
+        # https://github.com/dask/dask-image/issues/96
+
         if isinstance(region_mask, np.ndarray):
             if is_broadcastable_and_smaller(region_mask.shape, self.shape):
                 region_mask = BooleanArrayMask(region_mask, self._wcs)
@@ -857,11 +861,6 @@ class DaskSpectralCubeMixin:
                                       wcs_tolerance=self._wcs_tolerance)
 
         include = da.broadcast_to(include, self.shape)
-
-        # NOTE: the approach in the base SpectralCube class is incorrect, if
-        # there are multiple 'islands' of valid values in the cube, as this will
-        # pick only the first one found by find_objects. Here we use a more
-        # robust approach.
 
         slices = []
         for axis in range(3):

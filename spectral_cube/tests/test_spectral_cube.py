@@ -2330,3 +2330,25 @@ def test_mask_channels_preserve_mask(filename, use_dask):
     expected_mask = mask.copy()
     expected_mask[::2] = False
     np.testing.assert_equal(cube.mask.include(), expected_mask)
+
+
+def test_minimal_subcube(use_dask):
+
+    data = np.arange(210, dtype=float).reshape((5, 6, 7))
+    data[0] = np.nan
+    data[2] = np.nan
+    data[4] = np.nan
+    data[:,0] = np.nan
+    data[:,3:4] = np.nan
+    data[:, :, 0:2] = np.nan
+    data[:, :, 4:7] = np.nan
+
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
+
+    cube = SpectralCube(data * u.Jy / u.beam, wcs=wcs, use_dask=use_dask)
+    cube = cube.with_mask(np.isfinite(data))
+
+    subcube = cube.minimal_subcube()
+
+    assert subcube.shape == (3, 5, 2)
