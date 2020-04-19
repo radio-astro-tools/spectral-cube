@@ -1369,9 +1369,21 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
         y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
 
-        x, y, spectral = np.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+        if isinstance(self._data, da.Array):
 
-        return spectral, y, x
+            x, y, spectral = da.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+
+            # NOTE: we need to rechunk these to the actual data size, otherwise
+            # the resulting arrays have a single chunk which can cause issues with
+            # da.store (which writes data out in chunks)
+            return (spectral.rechunk(self._data.chunksize),
+                    y.rechunk(self._data.chunksize),
+                    x.rechunk(self._data.chunksize))
+        else:
+
+            x, y, spectral = np.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+
+            return spectral, y, x
 
     @cached
     def _pix_size_slice(self, axis):

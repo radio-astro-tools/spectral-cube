@@ -269,13 +269,6 @@ class DaskSpectralCubeMixin:
         else:
             return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)[view]
 
-    def get_mask_array(self):
-        """
-        Convert the mask to a boolean numpy array
-        """
-        return self._mask.include(data=self._data, wcs=self._wcs,
-                                  wcs_tolerance=self._wcs_tolerance)
-
     @projection_if_needed
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False,
@@ -735,53 +728,6 @@ class DaskSpectralCubeMixin:
             return ndimage.median_filter(data, ksize)
 
         return self.apply_function_parallel_spatial(median_filter_wrapper, ksize=ksize)
-
-    def _pix_cen(self, axis=None):
-        """
-        Offset of every pixel from the origin, along each direction
-
-        Returns
-        -------
-        tuple of spectral_offset, y_offset, x_offset, each 3D arrays
-        describing the distance from the origin
-
-        Notes
-        -----
-        These arrays are broadcast, and are not memory intensive
-
-        Each array is in the units of the corresponding wcs.cunit, but
-        this is implicit (e.g., they are not astropy Quantity arrays)
-        """
-        # Start off by extracting the world coordinates of the pixels
-        _, lat, lon = self.world[0, :, :]
-        spectral, _, _ = self.world[:, 0, 0]
-        spectral -= spectral[0] # offset from first pixel
-
-        # Convert to radians
-        lon = np.radians(lon)
-        lat = np.radians(lat)
-
-        # Find the dx and dy arrays
-        from astropy.coordinates.angle_utilities import angular_separation
-        dx = angular_separation(lon[:, :-1], lat[:, :-1],
-                                lon[:, 1:], lat[:, :-1])
-        dy = angular_separation(lon[:-1, :], lat[:-1, :],
-                                lon[1:, :], lat[1:, :])
-
-        # Find the cumulative offset - need to add a zero at the start
-        x = np.zeros(self._data.shape[1:])
-        y = np.zeros(self._data.shape[1:])
-        x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
-        y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
-
-        x, y, spectral = da.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
-
-        # NOTE: we need to rechunk these to the actual data size, otherwise
-        # the resulting arrays have a single chunk which can cause issues with
-        # da.store (which writes data out in chunks)
-        return (spectral.rechunk(self._data.chunksize),
-                y.rechunk(self._data.chunksize),
-                x.rechunk(self._data.chunksize))
 
     def moment(self, order=0, axis=0, **kwargs):
         """
