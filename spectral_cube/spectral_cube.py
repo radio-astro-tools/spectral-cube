@@ -1055,6 +1055,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             data cube
         """
         data = self._mask._flattened(data=self._data, wcs=self._wcs, view=slice)
+        if isinstance(data, da.Array):
+            # Quantity does not work well with lazily evaluated data with an
+            # unkonwn shape (which is the case when doing boolean indexing of arrays)
+            data = self._compute(data)
         if weights is not None:
             weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
             return u.Quantity(data * weights, self.unit, copy=False)

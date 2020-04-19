@@ -877,31 +877,6 @@ class DaskSpectralCubeMixin:
 
         return tuple(slices)
 
-    def flattened(self, slice=(), weights=None):
-        """
-        Return a slice of the cube giving only the valid data (i.e., removing
-        bad values)
-
-        Parameters
-        ----------
-        slice: 3-tuple
-            A length-3 tuple of view (or any equivalent valid slice of a
-            cube)
-        weights: (optional) np.ndarray
-            An array with the same shape (or slicing abilities/results) as the
-            data cube
-        """
-        data = self._mask._flattened(data=self._data, wcs=self._wcs, view=slice)
-        # Quantity does not work well with lazily evaluated data with an
-        # unkonwn shape (which is the case when doing boolean indexing of arrays)
-        if isinstance(data, da.Array):
-            data = self._compute(data)
-        if weights is not None:
-            weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
-            return u.Quantity(data * weights, self.unit, copy=False)
-        else:
-            return u.Quantity(data, self.unit, copy=False)
-
     def downsample_axis(self, factor, axis, estimator=np.nanmean,
                         truncate=False):
         """
