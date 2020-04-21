@@ -36,7 +36,7 @@ as a context manager, to temporarily change the scheduler::
 
 You can optionally specify the number of threads/processes to use with ``num_workers``::
 
-    >>> with cube.use_dask_scheduler('threads', num_threads=4):  # doctest: +IGNORE_OUTPUT
+    >>> with cube.use_dask_scheduler('threads', num_workers=4):  # doctest: +IGNORE_OUTPUT
     ...     cube.max()
 
 If you don't specify the number of threads, this could end up being quite large, and cause you to
