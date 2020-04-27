@@ -11,6 +11,9 @@
 - Refactor CASA I/O to use dask to access the array/mask data directly
   and to use only Python and Numpy to access image metadata. CASA images
   can now be read without CASA installed. #607, #609, #613
+- Add new dask-friendly classes ``DaskSpectralCube`` and
+  ``DaskVaryingResolutionSpectralCube`` which use dask to efficiently
+  carry out calculations. #618
 
 0.4.5 (unreleased)
 ------------------
