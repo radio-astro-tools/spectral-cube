@@ -963,6 +963,9 @@ class DaskSpectralCubeMixin:
 
         """
 
+        # TODO: this duplicates SpectralCube.spectral_interpolate, so we should
+        # find a way to avoid that duplication.
+
         inaxis = self.spectral_axis.to(spectral_grid.unit)
 
         indiff = np.mean(np.diff(inaxis))
