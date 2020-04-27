@@ -229,11 +229,12 @@ def write_fits_cube(cube, filename, overwrite=False,
 
     if isinstance(cube, BaseSpectralCube):
         hdulist = cube.hdulist
-        now = datetime.datetime.strftime(datetime.datetime.now(),
-                                         "%Y/%m/%d-%H:%M:%S")
-        hdulist[0].header.add_history("Written by spectral_cube v{version} on "
-                                      "{date}".format(version=SPECTRAL_CUBE_VERSION,
-                                                      date=now))
+        if include_origin_notes:
+            now = datetime.datetime.strftime(datetime.datetime.now(),
+                                            "%Y/%m/%d-%H:%M:%S")
+            hdulist[0].header.add_history("Written by spectral_cube v{version} on "
+                                        "{date}".format(version=SPECTRAL_CUBE_VERSION,
+                                                        date=now))
         hdulist.writeto(filename)
     else:
         raise NotImplementedError()
