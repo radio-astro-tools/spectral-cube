@@ -2334,6 +2334,9 @@ def test_mask_channels_preserve_mask(filename, use_dask):
 
 def test_minimal_subcube(use_dask):
 
+    if not use_dask:
+        pytest.importorskip('scipy')
+
     data = np.arange(210, dtype=float).reshape((5, 6, 7))
     data[0] = np.nan
     data[2] = np.nan
