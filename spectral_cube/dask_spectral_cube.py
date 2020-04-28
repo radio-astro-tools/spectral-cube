@@ -107,9 +107,6 @@ def projection_if_needed(function):
                 if set(axis) == set((1, 2)):
                     new_wcs = self._wcs.sub([wcs.WCSSUB_SPECTRAL])
                     header = self._nowcs_header
-                    # check whether the cube has beams at all
-                    # (note that "hasattr(self, 'beam') on an object with no
-                    # _beam will result in an exception....?!?!?!?)
                     if hasattr(self, '_beam') and self._beam is not None:
                         bmarg = {'beam': self.beam}
                     elif hasattr(self, '_beams') and self._beams is not None:
@@ -149,6 +146,9 @@ def projection_if_needed(function):
 
 class FilledArrayHandler:
     """
+    This class is a wrapper for the data and mask which can be used to
+    initialize a dask array. It provides a way for the filled data to be
+    constructed just for the requested chunks.
     """
 
     def __init__(self, cube, fill=np.nan):
@@ -171,6 +171,9 @@ class FilledArrayHandler:
 
 class MaskHandler:
     """
+    This class is a wrapper for the mask which can be used to initialize a dask
+    array. It provides a way for the mask to be computed just for the requested
+    chunk.
     """
 
     def __init__(self, cube):
@@ -238,8 +241,6 @@ class DaskSpectralCubeMixin:
         return SchedulerHandler(self, original_scheduler_kwargs)
 
     def _compute(self, array):
-        # For now, always default to serial mode, but we could then expand this
-        # to allow different modes.
         return array.compute(**self._scheduler_kwargs)
 
     def _warn_slow(self, funcname):
@@ -270,7 +271,7 @@ class DaskSpectralCubeMixin:
             return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)[view]
 
     @projection_if_needed
-    def apply_function(self, function, axis=None, weights=None, unit=None,
+    def apply_function(self, function, axis=None, unit=None,
                        projection=False,
                        keep_shape=False, **kwargs):
         """
@@ -285,9 +286,6 @@ class DaskSpectralCubeMixin:
             be nan-aware
         axis : 1, 2, 3, or None
             The axis to operate along.  If None, the return is scalar.
-        weights : (optional) np.ndarray
-            An array with the same shape (or slicing abilities/results) as the
-            data cube
         unit : (optional) `~astropy.units.Unit`
             The unit of the output projection or value.  Not all functions
             should return quantities with units.
@@ -305,9 +303,6 @@ class DaskSpectralCubeMixin:
             without units.  If axis is an integer, the return will be a
             :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
         """
-
-        # FIXME: add support for keep_shape
-        # FIXME: add support for weights
 
         if axis is None:
             out = function(self.flattened(), **kwargs)
@@ -330,7 +325,6 @@ class DaskSpectralCubeMixin:
                              projection=False,
                              unit=None,
                              check_endian=False,
-                             includemask=False,
                              **kwargs):
         """
         Apply a numpy function to the cube
@@ -367,8 +361,6 @@ class DaskSpectralCubeMixin:
             without units.  If axis is an integer, the return will be a
             :class:`~spectral_cube.lower_dimensional_structures.Projection` if ``projection`` is set
         """
-
-        # FIXME: add support for includemask
 
         data = self._get_filled_data(fill=fill, check_endian=check_endian)
 
@@ -474,6 +466,8 @@ class DaskSpectralCubeMixin:
         data = self._get_filled_data(fill=np.nan)
 
         if axis is None:
+            # da.nanmedian raises NotImplementedError since it is not possible
+            # to do efficiently, so we use Numpy instead.
             self._warn_slow('median')
             return np.nanmedian(self._compute(data), **kwargs)
         else:
@@ -496,6 +490,8 @@ class DaskSpectralCubeMixin:
         data = self._get_filled_data(fill=np.nan)
 
         if axis is None:
+            # There is no way to compute the percentile of the whole array in
+            # chunks.
             self._warn_slow('percentile')
             return np.nanpercentile(data, q, **kwargs)
         else:
@@ -581,7 +577,7 @@ class DaskSpectralCubeMixin:
         data = self._get_filled_data(fill=fill)
 
         if rechunk is not None:
-            data = self._get_filled_data(fill=fill).rechunk(rechunk)
+            data = data.rechunk(rechunk)
 
         if additional_arrays is None:
             newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
@@ -864,6 +860,9 @@ class DaskSpectralCubeMixin:
 
         slices = []
         for axis in range(3):
+            if spatial_only:
+                slices.append(slice(None))
+                continue
             collapse_axes = tuple(index for index in range(3) if index != axis)
             valid = self._compute(da.any(include, axis=collapse_axes))
             if np.any(valid):
@@ -871,9 +870,6 @@ class DaskSpectralCubeMixin:
                 slices.append(slice(np.min(indices), np.max(indices) + 1))
             else:
                 slices.append(slice(0))
-
-        if spatial_only:
-            slices = (slice(None), slices[1], slices[2])
 
         return tuple(slices)
 
@@ -911,6 +907,9 @@ class DaskSpectralCubeMixin:
 
         # FIXME: this does not work correctly currently due to
         # https://github.com/dask/dask/issues/6102
+
+        warnings.warn('In some cases, the final shape of the output from downsample_axis '
+                      'is incorrect, so use the result with caution', UserWarning)
 
         data = self._get_filled_data(fill=self._fill_value)
         mask = da.asarray(self.mask.include(), name=str(uuid.uuid4()))
