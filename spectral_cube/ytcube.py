@@ -11,6 +11,7 @@ import warnings
 
 __all__ = ['ytCube']
 
+
 class ytCube(object):
     """ Light wrapper of a yt object with ability to translate yt<->wcs
     coordinates """
@@ -57,18 +58,19 @@ class ytCube(object):
         world_coord = self.wcs.wcs_pix2world([yt_coord], first_index)[0]
         return world_coord
 
-
     def quick_render_movie(self, outdir, size=256, nframes=30,
-                           camera_angle=(0,0,1), north_vector=(0,0,1),
-                           rot_vector=(1,0,0),
+                           camera_angle=(0,0,1),
+                           north_vector=(0,1,0),
+                           rot_vector=None,
+                           zoom=None,
                            colormap='doom',
                            cmap_range='auto',
                            transfer_function='auto',
                            start_index=0,
                            image_prefix="",
                            output_filename='out.mp4',
-                           log_scale=False,
-                           rescale=True):
+                           log_scale=False, run_ffmpeg=True,
+                           rescale=True, sigma_clip=None):
         """
         Create a movie rotating the cube 360 degrees from
         PP -> PV -> PP -> PV -> PP
@@ -86,21 +88,21 @@ class ytCube(object):
         camera_angle: 3-tuple
             The initial angle of the camera
         north_vector: 3-tuple
-            The vector of 'north' in the data cube.  Default is coincident with
-            the spectral axis
+            The vector of 'north' in the data cube. Default is the "y" direction
         rot_vector: 3-tuple
-            The vector around which the camera will be rotated
+            The vector around which the camera will be rotated. Default: None,
+            which means it will be set to the north_vector value.
+        zoom : float
+            Change the width of the FOV of the camera. Default: None, which 
+            does no zooming. 
         colormap: str
             A valid colormap.  See `yt.show_colormaps`
+        cmap_range : 2-tuple or "auto"
+            If a 2-tuple of floats, this will be the (vmin, vmax) for the colorbar.
+            Otherise, "auto" sets the values from the data.
         transfer_function: 'auto' or `yt.visualization.volume_rendering.TransferFunction`
             Either 'auto' to use the colormap specified, or a valid
             TransferFunction instance
-        log_scale: bool
-            Should the colormap be log scaled?
-        rescale: bool
-            If True, the images will be rescaled to have a common 95th
-            percentile brightness, which can help reduce flickering from having
-            a single bright pixel in some projections
         start_index : int
             The number of the first image to save
         image_prefix : str
@@ -108,65 +110,88 @@ class ytCube(object):
         output_filename : str
             The movie file name to output.  The suffix may affect the file type
             created.  Defaults to 'out.mp4'.  Will be placed in ``outdir``
-
-        Returns
-        -------
-
-
+        log_scale : bool
+            Should the colormap be log scaled?
+        run_ffmpeg : bool
+            If True, ffmpeg will be used to make a movie out of the images.
+            Default: True
+        rescale: bool
+            If True, the images will be rescaled to have a common 95th
+            percentile brightness, which can help reduce flickering from having
+            a single bright pixel in some projections
+        sigma_clip: float, optional
+            Image values greater than this number times the standard deviation
+            plus the mean of the image will be clipped before saving. Useful
+            for enhancing images as it gets rid of rare high pixel values.
+            Default: None
         """
         try:
             import yt
         except ImportError:
-            raise ImportError("yt could not be imported.  Cube renderings are not possible.")
-
-        scale = np.max(self.cube.shape)
+            raise ImportError("yt could not be imported. Cube renderings are not possible.")
+        else:
+            from packaging import version
+            if version.parse(yt.__version__) < version.parse("3.5.0"):
+                raise RuntimeError("Only yt versions >= 3.5.0 are supported. Please upgrade yt.")
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)
         elif not os.path.isdir(outdir):
             raise OSError("Output directory {0} exists and is not a directory.".format(outdir))
 
+        if rot_vector is None:
+            rot_vector = north_vector
+
         if cmap_range == 'auto':
             upper = self.cube.max().value
             lower = self.cube.std().value * 3
             cmap_range = [lower,upper]
 
+        data_source = self.dataset.all_data()
+        sc = yt.create_scene(data_source, field='flux')
+        source = sc[0]
+
         if transfer_function == 'auto':
             tfh = self.auto_transfer_function(cmap_range, log=log_scale)
             tfh.tf.map_to_colormap(cmap_range[0], cmap_range[1], colormap=colormap)
-            tf = tfh.tf
+            source.tfh = tfh
         else:
             tf = transfer_function
+            source.tfh.tf = tf
+            source.tfh.bounds = cmap_range
 
-        center = self.dataset.domain_center
-        cam = self.dataset.h.camera(center, camera_angle, scale, size, tf,
-                                    north_vector=north_vector, fields='flux')
+        cam = sc.camera
+        cam.set_focus(data_source.get_field_parameter("center"))
+        cam.set_resolution(size)
+        cam.switch_view(normal_vector=camera_angle, north_vector=north_vector)
+        if zoom is not None:
+            cam.zoom(zoom)
 
-        im  = cam.snapshot()
+        im = sc.render()
         images = [im]
 
         pb = ProgressBar(nframes)
-        for ii,im in enumerate(cam.rotation(2 * np.pi, nframes,
-                                            rot_vector=rot_vector)):
+        for ii in cam.iter_rotate(2*np.pi, nframes, rot_vector=rot_vector):
+            im = sc.render()
             images.append(im)
-            im.write_png(os.path.join(outdir,"%s%04i.png" % (image_prefix,
-                                                             ii+start_index)),
-                         rescale=False)
+            outfile = os.path.join(outdir, "%s%04i.png" % (image_prefix,
+                                                           ii+start_index))
+            im.write_png(outfile, sigma_clip=sigma_clip, rescale=False)
             pb.update(ii+1)
         log.info("Rendering complete in {0}s".format(time.time() - pb._start_time))
 
         if rescale:
             _rescale_images(images, os.path.join(outdir, image_prefix))
 
-        pipe = _make_movie(outdir, prefix=image_prefix,
-                           filename=output_filename)
+        if run_ffmpeg:
+            pipe = _make_movie(outdir, prefix=image_prefix,
+                               filename=output_filename)
 
         return images
 
-    def auto_transfer_function(self, cmap_range, log=False, colormap='doom',
-                               **kwargs):
-
-        from yt.visualization.volume_rendering.transfer_function_helper import TransferFunctionHelper
+    def auto_transfer_function(self, cmap_range, log=False):
+        from yt.visualization.volume_rendering.transfer_function_helper import \
+            TransferFunctionHelper
         tfh = TransferFunctionHelper(self.dataset)
         tfh.set_field('flux')
         tfh.set_bounds(bounds=cmap_range)
@@ -261,6 +286,7 @@ def _rescale_images(images, prefix):
     for i, image in enumerate(images):
         image = image.rescale(cmax=cmax, amax=amax).swapaxes(0,1)
         image.write_png("%s%04i.png" % (prefix, i), rescale=False)
+
 
 def _make_movie(moviepath, prefix="", filename='out.mp4', overwrite=True):
     """

@@ -847,6 +847,46 @@ class TestYt():
         assert_allclose(ytc3.world2yt(world_coord3), yt_coord3.value)
         self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
 
+    def test_yt_vr(self):
+        filepath = os.path.abspath(os.path.dirname(__file__))
+
+        ds = self.ytc1.dataset
+
+        # Test one rendering
+
+        n_v = 10
+        vmin = 0.05
+        vmax = 4.0
+        dv = 0.02
+
+        transfer = yt.ColorTransferFunction((vmin, vmax))
+        transfer.add_layers(n_v, dv, colormap='RdBu_r')
+
+        direction = (0.0, 0.0, 1.0)
+        sc = yt.create_scene(ds, field='flux')
+        source = sc[0]
+        source.tfh.tf = transfer
+        source.tfh.bounds = (vmin, vmax)
+        cam = sc.camera
+        cam.switch_orientation(normal_vector=direction)
+        cam.set_resolution(32)
+        im1 = sc.render()
+        yt_vr1 = os.path.join(filepath, "data", "yt_vr1.npz")
+        with np.load(yt_vr1) as i1:
+            assert_array_equal(im1, i1['arr_0'])
+
+        # Test movie
+        im2 = self.ytc1.quick_render_movie('.', size=32, nframes=4,
+                                           camera_angle=(0.0, 0.0, 1.0), 
+                                           rot_vector=(0.0, 1.0, 0.0),
+                                           north_vector=(0.0, 1.0, 0.0),
+                                           run_ffmpeg=False)
+        im2 = np.array(im2)
+        yt_vr2 = os.path.join(filepath, "data", "yt_vr2.npz")
+        with np.load(yt_vr2) as i2:
+            assert_array_equal(im2, i2['arr_0'])
+        self.cube = self.ytc1 = self.ytc2 = self.ytc3 = None
+
 def test_read_write_rountrip(tmpdir, data_adv):
     cube = SpectralCube.read(data_adv)
     tmp_file = str(tmpdir.join('test.fits'))
