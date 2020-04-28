@@ -860,7 +860,7 @@ class DaskSpectralCubeMixin:
 
         slices = []
         for axis in range(3):
-            if spatial_only:
+            if axis == 0 and spatial_only:
                 slices.append(slice(None))
                 continue
             collapse_axes = tuple(index for index in range(3) if index != axis)
