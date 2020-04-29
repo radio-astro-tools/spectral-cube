@@ -4,6 +4,7 @@ import warnings
 
 import numpy as np
 from numpy.ma.core import nomask
+import dask.array as da
 
 from astropy import convolution
 from astropy import units as u
@@ -826,6 +827,8 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             if self._mask is not nomask:
                 # Kind of a hack; this is probably inefficient
                 bad = self._mask.exclude()[key]
+                if isinstance(bad, da.Array):
+                    bad = bad.compute()
                 new_qty[bad] = np.nan
             return new_qty
 

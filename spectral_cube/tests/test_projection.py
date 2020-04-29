@@ -301,6 +301,7 @@ def test_slice_tricks():
     assert new.ndim == 3
     assert len(w) == 0
 
+
 def test_array_property():
     test_wcs_1 = WCS(naxis=1)
     spec = OneDSpectrum(twelve_qty_1d, wcs=test_wcs_1)
@@ -312,6 +313,7 @@ def test_array_property():
 
     assert isinstance(arr, np.ndarray)
     assert not isinstance(arr, u.Quantity)
+
 
 def test_quantity_property():
     test_wcs_1 = WCS(naxis=1)
@@ -467,9 +469,9 @@ def test_projection_subimage(data_55):
     assert np.all(proj5.value == proj.value)
 
 
-def test_projection_subimage_nocelestial_fail(data_255_delta):
+def test_projection_subimage_nocelestial_fail(data_255_delta, use_dask):
 
-    cube, data = cube_and_raw(data_255_delta)
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     proj = cube.moment0(axis=1)
 
@@ -523,6 +525,7 @@ def test_mask_convolve():
     from astropy.convolution import convolve,Box1DKernel
     convolve(spec, Box1DKernel(3))
 
+
 def test_convolve():
     test_wcs_1 = WCS(naxis=1)
     spec = OneDSpectrum(twelve_qty_1d, wcs=test_wcs_1)
@@ -531,6 +534,7 @@ def test_convolve():
     specsmooth = spec.spectral_smooth(Box1DKernel(1))
 
     np.testing.assert_allclose(spec, specsmooth)
+
 
 def test_spectral_interpolate():
     test_wcs_1 = WCS(naxis=1)
@@ -543,14 +547,14 @@ def test_spectral_interpolate():
     np.testing.assert_allclose(new_spec, np.linspace(0,11,23)*u.Jy)
 
 
-def test_spectral_interpolate_with_mask(data_522_delta):
+def test_spectral_interpolate_with_mask(data_522_delta, use_dask):
 
     hdu = fits.open(data_522_delta)[0]
 
     # Swap the velocity axis so indiff < 0 in spectral_interpolate
     hdu.header["CDELT3"] = - hdu.header["CDELT3"]
 
-    cube = SpectralCube.read(hdu)
+    cube = SpectralCube.read(hdu, use_dask=use_dask)
 
     mask = np.ones(cube.shape, dtype=bool)
     mask[:2] = False
@@ -569,9 +573,10 @@ def test_spectral_interpolate_with_mask(data_522_delta):
     np.testing.assert_almost_equal(result.filled_data[:].value,
                                    [0.0, 0.5, np.NaN, np.NaN])
 
-def test_spectral_interpolate_reversed(data_522_delta):
 
-    cube, data = cube_and_raw(data_522_delta)
+def test_spectral_interpolate_reversed(data_522_delta, use_dask):
+
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
     # Reverse spectral axis
     sg = cube.spectral_axis[::-1]
@@ -582,9 +587,10 @@ def test_spectral_interpolate_reversed(data_522_delta):
 
     np.testing.assert_almost_equal(sg.value, result.spectral_axis.value)
 
-def test_spectral_interpolate_with_fillvalue(data_522_delta):
 
-    cube, data = cube_and_raw(data_522_delta)
+def test_spectral_interpolate_with_fillvalue(data_522_delta, use_dask):
+
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
     # Step one channel out of bounds.
     sg = ((cube.spectral_axis[0]) -
@@ -599,10 +605,10 @@ def test_spectral_interpolate_with_fillvalue(data_522_delta):
                                    np.ones(4)*42)
 
 
-def test_spectral_units(data_255_delta):
+def test_spectral_units(data_255_delta, use_dask):
     # regression test for issue 391
 
-    cube, data = cube_and_raw(data_255_delta)
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     sp = cube[:,0,0]
 
@@ -615,9 +621,9 @@ def test_spectral_units(data_255_delta):
     assert sp.header['CUNIT1'] in ('m s-1', 'm/s')
 
 
-def test_repr_1d(data_255_delta):
+def test_repr_1d(data_255_delta, use_dask):
 
-    cube, data = cube_and_raw(data_255_delta)
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     sp = cube[:,0,0]
 
@@ -628,9 +634,9 @@ def test_repr_1d(data_255_delta):
     assert 'OneDSpectrum' in sp[1:-1].__repr__()
 
 
-def test_1d_slices(data_255_delta):
+def test_1d_slices(data_255_delta, use_dask):
 
-    cube, data = cube_and_raw(data_255_delta)
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     sp = cube[:,0,0]
 
@@ -647,9 +653,9 @@ def test_1d_slices(data_255_delta):
                          ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
                           'nansum', 'ptp', 'var'),
                         )
-def test_1d_slice_reductions(method, data_255_delta):
+def test_1d_slice_reductions(method, data_255_delta, use_dask):
 
-    cube, data = cube_and_raw(data_255_delta)
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     sp = cube[:,0,0]
 
@@ -664,8 +670,8 @@ def test_1d_slice_reductions(method, data_255_delta):
     assert 'OneDSpectrum' in sp[1:-1].__repr__()
 
 
-def test_1d_slice_round(data_255_delta):
-    cube, data = cube_and_raw(data_255_delta)
+def test_1d_slice_round(data_255_delta, use_dask):
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     sp = cube[:,0,0]
 
@@ -678,8 +684,8 @@ def test_1d_slice_round(data_255_delta):
     assert 'OneDSpectrum' in sp[1:-1].round().__repr__()
 
 
-def test_LDO_arithmetic(data_vda):
-    cube, data = cube_and_raw(data_vda)
+def test_LDO_arithmetic(data_vda, use_dask):
+    cube, data = cube_and_raw(data_vda, use_dask=use_dask)
 
     sp = cube[:,0,0]
 
@@ -688,9 +694,9 @@ def test_LDO_arithmetic(data_vda):
     assert np.all(spx2.filled_data[:].value == sp.value*2)
 
 
-def test_beam_jtok_2D(data_advs):
+def test_beam_jtok_2D(data_advs, use_dask):
 
-    cube, data = cube_and_raw(data_advs)
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
     cube._meta['BUNIT'] = 'Jy / beam'
     cube._unit = u.Jy / u.beam
 
@@ -711,8 +717,8 @@ def test_beam_jtok_2D(data_advs):
                                    (plane.value * jtok).value)
 
 
-def test_basic_arrayness(data_adv):
-    cube, data = cube_and_raw(data_adv)
+def test_basic_arrayness(data_adv, use_dask):
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
     assert cube.shape == data.shape
 
@@ -737,11 +743,11 @@ def test_basic_arrayness(data_adv):
     # assert np.all(np.ma.array(slc) == data[0,:,:])
 
 
-def test_spatial_world_extrema_2D(data_522_delta):
+def test_spatial_world_extrema_2D(data_522_delta, use_dask):
 
     hdu = fits.open(data_522_delta)[0]
 
-    cube = SpectralCube.read(hdu)
+    cube = SpectralCube.read(hdu, use_dask=use_dask)
 
     plane = cube[0]
 
@@ -753,13 +759,13 @@ def test_spatial_world_extrema_2D(data_522_delta):
 @pytest.mark.parametrize('view', (np.s_[:, :],
                                   np.s_[::2, :],
                                   np.s_[0]))
-def test_spatial_world(view, data_adv):
+def test_spatial_world(view, data_adv, use_dask):
     p = path(data_adv)
     # d = fits.getdata(p)
     # wcs = WCS(p)
     # c = SpectralCube(d, wcs)
 
-    c = SpectralCube.read(p)
+    c = SpectralCube.read(p, use_dask=use_dask)
 
     plane = c[0]
 

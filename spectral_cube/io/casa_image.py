@@ -5,7 +5,7 @@ from astropy import units as u
 from astropy.io import registry as io_registry
 from radio_beam import Beam, Beams
 
-from .. import SpectralCube, StokesSpectralCube, BooleanArrayMask, VaryingResolutionSpectralCube
+from .. import DaskSpectralCube, StokesSpectralCube, BooleanArrayMask, DaskVaryingResolutionSpectralCube
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
 from .. utils import BeamWarning
@@ -39,13 +39,19 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
 
 
 def load_casa_image(filename, skipdata=False, memmap=True,
-                    skipvalid=False, skipcs=False, target_cls=None, **kwargs):
+                    skipvalid=False, skipcs=False, target_cls=None, use_dask=None, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can
     be suppressed. The object holds the coordsys object from the image in
     memory.
     """
+
+    if use_dask is None:
+        use_dask = True
+
+    if not use_dask:
+        raise ValueError("Loading CASA datasets is not possible with use_dask=False")
 
     from .core import StringWrapper
     if isinstance(filename, StringWrapper):
@@ -149,7 +155,6 @@ def load_casa_image(filename, skipdata=False, memmap=True,
     meta = {'filename': filename,
             'BUNIT': unit}
 
-
     if wcs.naxis == 3:
         data, wcs_slice = cube_utils._orient(data, wcs)
 
@@ -160,11 +165,11 @@ def load_casa_image(filename, skipdata=False, memmap=True,
             mask = None
 
         if 'beam' in locals():
-            cube = SpectralCube(data, wcs_slice, mask, meta=meta, beam=beam)
+            cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
-            cube = VaryingResolutionSpectralCube(data, wcs_slice, mask, meta=meta, beams=beams)
+            cube = DaskVaryingResolutionSpectralCube(data, wcs_slice, mask, meta=meta, beams=beams)
         else:
-            cube = SpectralCube(data, wcs_slice, mask, meta=meta)
+            cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta)
         # with #592, this is no longer true
         # we've already loaded the cube into memory because of CASA
         # limitations, so there's no reason to disallow operations
@@ -186,17 +191,17 @@ def load_casa_image(filename, skipdata=False, memmap=True,
                 mask[component] = None
 
             if 'beam' in locals():
-                data[component] = SpectralCube(data_, wcs_slice, mask[component],
-                                               meta=meta, beam=beam)
+                data[component] = DaskSpectralCube(data_, wcs_slice, mask[component],
+                                                   meta=meta, beam=beam)
             elif 'beams' in locals():
-                data[component] = VaryingResolutionSpectralCube(data_,
-                                                                wcs_slice,
-                                                                mask[component],
-                                                                meta=meta,
-                                                                beams=beams)
+                data[component] = DaskVaryingResolutionSpectralCube(data_,
+                                                                    wcs_slice,
+                                                                    mask[component],
+                                                                    meta=meta,
+                                                                    beams=beams)
             else:
-                data[component] = SpectralCube(data_, wcs_slice, mask[component],
-                                               meta=meta)
+                data[component] = DaskSpectralCube(data_, wcs_slice, mask[component],
+                                                   meta=meta)
 
             data[component].allow_huge_operations = True
 

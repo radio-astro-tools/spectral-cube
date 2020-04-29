@@ -14,52 +14,87 @@ from .casa_low_level_io import getdminfo
 __all__ = ['casa_image_dask_reader']
 
 
-class MemmapWrapper:
+class CASAArrayWrapper:
     """
-    A wrapper class for dask that opens memmap only when __getitem__ is called,
-    which prevents issues with too many open files if opening a memmap for all
-    chunks at the same time.
+    A wrapper class for dask that accesses chunks from a CASA file on request.
+    It is assumed that this wrapper will be used to construct a dask array that
+    has chunks aligned with the CASA file chunks.
+
+    Having a single wrapper object such as this is far more efficient than
+    having one array wrapper per chunk. This is because the dask graph gets
+    very large if we end up with one dask array per chunk and slows everything
+    down.
     """
 
-    def __init__(self, filename, **kwargs):
+    def __init__(self, filename, totalshape, chunkshape, dtype=None, itemsize=None, memmap=False):
         self._filename = filename
-        self._kwargs = kwargs
-        self.shape = kwargs['shape'][::-1]
-        self.dtype = kwargs['dtype']
+        self._totalshape = totalshape[::-1]
+        self._chunkshape = chunkshape[::-1]
+        self.shape = totalshape[::-1]
+        self.dtype = dtype
         self.ndim = len(self.shape)
+        self._stacks = np.ceil(np.array(totalshape) / np.array(chunkshape)).astype(int)
+        self._chunksize = np.product(chunkshape)
+        self._itemsize = itemsize
+        self._memmap = memmap
+        if not memmap:
+            if self._itemsize == 1:
+                self._array = np.unpackbits(np.fromfile(filename, dtype='uint8'), bitorder='little').astype(np.bool_)
+            else:
+                self._array = np.fromfile(filename, dtype=dtype)
 
     def __getitem__(self, item):
-        # We open a file manually and return an in-memory copy of the array
-        # otherwise the file doesn't get closed properly.
-        with open(self._filename) as f:
-            return np.memmap(f, mode='readonly', order='F', **self._kwargs).T[item].copy()
 
+        # TODO: potentially normalize item, for now assume it is a list of slice objects
 
-class MaskWrapper:
-    """
-    A wrapper class for dask that opens binary masks from file and returns
-    a chunk from it on-the-fly.
-    """
+        indices = []
+        for dim in range(self.ndim):
+            if isinstance(item[dim], slice):
+                indices.append(item[dim].start // self._chunkshape[dim])
+            else:
+                indices.append(item[dim] // self._chunkshape[dim])
 
-    def __init__(self, filename, offset, count, shape):
-        self._filename = filename
-        self._offset = offset
-        self._count = count
-        self.shape = shape[::-1]
-        self.dtype = np.bool_
-        self.ndim = len(self.shape)
+        chunk_number = indices[0]
+        for dim in range(1, self.ndim):
+            chunk_number = chunk_number * self._stacks[::-1][dim] + indices[dim]
 
-    def __getitem__(self, item):
-        # The offset is in the final bit array - but fromfile needs to operate
-        # by reading in uint8, so we need to make sure we align what we read
-        # in to the bytes.
-        start = floor(self._offset / 8)
-        end = ceil((self._offset + self._count) / 8)
-        array_uint8 = np.fromfile(self._filename, dtype=np.uint8,
-                                  offset=start, count=end - start)
-        array_bits = np.unpackbits(array_uint8, bitorder='little')
-        chunk = array_bits[self._offset - start * 8:self._offset + self._count - start * 8]
-        return chunk.reshape(self.shape[::-1], order='F').T[item].astype(np.bool_)
+        offset = chunk_number * self._chunksize * self._itemsize
+
+        item_in_chunk = []
+        for dim in range(self.ndim):
+            if isinstance(item[dim], slice):
+                item_in_chunk.append(slice(item[dim].start - indices[dim] * self._chunkshape[dim],
+                                      item[dim].stop - indices[dim] * self._chunkshape[dim],
+                                      item[dim].step))
+            else:
+                item_in_chunk.append(item[dim] - indices[dim] * self._chunkshape[dim])
+        item_in_chunk = tuple(item_in_chunk)
+
+        if self._itemsize == 1:
+
+            if self._memmap:
+                offset = offset // self._chunksize * ceil(self._chunksize / 8) * 8
+                start = floor(offset / 8)
+                end = ceil((offset + self._chunksize) / 8)
+                array_uint8 = np.fromfile(self._filename, dtype=np.uint8,
+                                          offset=start, count=end - start)
+                array_bits = np.unpackbits(array_uint8, bitorder='little')
+                chunk = array_bits[offset - start * 8:offset + self._chunksize - start * 8]
+                return chunk.reshape(self._chunkshape[::-1], order='F').T[item_in_chunk].astype(np.bool_)
+            else:
+                ceil_chunksize = int(ceil(self._chunksize / 8)) * 8
+                return (self._array[chunk_number*ceil_chunksize:(chunk_number+1)*ceil_chunksize][:self._chunksize]
+                             .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
+
+        else:
+
+            if self._memmap:
+                return np.fromfile(self._filename, dtype=self.dtype,
+                                   offset=offset,
+                                   count=self._chunksize).reshape(self._chunkshape[::-1], order='F').T[item_in_chunk]
+            else:
+                return (self._array[chunk_number*self._chunksize:(chunk_number+1)*self._chunksize]
+                            .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
 
 
 def from_array_fast(arrays, asarray=False, lock=False):
@@ -142,6 +177,8 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
         if filesize != expected:
             raise ValueError("Unexpected file size for mask, found {0} but "
                              "expected {1}".format(filesize, expected))
+        dtype = bool
+        itemsize = 1
     else:
         if filesize == totalsize * 4:
             if big_endian:
@@ -159,44 +196,15 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False):
             raise ValueError("Unexpected file size for data, found {0} but "
                              "expected {1} or {2}".format(filesize, totalsize * 4, totalsize * 8))
 
-    if memmap:
-        if mask:
-            chunks = [MaskWrapper(img_fn, offset=ii*ceil(chunksize / 8) * 8, count=chunksize,
-                                  shape=chunkshape)
-                      for ii in range(nchunks)]
-        else:
-            chunks = [MemmapWrapper(img_fn, dtype=dtype, offset=ii*chunksize*itemsize,
-                                    shape=chunkshape)
-                      for ii in range(nchunks)]
-    else:
-        if mask:
-            full_array = np.fromfile(img_fn, dtype='uint8')
-            full_array = np.unpackbits(full_array, bitorder='little').astype(np.bool_)
-            ceil_chunksize = int(ceil(chunksize / 8)) * 8
-            chunks = [full_array[ii*ceil_chunksize:(ii+1)*ceil_chunksize][:chunksize].reshape(chunkshape, order='F').T
-                      for ii in range(nchunks)]
-        else:
-            full_array = np.fromfile(img_fn, dtype=dtype)
-            chunks = [full_array[ii*chunksize:(ii+1)*chunksize].reshape(chunkshape, order='F').T
-                      for ii in range(nchunks)]
+    # CASA does not like numpy ints!
+    chunkshape = tuple(int(x) for x in chunkshape)
+    totalshape = tuple(int(x) for x in totalshape)
 
-    # convert all chunks to dask arrays - and set name and meta appropriately
-    # to prevent dask trying to access the data to determine these
-    # automatically.
-    chunks = from_array_fast(chunks)
+    # Create a wrapper that takes slices and returns the appropriate CASA data
+    wrapper = CASAArrayWrapper(img_fn, totalshape, chunkshape, dtype=dtype, itemsize=itemsize, memmap=memmap)
 
-    # make a nested list of all chunks then use block() to construct the final
-    # dask array.
-    def make_nested_list(chunks, stacks):
-        chunks = [chunks[i*stacks[0]:(i+1)*stacks[0]] for i in range(len(chunks) // stacks[0])]
-        if len(stacks) > 1:
-            return make_nested_list(chunks, stacks[1:])
-        else:
-            return chunks[0]
-
-    chunks = make_nested_list(chunks, stacks)
-
-    dask_array = dask.array.block(chunks)
+    # Convert to a dask array
+    dask_array = dask.array.from_array(wrapper, name='CASA Data ' + str(uuid.uuid4()), chunks=chunkshape[::-1])
 
     # Since the chunks may not divide the array exactly, all the chunks put
     # together may be larger than the array, so we need to get rid of any

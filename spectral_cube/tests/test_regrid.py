@@ -32,8 +32,8 @@ from . import path, utilities
 WINDOWS = sys.platform == "win32"
 
 
-def test_convolution(data_255_delta):
-    cube, data = cube_and_raw(data_255_delta)
+def test_convolution(data_255_delta, use_dask):
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     # 1" convolved with 1.5" -> 1.8027....
     target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
@@ -56,8 +56,8 @@ def test_convolution(data_255_delta):
     assert np.all(conv_cube.filled_data[1,:,:] == 0.0)
 
 
-def test_beams_convolution(data_455_delta_beams):
-    cube, data = cube_and_raw(data_455_delta_beams)
+def test_beams_convolution(data_455_delta_beams, use_dask):
+    cube, data = cube_and_raw(data_455_delta_beams, use_dask=use_dask)
 
     # 1" convolved with 1.5" -> 1.8027....
     target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
@@ -76,8 +76,8 @@ def test_beams_convolution(data_455_delta_beams):
                                        conv_cube.filled_data[ii,:,:].value)
 
 
-def test_beams_convolution_equal(data_522_delta_beams):
-    cube, data = cube_and_raw(data_522_delta_beams)
+def test_beams_convolution_equal(data_522_delta_beams, use_dask):
+    cube, data = cube_and_raw(data_522_delta_beams, use_dask=use_dask)
 
     # Only checking that the equal beam case is handled correctly.
     # Fake the beam in the first channel. Then ensure that the first channel
@@ -94,11 +94,11 @@ def test_beams_convolution_equal(data_522_delta_beams):
 
 
 @pytest.mark.parametrize('use_memmap', (True, False))
-def test_reproject(use_memmap, data_adv):
+def test_reproject(use_memmap, data_adv, use_dask):
 
     pytest.importorskip('reproject')
 
-    cube, data = cube_and_raw(data_adv)
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
     wcs_in = WCS(cube.header)
     wcs_out = wcs_in.deepcopy()
@@ -122,9 +122,9 @@ def test_reproject(use_memmap, data_adv):
     assert result_wcs_from_header.wcs.compare(wcs_out.wcs)
 
 
-def test_spectral_smooth(data_522_delta):
+def test_spectral_smooth(data_522_delta, use_dask):
 
-    cube, data = cube_and_raw(data_522_delta)
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
     result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), use_memmap=False)
 
@@ -140,10 +140,10 @@ def test_spectral_smooth(data_522_delta):
                                                                 x_size=5).array,
                                    4)
 
-def test_catch_kernel_with_units(data_522_delta):
+def test_catch_kernel_with_units(data_522_delta, use_dask):
     # Passing a kernel with a unit should raise a u.UnitsError
 
-    cube, data = cube_and_raw(data_522_delta)
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
     with pytest.raises(u.UnitsError,
                        match="The convolution kernel should be defined without a unit."):
@@ -156,7 +156,7 @@ def test_spectral_smooth_4cores(data_522_delta):
 
     pytest.importorskip('joblib')
 
-    cube, data = cube_and_raw(data_522_delta)
+    cube, data = cube_and_raw(data_522_delta, use_dask=False)
 
     result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=True)
 
@@ -189,9 +189,9 @@ def test_spectral_smooth_4cores(data_522_delta):
                                    4)
 
 
-def test_spectral_smooth_fail(data_522_delta_beams):
+def test_spectral_smooth_fail(data_522_delta_beams, use_dask):
 
-    cube, data = cube_and_raw(data_522_delta_beams)
+    cube, data = cube_and_raw(data_522_delta_beams, use_dask=use_dask)
 
     with pytest.raises(AttributeError,
                        match=("VaryingResolutionSpectralCubes can't be "
@@ -201,9 +201,9 @@ def test_spectral_smooth_fail(data_522_delta_beams):
         cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0))
 
 
-def test_spectral_interpolate(data_522_delta):
+def test_spectral_interpolate(data_522_delta, use_dask):
 
-    cube, data = cube_and_raw(data_522_delta)
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
     orig_wcs = cube.wcs.deepcopy()
 
@@ -218,9 +218,9 @@ def test_spectral_interpolate(data_522_delta):
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
 
 
-def test_spectral_interpolate_with_fillvalue(data_522_delta):
+def test_spectral_interpolate_with_fillvalue(data_522_delta, use_dask):
 
-    cube, data = cube_and_raw(data_522_delta)
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
     # Step one channel out of bounds.
     sg = ((cube.spectral_axis[0]) -
@@ -232,9 +232,9 @@ def test_spectral_interpolate_with_fillvalue(data_522_delta):
                                    np.ones(4)*42)
 
 
-def test_spectral_interpolate_fail(data_522_delta_beams):
+def test_spectral_interpolate_fail(data_522_delta_beams, use_dask):
 
-    cube, data = cube_and_raw(data_522_delta_beams)
+    cube, data = cube_and_raw(data_522_delta_beams, use_dask=use_dask)
 
     with pytest.raises(AttributeError,
                        match=("VaryingResolutionSpectralCubes can't be "
@@ -244,7 +244,7 @@ def test_spectral_interpolate_fail(data_522_delta_beams):
         cube.spectral_interpolate(5)
 
 
-def test_spectral_interpolate_with_mask(data_522_delta):
+def test_spectral_interpolate_with_mask(data_522_delta, use_dask):
 
     hdul = fits.open(data_522_delta)
     hdu = hdul[0]
@@ -252,7 +252,7 @@ def test_spectral_interpolate_with_mask(data_522_delta):
     # Swap the velocity axis so indiff < 0 in spectral_interpolate
     hdu.header["CDELT3"] = - hdu.header["CDELT3"]
 
-    cube = SpectralCube.read(hdu)
+    cube = SpectralCube.read(hdu, use_dask=use_dask)
 
     mask = np.ones(cube.shape, dtype=bool)
     mask[:2] = False
@@ -276,9 +276,9 @@ def test_spectral_interpolate_with_mask(data_522_delta):
     hdul.close()
 
 
-def test_spectral_interpolate_reversed(data_522_delta):
+def test_spectral_interpolate_reversed(data_522_delta, use_dask):
 
-    cube, data = cube_and_raw(data_522_delta)
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
     orig_wcs = cube.wcs.deepcopy()
 
@@ -313,9 +313,9 @@ def test_convolution_2D(data_55_delta):
 
 
 
-def test_nocelestial_convolution_2D_fail(data_255_delta):
+def test_nocelestial_convolution_2D_fail(data_255_delta, use_dask):
 
-    cube, data = cube_and_raw(data_255_delta)
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     proj = cube.moment0(axis=1)
 
@@ -355,11 +355,11 @@ def test_reproject_2D(data_55):
     assert result_wcs_from_header.wcs.compare(wcs_out.wcs)
 
 
-def test_nocelestial_reproject_2D_fail(data_255_delta):
+def test_nocelestial_reproject_2D_fail(data_255_delta, use_dask):
 
     pytest.importorskip('reproject')
 
-    cube, data = cube_and_raw(data_255_delta)
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
 
     proj = cube.moment0(axis=1)
 
@@ -370,7 +370,11 @@ def test_nocelestial_reproject_2D_fail(data_255_delta):
 
 @pytest.mark.parametrize('use_memmap', (True,False))
 def test_downsample(use_memmap, data_255):
-    cube, data = cube_and_raw(data_255)
+
+    # FIXME: this test should be updated to use the use_dask fixture once
+    # DaskSpectralCube.downsample_axis is fixed.
+
+    cube, data = cube_and_raw(data_255, use_dask=False)
 
     dscube = cube.downsample_axis(factor=2, axis=0, use_memmap=use_memmap)
 
@@ -385,6 +389,7 @@ def test_downsample(use_memmap, data_255):
                          data[:,2:4,:].mean(axis=1),
                          data[:,4:,:].mean(axis=1), # just data[:,4,:]
                         ]).swapaxes(0,1)
+
     assert expected.shape == (2,3,5)
     assert dscube.shape == (2,3,5)
 
@@ -402,10 +407,13 @@ def test_downsample(use_memmap, data_255):
                                    dscube.filled_data[:].value)
 
 
-
 @pytest.mark.parametrize('use_memmap', (True,False))
 def test_downsample_wcs(use_memmap, data_255):
-    cube, data = cube_and_raw(data_255)
+
+    # FIXME: this test should be updated to use the use_dask fixture once
+    # DaskSpectralCube.downsample_axis is fixed.
+
+    cube, data = cube_and_raw(data_255, use_dask=False)
 
     dscube = (cube
               .downsample_axis(factor=2, axis=1, use_memmap=use_memmap)
@@ -424,6 +432,7 @@ def test_downsample_wcs(use_memmap, data_255):
     xpixnew_ypixnew = np.array(dscube.wcs.celestial.wcs_world2pix(lonold, latold, 1))
 
     np.testing.assert_almost_equal(xpixnew_ypixnew, (0.75, 0.75))
+
 
 @pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK')
 def test_reproject_3D_memory():

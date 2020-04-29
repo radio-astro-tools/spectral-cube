@@ -1,16 +1,16 @@
 [run]
-source = {packagename}
+source = spectral_cube
 omit =
-   {packagename}/_astropy_init*
-   {packagename}/conftest*
-   {packagename}/cython_version*
-   {packagename}/setup_package*
-   {packagename}/*/setup_package*
-   {packagename}/*/*/setup_package*
-   {packagename}/tests/*
-   {packagename}/*/tests/*
-   {packagename}/*/*/tests/*
-   {packagename}/version*
+   spectral_cube/_astropy_init*
+   spectral_cube/conftest*
+   spectral_cube/cython_version*
+   spectral_cube/setup_package*
+   spectral_cube/*/setup_package*
+   spectral_cube/*/*/setup_package*
+   spectral_cube/tests/*
+   spectral_cube/*/tests/*
+   spectral_cube/*/*/tests/*
+   spectral_cube/version*
 
 [report]
 exclude_lines =

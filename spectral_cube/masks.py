@@ -1,12 +1,15 @@
 from __future__ import print_function, absolute_import, division
 
 import abc
+import uuid
 import warnings
 import tempfile
 
 from six.moves import zip
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
+
+import dask.array as da
 
 from astropy.wcs import InconsistentAxisTypesError
 from astropy.io import fits
@@ -182,7 +185,17 @@ class MaskBase(object):
         -----
         This is an internal method used by :class:`SpectralCube`.
         """
-        return data[view][self.include(data=data, wcs=wcs, view=view)]
+
+        mask = self.include(data=data, wcs=wcs, view=view)
+
+        # Workaround for https://github.com/dask/dask/issues/6089
+        if isinstance(data, da.Array) and not isinstance(mask, da.Array):
+            mask = da.asarray(mask, name=str(uuid.uuid4()))
+
+        # if not isinstance(data, da.Array) and isinstance(mask, da.Array):
+        #     mask = mask.compute()
+
+        return data[view][mask]
 
     def _filled(self, data, wcs=None, fill=np.nan, view=(), use_memmap=False,
                 **kwargs):

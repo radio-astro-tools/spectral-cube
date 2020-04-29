@@ -8,6 +8,7 @@ except ImportError:
     # python2
     import __builtin__ as builtins
 
+import dask.array as da
 import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
@@ -172,7 +173,10 @@ def _orient(array, wcs):
         raise ValueError("Input WCS should not contain stokes")
 
     t = [types.index('spectral'), nums.index(1), nums.index(0)]
-    result_array = array.transpose(t)
+    if t == [0, 1, 2]:
+        result_array = array
+    else:
+        result_array = array.transpose(t)
 
     result_wcs = wcs.sub([WCSSUB_LONGITUDE, WCSSUB_LATITUDE, WCSSUB_SPECTRAL])
 
@@ -220,7 +224,22 @@ class SliceIndexer(object):
         self._other = _other
 
     def __getitem__(self, view):
-        return self._func(self._other, view)
+        result = self._func(self._other, view)
+        if isinstance(result, da.Array):
+            result = result.compute()
+        return result
+
+    @property
+    def size(self):
+        return self._other.size
+
+    @property
+    def ndim(self):
+        return self._other.ndim
+
+    @property
+    def shape(self):
+        return self._other.shape
 
     def __iter__(self):
         raise Exception("You need to specify a slice (e.g. ``[:]`` or "

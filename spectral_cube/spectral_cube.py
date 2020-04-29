@@ -15,7 +15,7 @@ import textwrap
 from pathlib import PosixPath
 import six
 from six.moves import zip, range
-import dask.array
+import dask.array as da
 
 import astropy.wcs
 from astropy import units as u
@@ -1055,6 +1055,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             data cube
         """
         data = self._mask._flattened(data=self._data, wcs=self._wcs, view=slice)
+        if isinstance(data, da.Array):
+            # Quantity does not work well with lazily evaluated data with an
+            # unkonwn shape (which is the case when doing boolean indexing of arrays)
+            data = self._compute(data)
         if weights is not None:
             weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
             return u.Quantity(data * weights, self.unit, copy=False)
@@ -1318,7 +1322,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         values = self._data[view]
         # Astropy Quantities don't play well with dask arrays with shape ()
-        if isinstance(values, dask.array.core.Array) and values.shape == ():
+        if isinstance(values, da.Array) and values.shape == ():
             values = values.compute()
         return u.Quantity(values, self.unit, copy=False)
 
@@ -1369,9 +1373,21 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         x[:, 1:] = np.cumsum(np.degrees(dx), axis=1)
         y[1:, :] = np.cumsum(np.degrees(dy), axis=0)
 
-        x, y, spectral = np.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+        if isinstance(self._data, da.Array):
 
-        return spectral, y, x
+            x, y, spectral = da.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+
+            # NOTE: we need to rechunk these to the actual data size, otherwise
+            # the resulting arrays have a single chunk which can cause issues with
+            # da.store (which writes data out in chunks)
+            return (spectral.rechunk(self._data.chunksize),
+                    y.rechunk(self._data.chunksize),
+                    x.rechunk(self._data.chunksize))
+        else:
+
+            x, y, spectral = np.broadcast_arrays(x[None,:,:], y[None,:,:], spectral[:,None,None])
+
+            return spectral, y, x
 
     @cached
     def _pix_size_slice(self, axis):
@@ -2186,8 +2202,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 from yt.frontends.fits.api import FITSDataset
             from yt.units.unit_object import UnitParseError
 
-            hdu = PrimaryHDU(self._get_filled_data(fill=0.),
-                             header=self.wcs.to_header())
+            data = self._get_filled_data(fill=0.)
+
+            if isinstance(data, da.Array):
+                # Note that >f8 can cause issues with yt, and for visualization
+                # we don't really need the full 64-bit of floating point
+                # precision, so we cast to float32.
+                data = data.astype(np.float32).compute()
+
+            hdu = PrimaryHDU(data, header=self.wcs.to_header())
 
             units = str(self.unit.to_string())
 
@@ -3406,9 +3429,16 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
 
     _oned_spectrum = OneDSpectrum
 
+    def __new__(cls, *args, **kwargs):
+        if kwargs.pop('use_dask', False):
+            from .dask_spectral_cube import DaskSpectralCube
+            return super().__new__(DaskSpectralCube)
+        else:
+            return super().__new__(cls)
+
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None, allow_huge_operations=False, beam=None,
-                 wcs_tolerance=0.0, **kwargs):
+                 wcs_tolerance=0.0, use_dask=False, **kwargs):
 
         super(SpectralCube, self).__init__(data=data, wcs=wcs, mask=mask,
                                            meta=meta, fill_value=fill_value,
@@ -3476,6 +3506,13 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
     __name__ = "VaryingResolutionSpectralCube"
 
     _oned_spectrum = VaryingResolutionOneDSpectrum
+
+    def __new__(cls, *args, **kwargs):
+        if kwargs.pop('use_dask', False):
+            from .dask_spectral_cube import DaskVaryingResolutionSpectralCube
+            return super().__new__(DaskVaryingResolutionSpectralCube)
+        else:
+            return super().__new__(cls)
 
     def __init__(self, *args, **kwargs):
         """

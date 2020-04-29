@@ -9,15 +9,21 @@ def allbadtonan(function):
     results.  For >=1.9, any axes with all-nan values will have all-nan outputs
     in the collapsed version
     """
-    def f(data, axis=None):
-        result = function(data, axis=axis)
+    def f(data, axis=None, keepdims=None):
+        if keepdims is None:
+            result = function(data, axis=axis)
+        else:
+            result = function(data, axis=axis, keepdims=keepdims)
         if LooseVersion(np.__version__) >= LooseVersion('1.9.0') and hasattr(result, '__len__'):
             if axis is None:
                 if np.all(np.isnan(data)):
                     return np.nan
                 else:
                     return result
-            nans = np.all(np.isnan(data), axis=axis)
+            if keepdims is None:
+                nans = np.all(np.isnan(data), axis=axis)
+            else:
+                nans = np.all(np.isnan(data), axis=axis, keepdims=keepdims)
             result[nans] = np.nan
         return result
 

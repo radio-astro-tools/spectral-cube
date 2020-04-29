@@ -5,6 +5,7 @@ from ._astropy_init import __version__, test
 from pkg_resources import get_distribution, DistributionNotFound
 
 from .spectral_cube import (SpectralCube, VaryingResolutionSpectralCube)
+from .dask_spectral_cube import (DaskSpectralCube, DaskVaryingResolutionSpectralCube)
 from .stokes_spectral_cube import StokesSpectralCube
 from .masks import (MaskBase, InvertedMask, CompositeMask,
                     BooleanArrayMask, LazyMask, LazyComparisonMask,
@@ -20,6 +21,7 @@ from .io import fits
 del fits
 
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube',
+           'DaskSpectralCube', 'DaskVaryingResolutionSpectralCube',
             'StokesSpectralCube', 'CompositeMask', 'LazyComparisonMask',
             'LazyMask', 'BooleanArrayMask', 'FunctionMask',
             'OneDSpectrum', 'Projection', 'Slice'

@@ -29,6 +29,13 @@ else:
     from pytest_astropy_header.display import PYTEST_HEADER_MODULES, TESTED_VERSIONS
 
 
+@pytest.fixture(params=[False, True])
+def use_dask(request):
+    # Fixture to run tests that use this fixture with both SpectralCube and
+    # DaskSpectralCube
+    return request.param
+
+
 def pytest_configure(config):
 
     config.option.astropy_header = True
@@ -169,6 +176,14 @@ def data_adv(tmp_path):
     d, h = prepare_adv_data()
     fits.writeto(tmp_path / 'adv.fits', d, h)
     return tmp_path / 'adv.fits'
+
+
+@pytest.fixture
+def data_adv_simple(tmp_path):
+    d, h = prepare_adv_data()
+    d.flat[:] = np.arange(d.size)
+    fits.writeto(tmp_path / 'adv_simple.fits', d, h)
+    return tmp_path / 'adv_simple.fits'
 
 
 @pytest.fixture

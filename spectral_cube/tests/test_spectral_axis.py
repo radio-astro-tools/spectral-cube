@@ -5,8 +5,6 @@ from astropy.io import fits
 from astropy import units as u
 from astropy import constants
 from astropy.tests.helper import pytest, assert_quantity_allclose
-import warnings
-import os
 import numpy as np
 
 from .helpers import assert_allclose
@@ -16,6 +14,7 @@ from ..spectral_axis import (convert_spectral_axis, determine_ctype_from_vconv,
                              get_rest_value_from_wcs, air_to_vac,
                              air_to_vac_deriv, vac_to_air, doppler_z,
                              doppler_gamma, doppler_beta)
+
 
 def test_cube_wcs_freqtovel():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
@@ -34,6 +33,7 @@ def test_cube_wcs_freqtovel():
     assert newwcs.wcs.crval[2] == 305.2461585938794
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
 
+
 def test_cube_wcs_freqtovopt():
     header = fits.Header.fromtextfile(data_path('cubewcs1.hdr'))
     w1 = wcs.WCS(header)
@@ -50,6 +50,7 @@ def test_cube_wcs_freqtovopt():
         convert_spectral_axis(w1, 'km/s', 'VOPT')
 
     assert exc.value.args[0] == 'If converting from wavelength/frequency to speed, a reference wavelength/frequency is required.'
+
 
 @pytest.mark.parametrize('wcstype',('Z','W','R','V'))
 def test_greisen2006(wcstype):
@@ -102,6 +103,7 @@ def test_greisen2006(wcstype):
                                    rtol=1.e-3)
     assert wcs3.wcs.ctype[wcs3.wcs.spec] == wcs0.wcs.ctype[wcs0.wcs.spec]
     assert wcs3.wcs.cunit[wcs3.wcs.spec] == wcs0.wcs.cunit[wcs0.wcs.spec]
+
 
 def test_byhand_f2v():
     # VELO-F2V
@@ -160,6 +162,7 @@ def test_byhand_f2v():
     # this should be EXACT
     assert cdeltf_computed == cdeltf_computed_byfunction
 
+
 def test_byhand_vrad():
     # VRAD
     CRVAL3F = 1.37847121643E+09
@@ -199,6 +202,7 @@ def test_byhand_vrad():
     # (<Quantity -20609.645482954576 m / s>, <Quantity -20609.645482954576 m / s>, <Quantity 94888.9338036023 Hz>, <Quantity 94888.9338036023 Hz>)
     # (Pdb) myunit,lin_cunit,out_lin_cunit,outunit
     # WRONG (Unit("m / s"), Unit("m / s"), Unit("Hz"), Unit("Hz"))
+
 
 def test_byhand_vopt():
     # VOPT: case "Z"
@@ -305,6 +309,7 @@ def test_byhand_f2w():
     assert_allclose(crvalf_computed, crvalf, rtol=0.1)
     assert_allclose(cdeltf_computed, cdeltf, rtol=0.1)
 
+
 @pytest.mark.parametrize(('ctype','unit','velocity_convention','result'),
                          (('VELO-F2V', "Hz", None, 'FREQ'),
                           ('VELO-F2V', "m", None, 'WAVE-F2W'),
@@ -329,6 +334,7 @@ def test_ctype_determinator(ctype,unit,velocity_convention,result):
         outctype = determine_ctype_from_vconv(ctype, unit,
                                               velocity_convention=velocity_convention)
         assert outctype == result
+
 
 @pytest.mark.parametrize(('ctype','vconv'),
                          (('VELO-F2W', u.doppler_optical),
@@ -446,6 +452,7 @@ def test_air_to_vac(air, vac):
     assert np.abs((vac_to_air(air_to_vac(air))-air))/air < 1e-8
     assert np.abs((air_to_vac(vac_to_air(vac))-vac))/vac < 1e-8
 
+
 def test_byhand_awav2vel():
     # AWAV
     CRVAL3A = (6560*u.AA).to(u.m).value
@@ -497,6 +504,7 @@ def test_byhand_awav2vel():
 
     np.testing.assert_almost_equal(pix_line_output, pix_line_input, decimal=4)
 
+
 def test_byhand_awav2wav():
     # AWAV
     CRVAL3A = (6560*u.AA).to(u.m).value
@@ -526,7 +534,9 @@ def test_byhand_awav2wav():
     assert not (mywcs.wcs.crval[0] == newwcs.wcs.crval[0]
                 and mywcs.wcs.crpix[0] == newwcs.wcs.crpix[0])
 
+
 class test_nir_sinfoni_base(object):
+
     def setup_method(self, method):
         CD3_3   = 0.000245000002905726 # CD rotation matrix
         CTYPE3  = 'WAVE    '           # wavelength axis in microns
