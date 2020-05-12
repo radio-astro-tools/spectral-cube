@@ -7,6 +7,8 @@ from __future__ import print_function, absolute_import, division
 import uuid
 import inspect
 import warnings
+import tempfile
+
 from functools import wraps
 from contextlib import contextmanager
 
@@ -54,6 +56,21 @@ def ignore_warnings(function):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             return function(self, *args, **kwargs)
+
+    return wrapper
+
+
+def add_save_to_tmp_dir_option(function):
+
+    @wraps(function)
+    def wrapper(self, *args, **kwargs):
+        save_to_tmp_dir = kwargs.pop('save_to_tmp_dir', False)
+        cube = function(self, *args, **kwargs)
+        if save_to_tmp_dir and isinstance(cube, DaskSpectralCubeMixin):
+            filename = tempfile.mktemp()
+            cube._data.to_zarr(filename)
+            cube._data = da.from_zarr(filename)
+        return cube
 
     return wrapper
 
@@ -270,6 +287,7 @@ class DaskSpectralCubeMixin:
         else:
             return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)[view]
 
+    @add_save_to_tmp_dir_option
     @projection_if_needed
     def apply_function(self, function, axis=None, unit=None,
                        projection=False,
@@ -294,6 +312,12 @@ class DaskSpectralCubeMixin:
         keep_shape : bool
             If `True`, the returned object will be the same dimensionality as
             the cube.
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
 
         Returns
         -------
@@ -320,6 +344,7 @@ class DaskSpectralCubeMixin:
 
         return newdata
 
+    @add_save_to_tmp_dir_option
     @projection_if_needed
     def apply_numpy_function(self, function, fill=np.nan,
                              projection=False,
@@ -350,6 +375,12 @@ class DaskSpectralCubeMixin:
             A flag to check the endianness of the data before applying the
             function.  This is only needed for optimized functions, e.g. those
             in the `bottleneck <https://pypi.python.org/pypi/Bottleneck>`_ package.
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
         kwargs : dict
             Passed to the numpy function.
 
@@ -371,8 +402,10 @@ class DaskSpectralCubeMixin:
             # TODO: implement support for bottleneck? or arbitrary ufuncs?
             raise NotImplementedError()
 
+    @add_save_to_tmp_dir_option
     def apply_function_parallel_spatial(self,
                                         function,
+                                        accepts_chunks=False,
                                         **kwargs):
         """
         Apply a function in parallel along the spatial dimension.  The
@@ -387,27 +420,49 @@ class DaskSpectralCubeMixin:
             representing the mask.  It may also accept ``**kwargs``.  The
             function must return an object with the same shape as the input
             image.
+        accepts_chunks : bool
+            Whether the function can take chunks with shape (ns, ny, nx) where
+            ``ns`` is the number of spectral channels in the cube and ``nx``
+            and ``ny`` may be greater than one.
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
         kwargs : dict
             Passed to ``function``
         """
 
-        def wrapper(data_slices, **kwargs):
-            # Dask doesn't drop the spectral dimension so this function is a
-            # wrapper to do that automatically.
-            if data_slices.size > 0:
-                out = np.zeros_like(data_slices)
-                for index in range(data_slices.shape[0]):
-                    out[index] = function(data_slices[index], **kwargs)
-                return out
-            else:
-                return data_slices
+        if accepts_chunks:
+            def wrapper(data_slices, **kwargs):
+                # Dask doesn't drop the spectral dimension so this function is a
+                # wrapper to do that automatically.
+                if data_slices.size > 0:
+                    return function(data_slices, **kwargs)
+                else:
+                    return data_slices
+        else:
+            def wrapper(data_slices, **kwargs):
+                # Dask doesn't drop the spectral dimension so this function is a
+                # wrapper to do that automatically.
+                if data_slices.size > 0:
+                    out = np.zeros_like(data_slices)
+                    for index in range(data_slices.shape[0]):
+                        out[index] = function(data_slices[index], **kwargs)
+                    return out
+                else:
+                    return data_slices
 
         # Rechunk so that there is only one chunk in the image plane
         return self._map_blocks_to_cube(wrapper,
-                                        rechunk=('auto', -1, -1), fill=self._fill_value, **kwargs)
+                                        rechunk=('auto', -1, -1),
+                                        fill=self._fill_value, **kwargs)
 
+    @add_save_to_tmp_dir_option
     def apply_function_parallel_spectral(self,
                                          function,
+                                         accepts_chunks=False,
                                          **kwargs):
         """
         Apply a function in parallel along the spectral dimension.  The
@@ -422,24 +477,41 @@ class DaskSpectralCubeMixin:
             representing the mask.  It may also accept ``**kwargs``.  The
             function must return an object with the same shape as the input
             spectrum.
+        accepts_chunks : bool
+            Whether the function can take chunks with shape (ns, ny, nx) where
+            ``ns`` is the number of spectral channels in the cube and ``nx``
+            and ``ny`` may be greater than one.
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
         kwargs : dict
             Passed to ``function``
         """
 
-        data = self._get_filled_data(fill=self._fill_value)
+        if accepts_chunks:
 
-        # apply_along_axis returns an array with a single chunk, but we need to
-        # rechunk here to avoid issues when writing out the data even if it
-        # results in a poorer performance.
-        data = data.rechunk((-1, 50, 50))
+            return self._map_blocks_to_cube(function,
+                                            rechunk=(-1, 'auto', 'auto'), **kwargs)
 
-        newdata = da.apply_along_axis(function, 0, data, shape=(self.shape[0],))
+        else:
 
-        return self._new_cube_with(data=newdata,
-                                   wcs=self.wcs,
-                                   mask=self.mask,
-                                   meta=self.meta,
-                                   fill_value=self.fill_value)
+            data = self._get_filled_data(fill=self._fill_value)
+
+            # apply_along_axis returns an array with a single chunk, but we
+            # need to rechunk here to avoid issues when writing out the data
+            # even if it results in a poorer performance.
+            data = data.rechunk((-1, 50, 50))
+
+            newdata = da.apply_along_axis(function, 0, data, shape=(self.shape[0],))
+
+            return self._new_cube_with(data=newdata,
+                                       wcs=self.wcs,
+                                       mask=self.mask,
+                                       meta=self.meta,
+                                       fill_value=self.fill_value)
 
     @projection_if_needed
     @ignore_warnings
@@ -598,6 +670,7 @@ class DaskSpectralCubeMixin:
     # spaxel using apply_function_parallel_spectral but then take longer (but
     # less memory)
 
+    @add_save_to_tmp_dir_option
     def sigma_clip_spectrally(self,
                               threshold,
                               **kwargs):
@@ -610,6 +683,14 @@ class DaskSpectralCubeMixin:
         threshold : float
             The ``sigma`` parameter in `astropy.stats.sigma_clip`, which refers
             to the number of sigma above which to cut.
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
+        kwargs : dict
+            Passed to the sigma_clip function
         """
 
         def spectral_sigma_clip(array):
@@ -621,6 +702,7 @@ class DaskSpectralCubeMixin:
         return self._map_blocks_to_cube(spectral_sigma_clip,
                                         rechunk=(-1, 'auto', 'auto'))
 
+    @add_save_to_tmp_dir_option
     def spectral_smooth(self,
                         kernel,
                         convolve=convolution.convolve,
@@ -638,6 +720,12 @@ class DaskSpectralCubeMixin:
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
         kwargs : dict
             Passed to the convolve function
         """
@@ -657,6 +745,7 @@ class DaskSpectralCubeMixin:
         return self._map_blocks_to_cube(spectral_smooth,
                                         rechunk=(-1, 'auto', 'auto'))
 
+    @add_save_to_tmp_dir_option
     def spectral_smooth_median(self, ksize, **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -665,6 +754,12 @@ class DaskSpectralCubeMixin:
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
         kwargs : dict
             Not used at the moment.
         """
@@ -684,6 +779,7 @@ class DaskSpectralCubeMixin:
         return self._map_blocks_to_cube(median_filter_wrapper,
                                         rechunk=(-1, 'auto', 'auto'))
 
+    @add_save_to_tmp_dir_option
     def spatial_smooth(self, kernel, convolve=convolution.convolve, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
@@ -696,6 +792,12 @@ class DaskSpectralCubeMixin:
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
         kwargs : dict
             Passed to the convolve function
         """
@@ -705,6 +807,7 @@ class DaskSpectralCubeMixin:
 
         return self.apply_function_parallel_spatial(convolve_wrapper, kernel=kernel.array)
 
+    @add_save_to_tmp_dir_option
     def spatial_smooth_median(self, ksize, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
@@ -873,6 +976,7 @@ class DaskSpectralCubeMixin:
 
         return tuple(slices)
 
+    @add_save_to_tmp_dir_option
     def downsample_axis(self, factor, axis, estimator=np.nanmean,
                         truncate=False):
         """
@@ -903,6 +1007,12 @@ class DaskSpectralCubeMixin:
             Whether to truncate the last chunk or average over a smaller number.
             e.g., if you downsample [1,2,3,4] by a factor of 3, you could get either
             [2] or [2,4] if truncate is True or False, respectively.
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
         """
 
         # FIXME: this does not work correctly currently due to
@@ -937,6 +1047,7 @@ class DaskSpectralCubeMixin:
         return self._new_cube_with(data=data, wcs=newwcs,
                                    mask=BooleanArrayMask(mask, wcs=newwcs))
 
+    @add_save_to_tmp_dir_option
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
                              fill_value=None):
@@ -955,6 +1066,12 @@ class DaskSpectralCubeMixin:
             the spectral range defined in the original data.  The
             default is to use the nearest spectral channel in the
             cube.
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
 
         Returns
         -------
@@ -1071,6 +1188,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
     def hdulist(self):
         return HDUList(self.hdu)
 
+    @add_save_to_tmp_dir_option
     def convolve_to(self, beam, convolve=convolution.convolve, **kwargs):
         """
         Convolve each channel in the cube to a specified beam
@@ -1083,6 +1201,12 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
         kwargs : dict
             Keyword arguments to pass to the convolution function
 
@@ -1158,6 +1282,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
 
         return HDUList([hdu, bmhdu])
 
+    @add_save_to_tmp_dir_option
     def convolve_to(self, beam, allow_smaller=False,
                     convolve=convolution.convolve_fft,
                     **kwargs):
@@ -1186,6 +1311,12 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        save_to_tmp_dir : bool
+            If `True`, the computation will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the computation is only carried out when accessing
+            specific parts of the data or writing to disk.
 
         Returns
         -------
