@@ -16,6 +16,9 @@ This package has the following dependencies:
 * `Regions <https://astropy-regions.readthedocs.io/en/latest>`_ >=0.3dev, optional
   (Serialises/Deserialises DS9/CRTF region files and handles them. Used when
   extracting a subcube from region)
+* `dask <https://dask.org/>`_, used for the :class:`~spectral_cube.DaskSpectralCube` class
+* `zarr <https://zarr.readthedocs.io/en/stable/>`_ and `fsspec <https://pypi.org/project/fsspec/>`_,
+  used for storing computations to disk when using the dask-enabled classes.
 * `six <http://pypi.python.org/pypi/six/>`_
 
 Installation
