@@ -84,7 +84,7 @@ re-read it immediately from disk (for users interested in how the data is stored
      n_y:      4  type_y: DEC--ARC  unit_y: deg    range:    31.243639 deg:   31.243739 deg
      n_s:      7  type_s: VRAD      unit_s: m / s  range:    14322.821 m / s:   14944.909 m / s
 
-Note that this requires the `zarr` and `fsspec <https://pypi.org/project/fsspec/>`_ packages to be
+Note that this requires the `zarr`_ and `fsspec <https://pypi.org/project/fsspec/>`_ packages to be
 installed.
 
 This can also be beneficial if you are using multiprocessing or multithreading to carry out calculations,
@@ -97,7 +97,7 @@ Like the :class:`~spectral_cube.SpectralCube` class, the
 :class:`~spectral_cube.DaskSpectralCube` and
 :class:`~spectral_cube.DaskVaryingResolutionSpectralCube` classes have methods for applying custom
 functions to all the spectra or all the spatial images in a cube:
-:meth:`~spectral_cube.DaskSpectralCube.apply_function_parallel_spectra` and
+:meth:`~spectral_cube.DaskSpectralCube.apply_function_parallel_spectral` and
 :meth:`~spectral_cube.DaskSpectralCube.apply_function_parallel_spatial`. By default, these methods
 take functions that apply to individual spectra or images, but this can be quite slow for large
 spectral cubes. If possible, you should consider supplying a function that can accept 3-d cubes
@@ -116,7 +116,7 @@ the image plane::
 As an example, we will apply sigma clipping to all spectra in the cube. Note that there is a method
 to do this (:meth:`~spectral_cube.DaskSpectralCube.sigma_clip_spectrally`) but for the purposes of
 demonstration, we will set up the function ourselves and apply it with
-:meth:`~spectral_cube.DaskSpectralCube.apply_function_parallel_spectra`. We will use the
+:meth:`~spectral_cube.DaskSpectralCube.apply_function_parallel_spectral`. We will use the
 :func:`~astropy.stats.sigma_clip` function from astropy::
 
     >>> from astropy.stats import sigma_clip
@@ -133,7 +133,7 @@ silence, so we can do this here too::
     ...         warnings.simplefilter('ignore')
     ...         return sigma_clip(*args, **kwargs).filled(np.nan)
 
-Let's now call :meth:`~spectral_cube.DaskSpectralCube.apply_function_parallel_spectra`, including the
+Let's now call :meth:`~spectral_cube.DaskSpectralCube.apply_function_parallel_spectral`, including the
 ``save_to_tmp_dir`` option mentioned previously to force the calculation and the storage of the result
 to disk::
 
