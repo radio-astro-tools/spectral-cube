@@ -1,4 +1,6 @@
-# Tests specific to the dask classe
+# Tests specific to the dask class
+
+import pytest
 
 from spectral_cube import DaskSpectralCube
 
@@ -38,3 +40,12 @@ def test_scheduler(data_adv):
 
     cube._compute(fake_array)
     assert fake_array.kwargs == {'scheduler': 'threads'}
+
+
+def test_save_to_tmp_dir(data_adv):
+    pytest.importorskip('zarr')
+    cube = DaskSpectralCube.read(data_adv)
+    cube_new = cube.sigma_clip_spectrally(3, save_to_tmp_dir=True)
+    # The following test won't necessarily always work in future since the name
+    # is not really guaranteed, but this is pragrmatic enough for now
+    assert cube_new._data.name.startswith('from-zarr')

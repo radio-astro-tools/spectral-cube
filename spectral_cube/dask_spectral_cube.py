@@ -40,6 +40,14 @@ try:
 except ImportError:
     SCIPY_INSTALLED = False
 
+try:
+    import zarr
+    import fsspec
+except ImportError:
+    ZARR_INSTALLED = False
+else:
+    ZARR_INSTALLED = True
+
 
 def nansum_allbadtonan(dask_array, axis=None, keepdims=None):
     return da.reduction(dask_array,
@@ -67,6 +75,10 @@ def add_save_to_tmp_dir_option(function):
         save_to_tmp_dir = kwargs.pop('save_to_tmp_dir', False)
         cube = function(self, *args, **kwargs)
         if save_to_tmp_dir and isinstance(cube, DaskSpectralCubeMixin):
+            if not ZARR_INSTALLED:
+                raise ImportError("saving the cube to a temporary directory "
+                                  "requires the zarr and fsspec packages to "
+                                  "be installed.")
             filename = tempfile.mktemp()
             cube._data.to_zarr(filename)
             cube._data = da.from_zarr(filename)
@@ -697,10 +709,8 @@ class DaskSpectralCubeMixin:
             result = stats.sigma_clip(array, sigma=threshold, axis=0, **kwargs)
             return result.filled(np.nan)
 
-        # Rechunk so that there is only one chunk spectrally and let dask
-        # decide for the rest
-        return self._map_blocks_to_cube(spectral_sigma_clip,
-                                        rechunk=(-1, 'auto', 'auto'))
+        return self.apply_function_parallel_spectral(spectral_sigma_clip,
+                                                     accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
     def spectral_smooth(self,
@@ -735,15 +745,11 @@ class DaskSpectralCubeMixin:
                                "without a unit.")
 
         def spectral_smooth(array):
-            if array.size > 0:
-                kernel_3d = kernel.array.reshape((len(kernel.array), 1, 1))
-                return convolve(array, kernel_3d, normalize_kernel=True)
-            else:
-                return array
+            kernel_3d = kernel.array.reshape((len(kernel.array), 1, 1))
+            return convolve(array, kernel_3d, normalize_kernel=True)
 
-        # Rechunk so that there is only one chunk spectrally
-        return self._map_blocks_to_cube(spectral_smooth,
-                                        rechunk=(-1, 'auto', 'auto'))
+        return self.apply_function_parallel_spectral(spectral_smooth,
+                                                     accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
     def spectral_smooth_median(self, ksize, **kwargs):
@@ -775,9 +781,8 @@ class DaskSpectralCubeMixin:
         def median_filter_wrapper(img, **kwargs):
             return ndimage.median_filter(img, (ksize, 1, 1), **kwargs)
 
-        # Rechunk so that there is only one chunk spectrally
-        return self._map_blocks_to_cube(median_filter_wrapper,
-                                        rechunk=(-1, 'auto', 'auto'))
+        return self.apply_function_parallel_spectral(median_filter_wrapper,
+                                                     accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
     def spatial_smooth(self, kernel, convolve=convolution.convolve, **kwargs):
@@ -1228,14 +1233,10 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         kernel = convolution_kernel.array.reshape((1,) + convolution_kernel.array.shape)
 
         def convfunc(img):
-            if img.size > 0:
-                return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
-            else:
-                return img
+            return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
 
-        # Rechunk so that there is only one chunk in the image plane
-        return self._map_blocks_to_cube(convfunc,
-                                        rechunk=('auto', -1, -1)).with_beam(beam)
+        return self.apply_function_parallel_spatial(convfunc,
+                                                    accepts_chunks=True).with_beam(beam)
 
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
@@ -1323,7 +1324,6 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         cube : `SpectralCube`
             A SpectralCube with a single ``beam``
         """
-
 
         if ((self.wcs.celestial.wcs.get_pc()[0,1] != 0 or
              self.wcs.celestial.wcs.get_pc()[1,0] != 0)):
