@@ -448,16 +448,12 @@ class DaskSpectralCubeMixin:
 
         if accepts_chunks:
             def wrapper(data_slices, **kwargs):
-                # Dask doesn't drop the spectral dimension so this function is a
-                # wrapper to do that automatically.
                 if data_slices.size > 0:
                     return function(data_slices, **kwargs)
                 else:
                     return data_slices
         else:
             def wrapper(data_slices, **kwargs):
-                # Dask doesn't drop the spectral dimension so this function is a
-                # wrapper to do that automatically.
                 if data_slices.size > 0:
                     out = np.zeros_like(data_slices)
                     for index in range(data_slices.shape[0]):
@@ -503,9 +499,15 @@ class DaskSpectralCubeMixin:
             Passed to ``function``
         """
 
+        def wrapper(data, **kwargs):
+            if data.size > 0:
+                return function(data, **kwargs)
+            else:
+                return data
+
         if accepts_chunks:
 
-            return self._map_blocks_to_cube(function,
+            return self._map_blocks_to_cube(wrapper,
                                             rechunk=(-1, 'auto', 'auto'), **kwargs)
 
         else:
@@ -517,7 +519,7 @@ class DaskSpectralCubeMixin:
             # even if it results in a poorer performance.
             data = data.rechunk((-1, 50, 50))
 
-            newdata = da.apply_along_axis(function, 0, data, shape=(self.shape[0],))
+            newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],))
 
             return self._new_cube_with(data=newdata,
                                        wcs=self.wcs,
