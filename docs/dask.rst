@@ -63,6 +63,8 @@ a progress bar:
     [########################################] | 100% Completed |  0.1s
     <Quantity 0.01936739 Jy / beam>
 
+Performance benefits of using dask spectral cube classes
+
 Saving intermediate results to disk
 -----------------------------------
 
@@ -89,6 +91,42 @@ installed.
 
 This can also be beneficial if you are using multiprocessing or multithreading to carry out calculations,
 because zarr works nicely with disk access from different threads and processes.
+
+Performance benefits of dask classes
+------------------------------------
+
+The :class:`~spectral_cube.DaskSpectralCube` class provides in general better
+performance than the regular :class:`~spectral_cube.SpectralCube` class. As an
+example, we take a look at a spectral cube in FITS format for which we want to
+determine the continuum using sigma clipping. When doing this in serial mode,
+we already see improvements in performance - first we show the regular spectral
+cube capabilities without dask::
+
+    >>> from spectral_cube import SpectralCube
+    >>> cube_plain = SpectralCube.read('large_spectral_cube.fits')  # doctest: +SKIP
+    >>> %time cube_plain.sigma_clip_spectrally(1)  # doctest: +SKIP
+    ...
+    CPU times: user 5min 58s, sys: 38 s, total: 6min 36s
+    Wall time: 6min 37s
+
+and using the :class:`~spectral_cube.DaskSpectralCube` class::
+
+    >>> cube_dask = SpectralCube.read('large_spectral_cube.fits', use_dask=True)  # doctest: +SKIP
+    >>> %time cube_dask.sigma_clip_spectrally(1, save_to_tmp_dir=True)  # doctest: +SKIP
+    ...
+    CPU times: user 51.7 s, sys: 1.29 s, total: 52.9 s
+    Wall time: 51.5 s
+
+Using the parallel options mentioned above results in even better performance::
+
+    >>> cube_dask.use_dask_scheduler('threads', num_workers=4)  # doctest: +SKIP
+    >>> %time cube_dask.sigma_clip_spectrally(1, save_to_tmp_dir=True)  # doctest: +SKIP
+    ...
+    CPU times: user 1min 9s, sys: 1.44 s, total: 1min 11s
+    Wall time: 18.5 s
+
+In this case, the wall time is 3x faster (and 21x faster than the regular
+spectral cube class without dask).
 
 Applying custom functions to cubes
 ----------------------------------
@@ -131,7 +169,9 @@ silence, so we can do this here too::
     >>> def sigma_clip_with_nan(*args, **kwargs):
     ...     with warnings.catch_warnings():
     ...         warnings.simplefilter('ignore')
-    ...         return sigma_clip(*args, **kwargs).filled(np.nan)
+    ...         return sigma_clip(*args, axis=0, **kwargs).filled(np.nan)
+
+The ``axis=0`` is so that if the function is passed a cube, it will still work properly.
 
 Let's now call :meth:`~spectral_cube.DaskSpectralCube.apply_function_parallel_spectral`, including the
 ``save_to_tmp_dir`` option mentioned previously to force the calculation and the storage of the result
@@ -139,20 +179,15 @@ to disk::
 
     >>> clipped_cube = large.apply_function_parallel_spectral(sigma_clip_with_nan, sigma=3,
     ...                                                       save_to_tmp_dir=True)  # doctest: +SKIP
-    [########################################] | 100% Completed | 21.1s
-    [########################################] | 100% Completed |  2min 57.8s
+    [########################################] | 100% Completed |  1min 42.3s
 
-The ``sigma`` argument is passed to the ``sigma_clip_with_nan`` function. Note that the first
-progress bar is due to a calculation related to all the beams in the cube (since this is a
-cube with varying resolution. The relevant progress bar is the second one. We now call this
+The ``sigma`` argument is passed to the ``sigma_clip_with_nan`` function. We now call this
 again but specifying that the ``sigma_clip_with_nan`` function can also take cubes, using
-the ``accepts_chunks=True`` option, as well as ``axis=0`` to specify that the sigma clipping
-should be done for each spectrum independently::
+the ``accepts_chunks=True`` option::
 
     >>> clipped_cube = large.apply_function_parallel_spectral(sigma_clip_with_nan, sigma=3,
-    ...                                                       axis=0, accepts_chunks=True,
+    ...                                                       accepts_chunks=True,
     ...                                                       save_to_tmp_dir=True)  # doctest: +SKIP
-    [########################################] | 100% Completed | 21.2s
-    [########################################] | 100% Completed |  1min 46.8s
+    [########################################] | 100% Completed | 56.8s
 
-This leads to an improvement in performance of 1.6-1.7x in this case.
+This leads to an improvement in performance of 1.8x in this case.
