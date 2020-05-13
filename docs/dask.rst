@@ -183,7 +183,8 @@ to disk::
 
 The ``sigma`` argument is passed to the ``sigma_clip_with_nan`` function. We now call this
 again but specifying that the ``sigma_clip_with_nan`` function can also take cubes, using
-the ``accepts_chunks=True`` option::
+the ``accepts_chunks=True`` option (note that for this to work properly, the wrapped function
+needs to include ``axis=0`` in the call to :func:`~astropy.stats.sigma_clip` as shown above)::
 
     >>> clipped_cube = large.apply_function_parallel_spectral(sigma_clip_with_nan, sigma=3,
     ...                                                       accepts_chunks=True,

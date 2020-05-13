@@ -507,21 +507,15 @@ class DaskSpectralCubeMixin:
                 return data
 
         if accepts_chunks:
-
             return self._map_blocks_to_cube(wrapper,
                                             rechunk=(-1, 'auto', 'auto'), **kwargs)
-
         else:
-
             data = self._get_filled_data(fill=self._fill_value)
-
             # apply_along_axis returns an array with a single chunk, but we
             # need to rechunk here to avoid issues when writing out the data
             # even if it results in a poorer performance.
             data = data.rechunk((-1, 50, 50))
-
             newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],))
-
             return self._new_cube_with(data=newdata,
                                        wcs=self.wcs,
                                        mask=self.mask,
