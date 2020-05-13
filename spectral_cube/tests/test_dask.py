@@ -47,5 +47,5 @@ def test_save_to_tmp_dir(data_adv):
     cube = DaskSpectralCube.read(data_adv)
     cube_new = cube.sigma_clip_spectrally(3, save_to_tmp_dir=True)
     # The following test won't necessarily always work in future since the name
-    # is not really guaranteed, but this is pragrmatic enough for now
+    # is not really guaranteed, but this is pragmatic enough for now
     assert cube_new._data.name.startswith('from-zarr')

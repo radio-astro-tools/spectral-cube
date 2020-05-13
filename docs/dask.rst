@@ -141,7 +141,7 @@ take functions that apply to individual spectra or images, but this can be quite
 spectral cubes. If possible, you should consider supplying a function that can accept 3-d cubes
 and operate on all spectra or image slices in a vectorized way.
 
-To demonstrate this, we will read in a large CASA dataset with 623 channels and 768x768 pixels in
+To demonstrate this, we will read in a mid-sized CASA dataset with 623 channels and 768x768 pixels in
 the image plane::
 
     >>> large = SpectralCube.read('large_spectral_cube.image', format='casa_image', use_dask=True)  # doctest: +SKIP
@@ -161,7 +161,7 @@ demonstration, we will set up the function ourselves and apply it with
 
 By default, this function returns masked arrays, but to apply this to our
 spectral cube, we need it to return a plain Numpy array with NaNs for the masked
-values. In addition, the original function tends to return warnings which we want to
+values. In addition, the original function tends to return warnings we want to
 silence, so we can do this here too::
 
     >>> import warnings
