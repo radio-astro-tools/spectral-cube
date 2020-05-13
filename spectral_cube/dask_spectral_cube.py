@@ -80,7 +80,8 @@ def add_save_to_tmp_dir_option(function):
                                   "requires the zarr and fsspec packages to "
                                   "be installed.")
             filename = tempfile.mktemp()
-            cube._data.to_zarr(filename)
+            with dask.config.set(**cube._scheduler_kwargs):
+                cube._data.to_zarr(filename)
             cube._data = da.from_zarr(filename)
         return cube
 
