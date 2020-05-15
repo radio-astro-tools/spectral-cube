@@ -3121,7 +3121,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
 
-        def convfunc(img):
+        def convfunc(img, **kwargs):
             return convolve(img, convolution_kernel, normalize_kernel=True,
                             **kwargs)
 
