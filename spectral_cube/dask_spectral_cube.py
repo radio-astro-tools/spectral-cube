@@ -514,7 +514,7 @@ class DaskSpectralCubeMixin:
             # apply_along_axis returns an array with a single chunk, but we
             # need to rechunk here to avoid issues when writing out the data
             # even if it results in a poorer performance.
-            data = data.rechunk((-1, 50, 50))
+            data = data.rechunk((-1, 'auto', 'auto'))
             newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],))
             return self._new_cube_with(data=newdata,
                                        wcs=self.wcs,
