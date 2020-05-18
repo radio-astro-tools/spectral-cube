@@ -73,10 +73,10 @@ methods that return a cube, the result is not immediately calculated - instead, 
 when data is accessed directly (for example via `~spectral_cube.DaskSpectralCube.filled_data`), or when
 writing the cube to disk, for example as a FITS file. However, when doing several operations in a row, such
 as spectrally smoothing the cube, then spatially smoothing it, it can be more efficient to store intermediate
-results to disk. All methods that return a cube can therefore take the ``save_to_tmp_dir`` option which can
-be set to `True` to compute the result of the operation immediately, save it to a temporary directory, and
-re-read it immediately from disk (for users interested in how the data is stored, it is stored as a
-`zarr <https://zarr.readthedocs.io/en/stable/>`_ dataset)::
+results to disk. All methods that return a cube can therefore take the ``save_to_tmp_dir`` option (defaulting
+to `False`) which can be set to `True` to compute the result of the operation immediately, save it to a
+temporary directory, and re-read it immediately from disk (for users interested in how the data is stored,
+it is stored as a `zarr <https://zarr.readthedocs.io/en/stable/>`_ dataset)::
 
     >>> cube_new = cube.sigma_clip_spectrally(3, save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
     [########################################] | 100% Completed |  0.1s
