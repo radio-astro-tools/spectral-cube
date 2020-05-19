@@ -311,6 +311,8 @@ def test_convolution_2D(data_55_delta):
                                    conv_proj.value)
     assert conv_proj.beam == target_beam
 
+    # Pass a kwarg to the convolution function
+    conv_proj = proj.convolve_to(target_beam, nan_treatment='fill')
 
 
 def test_nocelestial_convolution_2D_fail(data_255_delta, use_dask):
