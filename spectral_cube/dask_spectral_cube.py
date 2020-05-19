@@ -1229,11 +1229,13 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
         kernel = convolution_kernel.array.reshape((1,) + convolution_kernel.array.shape)
 
-        def convfunc(img):
+        # See #631: kwargs get passed within self.apply_function_parallel_spatial
+        def convfunc(img, **kwargs):
             return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
 
         return self.apply_function_parallel_spatial(convfunc,
-                                                    accepts_chunks=True).with_beam(beam)
+                                                    accepts_chunks=True,
+                                                    **kwargs).with_beam(beam)
 
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
@@ -1358,7 +1360,8 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         beams = da.from_array(np.array(beams, dtype=np.object)
                               .reshape((len(beams), 1, 1)), chunks=(-1, -1, -1))
 
-        def convfunc(img, beam):
+        # See #631: kwargs get passed within self.apply_function_parallel_spatial
+        def convfunc(img, beam, **kwargs):
             if img.size > 0:
                 out = np.zeros(img.shape, dtype=img.dtype)
                 for index in range(img.shape[0]):
@@ -1374,7 +1377,8 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         # Rechunk so that there is only one chunk in the image plane
         cube = self._map_blocks_to_cube(convfunc,
                                         additional_arrays=(beams,),
-                                        rechunk=('auto', -1, -1))
+                                        rechunk=('auto', -1, -1),
+                                        **kwargs)
 
         # Result above is a DaskVaryingResolutionSpectralCube, convert to DaskSpectralCube
         newcube = DaskSpectralCube(data=cube._data,

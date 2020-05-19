@@ -461,7 +461,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         if filename is not None:
             self.figure.savefig(filename)
 
-    def convolve_to(self, beam, convolve=convolution.convolve_fft):
+    def convolve_to(self, beam, convolve=convolution.convolve_fft,
+                    **kwargs):
         """
         Convolve the image to a specified beam.
 
@@ -497,7 +498,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
             beam.deconvolve(self.beam).as_kernel(pixscale)
 
         newdata = convolve(self.value, convolution_kernel,
-                           normalize_kernel=True)
+                           normalize_kernel=True,
+                           **kwargs)
 
         self = Projection(newdata, unit=self.unit, wcs=self.wcs,
                           meta=self.meta, header=self.header,
