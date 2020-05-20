@@ -3121,7 +3121,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
 
-        def convfunc(img):
+        # See #631: kwargs get passed within self.apply_function_parallel_spatial
+        def convfunc(img, **kwargs):
             return convolve(img, convolution_kernel, normalize_kernel=True,
                             **kwargs)
 
@@ -3849,7 +3850,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
     @warn_slow
     def convolve_to(self, beam, allow_smaller=False,
                     convolve=convolution.convolve_fft,
-                    update_function=None):
+                    update_function=None,
+                    **kwargs):
         """
         Convolve each channel in the cube to a specified beam
 
@@ -3878,6 +3880,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
+        kwargs : dict
+            Keyword arguments to pass to the convolution function
+
 
         Returns
         -------
@@ -3934,8 +3939,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             if kernel is None:
                 newdata[ii, :, :] = img
             else:
+                # See #631: kwargs get passed within self.apply_function_parallel_spatial
                 newdata[ii, :, :] = convolve(img, kernel,
-                                             normalize_kernel=True)
+                                             normalize_kernel=True,
+                                             **kwargs)
             update_function()
 
         newcube = SpectralCube(data=newdata, wcs=self.wcs, mask=self.mask,

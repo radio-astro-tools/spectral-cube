@@ -1915,11 +1915,19 @@ def test_convolve_to_equal(data_vda, use_dask):
 
     assert np.all(convolved.value == plane.value)
 
+    # Pass a kwarg to the convolution function
+
+    convolved = plane.convolve_to(cube.beam, nan_treatment='fill')
+
 
 def test_convolve_to(data_vda_beams, use_dask):
     cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
 
     convolved = cube.convolve_to(Beam(0.5*u.arcsec))
+
+    # Pass a kwarg to the convolution function
+    convolved = cube.convolve_to(Beam(0.5*u.arcsec),
+                                 nan_treatment='fill')
 
 
 def test_convolve_to_with_bad_beams(data_vda_beams, use_dask):
