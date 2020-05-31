@@ -728,8 +728,9 @@ class MultiBeamMixinClass(object):
         includemask = BooleanArrayMask(goodbeams[:,None,None],
                                        self._wcs,
                                        shape=self._data.shape)
+        newmask = includemask if self.mask is None else np.bitwise_and(self.mask, includemask)
 
-        return self._new_thing_with(mask=np.bitwise_and(self.mask, includemask),
+        return self._new_thing_with(mask=newmask,
                                     beam_threshold=threshold,
                                     goodbeams_mask=np.bitwise_and(self.goodbeams_mask, goodbeams),
                                    )
