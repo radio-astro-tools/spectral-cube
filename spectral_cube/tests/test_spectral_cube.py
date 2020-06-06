@@ -1880,13 +1880,16 @@ def test_varyres_moment_logic_issue364(data_vda_beams, use_dask):
     assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
-def test_mask_bad_beams(data_vda_beams, use_dask):
+@pytest.mark.parametrize('filename', ['data_vda_beams',
+                                      'data_vda_beams_image'],
+                         indirect=['filename'])
+def test_mask_bad_beams(filename, use_dask):
     """
     Prior to #543, this tested two different scenarios of beam masking.  After
     that, the tests got mucked up because we can no longer have minor>major in
     the beams.
     """
-    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
 
     # make sure all of the beams are initially good (finite)
     assert np.all(cube.goodbeams_mask)
