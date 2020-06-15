@@ -3968,7 +3968,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             # No copying
             return self
 
-        if self.unit.is_equivalent(u.Jy/u.beam):
+        if self.unit.is_equivalent(u.Jy/u.beam) and unit.is_equivalent(u.K):
             # replace "beam" with the actual beam
             if not hasattr(self, 'beams'):
                 raise ValueError("To convert cubes with Jy/beam units, "
