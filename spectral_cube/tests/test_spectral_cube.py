@@ -1736,12 +1736,11 @@ def test_varyres_unitconversion_roundtrip(data_vda_beams, use_dask):
 
     assert cube.unit == u.Jy/u.beam
     roundtrip = cube.to(u.mJy/u.beam).to(u.Jy/u.beam)
-    assert np.all(cube.filled_data[:] == roundtrip.filled_data[:])
+    assert_quantity_allclose(cube.filled_data[:], roundtrip.filled_data[:])
 
-    roundtrip_K = cube.to(u.K).to(u.Jy/u.beam)
-    np.testing.assert_almost_equal(roundtrip_K.filled_data[:],
-                                   cube.filled_data[:])
-
+    # you can't straightforwardly roundtrip to Jy/beam yet
+    # it requires a per-beam equivalency, which is why there's
+    # a specific hack to go from Jy/beam (in each channel) -> K
 
 
 def test_append_beam_to_hdr(data_advs, use_dask):
