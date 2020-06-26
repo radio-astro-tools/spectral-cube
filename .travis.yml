@@ -28,8 +28,8 @@ matrix:
           name: "Python 3.7 with minimal dependencies"
 
         - python: 3.7
-          env: TOXENV='py37-test-all'
-          name: "Python 3.7 with all dependencies (except CASA)"
+          env: TOXENV='py37-test-novis'
+          name: "Python 3.7 with all non-visualization dependencies (except CASA)"
 
         - python: 3.6
           env: TOXENV='py36-test-casa'
@@ -40,13 +40,13 @@ matrix:
           name: "Python 3.6, CASA, and dev versions of key dependencies"
 
         - python: 3.8
-          env: TOXENV='py38-test-all-dev'
-          name: "Python 3.8, all dependencies, and dev versions of key dependencies"
+          env: TOXENV='py38-test-novis-dev'
+          name: "Python 3.8, all non-visualization dependencies, and dev versions of key dependencies"
 
         - language: c
           os: osx
-          env: PYTHON_VERSION=3.7 TOXENV='py37-test-all'
-          name: "Python 3.7 with all dependencies (except CASA) on MacOS X"
+          env: PYTHON_VERSION=3.7 TOXENV='py37-test-novis'
+          name: "Python 3.7 with all non-visualization dependencies (except CASA) on MacOS X"
 
         - language: c
           os: windows
