@@ -3829,6 +3829,16 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             return super(VRSC, self).__getattribute__(attrname)
 
     @property
+    def header(self):
+        header = super(VaryingResolutionSpectralCube, self).header
+
+        # this indicates to CASA that there is a beam table
+        header['CASAMBM'] = True
+
+        return header
+
+
+    @property
     def hdu(self):
         raise ValueError("For VaryingResolutionSpectralCube's, use hdulist "
                          "instead of hdu.")
