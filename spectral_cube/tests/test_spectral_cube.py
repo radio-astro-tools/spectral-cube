@@ -1994,6 +1994,37 @@ def test_mad_std(data_adv, use_dask):
         np.testing.assert_almost_equal(mcube.mad_std(axis=0).value, result2)
 
 
+def test_mad_std_nan(data_adv, use_dask):
+
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+    # HACK in a nan
+    data[1,1,0] = np.nan
+    hdu = cube.hdu
+    hdu.data = data
+    # use the include-everything mask so we're really testing that nan is ignored
+    oldmask = cube.mask
+    cube = SpectralCube.read(hdu)
+
+    if int(astropy.__version__[0]) < 2:
+        with pytest.raises(NotImplementedError) as exc:
+            cube.mad_std()
+
+    else:
+        # mad_std run manually on data
+        # (note: would have entry [1,0] = nan in bad case)
+        result = np.array([[0.15509701, 0.4576367 ],
+                           [0.20882025, 0.42932451],
+                           [0.48819454, 0.25499305]])
+
+        assert cube.mask.include().sum() == 23
+        np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
+
+        # run the test with the inclusive mask
+        cube._mask = oldmask
+        assert cube.mask.include().sum() == 24
+        np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
+
+
 def test_mad_std_params(data_adv, use_dask):
 
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
