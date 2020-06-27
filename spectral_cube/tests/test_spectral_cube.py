@@ -2028,6 +2028,11 @@ def test_mad_std_nan(data_adv, use_dask):
         assert cube.mask.include().sum() == 24
         np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
 
+    # try to force closure
+    del hdu
+    del cube
+    del data
+
 
 def test_mad_std_params(data_adv, use_dask):
 
