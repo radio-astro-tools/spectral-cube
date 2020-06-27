@@ -1729,6 +1729,20 @@ def test_varyres_moment(data_vda_beams, use_dask):
     assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
+def test_varyres_unitconversion_roundtrip(data_vda_beams, use_dask):
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    assert isinstance(cube, VaryingResolutionSpectralCube)
+
+    assert cube.unit == u.Jy/u.beam
+    roundtrip = cube.to(u.mJy/u.beam).to(u.Jy/u.beam)
+    assert_quantity_allclose(cube.filled_data[:], roundtrip.filled_data[:])
+
+    # you can't straightforwardly roundtrip to Jy/beam yet
+    # it requires a per-beam equivalency, which is why there's
+    # a specific hack to go from Jy/beam (in each channel) -> K
+
+
 def test_append_beam_to_hdr(data_advs, use_dask):
 
     cube, data = cube_and_raw(data_advs, use_dask=use_dask)
