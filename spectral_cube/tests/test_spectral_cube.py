@@ -2006,7 +2006,6 @@ def test_mad_std_nan(data_adv, use_dask):
     oldmask = cube.mask
     if use_dask:
         cube = DaskSpectralCube.read(hdu)
-        cube._data = dask.array.from_array(cube._data)
     else:
         cube = SpectralCube.read(hdu)
 
