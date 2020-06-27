@@ -2016,7 +2016,7 @@ def test_mad_std_nan(data_adv, use_dask):
     else:
         # mad_std run manually on data
         # (note: would have entry [1,0] = nan in bad case)
-        result = np.array([[0.15509701, 0.4576367 ],
+        result = np.array([[0.15509701, 0.45763670],
                            [0.20882025, 0.42932451],
                            [0.48819454, 0.25499305]])
 
