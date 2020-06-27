@@ -20,6 +20,8 @@ from astropy.tests.helper import assert_quantity_allclose
 from astropy.convolution import Gaussian2DKernel, Tophat2DKernel
 import numpy as np
 
+import dask
+
 from .. import (BooleanArrayMask,
                 FunctionMask, LazyMask, CompositeMask)
 from ..spectral_cube import (OneDSpectrum, Projection,
@@ -30,7 +32,7 @@ from .. import spectral_axis
 from .. import base_class
 from .. import utils
 
-from .. import SpectralCube, VaryingResolutionSpectralCube
+from .. import SpectralCube, VaryingResolutionSpectralCube, DaskSpectralCube
 
 
 from . import path
@@ -1995,7 +1997,6 @@ def test_mad_std(data_adv, use_dask):
 
 
 def test_mad_std_nan(data_adv, use_dask):
-
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
     # HACK in a nan
     data[1,1,0] = np.nan
@@ -2003,7 +2004,11 @@ def test_mad_std_nan(data_adv, use_dask):
     hdu.data = data
     # use the include-everything mask so we're really testing that nan is ignored
     oldmask = cube.mask
-    cube = SpectralCube.read(hdu)
+    if use_dask:
+        cube = DaskSpectralCube.read(hdu)
+        cube._data = dask.array.from_array(cube._data)
+    else:
+        cube = SpectralCube.read(hdu)
 
     if int(astropy.__version__[0]) < 2:
         with pytest.raises(NotImplementedError) as exc:
