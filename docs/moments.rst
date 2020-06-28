@@ -63,37 +63,40 @@ plotting packages such as APLpy::
     >>> f.show_colorscale()  # doctest: +SKIP
     >>> f.save('moment_0.png')  # doctest: +SKIP
 
-The equation for the N-th moment, where N is usually an integer between -1 and some arbitrary
-positive integer, is as follows:
+The equation for the N-th moment, where N is a positive integer, usually 0, 1,
+or 2, is:
 
 .. math:: M_N = \frac{\int I (l - M_l)^N dl}{M_0}
 
 Descriptions for the three most common moments used are as follows:
 
-* 0th moment - the integrated intensity over the spectral line, and is often used for computing line ratios
-* 1st moment - the the intensity-weighted velocity of the spectral line; can be taken as a measure for the mean velocity of the gas
-* 2nd moment - a measure for the velocity dispersion of the gas along the line of sight, or the width of the spectral line, and is defined by the intensity-weighted square of the velocity
+* 0th moment - the integrated intensity over the spectral line.  Units are cube
+  unit times spectral axis unit (e.g., K km/s).
+* 1st moment - the the intensity-weighted velocity of the spectral line.  The
+  unit is the same as the spectral axis unit (e.g., km/s)
+* 2nd moment - the velocity dispersion or the width of the spectral line.  The
+  unit is the spectral axis unit squared (e.g., :math:`km^2/s^2`).  To obtain measurements
+  of the linewidth in spectral axis units, see `Linewidth maps`_ below
 
 
 Linewidth maps
 --------------
 
-Making linewidth maps (sometimes referred to as second moment maps in radio
-astronomy), you can use::
+Line width maps based on the 2nd moment maps, as defined above, can be made
+with either of these two commands::
 
     >>> sigma_map = cube.linewidth_sigma()  # doctest: +SKIP
     >>> fwhm_map = cube.linewidth_fwhm()  # doctest: +SKIP
 
-The ``~spectral_cube.SpectralCube.linewidth_sigma`` computes a sigma linewidth map
-along the spectral axis, whereas the ``~spectral_cube.SpectralCube.linewidth_fwhm``
-function computes a FWHM linewidth map along the same spectral axis.
+``~spectral_cube.SpectralCube.linewidth_sigma`` computes a sigma linewidth map
+along the spectral axis, where sigma is the width of a Gaussian, while 
+``~spectral_cube.SpectralCube.linewidth_fwhm`` computes a FWHM
+linewidth map along the same spectral axis.
 
-The relations between the linewidth maps and the second moment are as follows:
+The linewidth maps are related to the second moment by
 
-Suppose the 2nd moment is denoted by :math:`x`>
-
-.. math:: linewidth_{sigma} = \sqrt{`x`} \\
+.. math:: linewidth_{sigma} = \sqrt{`M`_2} \\
           linewidth_{fwhm} = \sqrt{8*ln{2}} * \sqrt{x}
 
-These also return :class:`~spectral_cube.lower_dimensional_structures.Projection` instances as for the
+These functions return :class:`~spectral_cube.lower_dimensional_structures.Projection` instances as for the
 `Moment maps`_.
