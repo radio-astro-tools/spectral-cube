@@ -20,7 +20,7 @@ axis::
 
 .. note:: These follow the mathematical definition of moments, so the second
           moment is computed as the variance. For the actual formulas used for
-          the moments, please see `the relevant documentation here 
+          the moments, please see `the api doc 
           <https://spectral-cube.readthedocs.io/en/latest/api/spectral_cube.SpectralCube.html#spectral_cube.SpectralCube.moment>`_.
           For linewidth maps, see the
           `Linewidth maps`_ section.
