@@ -2032,6 +2032,8 @@ def test_mad_std_nan(data_adv, use_dask):
     del hdu
     del cube
     del data
+    del oldmask
+    del result
 
 
 def test_mad_std_params(data_adv, use_dask):
