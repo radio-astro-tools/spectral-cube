@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import re
-import six
+import copy
 import operator
 import itertools
 import warnings
@@ -12,6 +12,7 @@ import sys
 import pytest
 
 import astropy
+from astropy import stats
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
@@ -30,7 +31,7 @@ from .. import spectral_axis
 from .. import base_class
 from .. import utils
 
-from .. import SpectralCube, VaryingResolutionSpectralCube
+from .. import SpectralCube, VaryingResolutionSpectralCube, DaskSpectralCube
 
 
 from . import path
@@ -2006,6 +2007,50 @@ def test_mad_std(data_adv, use_dask):
                             [0.2819404, 0.2084236]])
 
         np.testing.assert_almost_equal(mcube.mad_std(axis=0).value, result2)
+
+
+def test_mad_std_nan(data_adv, use_dask):
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+    # HACK in a nan
+    data[1, 1, 0] = np.nan
+    hdu = copy.copy(cube.hdu)
+    hdu.data = copy.copy(data)
+    # use the include-everything mask so we're really testing that nan is
+    # ignored
+    oldmask = copy.copy(cube.mask)
+    if use_dask:
+        cube = DaskSpectralCube.read(hdu)
+    else:
+        cube = SpectralCube.read(hdu)
+
+    if int(astropy.__version__[0]) < 2:
+        with pytest.raises(NotImplementedError) as exc:
+            cube.mad_std()
+
+    else:
+        # mad_std run manually on data
+        # (note: would have entry [1,0] = nan in bad case)
+        result = np.array([[0.30998422, 0.25762317],
+                           [0.24100427, 0.6101782 ],
+                           [0.28194039, 0.20842358]])
+        resultB = stats.mad_std(data, axis=0, ignore_nan=True)
+        # this test is to make sure we're testing against the right stuff
+        np.testing.assert_almost_equal(result, resultB)
+
+        assert cube.mask.include().sum() == 23
+        np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
+
+        # run the test with the inclusive mask
+        cube._mask = oldmask
+        assert cube.mask.include().sum() == 24
+        np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
+
+    # try to force closure
+    del hdu
+    del cube
+    del data
+    del oldmask
+    del result
 
 
 def test_mad_std_params(data_adv, use_dask):

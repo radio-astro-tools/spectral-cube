@@ -597,7 +597,7 @@ class DaskSpectralCubeMixin:
 
     @projection_if_needed
     @ignore_warnings
-    def mad_std(self, axis=None, **kwargs):
+    def mad_std(self, axis=None, ignore_nan=True, **kwargs):
         """
         Use astropy's mad_std to compute the standard deviation
         """
@@ -608,11 +608,14 @@ class DaskSpectralCubeMixin:
             # In this case we have to load the full data - even dask's
             # nanmedian doesn't work efficiently over the whole array.
             self._warn_slow('mad_std')
-            return stats.mad_std(data, **kwargs)
+            return stats.mad_std(data, ignore_nan=ignore_nan, **kwargs)
         else:
             # Rechunk so that there is only one chunk along the desired axis
             data = data.rechunk([-1 if i == axis else 'auto' for i in range(3)])
-            return self._compute(data.map_blocks(stats.mad_std, drop_axis=axis, axis=axis, **kwargs))
+            return self._compute(data.map_blocks(stats.mad_std, drop_axis=axis,
+                                                 axis=axis,
+                                                 ignore_nan=ignore_nan,
+                                                 **kwargs))
 
     @projection_if_needed
     @ignore_warnings
