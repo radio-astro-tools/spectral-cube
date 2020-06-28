@@ -1497,8 +1497,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         Compute moments along the spectral axis.
 
-        Moments are defined as follows, where :math:`I` is the intensity
-        in a channel and :math:`x` is the spectral coordinate:
+        Moments are defined as follows, where :math:`I` is the intensity in a
+        channel and :math:`x` is the spectral coordinate:
 
         Moment 0:
 

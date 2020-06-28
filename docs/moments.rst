@@ -20,10 +20,8 @@ axis::
 
 .. note:: These follow the mathematical definition of moments, so the second
           moment is computed as the variance. For the actual formulas used for
-          the moments, please see `the api doc 
-          <https://spectral-cube.readthedocs.io/en/latest/api/spectral_cube.SpectralCube.html#spectral_cube.SpectralCube.moment>`_.
-          For linewidth maps, see the
-          `Linewidth maps`_ section.
+          the moments, please see :method:`~spectral_cube.SpectralCube.moment`.
+          For linewidth maps, see the `Linewidth maps`_ section.
           
 You may also want to convert the unit of the datacube into a velocity one before
 you can obtain a genuine velocity map via a 1st moment map. So first it will be necessary to 
