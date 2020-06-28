@@ -234,6 +234,16 @@ class DaskSpectralCubeMixin:
         new_cube._scheduler_kwargs = self._scheduler_kwargs
         return new_cube
 
+    @property
+    def _data(self):
+        return self.__data
+
+    @_data.setter
+    def _data(self, value):
+        if not isinstance(value, da.Array):
+            raise TypeError('_data should be set to a dask array')
+        self.__data = value
+
     def use_dask_scheduler(self, scheduler, num_workers=None):
         """
         Set the dask scheduler to use.
