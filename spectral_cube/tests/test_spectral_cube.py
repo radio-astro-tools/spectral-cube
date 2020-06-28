@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import re
-import six
+import copy
 import operator
 import itertools
 import warnings
@@ -19,8 +19,6 @@ from astropy.wcs import _wcs
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.convolution import Gaussian2DKernel, Tophat2DKernel
 import numpy as np
-
-import dask
 
 from .. import (BooleanArrayMask,
                 FunctionMask, LazyMask, CompositeMask)
@@ -2000,10 +1998,11 @@ def test_mad_std_nan(data_adv, use_dask):
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
     # HACK in a nan
     data[1,1,0] = np.nan
-    hdu = cube.hdu
-    hdu.data = data
-    # use the include-everything mask so we're really testing that nan is ignored
-    oldmask = cube.mask
+    hdu = copy.copy(cube.hdu)
+    hdu.data = copy.copy(data)
+    # use the include-everything mask so we're really testing that nan is
+    # ignored
+    oldmask = copy.copy(cube.mask)
     if use_dask:
         cube = DaskSpectralCube.read(hdu)
     else:
