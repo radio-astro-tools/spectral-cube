@@ -12,6 +12,7 @@ import sys
 import pytest
 
 import astropy
+from astropy import stats
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
@@ -1997,7 +1998,7 @@ def test_mad_std(data_adv, use_dask):
 def test_mad_std_nan(data_adv, use_dask):
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
     # HACK in a nan
-    data[1,1,0] = np.nan
+    data[1, 1, 0] = np.nan
     hdu = copy.copy(cube.hdu)
     hdu.data = copy.copy(data)
     # use the include-everything mask so we're really testing that nan is
@@ -2015,9 +2016,12 @@ def test_mad_std_nan(data_adv, use_dask):
     else:
         # mad_std run manually on data
         # (note: would have entry [1,0] = nan in bad case)
-        result = np.array([[0.15509701, 0.45763670],
-                           [0.20882025, 0.42932451],
-                           [0.48819454, 0.25499305]])
+        result = np.array([[0.30998422, 0.25762317],
+                           [0.24100427, 0.6101782 ],
+                           [0.28194039, 0.20842358]])
+        resultB = stats.mad_std(data, axis=0, ignore_nan=True)
+        # this test is to make sure we're testing against the right stuff
+        np.testing.assert_almost_equal(result, resultB)
 
         assert cube.mask.include().sum() == 23
         np.testing.assert_almost_equal(cube.mad_std(axis=0).value, result)
