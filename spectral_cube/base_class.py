@@ -599,6 +599,10 @@ class MultiBeamMixinClass(object):
             else:
                 beam_mask = np.logical_and(mask, self.goodbeams_mask)
 
+        if not any(beam_mask):
+            raise ValueError("All beams were excluded using threshold {threshold}"
+                             .format(threshold=threshold))
+
         # use private _beams here because the public one excludes the bad beams
         # by default
         new_beam = self._beams.average_beam(includemask=beam_mask)
