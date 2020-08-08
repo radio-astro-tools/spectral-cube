@@ -310,6 +310,39 @@ class DaskSpectralCubeMixin:
         else:
             return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)[view]
 
+   @add_save_to_tmp_dir_option
+    def rechunk(self, chunks='auto', threshold=None, block_size_limit=None,
+                **kwargs):
+        """
+        Rechunk the underlying dask array and return a new cube.
+
+        Parameters
+        ----------
+        chunks:  int, tuple, dict or str, optional
+            The new block dimensions to create. -1 indicates the full size of the
+            corresponding dimension. Default is "auto" which automatically
+            determines chunk sizes.
+        threshold: int, optional
+            The graph growth factor under which we don't bother introducing an
+            intermediate step.
+        block_size_limit: int, optional
+            The maximum block size (in bytes) we want to produce
+            Defaults to the dask configuration value ``array.chunk-size``
+        save_to_tmp_dir : bool
+            If `True`, the rechunking will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the rechunking is added as a step in the dask tree.
+        kwargs
+            Additional keyword arguments are passed to the dask rechunk method.
+        """
+
+        newdata = data.rechunk(chunks=chunks,
+                                threshold=threshold,
+                                block_size_limit=block_size_limit)
+
+        return self._new_cube_with(data=newdata)
+
     @add_save_to_tmp_dir_option
     @projection_if_needed
     def apply_function(self, function, axis=None, unit=None,
