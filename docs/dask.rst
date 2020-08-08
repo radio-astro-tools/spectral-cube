@@ -98,7 +98,7 @@ Rechunking data
 In some cases, the way the data is chunked on disk may be inefficient (for example large CASA
 datasets may be chunked into tens of thousands of blocks, which may make dask operations slow due to
 the size of the tree. To get around this, you can use the :meth:`~spectral_cube.DaskSpectralCube.rechunk`
-metho with the ``save_to_tmp_dir`` option mentioned above, which will rechunk the data to disk and
+method with the ``save_to_tmp_dir`` option mentioned above, which will rechunk the data to disk and
 make subsequent operations more efficient - either by letting dask choose the new chunk size::
 
     >>> cube_new = cube.rechunk(save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
@@ -118,6 +118,10 @@ or by specifying it explicitly::
      n_x:      3  type_x: RA---ARC  unit_x: deg    range:    52.231466 deg:   52.231544 deg
      n_y:      4  type_y: DEC--ARC  unit_y: deg    range:    31.243639 deg:   31.243739 deg
      n_s:      7  type_s: VRAD      unit_s: m / s  range:    14322.821 m / s:   14944.909 m / s
+
+While the :meth:`~spectral_cube.DaskSpectralCube.rechunk` method can be used without
+the ``save_to_tmp_dir=True`` option, which then just adds the rechunking to the dask tree,
+doing so is unlikely to lead in performance gains.
 
 Performance benefits of dask classes
 ------------------------------------
