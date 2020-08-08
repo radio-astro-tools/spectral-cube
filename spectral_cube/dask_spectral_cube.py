@@ -310,7 +310,13 @@ class DaskSpectralCubeMixin:
         else:
             return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)[view]
 
-   @add_save_to_tmp_dir_option
+    def __repr__(self):
+        default_repr = super().__repr__()
+        lines = default_repr.splitlines()
+        lines[0] = lines[0][:-1] + ' and chunk size {0}:'.format(self._data.chunksize)
+        return '\n'.join(lines)
+
+    @add_save_to_tmp_dir_option
     def rechunk(self, chunks='auto', threshold=None, block_size_limit=None,
                 **kwargs):
         """
@@ -337,9 +343,9 @@ class DaskSpectralCubeMixin:
             Additional keyword arguments are passed to the dask rechunk method.
         """
 
-        newdata = data.rechunk(chunks=chunks,
-                                threshold=threshold,
-                                block_size_limit=block_size_limit)
+        newdata = self._data.rechunk(chunks=chunks,
+                                     threshold=threshold,
+                                     block_size_limit=block_size_limit)
 
         return self._new_cube_with(data=newdata)
 
