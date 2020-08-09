@@ -100,7 +100,7 @@ version = release = get_distribution(setup_cfg['name']).version
 
 
 html_theme_options = {
-    'logotext1': 'packagename',  # white,  semi-bold
+    'logotext1': 'spectral-cube',  # white,  semi-bold
     'logotext2': '',  # orange, light
     'logotext3': ':docs'   # white,  light
     }
