@@ -123,6 +123,21 @@ While the :meth:`~spectral_cube.DaskSpectralCube.rechunk` method can be used wit
 the ``save_to_tmp_dir=True`` option, which then just adds the rechunking to the dask tree,
 doing so is unlikely to lead in performance gains.
 
+A common scenario for rechunking is if you plan to do mostly operations that
+collapse along the spectral axis, for example computing moment maps. In this
+case you can use::
+
+    >>> cube_new = cube.rechunk(chunks=(-1, 'auto', 'auto'), save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
+    [########################################] | 100% Completed |  0.1s
+
+which will rechunk the data into cubes that span the full spectral axis but will be
+chunked in the image plane. And a complementary case is if you plan to do operations
+to each image plane, such as spatial convolution, in which case you can divide the
+data into spectral chunks that span the whole of the image dimensions::
+
+    >>> cube_new = cube.rechunk(chunks=('auto', -1, -1), save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
+    [########################################] | 100% Completed |  0.1s
+
 Performance benefits of dask classes
 ------------------------------------
 

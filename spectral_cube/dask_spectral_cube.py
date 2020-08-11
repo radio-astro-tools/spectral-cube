@@ -322,12 +322,17 @@ class DaskSpectralCubeMixin:
         """
         Rechunk the underlying dask array and return a new cube.
 
+        For more details about the parameters below, see the dask documentation
+        about `rechunking <https://docs.dask.org/en/latest/array-chunks.html>`_.
+
         Parameters
         ----------
         chunks:  int, tuple, dict or str, optional
-            The new block dimensions to create. -1 indicates the full size of the
-            corresponding dimension. Default is "auto" which automatically
-            determines chunk sizes.
+            The new block dimensions to create. -1 indicates the full size of
+            the corresponding dimension. Default is "auto" which automatically
+            determines chunk sizes. This can also be a tuple with a different
+            value along each dimension - for example if computing moment maps,
+            you could use e.g. ``chunks=(-1, 'auto', 'auto')``
         threshold: int, optional
             The graph growth factor under which we don't bother introducing an
             intermediate step.
