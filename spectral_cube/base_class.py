@@ -612,17 +612,16 @@ class MultiBeamMixinClass(object):
         new_beam = self._beams.common_beam(includemask=beam_mask, **combeam_kwargs)
 
         if np.isnan(new_beam):
-            raise ValueError("Beam was not finite after averaging.  "
+            raise ValueError("Common beam is not finite. "
                              "This either indicates that there was a problem "
                              "with the include mask, one of the beam's values, "
                              "or a bug.")
 
         self._check_beam_areas(threshold, mean_beam=new_beam, mask=beam_mask)
         if warn:
-            warnings.warn("Arithmetic beam averaging is being performed.  This is "
-                          "not a mathematically robust operation, but is being "
-                          "permitted because the beams differ by "
-                          "<{0}".format(threshold),
+            warnings.warn("Small beam differences are being ignored in this operation. "
+                          " Beams differ by <{0}".format(threshold)
+                          " If this behavior is not desired, convolve to a common beam first.",
                           BeamAverageWarning
                          )
         return new_beam
