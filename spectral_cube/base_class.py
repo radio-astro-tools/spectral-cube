@@ -541,6 +541,8 @@ class MultiBeamMixinClass(object):
                                   pa=mid_value(props['pa'])
                                  )
 
+        # Change to deviation in areas with respect to a pixel area.
+
         for prop in criteria:
             val = props[prop]
             mid = getattr(reference_beam, prop)
@@ -553,13 +555,16 @@ class MultiBeamMixinClass(object):
 
         return includemask
 
-    def average_beams(self, threshold, mask='compute', warn=False):
+    def get_common_beam(self, threshold, mask='compute', warn=False,
+                       combeam_kwargs={}):
         """
-        Average the beams.  Note that this operation only makes sense in
-        limited contexts!  Generally one would want to convolve all the beams
-        to a common shape, but this method is meant to handle the "simple" case
-        when all your beams are the same to within some small factor and can
-        therefore be arithmetically averaged.
+        Use a common beam for operations.
+
+        Many cubes will have a beam that varies by a small factor (less than a single
+        spatial pixel area) across spectral channels. In that case, this method will
+        handle avoid spatially-convolving to an exact common beam, which is an expensive
+        operation. To avoid this behaviour, a cube should be convolved to a common beam
+        prior to applying further operations.
 
         Parameters
         ----------
@@ -571,6 +576,8 @@ class MultiBeamMixinClass(object):
             and edge beams.
         warn : bool
             Warn if successful?
+        combeam_kwargs : dict
+            Additional kwargs for the common beam algorithm.
 
         Returns
         -------
@@ -604,7 +611,8 @@ class MultiBeamMixinClass(object):
 
         # use private _beams here because the public one excludes the bad beams
         # by default
-        new_beam = self._beams.average_beam(includemask=beam_mask)
+        # new_beam = self._beams.average_beam(includemask=beam_mask)
+        new_beam = self._beams.common_beam(includemask=beam_mask, **combeam_kwargs)
 
         if np.isnan(new_beam):
             raise ValueError("Beam was not finite after averaging.  "
@@ -655,7 +663,7 @@ class MultiBeamMixinClass(object):
             if need_to_handle_beams:
                 # do this check *first* so we don't do an expensive operation
                 # and crash afterward
-                avg_beam = self.average_beams(beam_threshold, warn=True)
+                com_beam = self.get_common_beam(beam_threshold, warn=True)
 
             result = function(*args, **kwargs)
 
@@ -664,14 +672,14 @@ class MultiBeamMixinClass(object):
                 return result
 
             elif need_to_handle_beams:
-                result.meta['beam'] = avg_beam
-                result._beam = avg_beam
+                result.meta['beam'] = com_beam
+                result._beam = com_beam
 
             return result
 
         return newfunc
 
-    def _check_beam_areas(self, threshold, mean_beam, mask=None):
+    def _check_beam_areas(self, threshold, common_beam, mask=None):
         """
         Check that the beam areas are the same to within some threshold
         """
@@ -694,7 +702,7 @@ class MultiBeamMixinClass(object):
         for (qtyname, qty) in (qtys.items()):
             minv = qty[mask].min()
             maxv = qty[mask].max()
-            mn = getattr(mean_beam, qtyname)
+            mn = getattr(common_beam, qtyname)
             maxdiff = (np.max(np.abs(u.Quantity((maxv-mn, minv-mn))))/mn).decompose()
 
             if isinstance(threshold, dict):
