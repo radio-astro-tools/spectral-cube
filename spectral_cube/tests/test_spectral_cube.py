@@ -1724,10 +1724,40 @@ def test_varyres_moment(data_vda_beams, use_dask):
     # the beams are very different, but for this test we don't care
     cube.beam_threshold = 1.0
 
-    with pytest.warns(UserWarning, match="Arithmetic beam averaging is being performed"):
+    with pytest.warns(UserWarning, match="Small beam differences are being ignored in this operation."):
         m0 = cube.moment0()
 
-    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
+    # Common beam differs significantly from the average.
+    # We should get a ~0.422"x0.266" beam with PA=15.
+    # Exact values don't matter too much here; just check we return a common beam instead
+    # of the avg.
+    assert_quantity_allclose(m0.meta['beam'].major, 0.422*u.arcsec, rtol=0.005)
+    assert_quantity_allclose(m0.meta['beam'].minor, 0.266*u.arcsec, rtol=0.005)
+    assert_quantity_allclose(m0.meta['beam'].pa, 15*u.deg, rtol=0.005)
+
+
+def test_varyres_moment_logic_issue364(data_vda_beams, use_dask):
+    """ regression test for issue364 """
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    assert isinstance(cube, VaryingResolutionSpectralCube)
+
+    # the beams are very different, but for this test we don't care
+    cube.beam_threshold = 1.0
+
+    with pytest.warns(UserWarning, match="Small beam differences are being ignored in this operation."):
+        # note that cube.moment(order=0) is different from cube.moment0()
+        # because cube.moment0() calls cube.moment(order=0, axis=(whatever)),
+        # but cube.moment doesn't necessarily have to receive the axis kwarg
+        m0 = cube.moment(order=0)
+
+    # Common beam differs significantly from the average.
+    # We should get a ~0.422"x0.266" beam with PA=15.
+    # Exact values don't matter too much here; just check we return a common beam instead
+    # of the avg.
+    assert_quantity_allclose(m0.meta['beam'].major, 0.422*u.arcsec, rtol=0.005)
+    assert_quantity_allclose(m0.meta['beam'].minor, 0.266*u.arcsec, rtol=0.005)
+    assert_quantity_allclose(m0.meta['beam'].pa, 15*u.deg, rtol=0.005)
 
 
 def test_varyres_unitconversion_roundtrip(data_vda_beams, use_dask):
@@ -1859,25 +1889,6 @@ def test_pix_sign(data_advs, use_dask):
     assert s>0
     assert y>0
     assert x>0
-
-
-def test_varyres_moment_logic_issue364(data_vda_beams, use_dask):
-    """ regression test for issue364 """
-    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
-
-    assert isinstance(cube, VaryingResolutionSpectralCube)
-
-    # the beams are very different, but for this test we don't care
-    cube.beam_threshold = 1.0
-
-    with pytest.warns(UserWarning, match="Arithmetic beam averaging is being performed"):
-        # note that cube.moment(order=0) is different from cube.moment0()
-        # because cube.moment0() calls cube.moment(order=0, axis=(whatever)),
-        # but cube.moment doesn't necessarily have to receive the axis kwarg
-        m0 = cube.moment(order=0)
-
-    # note that this is just a sanity check; one should never use the average beam
-    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
 def test_mask_bad_beams(data_vda_beams, use_dask):
