@@ -17,7 +17,7 @@ To read in a FITS cube using the dask-enabled classes, you can do::
     >>> fn = data.get_pkg_data_filename('tests/data/example_cube.fits', 'spectral_cube')
     >>> cube = SpectralCube.read(fn, use_dask=True)
     >>> cube
-    DaskSpectralCube with shape=(7, 4, 3) and unit=Jy / beam:
+    DaskSpectralCube with shape=(7, 4, 3) and unit=Jy / beam and chunk size (7, 4, 3):
      n_x:      3  type_x: RA---ARC  unit_x: deg    range:    52.231466 deg:   52.231544 deg
      n_y:      4  type_y: DEC--ARC  unit_y: deg    range:    31.243639 deg:   31.243739 deg
      n_s:      7  type_s: VRAD      unit_s: m / s  range:    14322.821 m / s:   14944.909 m / s
@@ -81,7 +81,7 @@ it is stored as a `zarr <https://zarr.readthedocs.io/en/stable/>`_ dataset)::
     >>> cube_new = cube.sigma_clip_spectrally(3, save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
     [########################################] | 100% Completed |  0.1s
     >>> cube_new
-    DaskSpectralCube with shape=(7, 4, 3) and unit=Jy / beam:
+    DaskSpectralCube with shape=(7, 4, 3) and unit=Jy / beam and chunk size (7, 4, 3):
      n_x:      3  type_x: RA---ARC  unit_x: deg    range:    52.231466 deg:   52.231544 deg
      n_y:      4  type_y: DEC--ARC  unit_y: deg    range:    31.243639 deg:   31.243739 deg
      n_s:      7  type_s: VRAD      unit_s: m / s  range:    14322.821 m / s:   14944.909 m / s
@@ -91,6 +91,52 @@ installed.
 
 This can also be beneficial if you are using multiprocessing or multithreading to carry out calculations,
 because zarr works nicely with disk access from different threads and processes.
+
+Rechunking data
+---------------
+
+In some cases, the way the data is chunked on disk may be inefficient (for example large CASA
+datasets may be chunked into tens of thousands of blocks), which may make dask operations slow due to
+the size of the tree. To get around this, you can use the :meth:`~spectral_cube.DaskSpectralCube.rechunk`
+method with the ``save_to_tmp_dir`` option mentioned above, which will rechunk the data to disk and
+make subsequent operations more efficient - either by letting dask choose the new chunk size::
+
+    >>> cube_new = cube.rechunk(save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
+    [########################################] | 100% Completed |  0.1s
+    >>> cube_new
+    DaskSpectralCube with shape=(7, 4, 3) and unit=Jy / beam and chunk size (7, 4, 3):
+     n_x:      3  type_x: RA---ARC  unit_x: deg    range:    52.231466 deg:   52.231544 deg
+     n_y:      4  type_y: DEC--ARC  unit_y: deg    range:    31.243639 deg:   31.243739 deg
+     n_s:      7  type_s: VRAD      unit_s: m / s  range:    14322.821 m / s:   14944.909 m / s
+
+or by specifying it explicitly::
+
+    >>> cube_new = cube.rechunk(chunks=(2, 2, 2), save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
+    [########################################] | 100% Completed |  0.1s
+    >>> cube_new
+    DaskSpectralCube with shape=(7, 4, 3) and unit=Jy / beam and chunk size (2, 2, 2):
+     n_x:      3  type_x: RA---ARC  unit_x: deg    range:    52.231466 deg:   52.231544 deg
+     n_y:      4  type_y: DEC--ARC  unit_y: deg    range:    31.243639 deg:   31.243739 deg
+     n_s:      7  type_s: VRAD      unit_s: m / s  range:    14322.821 m / s:   14944.909 m / s
+
+While the :meth:`~spectral_cube.DaskSpectralCube.rechunk` method can be used without
+the ``save_to_tmp_dir=True`` option, which then just adds the rechunking to the dask tree,
+doing so is unlikely to lead in performance gains.
+
+A common scenario for rechunking is if you plan to do mostly operations that
+collapse along the spectral axis, for example computing moment maps. In this
+case you can use::
+
+    >>> cube_new = cube.rechunk(chunks=(-1, 'auto', 'auto'), save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
+    [########################################] | 100% Completed |  0.1s
+
+which will rechunk the data into cubes that span the full spectral axis but will be
+chunked in the image plane. And a complementary case is if you plan to do operations
+to each image plane, such as spatial convolution, in which case you can divide the
+data into spectral chunks that span the whole of the image dimensions::
+
+    >>> cube_new = cube.rechunk(chunks=('auto', -1, -1), save_to_tmp_dir=True)  # doctest: +IGNORE_OUTPUT
+    [########################################] | 100% Completed |  0.1s
 
 Performance benefits of dask classes
 ------------------------------------
