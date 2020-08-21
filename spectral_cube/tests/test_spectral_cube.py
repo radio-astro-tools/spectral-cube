@@ -1922,9 +1922,6 @@ def test_mask_bad_beams(data_vda_beams, use_dask):
     assert np.all(masked_cube.mask.include()[:,0,0] == [False,True,True,False])
     assert np.all(masked_cube.goodbeams_mask == [False,True,True,False])
 
-    mean = masked_cube.mean(axis=0)
-    assert np.all(mean == cube[1:3,:,:].mean(axis=0))
-
     # Test if masked_cube.beam_threshold is used when no threshold is given
     # when the reference cube is given, it equals the beam for channels 1, 2
     cube.beam_threshold = 1e-6
@@ -1944,10 +1941,25 @@ def test_mask_bad_beams(data_vda_beams, use_dask):
 
 
 
-def test_beam_area_failure():
-    pass
+def test_beam_area_failure(data_vda_beams, use_dask):
+    '''
+    Spectral operations should fail since the beams vary from the common beam.
 
-    # cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
+    **Note**: Change when an intermediate dask convolve operation is triggered automatically.
+    '''
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    with pytest.raises(ValueError,
+                       match="Convolve to a common beam before applying any spectral operation"):
+
+        mean_val = cube.mean(axis=0)
+
+
+def test_beam_area_similar(data_vda_similarbeams, use_dask):
+    cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
+
+    # The beam areas doffer by <0.01. This operation is allowed.
+    mean_val = cube.mean(axis=0)
 
 
 def test_convolve_to_equal(data_vda, use_dask):
