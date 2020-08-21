@@ -555,10 +555,11 @@ class MultiBeamMixinClass(object):
 
         return includemask
 
-    def get_common_beam(self, threshold, mask='compute', warn=False,
-                       combeam_kwargs={}):
+    def set_common_beam(self,
+                        threshold=None, mask='compute', warn=False,
+                        combeam_kwargs={}):
         """
-        Use a common beam for operations.
+        Set the common beam for operations.
 
         Many cubes will have a beam that varies by a small factor (less than a single
         spatial pixel area) across spectral channels. In that case, this method will
@@ -568,22 +569,26 @@ class MultiBeamMixinClass(object):
 
         Parameters
         ----------
-        threshold : float
+        threshold : float, optional
             The fractional difference between beam major, minor, and pa to
-            permit
+            permit. The default is to `~SpectralCube.beam_threshold`, which is initially set
+            to 0.01 (i.e., <1% changes in the beam area are allowed).
         mask : 'compute', None, or boolean array
             The mask to apply to the beams.  Useful for excluding bad channels
             and edge beams.
         warn : bool
             Warn if successful?
         combeam_kwargs : dict
-            Additional kwargs for the common beam algorithm.
+            Additional kwargs for the common beam algorithm. See `~radio_beam.Beams.common_beam`.
 
         Returns
         -------
         new_beam : radio_beam.Beam
             A new radio beam object that is the average of the unmasked beams
         """
+
+        if threshold is None:
+            threshold = self.beam_threshold
 
         use_dask = isinstance(self._data, da.Array)
 
@@ -617,15 +622,20 @@ class MultiBeamMixinClass(object):
                              "with the include mask, one of the beam's values, "
                              "or a bug.")
 
-        self._check_beam_areas(threshold, mean_beam=new_beam, mask=beam_mask)
-        if warn:
-            warnings.warn("Small beam differences are being ignored in this operation. "
-                          " Beams differ by <{0}".format(threshold)
-                          " If this behavior is not desired, convolve to a common beam first.",
-                          BeamAverageWarning
-                         )
-        return new_beam
+        # This will now print a warning describing whether a common beam convolution will
+        # be triggered. Or if small beam variations will be ignored.
+        self._check_beam_areas(threshold, new_beam, mask=beam_mask, raise_error=False)
 
+        self._common_beam = new_beam
+
+    @property
+    def common_beam(self):
+
+        if not hasattr(self, '_common_beam'):
+            # Compute the common beam with the default parameters if not set.
+            self.set_common_beam()
+
+        return self._common_beam
 
     def _handle_beam_areas_wrapper(self, function, beam_threshold=None):
         """
@@ -675,7 +685,8 @@ class MultiBeamMixinClass(object):
 
         return newfunc
 
-    def _check_beam_areas(self, threshold, common_beam, mask=None):
+    def _check_beam_areas(self, threshold, common_beam, mask=None,
+                          raise_error=True):
         """
         Check that the beam areas are the same to within some threshold
         """
@@ -713,7 +724,21 @@ class MultiBeamMixinClass(object):
                                                                     qtyname
                                                                    ))
         if errormessage != "":
-            raise ValueError(errormessage)
+
+            if raise_error:
+                raise ValueError(errormessage)
+
+            else:
+                warnings.warn(errormessage)
+                warnings.warn("Convolution to a common beam will be triggered at an intermediate level."
+                              " To avoid this step, first convolve the spectral-cube to a common beam size.")
+
+        else:
+            warnings.warn("Small beam differences are being ignored in this operation. "
+                          " Beams differ by <{0}".format(threshold) +
+                          " If this behavior is not desired, convolve to a common beam first.",
+                          BeamAverageWarning
+                         )
 
     def mask_out_bad_beams(self, threshold, reference_beam=None,
                            criteria=['sr','major','minor'],
