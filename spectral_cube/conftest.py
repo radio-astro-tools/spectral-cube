@@ -73,11 +73,13 @@ def prepare_4_beams():
 
 
 def prepare_4_similar_beams():
+    # These are chosen such that the common beam areas differs by <2%
+    # This is to test avoiding common beam operations for small differences.
     beams = np.recarray(4, dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'),
                                   ('BPA', '>f4'), ('CHAN', '>i4'),
                                   ('POL', '>i4')])
-    beams['BMAJ'] = [0.42,0.41,0.4,0.41] # arcseconds
-    beams['BMIN'] = [0.21,0.2,0.2,0.2]
+    beams['BMAJ'] = [0.420,0.419,0.418,0.419] # arcseconds
+    beams['BMIN'] = [0.200,0.200,0.200,0.199]
     beams['BPA'] = [0,0,0,0] # degrees
     beams['CHAN'] = [0,1,2,3]
     beams['POL'] = [0,0,0,0]
