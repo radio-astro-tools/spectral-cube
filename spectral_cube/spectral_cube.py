@@ -3768,47 +3768,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
-    def _check_beam_areas(self, threshold, mean_beam, mask=None):
-        """
-        Check that the beam areas are the same to within some threshold
-        """
-
-        if mask is not None:
-            assert len(mask) == len(self.unmasked_beams)
-            mask = np.array(mask, dtype='bool')
-        else:
-            mask = np.ones(len(self.unmasked_beams), dtype='bool')
-
-        qtys = dict(sr=self.unmasked_beams.sr,
-                    major=self.unmasked_beams.major.to(u.deg),
-                    minor=self.unmasked_beams.minor.to(u.deg),
-                    # position angles are not really comparable
-                    #pa=u.Quantity([bm.pa for bm in self.unmasked_beams], u.deg),
-                   )
-
-        errormessage = ""
-
-        for (qtyname, qty) in (qtys.items()):
-            minv = qty[mask].min()
-            maxv = qty[mask].max()
-            mn = getattr(mean_beam, qtyname)
-            maxdiff = (np.max(np.abs(u.Quantity((maxv-mn, minv-mn))))/mn).decompose()
-
-            if isinstance(threshold, dict):
-                th = threshold[qtyname]
-            else:
-                th = threshold
-
-            if maxdiff > th:
-                errormessage += ("Beam {2}s differ by up to {0}x, which is greater"
-                                 " than the threshold {1}\n".format(maxdiff,
-                                                                    threshold,
-                                                                    qtyname
-                                                                   ))
-        if errormessage != "":
-            raise ValueError(errormessage)
-
-
     def __getattribute__(self, attrname):
         """
         For any functions that operate over the spectral axis, perform beam
