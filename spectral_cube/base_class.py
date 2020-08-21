@@ -748,7 +748,7 @@ class MultiBeamMixinClass(object):
                           BeamAverageWarning
                          )
 
-    def mask_out_bad_beams(self, threshold, reference_beam=None,
+    def mask_out_bad_beams(self, threshold=None, reference_beam=None,
                            criteria=['sr','major','minor'],
                            mid_value=np.nanmedian):
         """
