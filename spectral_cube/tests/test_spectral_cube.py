@@ -1932,8 +1932,17 @@ def test_mask_bad_beams(filename, use_dask):
     # make sure cropping the cube maintains the mask
     assert np.all(cube[:3].goodbeams_mask)
 
+    # Test all beams allowed.
+    masked_cube = cube.mask_out_bad_beams(threshold=1.,
+                                          reference_beam=Beam(0.3*u.arcsec,
+                                                              0.2*u.arcsec,
+                                                              60*u.deg))
+
+    assert np.all(masked_cube.mask.include()[:,0,0] == [True,True,True,True])
+    assert np.all(masked_cube.goodbeams_mask == [True,True,True,True])
+
     # middle two beams have same area
-    masked_cube = cube.mask_out_bad_beams(0.01,
+    masked_cube = cube.mask_out_bad_beams(threshold=1e-6,
                                           reference_beam=Beam(0.3*u.arcsec,
                                                               0.2*u.arcsec,
                                                               60*u.deg))
@@ -1944,13 +1953,29 @@ def test_mask_bad_beams(filename, use_dask):
     mean = masked_cube.mean(axis=0)
     assert np.all(mean == cube[1:3,:,:].mean(axis=0))
 
+    # Test if masked_cube.beam_threshold is used when no threshold is given
+    # when the reference cube is given, it equals the beam for channels 1, 2
+    cube.beam_threshold = 1e-6
+    masked_cube = cube.mask_out_bad_beams(reference_beam=Beam(0.3*u.arcsec,
+                                                              0.2*u.arcsec,
+                                                              60*u.deg))
 
-    #doesn't test anything any more
-    # masked_cube2 = cube.mask_out_bad_beams(0.5,)
+    assert np.all(masked_cube.goodbeams_mask == [False,True,True,False])
 
-    # mean2 = masked_cube2.mean(axis=0)
-    # assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
-    # assert np.all(masked_cube2.goodbeams_mask == [False,True,True,False])
+    # If no reference beam is given, a very strict threshold will mask
+    # everything:
+    assert cube.beam_threshold == 1e-6
+    masked_cube = cube.mask_out_bad_beams()
+
+    assert not masked_cube.mask.include().any()
+    assert not masked_cube.goodbeams_mask.any()
+
+
+
+def test_beam_area_failure():
+    pass
+
+    # cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
 
 
 def test_convolve_to_equal(data_vda, use_dask):
