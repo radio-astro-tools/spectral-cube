@@ -498,7 +498,7 @@ class MultiBeamMixinClass(object):
 
         self._goodbeams_mask = value
 
-    def identify_bad_beams(self, threshold, reference_beam=None,
+    def identify_bad_beams(self, threshold=None, reference_beam=None,
                            criteria=['sr','major','minor'],
                            mid_value=np.nanmedian):
         """
@@ -507,8 +507,10 @@ class MultiBeamMixinClass(object):
 
         Parameters
         ----------
-        threshold : float
-            Fractional threshold
+        threshold : float, optional
+            The fractional difference between beam major, minor, and pa to
+            permit. The default is to `~SpectralCube.beam_threshold`, which is initially set
+            to 0.01 (i.e., <1% changes in the beam area are allowed).
         reference_beam : Beam
             A beam to use as the reference.  If unspecified, ``mid_value`` will
             be used to select a middle beam
@@ -524,6 +526,9 @@ class MultiBeamMixinClass(object):
         includemask : np.array
             A boolean array where ``True`` indicates the good beams
         """
+
+        if threshold is None:
+            threshold = self.beam_threshold
 
         includemask = np.ones(self.unmasked_beams.size, dtype='bool')
 
@@ -669,7 +674,7 @@ class MultiBeamMixinClass(object):
             if need_to_handle_beams:
                 # do this check *first* so we don't do an expensive operation
                 # and crash afterward
-                com_beam = self.get_common_beam(beam_threshold, warn=True)
+                self._check_beam_areas(self.beam_threshold, self.common_beam)
 
             result = function(*args, **kwargs)
 
@@ -678,8 +683,8 @@ class MultiBeamMixinClass(object):
                 return result
 
             elif need_to_handle_beams:
-                result.meta['beam'] = com_beam
-                result._beam = com_beam
+                result.meta['beam'] = self.common_beam
+                result._beam = self.common_beam
 
             return result
 
@@ -746,11 +751,22 @@ class MultiBeamMixinClass(object):
         """
         See `identify_bad_beams`.  This function returns a masked cube
 
+        Parameters
+        ----------
+        threshold : float, optional
+            The fractional difference between beam major, minor, and pa to
+            permit. The default is to `~SpectralCube.beam_threshold`, which is initially set
+            to 0.01 (i.e., <1% changes in the beam area are allowed).
+
+
         Returns
         -------
         newcube : VaryingResolutionSpectralCube
             The cube with bad beams masked out
         """
+
+        if threshold is None:
+            threshold = self.beam_threshold
 
         goodbeams = self.identify_bad_beams(threshold=threshold,
                                             reference_beam=reference_beam,
