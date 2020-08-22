@@ -121,6 +121,8 @@ def projection_if_needed(function):
 
         if axis is None:
 
+            # TODO: avoid statistics for beam dependent units (e.g. Jy/beam)
+
             # return is scalar
             if unit is not None:
                 return u.Quantity(out, unit=unit)
@@ -281,6 +283,9 @@ class DaskSpectralCubeMixin:
         return SchedulerHandler(self, original_scheduler_kwargs)
 
     def _compute(self, array):
+
+        # TODO: check for beam area here. Add in convolution to common beam if needed and enabled.
+
         return array.compute(**self._scheduler_kwargs)
 
     def _warn_slow(self, funcname):
