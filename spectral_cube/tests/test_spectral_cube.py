@@ -1968,8 +1968,11 @@ def test_mask_bad_beams(filename, use_dask):
     assert not masked_cube.goodbeams_mask.any()
 
 
-
-def test_beam_area_failure(data_vda_beams, use_dask):
+@pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
+                                    'median', 'argmin', 'argmax',
+                                    'moment', 'moment0', 'moment1',
+                                    'moment2', 'linewidth_sigma', 'linewidth_fwhm'))
+def test_beam_area_failure(data_vda_beams, method, use_dask):
     '''
     Spectral operations should fail since the beams vary from the common beam.
 
@@ -1977,17 +1980,25 @@ def test_beam_area_failure(data_vda_beams, use_dask):
     '''
     cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
 
+    # Run a range of operations that should be checking for the beam areas
+
     with pytest.raises(ValueError,
                        match="Convolve to a common beam before applying any spectral operation"):
+        out = getattr(cube, method)()
 
-        mean_val = cube.mean(axis=0)
+        # mean_val = cube.mean(axis=0)
 
-
-def test_beam_area_similar(data_vda_similarbeams, use_dask):
+@pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
+                                    'median', 'argmin', 'argmax',
+                                    'moment', 'moment0', 'moment1',
+                                    'moment2', 'linewidth_sigma', 'linewidth_fwhm'))
+def test_beam_area_similar(data_vda_similarbeams, method, use_dask):
     cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
 
     # The beam areas doffer by <0.01. This operation is allowed.
-    mean_val = cube.mean(axis=0)
+    out = getattr(cube, method)()
+
+    # mean_val = cube.mean(axis=0)
 
 
 def test_convolve_to_equal(data_vda, use_dask):
