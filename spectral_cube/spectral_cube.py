@@ -3782,7 +3782,11 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         # called by some of these, maybe *only* those should be wrapped to
         # avoid redundant calls
         if attrname in ('moment', 'apply_numpy_function', 'apply_function',
-                        'apply_function_parallel_spectral'):
+                        'apply_function_parallel_spectral', 'sum',
+                        'mean', 'median', 'percentile', 'std', 'mad_std',
+                        'max', 'min', 'argmax', 'argmin',):
+
+
             origfunc = super(VRSC, self).__getattribute__(attrname)
             return self._handle_beam_areas_wrapper(origfunc)
         else:
