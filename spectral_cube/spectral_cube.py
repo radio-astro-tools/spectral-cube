@@ -3784,8 +3784,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         if attrname in ('moment', 'apply_numpy_function', 'apply_function',
                         'apply_function_parallel_spectral', 'sum',
                         'mean', 'median', 'percentile', 'std', 'mad_std',
-                        'max', 'min', 'argmax', 'argmin',):
-
+                        'max', 'min', 'argmax', 'argmin'):
 
             origfunc = super(VRSC, self).__getattribute__(attrname)
             return self._handle_beam_areas_wrapper(origfunc)
