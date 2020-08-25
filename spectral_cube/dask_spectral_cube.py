@@ -284,8 +284,6 @@ class DaskSpectralCubeMixin:
 
     def _compute(self, array):
 
-        # TODO: check for beam area here. Add in convolution to common beam if needed and enabled.
-
         return array.compute(**self._scheduler_kwargs)
 
     def _warn_slow(self, funcname):
