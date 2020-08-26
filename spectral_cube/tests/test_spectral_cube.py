@@ -1940,10 +1940,12 @@ def test_mask_bad_beams(data_vda_beams, use_dask):
     assert not masked_cube.goodbeams_mask.any()
 
 
-@pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
-                                    'median', 'argmin', 'argmax',
-                                    'moment', 'moment0', 'moment1',
-                                    'moment2', 'linewidth_sigma', 'linewidth_fwhm'))
+spectral_ops = ('sum', 'min', 'max', 'std', 'mad_std',
+                'median', 'argmin', 'argmax',
+                'moment', 'moment0', 'moment1',
+                'moment2', 'linewidth_sigma', 'linewidth_fwhm')
+
+@pytest.mark.parametrize('method', spectral_ops)
 def test_beam_area_failure(data_vda_beams, method, use_dask):
     '''
     Spectral operations should fail since the beams vary from the common beam.
@@ -1963,10 +1965,7 @@ def test_beam_area_failure(data_vda_beams, method, use_dask):
             out = getattr(cube, method)(axis=0)
 
 
-@pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
-                                    'median', 'argmin', 'argmax',
-                                    'moment', 'moment0', 'moment1',
-                                    'moment2', 'linewidth_sigma', 'linewidth_fwhm'))
+@pytest.mark.parametrize('method', spectral_ops)
 def test_beam_area_similar(data_vda_similarbeams, method, use_dask):
     cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
 
@@ -1978,10 +1977,7 @@ def test_beam_area_similar(data_vda_similarbeams, method, use_dask):
         out = getattr(cube, method)(axis=0)
 
 
-@pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
-                                    'median', 'argmin', 'argmax',
-                                    'moment', 'moment0', 'moment1',
-                                    'moment2', 'linewidth_sigma', 'linewidth_fwhm'))
+@pytest.mark.parametrize('method', spectral_ops)
 def test_beam_area_failure_strictmode(data_vda_similarbeams, method, use_dask):
     '''
     Spectral operations should fail since the beams vary from the common beam.
