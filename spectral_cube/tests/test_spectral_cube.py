@@ -1977,6 +1977,14 @@ def test_beam_area_similar(data_vda_similarbeams, method, use_dask):
         out = getattr(cube, method)(axis=0)
 
 
+def test_deprecated_average_beams(data_vda_beams, use_dask):
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    with pytest.warns(DeprecationWarning):
+        cube.average_beams(1.0)
+
+
 @pytest.mark.parametrize('method', spectral_ops)
 def test_beam_area_failure_strictmode(data_vda_similarbeams, method, use_dask):
     '''
