@@ -1972,6 +1972,26 @@ def test_beam_area_similar(data_vda_similarbeams, method, use_dask):
 
     # mean_val = cube.mean(axis=0)
 
+@pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
+                                    'median', 'argmin', 'argmax',
+                                    'moment', 'moment0', 'moment1',
+                                    'moment2', 'linewidth_sigma', 'linewidth_fwhm'))
+def test_beam_area_failure_strictmode(data_vda_similarbeams, method, use_dask):
+    '''
+    Spectral operations should fail since the beams vary from the common beam.
+
+    **Note**: Change when an intermediate dask convolve operation is triggered automatically.
+    '''
+    cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
+
+    cube.strict_beam_match = True
+
+    # Run a range of operations that should be checking for the beam areas
+
+    with pytest.raises(ValueError,
+                       match="Convolve to a common beam before applying any spectral operation"):
+        out = getattr(cube, method)()
+
 
 def test_convolve_to_equal(data_vda, use_dask):
 
