@@ -727,6 +727,13 @@ class MultiBeamMixinClass(object):
 
         errormessage = ""
 
+        # Add a note when we have strict mode enabled.
+        if self.strict_beam_match:
+            strictmessage = "Strict beam match mode is enabled (a threshold of 0.0 is always enforced)." \
+                " To disable, set `cube.strict_beam_match = False`.\n"
+        else:
+            strictmessage = ""
+
         for (qtyname, qty) in (qtys.items()):
             minv = qty[mask].min()
             maxv = qty[mask].max()
@@ -738,6 +745,13 @@ class MultiBeamMixinClass(object):
             else:
                 th = threshold
 
+            # If strict mode enabled, beams must match exactly.
+            if self.strict_beam_match:
+                if hasattr(th, 'unit'):
+                    th = 0. * th.unit
+                else:
+                    th = 0.
+
             if maxdiff > th:
                 errormessage += ("Beam {2}s differ by up to {0}x, which is greater"
                                  " than the threshold {1}\n".format(maxdiff,
@@ -747,11 +761,12 @@ class MultiBeamMixinClass(object):
         if errormessage != "":
 
             if raise_error or self.strict_beam_match:
-                raise ValueError(f"{errormessage}\nConvolve to a common beam before applying any"
+                raise ValueError(f"{strictmessage}{errormessage}\nConvolve to a common beam before applying any"
                                  " spectral operation.")
 
             else:
                 warnings.warn(errormessage)
+                warnings.warn(strictmessage)
                 warnings.warn("Convolution to a common beam will be triggered at an intermediate level."
                               " To avoid this step, first convolve the spectral-cube to a common beam size.")
 
