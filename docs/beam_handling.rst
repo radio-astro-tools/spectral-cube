@@ -55,8 +55,12 @@ Multi-beam cubes
 Varying resolution (multi-beam) cubes are somewhat trickier to work with in
 general, though unit conversion is easy.  You can perform the same sort of unit
 conversion with `~spectral_cube.spectral_cube.VaryingResolutionSpectralCube` s
-as with regular `~spectral_cube.spectral_cube.SpectralCube` s; ``spectral-cube``
-will use a different beam and frequency for each plane.
+as with regular `~spectral_cube.spectral_cube.SpectralCube` s. For example, to
+convert from Jy / beam to K::
+
+    >>> vrsc_cube_K = vrsc_cube.to(u.K)  # doctest: +SKIP
+
+``spectral-cube`` will use a different beam and frequency for each plane.
 
 You can identify channels with bad beams (i.e., beams that differ from a reference beam,
 which by default is the median beam) using
