@@ -20,7 +20,7 @@ operations spanning the spectral axis, for example ``cube.moment0(axis=0)`` or
 This occurs if the beam sizes are different by more than the specified
 threshold factor.  A default threshold of 1% is set because for most
 interferometric images, beam differences on this scale are negligible (they
-correspond to flux measurement errors of 10^-4).  
+correspond to flux measurement errors of 10^-4).
 
 To inspect the beam properties, look at the ``beams`` attribute, for example:
 
@@ -56,6 +56,9 @@ There are several options to manage this problem:
    good_beams = cube.identify_bad_beams(threshold=0.1)
    mcube = cube.mask_out_bad_beams(threshold=0.1)
 
+
+Please see the more detailed explanation of the beam threshold treatment in
+:doc:`beam_handling` for more information about this warning.
 
 
 
