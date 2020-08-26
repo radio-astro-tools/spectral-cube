@@ -743,7 +743,7 @@ class MultiBeamMixinClass(object):
                                                                    ))
         if errormessage != "":
 
-            if raise_error:
+            if raise_error or self.strict_beam_match:
                 raise ValueError(f"{errormessage}\nConvolve to a common beam before applying any"
                                  " spectral operation.")
 

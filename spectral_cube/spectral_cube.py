@@ -3547,6 +3547,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         beam_table = kwargs.pop('beam_table', None)
         beams = kwargs.pop('beams', None)
         beam_threshold = kwargs.pop('beam_threshold', 0.01)
+        strict_beam_match = kwargs.pop('strict_beam_match', False)
+
+        if strict_beam_match:
+            beam_threshold = 0.0
 
         if (beam_table is None and beams is None):
             raise ValueError(
@@ -3604,6 +3608,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         self.beams = beams
         self.beam_threshold = beam_threshold
+        self.strict_beam_match = strict_beam_match
 
     def __getitem__(self, view):
 
