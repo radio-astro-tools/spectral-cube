@@ -29,12 +29,30 @@ will be different for each slice.
 
 Common Beam selection
 ^^^^^^^^^^^^^^^^^^^^^
-You may want to convolve your cube to the smallest beam that is still larger
-than all contained beams.  To do this, you can use the
-`~radio_beam.Beams.common_beam` tool.  For example::
 
-    common_beam = cube.beams.common_beam()
-    new_cube = cube.convolve_to(common_beam)
+Many spectral operations on a cube with a varying resolution will require first
+convolving to a common resolution. You may want to retain the finest spatial
+resolution possible by finding the smallest common beam that encloses all beams
+in the cube. To do this, we can use
+:meth:`~spectral_cube.VaryingResolutionSpectralCube.set_common_beam`::
+
+    cube.set_common_beam()
+
+This method wraps the `~radio_beam.Beams.common_beam`, and keyword arguments for
+the common beam algorithm can be passed a dictionary to `combeam_kwargs`.
+The common beam can then be accessed with::
+
+    cube.common_beam
+
+A new common beam will be computed each time
+:meth:`~spectral_cube.VaryingResolutionSpectralCube.set_common_beam` is called.
+This can be used to make changes to the settings for the common beam algorithm
+or if some beams are masked (see :doc:`beam_handling`).
+
+The cube can then be convolved to the smallest common beam using the normal
+call for convolution::
+
+    new_cube = cube.convolve_to(cube.common_beam)
 
 Sometimes, you'll encounter the error "Could not find common beam to deconvolve
 all beams." This is a real issue, as the algorithms we have in hand so far do
@@ -45,7 +63,7 @@ algorithm to converge to a valid common beam:
 `~radio_beam.commonbeam.getMinVolEllipse` code by
 passing ``tolerance=1e-5`` to the common beam function::
 
-    cube.beams.common_beam(tolerance=1e-5)
+    cube.set_common_beam(combeam_kwargs=dict(tolerance=1e-5))
 
 Convergence may be met by either increasing or decreasing the tolerance; it
 depends on having the algorithm not step within the minimum enclosing ellipse,
@@ -57,7 +75,7 @@ and will take longer to run.
 to overestimate the beam size, ensuring that solutions that are marginally
 smaller than the common beam will not be found by the algorithm::
 
-    cube.beams.common_beam(epsilon=1e-3)
+    cube.set_common_beam(combeam_kwargs=dict(epsilon=1e-3))
 
 The default value of ``epsilon=1e-3`` will sample points 0.1% larger than the
 edge of each beam in the set. Increasing ``epsilon`` ensures that a valid common
