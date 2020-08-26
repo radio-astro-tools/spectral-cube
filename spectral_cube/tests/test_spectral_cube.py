@@ -1956,9 +1956,12 @@ def test_beam_area_failure(data_vda_beams, method, use_dask):
 
     with pytest.raises(ValueError,
                        match="Convolve to a common beam before applying any spectral operation"):
-        out = getattr(cube, method)()
+        if 'linewidth' in method:
+            # Doesn't take axis, always in spectral direction
+            out = getattr(cube, method)()
+        else:
+            out = getattr(cube, method)(axis=0)
 
-        # mean_val = cube.mean(axis=0)
 
 @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
                                     'median', 'argmin', 'argmax',
@@ -1968,9 +1971,12 @@ def test_beam_area_similar(data_vda_similarbeams, method, use_dask):
     cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
 
     # The beam areas doffer by <0.01. This operation is allowed.
-    out = getattr(cube, method)()
+    if 'linewidth' in method:
+        # Doesn't take axis, always in spectral direction
+        out = getattr(cube, method)()
+    else:
+        out = getattr(cube, method)(axis=0)
 
-    # mean_val = cube.mean(axis=0)
 
 @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
                                     'median', 'argmin', 'argmax',
@@ -1987,10 +1993,14 @@ def test_beam_area_failure_strictmode(data_vda_similarbeams, method, use_dask):
     cube.strict_beam_match = True
 
     # Run a range of operations that should be checking for the beam areas
-
+    # Match for the specific message about strict beam mode
     with pytest.raises(ValueError,
-                       match="Convolve to a common beam before applying any spectral operation"):
-        out = getattr(cube, method)()
+                       match="Strict beam match mode is enabled"):
+        if 'linewidth' in method:
+            # Doesn't take axis, always in spectral direction
+            out = getattr(cube, method)()
+        else:
+            out = getattr(cube, method)(axis=0)
 
 
 def test_convolve_to_equal(data_vda, use_dask):
