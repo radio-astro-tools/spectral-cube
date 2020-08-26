@@ -571,7 +571,7 @@ class MultiBeamMixinClass(object):
                       "common beam can then be accessed with `cube.common_beam`.",
                       DeprecationWarning)
 
-        self.set_common_beam(self, threshold, mask=mask, warn=warn)
+        self.set_common_beam(threshold, mask=mask, warn=warn)
 
     def set_common_beam(self,
                         threshold=None, mask='compute', warn=False,
