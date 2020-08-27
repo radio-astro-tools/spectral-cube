@@ -575,13 +575,16 @@ class MultiBeamMixinClass(object):
 
     def set_common_beam(self, threshold=None, mask='goodbeams', warn=False, **kwargs):
         """
-        Set the common beam for operations.
+        Set the common beam: `~VaryingResolutionSpectralCube.common_beam`.
 
         Many cubes will have a beam that varies by a small factor (less than a single
         spatial pixel area) across spectral channels. In that case, this method will
         handle avoid spatially-convolving to an exact common beam, which is an expensive
         operation. To avoid this behaviour, a cube should be convolved to a common beam
         prior to applying further operations.
+
+        This function also accounts for masked channels and will not include those beams
+        in the common beam calculation. See the description for the `mask` keyword below.
 
         Parameters
         ----------
@@ -591,7 +594,11 @@ class MultiBeamMixinClass(object):
             to 0.01 (i.e., <1% changes in the beam area are allowed).
         mask : 'compute', 'goodbeams', None, or boolean array
             The mask to apply to the beams.  Useful for excluding bad channels
-            and edge beams.
+            and edge beams. The default 'goodbeams' uses the current
+            `~VaryingResolutionSpectralCube.goodbeams_mask`. This also equivalent to`mask=None`.
+            To also mask using the full `~VaryingResolutionSpectralCube.mask`, use `mask=compute`.
+            Finally, a boolean mask can also be given, which will be combined with
+            `~VaryingResolutionSpectralCube.goodbeams_mask`.
         warn : bool
             Warn if successful?
         kwargs :
@@ -609,7 +616,7 @@ class MultiBeamMixinClass(object):
 
         use_dask = isinstance(self._data, da.Array)
 
-        if mask == 'goodbeams':
+        if mask == 'goodbeams' or mask is None:
             beam_mask = self.goodbeams_mask[:, None, None]
 
             if use_dask:
@@ -635,6 +642,7 @@ class MultiBeamMixinClass(object):
 
         # use private _beams here because the public one excludes the bad beams
         # by default
+        # new_beam = self._beams.average_beam(includemask=beam_mask)
         new_beam = self._beams.common_beam(includemask=beam_mask, **kwargs)
 
         if np.isnan(new_beam):
