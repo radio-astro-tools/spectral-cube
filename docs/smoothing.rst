@@ -39,7 +39,8 @@ in the cube. To do this, we can use
     cube.set_common_beam()
 
 This method wraps the `~radio_beam.Beams.common_beam`, and keyword arguments for
-the common beam algorithm can be passed a dictionary to `combeam_kwargs`.
+the common beam algorithm can be passed directly in
+:meth:`~spectral_cube.VaryingResolutionSpectralCube.set_common_beam`.
 The common beam can then be accessed with::
 
     cube.common_beam
@@ -63,7 +64,7 @@ algorithm to converge to a valid common beam:
 `~radio_beam.commonbeam.getMinVolEllipse` code by
 passing ``tolerance=1e-5`` to the common beam function::
 
-    cube.set_common_beam(combeam_kwargs=dict(tolerance=1e-5))
+    cube.set_common_beam(tolerance=1e-5)
 
 Convergence may be met by either increasing or decreasing the tolerance; it
 depends on having the algorithm not step within the minimum enclosing ellipse,
@@ -75,7 +76,7 @@ and will take longer to run.
 to overestimate the beam size, ensuring that solutions that are marginally
 smaller than the common beam will not be found by the algorithm::
 
-    cube.set_common_beam(combeam_kwargs=dict(epsilon=1e-3))
+    cube.set_common_beam(epsilon=1e-3)
 
 The default value of ``epsilon=1e-3`` will sample points 0.1% larger than the
 edge of each beam in the set. Increasing ``epsilon`` ensures that a valid common
