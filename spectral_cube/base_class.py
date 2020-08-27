@@ -605,10 +605,6 @@ class MultiBeamMixinClass(object):
             Additional kwargs are passed to the common beam algorithm.
             See `~radio_beam.Beams.common_beam`.
 
-        Returns
-        -------
-        new_beam : radio_beam.Beam
-            A new radio beam object that is the average of the unmasked beams
         """
 
         if threshold is None:
@@ -616,10 +612,17 @@ class MultiBeamMixinClass(object):
 
         use_dask = isinstance(self._data, da.Array)
 
-        if mask == 'goodbeams' or mask is None:
-            beam_mask = self.goodbeams_mask[:, None, None]
+        if isinstance(mask, np.ndarray):
 
-            if use_dask:
+            if mask.ndim > 1:
+                beam_mask = np.logical_and(mask, self.goodbeams_mask[:, None, None])
+            else:
+                beam_mask = np.logical_and(mask, self.goodbeams_mask)
+
+        elif mask == 'goodbeams' or mask is None:
+            beam_mask = self.goodbeams_mask
+
+            if isinstance(beam_mask, da.Array):
                 beam_mask = self._compute(beam_mask)
         elif mask == 'compute':
             if use_dask:
@@ -638,10 +641,7 @@ class MultiBeamMixinClass(object):
             else:
                 beam_mask = self.goodbeams_mask
         else:
-            if mask.ndim > 1:
-                beam_mask = np.logical_and(mask, self.goodbeams_mask[:, None, None])
-            else:
-                beam_mask = np.logical_and(mask, self.goodbeams_mask)
+            raise ValueError("mask must be a numpy array, 'goodbeams', 'compute' or None.")
 
         # use private _beams here because the public one excludes the bad beams
         # by default
