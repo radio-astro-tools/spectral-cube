@@ -2035,6 +2035,54 @@ def test_beam_area_failure_strictmode(data_vda_similarbeams, method, use_dask):
             out = getattr(cube, method)(axis=0)
 
 
+def test_set_common_beam_masking(data_vda_beams, use_dask):
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    # goodbeams (default) == None
+
+    assert cube.goodbeams_mask.all()
+
+    cube.set_common_beam(mask='goodbeams')
+
+    assert cube.common_beam == Beam(major=0.42187795051845506*u.arcsec,
+                                    minor=0.2656599390275613*u.arcsec,
+                                    pa=14.998843033892463*u.deg)
+
+    # None defaults to goodbeams
+    cube.set_common_beam(mask=None)
+
+    assert cube.common_beam == Beam(major=0.42187795051845506*u.arcsec,
+                                    minor=0.2656599390275613*u.arcsec,
+                                    pa=14.998843033892463*u.deg)
+
+    # 'compute' to include cube mask
+
+    # Assign the cube mask to not include the first channel
+    mask = np.ones(cube.shape, dtype='bool')
+    mask[0] = False
+    masked_cube = cube.with_mask(mask)
+
+    masked_cube.set_common_beam(mask='compute')
+
+    assert masked_cube.common_beam == Beam(major=0.41415008473115555*u.arcsec,
+                                           minor=0.2227545167078735*u.arcsec,
+                                           pa=39.03642613138831*u.deg)
+
+    # Last is passing a custom mask.
+
+    mybeam_mask = np.ones(cube.shape[0], dtype='bool')
+    mybeam_mask[0] = False
+
+    cube.set_common_beam(mask=mybeam_mask)
+    assert cube.common_beam == Beam(major=0.41415008473115555*u.arcsec,
+                                    minor=0.2227545167078735*u.arcsec,
+                                    pa=39.03642613138831*u.deg)
+
+    # Otherwise, ValuError
+    with pytest.raises(ValueError):
+        cube.set_common_beam(mask='FAILS')
+
 def test_convolve_to_equal(data_vda, use_dask):
 
     cube, data = cube_and_raw(data_vda, use_dask=use_dask)
