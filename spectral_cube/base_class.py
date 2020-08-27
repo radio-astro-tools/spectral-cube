@@ -573,9 +573,7 @@ class MultiBeamMixinClass(object):
 
         self.set_common_beam(threshold, mask=mask, warn=warn)
 
-    def set_common_beam(self,
-                        threshold=None, mask='compute', warn=False,
-                        combeam_kwargs={}):
+    def set_common_beam(self, threshold=None, mask='goodbeams', warn=False, **kwargs):
         """
         Set the common beam for operations.
 
@@ -591,13 +589,14 @@ class MultiBeamMixinClass(object):
             The fractional difference between beam major, minor, and pa to
             permit. The default is to `~SpectralCube.beam_threshold`, which is initially set
             to 0.01 (i.e., <1% changes in the beam area are allowed).
-        mask : 'compute', None, or boolean array
+        mask : 'compute', 'goodbeams', None, or boolean array
             The mask to apply to the beams.  Useful for excluding bad channels
             and edge beams.
         warn : bool
             Warn if successful?
-        combeam_kwargs : dict
-            Additional kwargs for the common beam algorithm. See `~radio_beam.Beams.common_beam`.
+        kwargs :
+            Additional kwargs are passed to the common beam algorithm.
+            See `~radio_beam.Beams.common_beam`.
 
         Returns
         -------
@@ -610,7 +609,12 @@ class MultiBeamMixinClass(object):
 
         use_dask = isinstance(self._data, da.Array)
 
-        if mask == 'compute':
+        if mask == 'goodbeams':
+            beam_mask = self.goodbeams_mask[:, None, None]
+
+            if use_dask:
+                beam_mask = self._compute(beam_mask)
+        elif mask == 'compute':
             if use_dask:
                 # If we are dealing with dask arrays, we compute the beam
                 # mask once and for all since it is used multiple times in its
@@ -634,8 +638,7 @@ class MultiBeamMixinClass(object):
 
         # use private _beams here because the public one excludes the bad beams
         # by default
-        # new_beam = self._beams.average_beam(includemask=beam_mask)
-        new_beam = self._beams.common_beam(includemask=beam_mask, **combeam_kwargs)
+        new_beam = self._beams.common_beam(includemask=beam_mask, **kwargs)
 
         if np.isnan(new_beam):
             raise ValueError("Common beam is not finite. "
