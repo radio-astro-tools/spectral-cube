@@ -617,8 +617,6 @@ class MultiBeamMixinClass(object):
         if threshold is None:
             threshold = self.beam_threshold
 
-        use_dask = isinstance(self._data, da.Array)
-
         if isinstance(mask, np.ndarray):
 
             if mask.ndim > 1:
@@ -632,22 +630,24 @@ class MultiBeamMixinClass(object):
             if isinstance(beam_mask, da.Array):
                 beam_mask = self._compute(beam_mask)
         elif mask == 'compute':
-            if use_dask:
+            is_dask_masks = (isinstance(self.unmasked_channels, da.Array) or
+                             isinstance(self.goodbeams_mask, da.Array))
+
+            if is_dask_masks:
                 # If we are dealing with dask arrays, we compute the beam
                 # mask once and for all since it is used multiple times in its
                 # entirety in the remainder of this method.
-                beam_mask = da.any(da.logical_and(self.unmasked_channels,
-                                                  self.goodbeams_mask))
+                beam_mask = da.logical_and(self.unmasked_channels,
+                                           self.goodbeams_mask)
                 beam_mask = self._compute(beam_mask)
             else:
-                beam_mask = np.any(np.logical_and(self.unmasked_channels,
-                                                  self.goodbeams_mask))
+                beam_mask = np.logical_and(self.unmasked_channels,
+                                           self.goodbeams_mask)
         else:
             raise ValueError("mask must be a numpy array, 'goodbeams', 'compute' or None.")
 
         # use private _beams here because the public one excludes the bad beams
         # by default
-        # new_beam = self._beams.average_beam(includemask=beam_mask)
         new_beam = self._beams.common_beam(includemask=beam_mask, **kwargs)
 
         if np.isnan(new_beam):
