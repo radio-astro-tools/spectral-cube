@@ -2097,6 +2097,14 @@ def test_set_common_beam_masking(data_vda_beams, use_dask):
 
     compare_common_beams(cube.common_beam, combeam2)
 
+    # Multidimensional custom mask
+    mybeam_mask3d = np.ones(cube.shape, dtype='bool')
+    mybeam_mask3d[0] = False
+
+    cube.set_common_beam(mask=mybeam_mask3d)
+
+    compare_common_beams(cube.common_beam, combeam2)
+
     # Otherwise, ValuError
     with pytest.raises(ValueError):
         cube.set_common_beam(mask='FAILS')

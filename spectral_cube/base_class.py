@@ -620,7 +620,8 @@ class MultiBeamMixinClass(object):
         if isinstance(mask, np.ndarray):
 
             if mask.ndim > 1:
-                beam_mask = np.logical_and(mask, self.goodbeams_mask[:, None, None])
+                beam_mask = np.any(np.logical_and(mask, self.goodbeams_mask[:, None, None]),
+                                   axis=(1,2))
             else:
                 beam_mask = np.logical_and(mask, self.goodbeams_mask)
 
