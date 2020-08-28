@@ -1262,6 +1262,10 @@ class DaskSpectralCubeMixin:
 
         return newcube
 
+    @property
+    def _mask_include(self):
+        return da.from_array(MaskHandler(self), name='MaskHandler ' + str(uuid.uuid4()), chunks=self._data.chunksize)
+
 
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
@@ -1511,11 +1515,3 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
-
-    @property
-    def _mask_include(self):
-        return BooleanArrayMask(da.from_array(MaskHandler(self),
-                                              name='MaskHandler ' + str(uuid.uuid4()),
-                                              chunks=self._data.chunksize),
-                                wcs=self.wcs,
-                                shape=self.shape)
