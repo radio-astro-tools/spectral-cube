@@ -567,7 +567,7 @@ class MultiBeamMixinClass(object):
 
         return includemask
 
-    def average_beams(self, threshold, mask='compute', warn=False):
+    def average_beams(self, threshold, mask='goodbeams', warn=False):
         '''
         This is now deprecated. See `~VaryingResolutionSpectralCube.set_common_beam.`.
         '''
