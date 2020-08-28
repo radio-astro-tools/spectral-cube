@@ -346,6 +346,13 @@ class SpectralAxisMixinClass(object):
         # spectral objects should be forced to implement this
         raise NotImplementedError
 
+    @property
+    @cached
+    def unmasked_channels(self):
+        if isinstance(self._data, da.Array):
+            return self._compute(da.any(self._mask_include, axis=(1, 2)))
+
+        return self.mask.include().any(axis=(1, 2))
 
 class MaskableArrayMixinClass(object):
     """
