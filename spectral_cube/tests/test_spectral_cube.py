@@ -2011,17 +2011,17 @@ def test_set_common_beam_masking(data_vda_beams, use_dask):
 
     def compare_common_beams(beam1, beam2):
 
-        np.testing.assert_almost_equal(beam1.major.to(u.arcsec).value,
-                                       beam2.major.to(u.arcsec).value,
-                                       atol=1e-5)
+        np.testing.assert_allclose(beam1.major.to(u.arcsec).value,
+                                   beam2.major.to(u.arcsec).value,
+                                   atol=1e-5)
 
-        np.testing.assert_almost_equal(beam1.minor.to(u.arcsec).value,
-                                       beam2.minor.to(u.arcsec).value,
-                                       atol=1e-5)
+        np.testing.assert_allclose(beam1.minor.to(u.arcsec).value,
+                                   beam2.minor.to(u.arcsec).value,
+                                   atol=1e-5)
 
-        np.testing.assert_almost_equal(beam1.pa.to(u.deg).value,
-                                       beam2.pa.to(u.deg).value,
-                                       atol=1e-5)
+        np.testing.assert_allclose(beam1.pa.to(u.deg).value,
+                                   beam2.pa.to(u.deg).value,
+                                   atol=1e-5)
 
 
     cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
@@ -2049,6 +2049,8 @@ def test_set_common_beam_masking(data_vda_beams, use_dask):
     mask = np.ones(cube.shape, dtype='bool')
     mask[0] = False
     masked_cube = cube.with_mask(mask)
+
+    assert (masked_cube.unmasked_channels == np.any(mask, axis=(1,2))).all()
 
     masked_cube.set_common_beam(mask='compute')
 
