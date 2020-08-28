@@ -2540,6 +2540,27 @@ def test_mask_channels_preserve_mask(filename, use_dask):
     np.testing.assert_equal(cube.mask.include(), expected_mask)
 
 
+@pytest.mark.parametrize('filename', ['data_vda', 'data_vda_beams'],
+                         indirect=['filename'])
+def test_unmasked_channels(filename, use_dask):
+
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
+
+    # Add a mask to the cube
+    mask = np.ones(cube.shape, dtype=bool)
+    mask[0] = False
+    cube = cube.with_mask(mask)
+
+    np.testing.assert_equal(cube.unmasked_channels, mask.any(axis=(1, 2)))
+
+    # Mask by channels
+    mask_channels = np.array([False, True, False, True])
+
+    cube = cube.mask_channels(mask_channels)
+
+    np.testing.assert_equal(cube.unmasked_channels, ~mask_channels)
+
+
 def test_minimal_subcube(use_dask):
 
     if not use_dask:
