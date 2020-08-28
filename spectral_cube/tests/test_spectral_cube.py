@@ -2037,6 +2037,21 @@ def test_beam_area_failure_strictmode(data_vda_similarbeams, method, use_dask):
 
 def test_set_common_beam_masking(data_vda_beams, use_dask):
 
+    def compare_common_beams(beam1, beam2):
+
+        np.testing.assert_almost_equal(beam1.major.to(u.arcsec).value,
+                                       beam2.major.to(u.arcsec).value,
+                                       atol=1e-5)
+
+        np.testing.assert_almost_equal(beam1.minor.to(u.arcsec).value,
+                                       beam2.minor.to(u.arcsec).value,
+                                       atol=1e-5)
+
+        np.testing.assert_almost_equal(beam1.pa.to(u.deg).value,
+                                       beam2.pa.to(u.deg).value,
+                                       atol=1e-5)
+
+
     cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
 
     # goodbeams (default) == None
@@ -2045,16 +2060,16 @@ def test_set_common_beam_masking(data_vda_beams, use_dask):
 
     cube.set_common_beam(mask='goodbeams')
 
-    assert cube.common_beam == Beam(major=0.42187795051845506*u.arcsec,
-                                    minor=0.2656599390275613*u.arcsec,
-                                    pa=14.998843033892463*u.deg)
+    combeam1 = Beam(major=0.42187795051845506*u.arcsec,
+                    minor=0.2656599390275613*u.arcsec,
+                    pa=14.998843033892463*u.deg)
+
+    compare_common_beams(cube.common_beam, combeam1)
 
     # None defaults to goodbeams
     cube.set_common_beam(mask=None)
 
-    assert cube.common_beam == Beam(major=0.42187795051845506*u.arcsec,
-                                    minor=0.2656599390275613*u.arcsec,
-                                    pa=14.998843033892463*u.deg)
+    compare_common_beams(cube.common_beam, combeam1)
 
     # 'compute' to include cube mask
 
@@ -2065,9 +2080,11 @@ def test_set_common_beam_masking(data_vda_beams, use_dask):
 
     masked_cube.set_common_beam(mask='compute')
 
-    assert masked_cube.common_beam == Beam(major=0.41415008473115555*u.arcsec,
-                                           minor=0.2227545167078735*u.arcsec,
-                                           pa=39.03642613138831*u.deg)
+    combeam2 = Beam(major=0.41415008473115555*u.arcsec,
+                    minor=0.2227545167078735*u.arcsec,
+                    pa=39.03642613138831*u.deg)
+
+    compare_common_beams(masked_cube.common_beam, combeam2)
 
     # Last is passing a custom mask.
 
@@ -2075,9 +2092,8 @@ def test_set_common_beam_masking(data_vda_beams, use_dask):
     mybeam_mask[0] = False
 
     cube.set_common_beam(mask=mybeam_mask)
-    assert cube.common_beam == Beam(major=0.41415008473115555*u.arcsec,
-                                    minor=0.2227545167078735*u.arcsec,
-                                    pa=39.03642613138831*u.deg)
+
+    compare_common_beams(cube.common_beam, combeam2)
 
     # Otherwise, ValuError
     with pytest.raises(ValueError):
@@ -2586,7 +2602,7 @@ def test_unmasked_channels(filename, use_dask):
 
     cube = cube.mask_channels(mask_channels)
 
-    np.testing.assert_equal(cube.unmasked_channels, ~mask_channels)
+    np.testing.assert_equal(cube.unmasked_channels, mask_channels)
 
 
 def test_minimal_subcube(use_dask):
