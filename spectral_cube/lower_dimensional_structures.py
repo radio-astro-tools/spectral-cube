@@ -17,7 +17,7 @@ from astropy.io.registry import UnifiedReadWriteMethod
 from . import spectral_axis
 from .io.core import LowerDimensionalObjectWrite
 from .utils import SliceWarning, BeamWarning, SmoothingWarning, FITSWarning
-from .cube_utils import convert_bunit
+from . import cube_utils
 from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
 
@@ -26,7 +26,6 @@ from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          MultiBeamMixinClass, BeamMixinClass,
                          HeaderMixinClass
                         )
-from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
 class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
@@ -89,6 +88,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         else:
             newwcs = None
 
+        print(new_qty)
+        print(new_qty._data)
+        print(new_qty.value)
+
         new = self.__class__(value=new_qty.value,
                              unit=new_qty.unit,
                              copy=False,
@@ -132,13 +135,13 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         Get a pure array representation of the LDO.  Useful when multiplying
         and using numpy indexing tricks.
         """
-        return np.asarray(self)
+        return self.filled_data[:].value
 
-    @property
-    def _data(self):
-        # the _data property is required by several other mixins
-        # (which probably means defining it here is a bad design)
-        return self.array
+    # @property
+    # def _data(self):
+    #     # the _data property is required by several other mixins
+    #     # (which probably means defining it here is a bad design)
+    #     return self.__data
 
     @property
     def quantity(self):
@@ -152,8 +155,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         """
         Get a unitless numpy array with the mask applied.
         """
-        # return np.asarray(self.filled_data[:])
-        return np.asarray(self)
+        return np.asarray(self.filled_data[:])
+        # return np.asarray(self)
 
     def to(self, unit, equivalencies=[], freq=None):
         """
@@ -297,8 +300,16 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         if wcs is not None and wcs.wcs.naxis != 2:
             raise ValueError("wcs should have two dimension")
 
-        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
-                                  copy=copy).view(cls)
+        # self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
+        #                           copy=copy).view(cls)
+
+        self = super().__new__(cls, value, unit=unit, dtype=dtype,
+                               copy=copy).view(cls)
+
+        # self = cls.__new__(cls, value, unit=unit, dtype=dtype,
+        #                    copy=copy).view(cls)
+
+        self._data = np.asarray(value)
         self._wcs = wcs
         self._meta = {} if meta is None else meta
         self._wcs_tolerance = wcs_tolerance
@@ -427,7 +438,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         mywcs = wcs.WCS(hdu.header)
 
         if "BUNIT" in hdu.header:
-            unit = convert_bunit(hdu.header["BUNIT"])
+            unit = cube_utils.convert_bunit(hdu.header["BUNIT"])
             meta["BUNIT"] = hdu.header["BUNIT"]
         else:
             unit = None
@@ -661,8 +672,13 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         if wcs is not None and wcs.wcs.naxis != 1:
             raise ValueError("wcs should have two dimension")
 
-        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
-                                  copy=copy).view(cls)
+        self = super().__new__(cls, value, unit=unit, dtype=dtype,
+                               copy=copy).view(cls)
+
+        # self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
+        #                           copy=copy).view(cls)
+
+        self._data = np.asarray(value)
         self._wcs = wcs
         self._meta = {} if meta is None else meta
         self._wcs_tolerance = wcs_tolerance
@@ -705,7 +721,7 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         mywcs = wcs.WCS(hdu.header)
 
         if "BUNIT" in hdu.header:
-            unit = convert_bunit(hdu.header["BUNIT"])
+            unit = cube_utils.convert_bunit(hdu.header["BUNIT"])
             meta["BUNIT"] = hdu.header["BUNIT"]
         else:
             unit = None
