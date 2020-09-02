@@ -145,7 +145,14 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         """
         Get a pure `~astropy.units.Quantity` representation of the LDO.
         """
-        return u.Quantity(self)
+        return u.Quantity(self.filled_data[:])
+
+    @property
+    def value(self):
+        """
+        Get a unitless numpy array with the mask applied.
+        """
+        return np.asarray(self.filled_data[:])
 
     def to(self, unit, equivalencies=[], freq=None):
         """
@@ -248,14 +255,14 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         matters: ``self`` must have ``_wcs``, for example.
         """
         if mask is None:
-            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
-                                    self._wcs, shape=self.value.shape)
+            mask = BooleanArrayMask(np.isfinite(self.array),
+                                    self._wcs, shape=self.array.shape)
         elif isinstance(mask, np.ndarray):
-            if mask.shape != self.value.shape:
+            if mask.shape != self.array.shape:
                 raise ValueError("Mask shape must match the {0} shape."
                                  .format(self.__class__.__name__)
                                 )
-            mask = BooleanArrayMask(mask, self._wcs, shape=self.value.shape)
+            mask = BooleanArrayMask(mask, self._wcs, shape=self.array.shape)
         elif isinstance(mask, MaskBase):
             pass
         else:
@@ -263,7 +270,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
                             "type.".format(type(mask)))
 
         # Validate the mask before setting
-        mask._validate_wcs(new_data=self.value, new_wcs=self._wcs,
+        mask._validate_wcs(new_data=self.array, new_wcs=self._wcs,
                            wcs_tolerance=self._wcs_tolerance)
 
         self._mask = mask
