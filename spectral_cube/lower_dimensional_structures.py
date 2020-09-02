@@ -152,7 +152,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         """
         Get a unitless numpy array with the mask applied.
         """
-        return np.asarray(self.filled_data[:])
+        # return np.asarray(self.filled_data[:])
+        return np.asarray(self)
 
     def to(self, unit, equivalencies=[], freq=None):
         """
@@ -255,14 +256,15 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         matters: ``self`` must have ``_wcs``, for example.
         """
         if mask is None:
-            mask = BooleanArrayMask(np.isfinite(self.array),
-                                    self._wcs, shape=self.array.shape)
+            mask = BooleanArrayMask(np.isfinite(self._data),
+                                    self._wcs, shape=self._data.shape)
+
         elif isinstance(mask, np.ndarray):
-            if mask.shape != self.array.shape:
+            if mask.shape != self._data.shape:
                 raise ValueError("Mask shape must match the {0} shape."
                                  .format(self.__class__.__name__)
                                 )
-            mask = BooleanArrayMask(mask, self._wcs, shape=self.array.shape)
+            mask = BooleanArrayMask(mask, self._wcs, shape=self._data.shape)
         elif isinstance(mask, MaskBase):
             pass
         else:
@@ -270,10 +272,16 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
                             "type.".format(type(mask)))
 
         # Validate the mask before setting
-        mask._validate_wcs(new_data=self.array, new_wcs=self._wcs,
+        mask._validate_wcs(new_data=self._data, new_wcs=self._wcs,
                            wcs_tolerance=self._wcs_tolerance)
 
         self._mask = mask
+
+    def __repr__(self):
+        prefixstr = '<' + self.__class__.__name__ + ' '
+        arrstr = np.array2string(self.filled_data[:].value, separator=',',
+                                 prefix=prefixstr)
+        return '{0}{1}{2:s}>'.format(prefixstr, arrstr, self._unitstr)
 
 
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
@@ -676,12 +684,6 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                 self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
 
         return self
-
-    def __repr__(self):
-        prefixstr = '<' + self.__class__.__name__ + ' '
-        arrstr = np.array2string(self.filled_data[:].value, separator=',',
-                                 prefix=prefixstr)
-        return '{0}{1}{2:s}>'.format(prefixstr, arrstr, self._unitstr)
 
     @staticmethod
     def from_hdu(hdu):
