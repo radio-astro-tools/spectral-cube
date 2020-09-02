@@ -383,7 +383,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         fill_value = self._fill_value if fill_value is None else fill_value
 
         if beam is None:
-            if hasattr(self, 'beam'):
+            if self._beam is not None:
                 beam = self.beam
 
         newproj = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
