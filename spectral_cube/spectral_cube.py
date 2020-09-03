@@ -3299,6 +3299,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                           fig=None, fig_smallest_dim_inches=8, decimals=3, zoom=1,
                           textcolor=None, cmap='gray_r', tighten=False,
                           textxloc=0.5, textyloc=0.9,
+                          colorbar=False, colorbar_title='', cax=[0.93, 0.08, 0.02, 0.4],                          
                           savefig_kwargs={}, **kwargs):
         """
         Make channel maps from a spectral cube
@@ -3337,6 +3338,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             pointing center will be customizable.
         tighten : bool
             Call ``plt.tight_layout()`` after plotting?
+        colorbar : bool
+            plot a colorbar next the t
+        colorbar_title : str
+            title of the colorbar, default is empty. 
+        cax : list
+            a box controling the position of the colorbar, in the format of 
+            [left, bottom, width, height]. default value = [0.93, 0.08, 0.02, 0.4]
         savefig_kwargs : dict
             Keyword arguments to pass to ``savefig`` (e.g.,
             ``bbox_inches='tight'``)
@@ -3414,6 +3422,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             ax.tick_params(direction='in', color=textcolor)
 
             axis_list.append(ax)
+
+        if colorbar:
+            cax = plt.axes(cax)
+            fig = plt.gcf()
+            cbar = fig.colorbar(im, cax=cax)
+            cbar.ax.set_title(colorbar_title)
 
         if tighten:
             plt.tight_layout()
