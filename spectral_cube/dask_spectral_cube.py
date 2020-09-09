@@ -707,6 +707,43 @@ class DaskSpectralCubeMixin:
         """
         return self._compute(da.nanargmin(self._get_filled_data(fill=np.inf), axis=axis))
 
+    @ignore_warnings
+    def statistics(self):
+        """
+        Return a dictinary of global basic statistics for the data.
+
+        This method is designed to minimize the number of times each chunk is
+        accessed. The statistics are computed for each chunk in turn before
+        being aggregated.
+        """
+
+        data = self._get_filled_data(fill=np.nan)
+
+        def compute_stats(chunk, *args):
+            return np.array([np.nanmin(chunk),
+                             np.nanmax(chunk),
+                             np.nansum(chunk),
+                             np.nansum(chunk * chunk)])
+
+        results = da.map_blocks(compute_stats, data).compute()
+
+        min_values, max_values, sum_values, ssum_values = results.reshape((-1, 4)).T
+
+        stats = {'min': min_values.min(),
+                 'max': max_values.max(),
+                 'sum': sum_values.sum()}
+
+        stats['mean'] = stats['sum'] / data.size
+
+        # FIXME: for now this uses the simple 'textbook' algorithm which is not
+        # numerically stable, so this should be replaced by a more robust approach
+        stats['std'] = ((ssum_values.sum() - stats['sum'] ** 2 / data.size) / (data.size - 1)) ** 0.5
+
+        for key in stats:
+            stats[key] = u.Quantity(stats[key], self._unit)
+
+        return stats
+
     def _map_blocks_to_cube(self, function, additional_arrays=None, fill=np.nan, rechunk=None, **kwargs):
         """
         Call dask's map_blocks, returning a new spectral cube.
