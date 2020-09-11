@@ -715,6 +715,9 @@ class DaskSpectralCubeMixin:
         This method is designed to minimize the number of times each chunk is
         accessed. The statistics are computed for each chunk in turn before
         being aggregated.
+
+        The names for each statistic are adopted from CASA's ia.statistics
+        (see https://casa.nrao.edu/Release4.1.0/doc/CasaRef/image.statistics.html)
         """
 
         data = self._get_filled_data(fill=np.nan)
@@ -725,7 +728,8 @@ class DaskSpectralCubeMixin:
             from numpy import nanmin, nanmax, nansum
 
         def compute_stats(chunk, *args):
-            return np.array([nanmin(chunk),
+            return np.array([np.sum(~np.isnan(chunk)),
+                             nanmin(chunk),
                              nanmax(chunk),
                              nansum(chunk),
                              nansum(chunk * chunk)])
@@ -733,20 +737,21 @@ class DaskSpectralCubeMixin:
         with dask.config.set(**self._scheduler_kwargs):
             results = da.map_blocks(compute_stats, data).compute()
 
-        min_values, max_values, sum_values, ssum_values = results.reshape((-1, 4)).T
+        count_values, min_values, max_values, sum_values, ssum_values = results.reshape((-1, 5)).T
 
-        stats = {'min': min_values.min(),
-                 'max': max_values.max(),
-                 'sum': sum_values.sum()}
+        stats = {'npts': count_values.sum(),
+                 'min': min_values.min() * self._unit,
+                 'max': max_values.max() * self._unit,
+                 'sum': sum_values.sum() * self._unit,
+                 'sumsq': ssum_values.sum() * self._unit ** 2}
 
-        stats['mean'] = stats['sum'] / data.size
+        stats['mean'] = stats['sum'] / stats['npts']
 
         # FIXME: for now this uses the simple 'textbook' algorithm which is not
         # numerically stable, so this should be replaced by a more robust approach
-        stats['std'] = ((ssum_values.sum() - stats['sum'] ** 2 / data.size) / (data.size - 1)) ** 0.5
+        stats['sigma'] = ((stats['sumsq'] - stats['sum'] ** 2 / stats['npts']) / (stats['npts'] - 1)) ** 0.5
 
-        for key in stats:
-            stats[key] = u.Quantity(stats[key], self._unit)
+        stats['rms'] = np.sqrt(stats['sumsq'] / stats['npts'])
 
         return stats
 
