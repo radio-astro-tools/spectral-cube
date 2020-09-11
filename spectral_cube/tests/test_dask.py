@@ -100,7 +100,7 @@ def test_statistics_consistency_casa(data_adv, tmp_path):
     make_casa_testimage(data_adv, tmp_path / 'casa.image')
 
     ia = casatools.image()
-    ia.open(str(tmp_path / 'casa.mask'))
+    ia.open(str(tmp_path / 'casa.image'))
     stats_casa = ia.statistics()
     ia.close()
 
