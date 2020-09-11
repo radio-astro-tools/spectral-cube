@@ -105,4 +105,8 @@ def test_statistics_consistency_casa(data_adv, tmp_path):
     ia.close()
 
     for key in stats:
-        assert_allclose(stats[key].value, stats_casa[key])
+        if isinstance(stats[key], u.Quantity):
+            value = stats[key].value
+        else:
+            value = stats[key]
+        assert_allclose(value, stats_casa[key])
