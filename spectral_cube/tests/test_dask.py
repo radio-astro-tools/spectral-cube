@@ -2,6 +2,9 @@
 
 import pytest
 
+from astropy.tests.helper import assert_quantity_allclose
+from astropy import units as u
+
 from spectral_cube import DaskSpectralCube
 
 
@@ -58,3 +61,13 @@ def test_rechunk(data_adv):
     # note last element is 2 because the chunk size we asked for
     # is larger than cube - this is fine and deliberate in this test
     assert cube_new._data.chunksize == (1, 2, 2)
+
+
+def test_statistics(data_adv):
+    cube = DaskSpectralCube.read(data_adv)
+    stats = cube.statistics()
+    assert_quantity_allclose(stats['mean'], 0.4941651776136591 * u.K)
+    assert_quantity_allclose(stats['std'], 0.3021908870982011 * u.K)
+    assert_quantity_allclose(stats['sum'], 11.85996426272782 * u.K)
+    assert_quantity_allclose(stats['min'], 0.0363300285196364 * u.K)
+    assert_quantity_allclose(stats['max'], 0.9662900439556562 * u.K)
