@@ -14,6 +14,9 @@
 - Add new dask-friendly classes ``DaskSpectralCube`` and
   ``DaskVaryingResolutionSpectralCube`` which use dask to efficiently
   carry out calculations. #618
+- Add new ``statistics`` method on ``DaskSpectralCube`` which allows
+  several global statistics to be computed by loading each cube chunk
+  only once. #663
 
 0.4.5 (unreleased)
 ------------------
