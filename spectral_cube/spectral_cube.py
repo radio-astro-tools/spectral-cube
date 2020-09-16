@@ -812,6 +812,49 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          reduce=False, projection=False,
                                          how=how, axis=axis, **kwargs)
 
+    @aggregation_docstring
+    @warn_slow
+    def peak_location(self, axis, how='auto', **kwargs):
+        '''
+        Return the spatial or spectral index of the maximum value
+        along a line of sight.
+
+        Parameters
+        ----------
+        axis : int
+            The axis to return the peak location along. e.g., `axis=0`
+            will return the value of the spectral axis at the peak value.
+        '''
+
+        argmax_plane = self.argmax(axis=axis, how='auto', **kwargs)
+
+        # Get 1D slice along that axis.
+        world_slice = [0, 0]
+        world_slice.insert(axis, slice(None))
+
+        world_coords = self.world[tuple(world_slice)][axis]
+
+        world_newaxis = [np.newaxis] * 2
+        world_newaxis.insert(axis, slice(None))
+        world_newaxis = tuple(world_newaxis)
+
+        plane_newaxis = [slice(None), slice(None)]
+        plane_newaxis.insert(axis, np.newaxis)
+        plane_newaxis = tuple(plane_newaxis)
+
+        out = np.take_along_axis(world_coords[world_newaxis],
+                                        argmax_plane[plane_newaxis], axis=axis)
+        out = out.squeeze()
+
+        # Return a Projection.
+        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+        meta = {'collapse_axis': axis}
+        meta.update(self._meta)
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                          unit=out.unit, header=self._nowcs_header)
+
     def chunked(self, chunksize=1000):
         """
         Not Implemented.
@@ -3789,7 +3832,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         if attrname in ('moment', 'apply_numpy_function', 'apply_function',
                         'apply_function_parallel_spectral', 'sum',
                         'mean', 'median', 'percentile', 'std', 'mad_std',
-                        'max', 'min', 'argmax', 'argmin'):
+                        'max', 'min', 'argmax', 'argmin', 'peak_location'):
 
             origfunc = super(VRSC, self).__getattribute__(attrname)
             return self._handle_beam_areas_wrapper(origfunc)
