@@ -705,11 +705,14 @@ class TestNumpyMethods(BaseTest):
         self.c = self.d = None
 
     @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
-                                        'median', 'argmin', 'argmax'))
+                                        'median', 'argmin', 'argmax',
+                                        'argmax_world', 'argmin_world'))
     def test_transpose(self, method, data_adv, data_vad, use_dask):
         c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
         c2, d2 = cube_and_raw(data_vad, use_dask=use_dask)
         for axis in [None, 0, 1, 2]:
+            if 'world' in method and axis == None:
+                continue
             assert_allclose(getattr(c1, method)(axis=axis),
                             getattr(c2, method)(axis=axis))
             if not use_dask:
@@ -718,6 +721,19 @@ class TestNumpyMethods(BaseTest):
                                 getattr(c2, method)(axis=axis, progressbar=True))
         self.c = self.d = None
 
+    @pytest.mark.parametrize('method', ('argmax_world', 'argmin_world'))
+    def test_arg_world(self, method, data_adv, use_dask):
+        c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
+
+        # Pixel operation is same name with "_world" removed.
+        arg0_pixel = getattr(c1, method.split("_")[0])(axis=0)
+
+        arg0_world = np.take_along_axis(c1.spectral_axis[:, np.newaxis, np.newaxis],
+                                        arg0_pixel[np.newaxis, :, :], axis=0).squeeze()
+
+        assert_allclose(getattr(c1, method)(axis=0), arg0_world)
+
+        self.c = self.d = None
 
 class TestSlab(BaseTest):
 
@@ -1942,6 +1958,7 @@ def test_mask_bad_beams(data_vda_beams, use_dask):
 
 spectral_ops = ('sum', 'min', 'max', 'std', 'mad_std',
                 'median', 'argmin', 'argmax',
+                'argmin_world', 'argmax_world',
                 'moment', 'moment0', 'moment1',
                 'moment2', 'linewidth_sigma', 'linewidth_fwhm')
 
