@@ -831,6 +831,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Convert to WCS coordinates.
         out = cube_utils.world_take_along_axis(self, argmax_plane, axis)
 
+        # Compute whether the mask has any valid data along `axis`
+        collapsed_mask = self.mask.include().any(axis=axis)
+        out[~collapsed_mask] = np.NaN
+
         # Return a Projection.
         new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
 
@@ -858,6 +862,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         # Convert to WCS coordinates.
         out = cube_utils.world_take_along_axis(self, argmin_plane, axis)
+
+        # Compute whether the mask has any valid data along `axis`
+        collapsed_mask = self.mask.include().any(axis=axis)
+        out[~collapsed_mask] = np.NaN
 
         # Return a Projection.
         new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
