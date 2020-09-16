@@ -525,7 +525,7 @@ def world_take_along_axis(cube, posn_plane, axis):
     plane_newaxis = tuple(plane_newaxis)
 
     out = np.take_along_axis(world_coords[world_newaxis],
-                                argmin_plane[plane_newaxis], axis=axis)
+                             posn_plane[plane_newaxis], axis=axis)
     out = out.squeeze()
 
     return out
