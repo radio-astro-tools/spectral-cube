@@ -814,7 +814,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     @aggregation_docstring
     @warn_slow
-    def argmax_world(self, axis, how='auto', **kwargs):
+    def argmax_world(self, axis, **kwargs):
         '''
         Return the spatial or spectral index of the maximum value
         along a line of sight.
@@ -826,7 +826,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             will return the value of the spectral axis at the peak value.
         '''
 
-        argmax_plane = self.argmax(axis=axis, how=how, **kwargs)
+        argmax_plane = self.argmax(axis=axis, **kwargs)
 
         # Convert to WCS coordinates.
         out = cube_utils.world_take_along_axis(self, argmax_plane, axis)
@@ -842,7 +842,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     @aggregation_docstring
     @warn_slow
-    def argmin_world(self, axis, how='auto', **kwargs):
+    def argmin_world(self, axis, **kwargs):
         '''
         Return the spatial or spectral index of the minimum value
         along a line of sight.
@@ -854,7 +854,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             will return the value of the spectral axis at the peak value.
         '''
 
-        argmin_plane = self.argmin(axis=axis, how=how, **kwargs)
+        argmin_plane = self.argmin(axis=axis, **kwargs)
 
         # Convert to WCS coordinates.
         out = cube_utils.world_take_along_axis(self, argmin_plane, axis)
