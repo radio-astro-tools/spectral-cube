@@ -1,4 +1,4 @@
-0.5 (unreleased)
+0.5 (2020-09-17)
 ----------------
 - Bugfix: subcubes from compound regions previously did not work.  #601
 - Bugfix: VaryingResolutionSpectralCube.mask_channels now preserves
@@ -15,7 +15,7 @@
   ``DaskVaryingResolutionSpectralCube`` which use dask to efficiently
   carry out calculations. #618
 
-0.4.5 (unreleased)
+0.4.5 (2019-11-30)
 ------------------
  - Added support for casatools-based io in #541 and beam reading from CASA
    images in #543
