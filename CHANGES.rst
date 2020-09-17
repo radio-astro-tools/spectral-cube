@@ -1,3 +1,7 @@
+0.5.1 (unreleased)
+------------------
+None yet
+
 0.5 (2020-09-17)
 ----------------
 - Bugfix: subcubes from compound regions previously did not work.  #601
