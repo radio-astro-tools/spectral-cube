@@ -447,20 +447,32 @@ def test_projection_subimage(data_55):
     proj1 = proj.subimage(xlo=1, xhi=3)
     proj2 = proj.subimage(xlo=24.06269 * u.deg,
                           xhi=24.06206 * u.deg)
+    proj3 = proj.subimage(xlo=24.06269*u.deg, xhi=3)
+    proj4 = proj.subimage(xlo=1, xhi=24.06206*u.deg)
 
     assert proj1.shape == (5, 2)
     assert proj2.shape == (5, 2)
+    assert proj3.shape == (5, 2)
+    assert proj4.shape == (5, 2)
     assert proj1.wcs.wcs.compare(proj2.wcs.wcs)
+    assert proj1.wcs.wcs.compare(proj3.wcs.wcs)
+    assert proj1.wcs.wcs.compare(proj4.wcs.wcs)
     assert proj.beam == proj1.beam
     assert proj.beam == proj2.beam
 
-    proj3 = proj.subimage(ylo=1, yhi=3)
-    proj4 = proj.subimage(ylo=29.93464 * u.deg,
+    proj4 = proj.subimage(ylo=1, yhi=3)
+    proj5 = proj.subimage(ylo=29.93464 * u.deg,
                           yhi=29.93522 * u.deg)
+    proj6 = proj.subimage(ylo=1, yhi=29.93522 * u.deg)
+    proj7 = proj.subimage(ylo=29.93464 * u.deg, yhi=3)
 
-    assert proj3.shape == (2, 5)
     assert proj4.shape == (2, 5)
-    assert proj3.wcs.wcs.compare(proj4.wcs.wcs)
+    assert proj5.shape == (2, 5)
+    assert proj6.shape == (2, 5)
+    assert proj7.shape == (2, 5)
+    assert proj4.wcs.wcs.compare(proj5.wcs.wcs)
+    assert proj4.wcs.wcs.compare(proj6.wcs.wcs)
+    assert proj4.wcs.wcs.compare(proj7.wcs.wcs)
 
     proj5 = proj.subimage()
 
