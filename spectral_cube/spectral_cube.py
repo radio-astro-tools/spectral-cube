@@ -1856,7 +1856,44 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # list to track which entries had units
         united = []
 
+        # Solve the spatial axes together. i.e., lower and upper corners
+        # as distance from (xlo, ylo) or (xhi, yhi)
+
+        for corn in ['lo', 'hi']:
+            grids = {}
+
+            for lim in ['x', 'y']:
+
+                limval = limit_dict[lim + corn]
+
+                dim = 1 if lim == 'y' else 2
+                odim = 2 if lim == 'y' else 1
+
+                if hasattr(limval, 'unit'):
+                    # WCS grid
+                    grids[lim] = self.spatial_coordinate_map[dim-1]
+                    united.append(lim + corn)
+
+                else:
+                    # Pixel grid
+                    grids[lim] = np.tile(np.arange(self.shape[dim]), (self.shape[odim], 1))
+                    # Transpose if the spatially-tiled grid doesn't match the spatial shape
+                    if grids[lim].shape != self.shape[1:]:
+                        grids[lim] = grids[lim].T
+
+            dist = np.sqrt((grids['x'] - limit_dict['x' + corn])**2 +
+                           (grids['y'] - limit_dict['y' + corn])**2 )
+            # Get the min posns
+            ymin, xmin = np.unravel_index(dist.argmin(), dist.shape)
+
+            limit_dict['y' + corn] = ymin
+            limit_dict['x' + corn] = xmin
+
+        # Handle the z (spectral) axis. This shouldn't change
+        # much spacially, so solve one at a time
         for lim in limit_dict:
+            if 'z' not in lim:
+                continue
             limval = limit_dict[lim]
             if hasattr(limval, 'unit'):
                 united.append(lim)
