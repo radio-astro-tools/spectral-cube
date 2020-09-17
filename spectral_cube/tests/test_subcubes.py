@@ -30,23 +30,48 @@ def test_subcube(data_advs, use_dask):
 
     cube, data = cube_and_raw(data_advs, use_dask=use_dask)
 
-    sc1 = cube.subcube(xlo=1, xhi=3)
-    sc2 = cube.subcube(xlo=24.06269*u.deg, xhi=24.06206*u.deg)
+    sc1x = cube.subcube(xlo=1, xhi=3)
+    sc2x = cube.subcube(xlo=24.06269*u.deg, xhi=24.06206*u.deg)
     sc2b = cube.subcube(xlo=24.06206*u.deg, xhi=24.06269*u.deg)
+    # Mixed should be equivalent to above
+    sc3x = cube.subcube(xlo=24.06269*u.deg, xhi=3)
+    sc4x = cube.subcube(xlo=1, xhi=24.06206*u.deg)
 
-    assert sc1.shape == (2,3,2)
-    assert sc2.shape == (2,3,2)
+    assert sc1x.shape == (2,3,2)
+    assert sc2x.shape == (2,3,2)
     assert sc2b.shape == (2,3,2)
-    assert sc1.wcs.wcs.compare(sc2.wcs.wcs)
-    assert sc1.wcs.wcs.compare(sc2b.wcs.wcs)
+    assert sc3x.shape == (2,3,2)
+    assert sc4x.shape == (2,3,2)
+    assert sc1x.wcs.wcs.compare(sc2x.wcs.wcs)
+    assert sc1x.wcs.wcs.compare(sc2b.wcs.wcs)
+    assert sc1x.wcs.wcs.compare(sc3x.wcs.wcs)
+    assert sc1x.wcs.wcs.compare(sc4x.wcs.wcs)
 
-    sc3 = cube.subcube(ylo=1, yhi=3)
-    sc4 = cube.subcube(ylo=29.93464 * u.deg,
-                       yhi=29.93522 * u.deg)
+    sc1y = cube.subcube(ylo=1, yhi=3)
+    sc2y = cube.subcube(ylo=29.93464 * u.deg,
+                        yhi=29.93522 * u.deg)
+    sc3y = cube.subcube(ylo=1, yhi=29.93522 * u.deg)
+    sc4y = cube.subcube(ylo=29.93464 * u.deg, yhi=3)
 
-    assert sc3.shape == (2, 2, 4)
-    assert sc4.shape == (2, 2, 4)
-    assert sc3.wcs.wcs.compare(sc4.wcs.wcs)
+    assert sc1y.shape == (2, 2, 4)
+    assert sc2y.shape == (2, 2, 4)
+    assert sc3y.shape == (2, 2, 4)
+    assert sc4y.shape == (2, 2, 4)
+    assert sc1y.wcs.wcs.compare(sc2y.wcs.wcs)
+    assert sc1y.wcs.wcs.compare(sc3y.wcs.wcs)
+    assert sc1y.wcs.wcs.compare(sc4y.wcs.wcs)
+
+    sc1z = cube.subcube(zlo=1, zhi=2)
+    sc2z = cube.subcube(zlo=-320*u.km/u.s, zhi=-319*u.km/u.s)
+    sc3z = cube.subcube(zlo=1, zhi=-319 * u.km / u.s)
+    sc4z = cube.subcube(zlo=-320*u.km/u.s, zhi=2)
+    assert sc1z.shape == (1, 3, 4)
+    assert sc2z.shape == (1, 3, 4)
+    assert sc3z.shape == (1, 3, 4)
+    assert sc4z.shape == (1, 3, 4)
+    assert sc1z.wcs.wcs.compare(sc2z.wcs.wcs)
+    assert sc1z.wcs.wcs.compare(sc3z.wcs.wcs)
+    assert sc1z.wcs.wcs.compare(sc4z.wcs.wcs)
 
     sc5 = cube.subcube()
 
