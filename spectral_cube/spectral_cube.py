@@ -1828,15 +1828,53 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             int, will be interpreted as pixel coordinates.
         """
 
-        limit_dict = {'xlo':0 if xlo == 'min' else xlo,
-                      'ylo':0 if ylo == 'min' else ylo,
-                      'zlo':0 if zlo == 'min' else zlo,
-                      'xhi':self.shape[2] if xhi=='max' else xhi,
-                      'yhi':self.shape[1] if yhi=='max' else yhi,
-                      'zhi':self.shape[0] if zhi=='max' else zhi}
         dims = {'x': 2,
                 'y': 1,
                 'z': 0}
+
+        limit_dict = {}
+
+        # Match corners. If one uses a WCS coord, set 'min'/'max'
+        # To the lat or long extrema.
+        # We only care about matching spatial corners.
+        xlo_unit = hasattr(xlo, 'unit')
+        ylo_unit = hasattr(ylo, 'unit')
+
+        # Do min/max switching if the WCS grid increases/decreases
+        # with the pixel grid.
+        ymin = min if self.wcs.wcs.cdelt[1] > 0 else max
+        xmin = min if self.wcs.wcs.cdelt[0] > 0 else max
+        ymax = max if self.wcs.wcs.cdelt[1] > 0 else min
+        xmax = max if self.wcs.wcs.cdelt[0] > 0 else min
+
+        limit_dict['zlo'] = 0 if zlo == 'min' else zlo
+
+        if not any([xlo_unit, ylo_unit]):
+            limit_dict['xlo'] = 0 if xlo == 'min' else xlo
+            limit_dict['ylo'] = 0 if ylo == 'min' else ylo
+        else:
+            if xlo_unit:
+                limit_dict['xlo'] = xlo
+                limit_dict['ylo'] = ymin(self.latitude_extrema) if ylo == 'min' else ylo
+            if ylo_unit:
+                limit_dict['ylo'] = ylo
+                limit_dict['xlo'] = xmin(self.longitude_extrema) if xlo == 'min' else xlo
+
+        xhi_unit = hasattr(xhi, 'unit')
+        yhi_unit = hasattr(yhi, 'unit')
+
+        limit_dict['zhi'] = self.shape[0] if zhi == 'max' else zhi
+
+        if not any([xhi_unit, yhi_unit]):
+            limit_dict['xhi'] = self.shape[2] if xhi == 'max' else xhi
+            limit_dict['yhi'] = self.shape[1] if yhi == 'max' else yhi
+        else:
+            if xhi_unit:
+                limit_dict['xhi'] = xhi
+                limit_dict['yhi'] = ymax(self.latitude_extrema) if yhi == 'max' else yhi
+            if yhi_unit:
+                limit_dict['yhi'] = yhi
+                limit_dict['xhi'] = xmax(self.longitude_extrema) if xhi == 'max' else xhi
 
         # Specific warning for slicing a frequency axis with a velocity or
         # vice/versa
@@ -1862,27 +1900,34 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         for corn in ['lo', 'hi']:
             grids = {}
 
+            x_hasunit = hasattr(limit_dict['x'+corn], 'unit')
+            y_hasunit = hasattr(limit_dict['y'+corn], 'unit')
+
+            if not any([x_hasunit, y_hasunit]):
+                continue
+
             for lim in ['x', 'y']:
 
                 limval = limit_dict[lim + corn]
 
                 dim = 1 if lim == 'y' else 2
-                odim = 2 if lim == 'y' else 1
 
-                if hasattr(limval, 'unit'):
-                    # WCS grid
-                    grids[lim] = self.spatial_coordinate_map[dim-1]
-                    united.append(lim + corn)
+                # WCS grid
+                grids[lim] = self.spatial_coordinate_map[dim-1]
 
-                else:
-                    # Pixel grid
-                    grids[lim] = np.tile(np.arange(self.shape[dim]), (self.shape[odim], 1))
-                    # Transpose if the spatially-tiled grid doesn't match the spatial shape
-                    if grids[lim].shape != self.shape[1:]:
-                        grids[lim] = grids[lim].T
+                united.append(lim + corn)
 
-            dist = np.sqrt((grids['x'] - limit_dict['x' + corn])**2 +
-                           (grids['y'] - limit_dict['y' + corn])**2 )
+            log.debug(f"Grid: {grids['x'][0, :]}, Corner: {limit_dict['x' + corn]}")
+            log.debug(f"Grid: {grids['y'][:, 0]}, Corner: {limit_dict['y' + corn]}")
+
+            x2 = (grids['x'] - limit_dict['x' + corn])**2
+            if hasattr(x2, 'unit'):
+                x2 = x2.value
+            y2 = (grids['y'] - limit_dict['y' + corn])**2
+            if hasattr(y2, 'unit'):
+                y2 = y2.value
+
+            dist = np.sqrt(x2 + y2)
             # Get the min posns
             ymin, xmin = np.unravel_index(dist.argmin(), dist.shape)
 
@@ -1914,7 +1959,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 # must have high > low
                 limit_dict[xx+'hi'], limit_dict[xx+'lo'] = lo, hi
 
-            if xx+'lo' in united:
+            # if xx+'lo' in united:
+            if xx+'hi' in united:
                 # End-inclusive indexing: need to add one for the high slice
                 # Only do this for converted values, not for pixel values
                 # (i.e., if the xlo/ylo/zlo value had units)
