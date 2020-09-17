@@ -1908,8 +1908,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
             for lim in ['x', 'y']:
 
-                limval = limit_dict[lim + corn]
-
                 dim = 1 if lim == 'y' else 2
 
                 # WCS grid
