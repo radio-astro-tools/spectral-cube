@@ -735,7 +735,7 @@ class DaskSpectralCubeMixin:
                              nansum(chunk * chunk)])
 
         with dask.config.set(**self._scheduler_kwargs):
-            results = da.map_blocks(compute_stats, data).compute()
+            results = da.map_blocks(compute_stats, data.reshape(-1)).compute()
 
         count_values, min_values, max_values, sum_values, ssum_values = results.reshape((-1, 5)).T
 

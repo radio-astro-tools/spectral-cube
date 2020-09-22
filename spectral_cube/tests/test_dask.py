@@ -77,7 +77,7 @@ def test_rechunk(data_adv):
 
 
 def test_statistics(data_adv):
-    cube = DaskSpectralCube.read(data_adv)
+    cube = DaskSpectralCube.read(data_adv).rechunk(chunks=(1, 2, 3))
     stats = cube.statistics()
     assert_quantity_allclose(stats['npts'], 24)
     assert_quantity_allclose(stats['mean'], 0.4941651776136591 * u.K)
