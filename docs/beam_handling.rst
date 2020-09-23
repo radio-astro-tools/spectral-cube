@@ -76,9 +76,7 @@ When applying spectral operations on a
 `~spectral_cube.spectral_cube.VaryingResolutionSpectralCube`, it is often
 necessary to first convolve the data to have a common beam. To retain the
 maximum amount of spatial information, the data can be convolved to the
-smallest common beam that all beams in
-`~spectral_cube.spectral_cube.VaryingResolutionSpectralCube.beam` can be
-deconvolved from.
+smallest common beam.
 
 Finding the smallest common beam and convolution operations are described
 in detail in :doc:`smoothing`.
@@ -108,7 +106,9 @@ The beam threshold can be changed from the default 0.01 with::
 
 .. note::
 
-    Setting `vrsc_cube.beam_threshold = 1.0` will allow all beam variations without raising an error. Large values for the beam threshold should not be used for scientific results.
+    Setting `vrsc_cube.beam_threshold = 1.0`, or greater, will allow for large
+    beam variations without raising an error. Large values for the beam threshold
+    should not be used for scientific results.
 
 For most spectral-line data cubes covering a single spectral line, the fine resolution
 and small frequency range will often allow the above approximation to work.
