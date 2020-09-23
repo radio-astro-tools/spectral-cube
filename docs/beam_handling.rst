@@ -78,7 +78,7 @@ necessary to first convolve the data to have a common beam. To retain the
 maximum amount of spatial information, the data can be convolved to the
 smallest common beam.
 
-Finding the smallest common beam and convolution operations are described
+Tools for finding the smallest common beam and convolution operations are described
 in detail in :doc:`smoothing`.
 
 
