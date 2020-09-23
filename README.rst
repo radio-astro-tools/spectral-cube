@@ -36,5 +36,5 @@ Build and coverage status
    :target: https://travis-ci.org/radio-astro-tools/spectral-cube
 .. |Coverage Status| image:: https://coveralls.io/repos/radio-astro-tools/spectral-cube/badge.svg?branch=master
    :target: https://coveralls.io/r/radio-astro-tools/spectral-cube?branch=master
-.. |DOI| image:: https://zenodo.org/badge/doi/10.5281/zenodo.11485.png
+.. |DOI| image:: https://zenodo.org/badge/doi/10.5281/zenodo.11485.svg
    :target: http://dx.doi.org/10.5281/zenodo.11485
