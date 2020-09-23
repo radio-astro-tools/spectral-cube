@@ -113,7 +113,7 @@ The beam threshold can be changed from the default 0.01 with::
 For most spectral-line data cubes covering a single spectral line, the fine resolution
 and small frequency range will often allow the above approximation to work.
 However, if you are working with wideband data, this approximation will not hold and you
-will need to convolve to a common beam, or extract spectral slabs from the data cube.
+will need to convolve to a common beam or extract spectral slabs from the data cube.
 
 Strict mode
 ***********
