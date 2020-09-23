@@ -86,7 +86,7 @@ Small beam variations: Do I need to convolve first?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Formally, operations on multiple spectral channels require the data to have a common
-resolution. In practice, data cubes with a high-spectral resolution will have the beam
+resolution. In practice, data cubes with a high spectral resolution will have the beam
 vary by a very small factor between adjacent channels. It is then a safe approximation
 to ignore small changes in the beam to avoid having to convolve the entire data cube to
 a common beam (which might be a slow and expensive operation for large cubes).
