@@ -1,6 +1,6 @@
 0.5.1 (unreleased)
 ------------------
-None yet
+- Bugfix: subcube producing spatial offsets for large images (#666)
 
 0.5 (2020-09-17)
 ----------------
