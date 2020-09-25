@@ -567,6 +567,10 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         """
         Extract a region spatially.
 
+        When spatial WCS dimensions are given, the spatial coordinates of the 'lo'
+        and 'hi' corners are solved together. This minimizes WCS variations due to
+        the sky curvature when slicing from a large (>1 deg) image.
+
         Parameters
         ----------
         [xy]lo/[xy]hi : int or `astropy.units.Quantity` or `min`/`max`
@@ -652,9 +656,6 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
                 united.append(lim + corn)
 
-            # log.debug(f"Grid: {grids['x'][0, :]}, Corner: {limit_dict['x' + corn]}")
-            # log.debug(f"Grid: {grids['y'][:, 0]}, Corner: {limit_dict['y' + corn]}")
-
             x2 = (grids['x'] - limit_dict['x' + corn])**2
             if hasattr(x2, 'unit'):
                 x2 = x2.value
@@ -668,26 +669,6 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
             limit_dict['y' + corn] = ymin
             limit_dict['x' + corn] = xmin
-
-        # for lim in limit_dict:
-        #     limval = limit_dict[lim]
-        #     if hasattr(limval, 'unit'):
-        #         dim = dims[lim[0]]
-        #         sl = [slice(0, 1)]
-        #         sl.insert(dim, slice(None))
-        #         spine = self.world[tuple(sl)][dim]
-        #         val = np.argmin(np.abs(limval - spine))
-        #         if limval > spine.max() or limval < spine.min():
-        #             pass
-        #             # log.warn("The limit {0} is out of bounds."
-        #             #          "  Using min/max instead.".format(lim))
-        #         if lim[1:] == 'hi':
-        #             # End-inclusive indexing: need to add one for the high
-        #             # slice
-        #             limit_dict[lim] = val + 1
-        #         else:
-        #             limit_dict[lim] = val
-
 
         for xx in 'yx':
             hi,lo = limit_dict[xx+'hi'], limit_dict[xx+'lo']

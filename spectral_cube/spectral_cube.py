@@ -1820,6 +1820,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         Extract a sub-cube spatially and spectrally.
 
+        When spatial WCS dimensions are given, the spatial coordinates of the 'lo'
+        and 'hi' corners are solved together. This minimizes WCS variations due to
+        the sky curvature when slicing from a large (>1 deg) image.
+
         Parameters
         ----------
         [xyz]lo/[xyz]hi : int or :class:`~astropy.units.Quantity` or ``min``/``max``
@@ -1957,7 +1961,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 # must have high > low
                 limit_dict[xx+'hi'], limit_dict[xx+'lo'] = lo, hi
 
-            # if xx+'lo' in united:
             if xx+'hi' in united:
                 # End-inclusive indexing: need to add one for the high slice
                 # Only do this for converted values, not for pixel values
