@@ -310,6 +310,50 @@ class DaskSpectralCubeMixin:
         else:
             return da.from_array(FilledArrayHandler(self, fill=fill), name='FilledArrayHandler ' + str(uuid.uuid4()), chunks=data.chunksize)[view]
 
+    def __repr__(self):
+        default_repr = super().__repr__()
+        lines = default_repr.splitlines()
+        lines[0] = lines[0][:-1] + ' and chunk size {0}:'.format(self._data.chunksize)
+        return '\n'.join(lines)
+
+    @add_save_to_tmp_dir_option
+    def rechunk(self, chunks='auto', threshold=None, block_size_limit=None,
+                **kwargs):
+        """
+        Rechunk the underlying dask array and return a new cube.
+
+        For more details about the parameters below, see the dask documentation
+        about `rechunking <https://docs.dask.org/en/latest/array-chunks.html>`_.
+
+        Parameters
+        ----------
+        chunks:  int, tuple, dict or str, optional
+            The new block dimensions to create. -1 indicates the full size of
+            the corresponding dimension. Default is "auto" which automatically
+            determines chunk sizes. This can also be a tuple with a different
+            value along each dimension - for example if computing moment maps,
+            you could use e.g. ``chunks=(-1, 'auto', 'auto')``
+        threshold: int, optional
+            The graph growth factor under which we don't bother introducing an
+            intermediate step.
+        block_size_limit: int, optional
+            The maximum block size (in bytes) we want to produce
+            Defaults to the dask configuration value ``array.chunk-size``
+        save_to_tmp_dir : bool
+            If `True`, the rechunking will be carried out straight away and
+            saved to a temporary directory. This can improve performance,
+            especially if carrying out several operations sequentially. If
+            `False`, the rechunking is added as a step in the dask tree.
+        kwargs
+            Additional keyword arguments are passed to the dask rechunk method.
+        """
+
+        newdata = self._data.rechunk(chunks=chunks,
+                                     threshold=threshold,
+                                     block_size_limit=block_size_limit)
+
+        return self._new_cube_with(data=newdata)
+
     @add_save_to_tmp_dir_option
     @projection_if_needed
     def apply_function(self, function, axis=None, unit=None,
