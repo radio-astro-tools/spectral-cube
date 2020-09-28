@@ -812,7 +812,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          reduce=False, projection=False,
                                          how=how, axis=axis, **kwargs)
 
-    @aggregation_docstring
     @warn_slow
     def argmax_world(self, axis, **kwargs):
         '''
@@ -844,7 +843,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           unit=out.unit, header=self._nowcs_header)
 
-    @aggregation_docstring
     @warn_slow
     def argmin_world(self, axis, **kwargs):
         '''
