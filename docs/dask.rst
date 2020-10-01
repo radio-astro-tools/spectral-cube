@@ -238,3 +238,25 @@ needs to include ``axis=0`` in the call to :func:`~astropy.stats.sigma_clip` as 
     [########################################] | 100% Completed | 56.8s
 
 This leads to an improvement in performance of 1.8x in this case.
+
+Efficient global statistics
+---------------------------
+
+If you are interested in computing a number of global statistics (e.g. min, max, mean)
+for a whole cube, and want to avoid separate calls which would lead to the data being
+read each time, it is also possible to compute these statistics in a way that each
+chunk is accessed only once - this is done via the
+:meth:`~spectral_cube.DaskSpectralCube.statistics` method which returns a dictionary
+of statistics, which are named using the same convention as CASA's
+`ia.statistics <https://casa.nrao.edu/Release4.1.0/doc/CasaRef/image.statistics.html>`_::
+
+    >>> stats = cube.statistics()  # doctest: +IGNORE_OUTPUT
+    >>> sorted(stats)
+    ['max', 'mean', 'min', 'npts', 'rms', 'sigma', 'sum', 'sumsq']
+    >>> stats['min']
+    <Quantity -0.01408793 Jy / beam>
+    >>> stats['mean']
+    <Quantity 0.00338361 Jy / beam>
+
+This method should respect the current scheduler, so you may be able to get better performance
+with a multi-threaded scheduler.

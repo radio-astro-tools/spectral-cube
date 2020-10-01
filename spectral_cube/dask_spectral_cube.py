@@ -707,6 +707,54 @@ class DaskSpectralCubeMixin:
         """
         return self._compute(da.nanargmin(self._get_filled_data(fill=np.inf), axis=axis))
 
+    @ignore_warnings
+    def statistics(self):
+        """
+        Return a dictinary of global basic statistics for the data.
+
+        This method is designed to minimize the number of times each chunk is
+        accessed. The statistics are computed for each chunk in turn before
+        being aggregated.
+
+        The names for each statistic are adopted from CASA's ia.statistics
+        (see https://casa.nrao.edu/Release4.1.0/doc/CasaRef/image.statistics.html)
+        """
+
+        data = self._get_filled_data(fill=np.nan)
+
+        try:
+            from bottleneck import nanmin, nanmax, nansum
+        except ImportError:
+            from numpy import nanmin, nanmax, nansum
+
+        def compute_stats(chunk, *args):
+            return np.array([np.sum(~np.isnan(chunk)),
+                             nanmin(chunk),
+                             nanmax(chunk),
+                             nansum(chunk),
+                             nansum(chunk * chunk)])
+
+        with dask.config.set(**self._scheduler_kwargs):
+            results = da.map_blocks(compute_stats, data.reshape(-1)).compute()
+
+        count_values, min_values, max_values, sum_values, ssum_values = results.reshape((-1, 5)).T
+
+        stats = {'npts': count_values.sum(),
+                 'min': min_values.min() * self._unit,
+                 'max': max_values.max() * self._unit,
+                 'sum': sum_values.sum() * self._unit,
+                 'sumsq': ssum_values.sum() * self._unit ** 2}
+
+        stats['mean'] = stats['sum'] / stats['npts']
+
+        # FIXME: for now this uses the simple 'textbook' algorithm which is not
+        # numerically stable, so this should be replaced by a more robust approach
+        stats['sigma'] = ((stats['sumsq'] - stats['sum'] ** 2 / stats['npts']) / (stats['npts'] - 1)) ** 0.5
+
+        stats['rms'] = np.sqrt(stats['sumsq'] / stats['npts'])
+
+        return stats
+
     def _map_blocks_to_cube(self, function, additional_arrays=None, fill=np.nan, rechunk=None, **kwargs):
         """
         Call dask's map_blocks, returning a new spectral cube.
