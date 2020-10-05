@@ -515,7 +515,7 @@ class MultiBeamMixinClass(object):
         Parameters
         ----------
         threshold : float, optional
-            The fractional difference between beam major, minor, and pa to
+            The fractional difference between beam major, minor, and position angle to
             permit. The default is to `~SpectralCube.beam_threshold`, which is initially set
             to 0.01 (i.e., <1% changes in the beam area are allowed).
         reference_beam : Beam
@@ -782,7 +782,7 @@ class MultiBeamMixinClass(object):
                 warnings.warn(errormessage)
                 warnings.warn(strictmessage)
                 warnings.warn("Convolution to a common beam will be triggered at an intermediate level."
-                              " To avoid this step, first convolve the spectral-cube to a common beam size.")
+                              " To avoid this step, first convolve the SpectralCube to a common beam size.")
 
         else:
             warnings.warn("Small beam differences are being ignored in this operation. "

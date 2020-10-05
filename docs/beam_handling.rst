@@ -131,7 +131,7 @@ Note that this is equivalent to setting the beam threshold to 0.
 Identifying channels with bad beams
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Some cubes may have channels with beams that vary drastically over small ranges overlap
+Some cubes may have channels with beams that vary drastically over small ranges in spectral
 channels. This is often the case where a range of channels has poor data or is affected
 by radio frequency interference, leading to most of the data in that channel being flagged.
 If these channels are kept, the smallest common beam (see :doc:`smoothing`) may be much
