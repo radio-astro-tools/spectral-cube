@@ -513,6 +513,8 @@ def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
 
     ndim = cube.ndim
 
+    print(xlo, ylo, xhi, yhi)
+
     for val in (xlo,ylo,xhi,yhi):
         if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
             raise u.UnitsError("The X and Y slices must be specified in "
@@ -582,12 +584,15 @@ def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
         x_hasunit = hasattr(limit_dict['x'+corn], 'unit')
         y_hasunit = hasattr(limit_dict['y'+corn], 'unit')
 
+        # print(limit_dict['x'+corn], limit_dict['y'+corn])
+        # print(x_hasunit, y_hasunit)
+
         # (1) If both pixel units, we keep in pixel units.
         if not any([x_hasunit, y_hasunit]):
             continue
 
         # (2) If both WCS units, use world_to_array_index_values
-        if all([x_hasunit, y_hasunit]):
+        elif all([x_hasunit, y_hasunit]):
 
             corn_arr = np.array([limit_dict['x'+corn].value,
                                     limit_dict['y'+corn].value])
@@ -601,46 +606,54 @@ def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
                 united.append('y' + corn)
                 united.append('x' + corn)
 
-            continue
 
         # (3) If mixed, minimize the distance between the spatial position grids
-        #     for the cube to find the closest spatial pixel.
+        #     for the cube to find the closest spatial pixel, limited to the 1 pixel
+        #     value that is given.
+        else:
 
-        # Grab the WCS spatial coordinates grids for the whole cube
-        for lim in ['x', 'y']:
+            # We change the dimensions being sliced depending on whether the
+            # x or y dim is given in pixel units.
+            # This allows for a 1D minimization instead of needing both spatial axes.
 
-            # For 3D cube
-            if ndim == 3:
-                dim = 1 if lim == 'y' else 2
-            # For 2D spatial projection/slice
+            if x_hasunit:
+                pixval = limit_dict['y' + corn]
+                lim = 'x' + corn
+                slicedim = 0
             else:
-                dim = 0 if lim == 'y' else 1
+                pixval = limit_dict['x' + corn]
+                lim = 'y' + corn
+                slicedim = 1
 
-            # WCS grid
-            grids[lim] = cube.spatial_coordinate_map[dim-1]
+            if corn == 'lo':
+                slice_pixdim = slice(pixval, pixval+1)
+            else:
+                slice_pixdim = slice(pixval-1, pixval)
 
-            united.append(lim + corn)
+            limval = limit_dict[lim]
+            if hasattr(limval, 'unit'):
+                united.append(lim)
 
-        log.debug(f"Grid: {grids['x'][0, :]}, Corner: {limit_dict['x' + corn]}")
-        log.debug(f"Grid: {grids['y'][:, 0]}, Corner: {limit_dict['y' + corn]}")
+                sl = [slice(None)]
+                sl.insert(slicedim, slice_pixdim)
+
+                if ndim == 3:
+                    sl.insert(0, slice(0, 1))
 
 
-        # Calculated the squared distance in each spatial dimensions
-        x2 = (grids['x'] - limit_dict['x' + corn])**2
-        if hasattr(x2, 'unit'):
-            x2 = x2.value
-        y2 = (grids['y'] - limit_dict['y' + corn])**2
-        if hasattr(y2, 'unit'):
-            y2 = y2.value
+                sl = tuple(sl)
 
-        # Compute the distance and find the minimum location corresponding
-        # to the corner in pixels
-        dist = np.sqrt(x2 + y2)
-        # Get the min posns
-        ymin, xmin = np.unravel_index(dist.argmin(), dist.shape)
+                if slicedim == 0:
+                    spine = cube.world[sl][2 if ndim == 3 else 1]
+                else:
+                    spine = cube.world[sl][1 if ndim == 3 else 0]
 
-        limit_dict['y' + corn] = ymin
-        limit_dict['x' + corn] = xmin
+                val = np.argmin(np.abs(limval-spine))
+                if limval > spine.max() or limval < spine.min():
+                    log.warning("The limit {0} is out of bounds."
+                                "  Using min/max instead.".format(lim))
+
+                limit_dict[lim] = val
 
     # Correct ordering (this shouldn't be necessary but do a quick check)
     for xx in 'yx':
