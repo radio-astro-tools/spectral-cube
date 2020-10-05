@@ -474,6 +474,22 @@ def test_projection_subimage(data_55):
     assert proj4.wcs.wcs.compare(proj6.wcs.wcs)
     assert proj4.wcs.wcs.compare(proj7.wcs.wcs)
 
+    # Test mixed slicing in both spatial directions
+    proj1xy = proj.subimage(xlo=1, xhi=3, ylo=1, yhi=3)
+    proj2xy = proj.subimage(xlo=24.06269*u.deg, xhi=3,
+                            ylo=1,yhi=29.93522 * u.deg)
+
+    proj3xy = proj.subimage(xlo=1, xhi=24.06206*u.deg,
+                            ylo=29.93464 * u.deg, yhi=3)
+
+
+    assert proj1xy.shape == (2, 2)
+    assert proj2xy.shape == (2, 2)
+    assert proj3xy.shape == (2, 2)
+    assert proj1xy.wcs.wcs.compare(proj2xy.wcs.wcs)
+    assert proj1xy.wcs.wcs.compare(proj3xy.wcs.wcs)
+
+
     proj5 = proj.subimage()
 
     assert proj5.shape == proj.shape

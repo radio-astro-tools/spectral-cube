@@ -61,6 +61,23 @@ def test_subcube(data_advs, use_dask):
     assert sc1y.wcs.wcs.compare(sc3y.wcs.wcs)
     assert sc1y.wcs.wcs.compare(sc4y.wcs.wcs)
 
+
+    # Test mixed slicing in both spatial directions
+    sc1xy = cube.subcube(xlo=1, xhi=3, ylo=1, yhi=3)
+    sc2xy = cube.subcube(xlo=24.06269*u.deg, xhi=3,
+                         ylo=1,yhi=29.93522 * u.deg)
+
+    sc3xy = cube.subcube(xlo=1, xhi=24.06206*u.deg,
+                         ylo=29.93464 * u.deg, yhi=3)
+
+
+    assert sc1xy.shape == (2, 2, 2)
+    assert sc2xy.shape == (2, 2, 2)
+    assert sc3xy.shape == (2, 2, 2)
+    assert sc1xy.wcs.wcs.compare(sc2xy.wcs.wcs)
+    assert sc1xy.wcs.wcs.compare(sc3xy.wcs.wcs)
+
+
     sc1z = cube.subcube(zlo=1, zhi=2)
     sc2z = cube.subcube(zlo=-320*u.km/u.s, zhi=-319*u.km/u.s)
     sc3z = cube.subcube(zlo=1, zhi=-319 * u.km / u.s)
