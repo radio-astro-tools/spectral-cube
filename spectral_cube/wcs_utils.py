@@ -486,7 +486,14 @@ def diagonal_wcs_to_cdelt(mywcs):
 def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
     '''
     Given low and high cuts, return the pixel coordinates for a rectangular
-    region in the given cube or spatial projection.
+    region in the given cube or spatial projection. lo and hi inputs can be
+    given in pixels, "min"/"max", or in world coordinates.
+
+    When spatial WCS dimensions are given as an `~astropy.units.Quantity`,
+    the spatial coordinates of the 'lo' and 'hi' corners are solved together.
+    This minimizes WCS variations due to the sky curvature when slicing from
+    a large (>1 deg) image.
+
 
     Parameters
     ----------

@@ -567,9 +567,10 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         """
         Extract a region spatially.
 
-        When spatial WCS dimensions are given, the spatial coordinates of the 'lo'
-        and 'hi' corners are solved together. This minimizes WCS variations due to
-        the sky curvature when slicing from a large (>1 deg) image.
+        When spatial WCS dimensions are given as an `~astropy.units.Quantity`,
+        the spatial coordinates of the 'lo' and 'hi' corners are solved together.
+        This minimizes WCS variations due to the sky curvature when slicing from
+        a large (>1 deg) image.
 
         Parameters
         ----------
