@@ -513,8 +513,6 @@ def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
 
     ndim = cube.ndim
 
-    print(xlo, ylo, xhi, yhi)
-
     for val in (xlo,ylo,xhi,yhi):
         if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
             raise u.UnitsError("The X and Y slices must be specified in "
