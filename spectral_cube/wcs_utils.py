@@ -507,7 +507,7 @@ def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
     Returns
     -------
     limit_dict : dict
-        Pixel coordinates of [xy]lo/[xy]hi in the given `cube`.
+        Pixel coordinates of [xy]lo/[xy]hi in the given ``cube``.
 
     '''
 
