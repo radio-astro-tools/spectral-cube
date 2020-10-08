@@ -593,7 +593,7 @@ def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
         elif all([x_hasunit, y_hasunit]):
 
             corn_arr = np.array([limit_dict['x'+corn].value,
-                                    limit_dict['y'+corn].value])
+                                 limit_dict['y'+corn].value])
 
             xmin, ymin = cube.wcs.celestial.world_to_array_index_values(corn_arr.reshape((1, 2)))[0]
 
