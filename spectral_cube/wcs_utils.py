@@ -500,7 +500,7 @@ def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
     cube : :class:`~SpectralCube` or spatial :class:`~Projection`
         A spectral-cube or projection/slice with spatial dimensions.
     [xy]lo/[xy]hi : int or :class:`~astropy.units.Quantity` or ``min``/``max``
-        The endpoints to extract.  If given as a quantity, will be
+        The endpoints to extract.  If given as a ``Quantity``, will be
         interpreted as World coordinates.  If given as a ``string`` or
         ``int``, will be interpreted as pixel coordinates.
 
