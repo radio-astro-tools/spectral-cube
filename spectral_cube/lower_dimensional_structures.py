@@ -567,6 +567,11 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         """
         Extract a region spatially.
 
+        When spatial WCS dimensions are given as an `~astropy.units.Quantity`,
+        the spatial coordinates of the 'lo' and 'hi' corners are solved together.
+        This minimizes WCS variations due to the sky curvature when slicing from
+        a large (>1 deg) image.
+
         Parameters
         ----------
         [xy]lo/[xy]hi : int or `astropy.units.Quantity` or `min`/`max`
@@ -577,36 +582,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
         self._raise_wcs_no_celestial()
 
-        limit_dict = {'xlo': 0 if xlo == 'min' else xlo,
-                      'ylo': 0 if ylo == 'min' else ylo,
-                      'xhi': self.shape[1] if xhi == 'max' else xhi,
-                      'yhi': self.shape[0] if yhi == 'max' else yhi}
-        dims = {'x': 1,
-                'y': 0}
-
-        for val in (xlo, ylo, xhi, yhi):
-            if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
-                raise u.UnitsError("The X and Y slices must be specified in "
-                                   "degree-equivalent units.")
-
-        for lim in limit_dict:
-            limval = limit_dict[lim]
-            if hasattr(limval, 'unit'):
-                dim = dims[lim[0]]
-                sl = [slice(0, 1)]
-                sl.insert(dim, slice(None))
-                spine = self.world[tuple(sl)][dim]
-                val = np.argmin(np.abs(limval - spine))
-                if limval > spine.max() or limval < spine.min():
-                    pass
-                    # log.warn("The limit {0} is out of bounds."
-                    #          "  Using min/max instead.".format(lim))
-                if lim[1:] == 'hi':
-                    # End-inclusive indexing: need to add one for the high
-                    # slice
-                    limit_dict[lim] = val + 1
-                else:
-                    limit_dict[lim] = val
+        # Solve for the spatial pixel indices together
+        limit_dict = wcs_utils.find_spatial_pixel_index(self, xlo, xhi, ylo, yhi)
 
         slices = [slice(limit_dict[xx + 'lo'], limit_dict[xx + 'hi'])
                   for xx in 'yx']

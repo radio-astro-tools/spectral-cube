@@ -1820,6 +1820,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         Extract a sub-cube spatially and spectrally.
 
+        When spatial WCS dimensions are given as an `~astropy.units.Quantity`,
+        the spatial coordinates of the 'lo' and 'hi' corners are solved together.
+        This minimizes WCS variations due to the sky curvature when slicing from
+        a large (>1 deg) image.
+
         Parameters
         ----------
         [xyz]lo/[xyz]hi : int or :class:`~astropy.units.Quantity` or ``min``/``max``
@@ -1828,15 +1833,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             int, will be interpreted as pixel coordinates.
         """
 
-        limit_dict = {'xlo':0 if xlo == 'min' else xlo,
-                      'ylo':0 if ylo == 'min' else ylo,
-                      'zlo':0 if zlo == 'min' else zlo,
-                      'xhi':self.shape[2] if xhi=='max' else xhi,
-                      'yhi':self.shape[1] if yhi=='max' else yhi,
-                      'zhi':self.shape[0] if zhi=='max' else zhi}
         dims = {'x': 2,
                 'y': 1,
                 'z': 0}
+
+        limit_dict = {}
+
+        limit_dict['zlo'] = 0 if zlo == 'min' else zlo
+        limit_dict['zhi'] = self.shape[0] if zhi == 'max' else zhi
 
         # Specific warning for slicing a frequency axis with a velocity or
         # vice/versa
@@ -1848,15 +1852,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                "spectral slice.  Use `.with_spectral_unit` "
                                "to convert to equivalent units first")
 
-        for val in (xlo,ylo,xhi,yhi):
-            if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
-                raise u.UnitsError("The X and Y slices must be specified in "
-                                   "degree-equivalent units.")
+        # Solve for the spatial pixel indices together
+        limit_dict_spat = wcs_utils.find_spatial_pixel_index(self, xlo, xhi, ylo, yhi)
 
-        # list to track which entries had units
+        limit_dict.update(limit_dict_spat)
+
+        # Handle the z (spectral) axis. This shouldn't change
+        # much spacially, so solve one at a time
+        # Track if the z axis values had units. Will need to make a +1 correction below
         united = []
-
         for lim in limit_dict:
+            if 'z' not in lim:
+                continue
             limval = limit_dict[lim]
             if hasattr(limval, 'unit'):
                 united.append(lim)
@@ -1871,17 +1878,17 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                 "  Using min/max instead.".format(lim))
                 limit_dict[lim] = val
 
-        for xx in 'zyx':
-            hi,lo = limit_dict[xx+'hi'], limit_dict[xx+'lo']
-            if hi < lo:
-                # must have high > low
-                limit_dict[xx+'hi'], limit_dict[xx+'lo'] = lo, hi
+        # Check spectral axis ordering.
+        hi,lo = limit_dict['zhi'], limit_dict['zlo']
+        if hi < lo:
+            # must have high > low
+            limit_dict['zhi'], limit_dict['zlo'] = lo, hi
 
-            if xx+'lo' in united:
-                # End-inclusive indexing: need to add one for the high slice
-                # Only do this for converted values, not for pixel values
-                # (i.e., if the xlo/ylo/zlo value had units)
-                limit_dict[xx+'hi'] += 1
+        if 'zhi' in united:
+            # End-inclusive indexing: need to add one for the high slice
+            # Only do this for converted values, not for pixel values
+            # (i.e., if the xlo/ylo/zlo value had units)
+            limit_dict['zhi'] += 1
 
         for xx in 'zyx':
             if limit_dict[xx+'hi'] == limit_dict[xx+'lo']:

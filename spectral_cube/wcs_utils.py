@@ -481,3 +481,189 @@ def diagonal_wcs_to_cdelt(mywcs):
         del mywcs.wcs.cd
         mywcs.wcs.cdelt = cdelt
     return mywcs
+
+
+def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
+    '''
+    Given low and high cuts, return the pixel coordinates for a rectangular
+    region in the given cube or spatial projection. lo and hi inputs can be
+    given in pixels, "min"/"max", or in world coordinates.
+
+    When spatial WCS dimensions are given as an `~astropy.units.Quantity`,
+    the spatial coordinates of the 'lo' and 'hi' corners are solved together.
+    This minimizes WCS variations due to the sky curvature when slicing from
+    a large (>1 deg) image.
+
+
+    Parameters
+    ----------
+    cube : :class:`~SpectralCube` or spatial :class:`~Projection`
+        A spectral-cube or projection/slice with spatial dimensions.
+    [xy]lo/[xy]hi : int or :class:`~astropy.units.Quantity` or ``min``/``max``
+        The endpoints to extract.  If given as a ``Quantity``, will be
+        interpreted as World coordinates.  If given as a ``string`` or
+        ``int``, will be interpreted as pixel coordinates.
+
+    Returns
+    -------
+    limit_dict : dict
+        Pixel coordinates of [xy]lo/[xy]hi in the given ``cube``.
+
+    '''
+
+    ndim = cube.ndim
+
+    for val in (xlo,ylo,xhi,yhi):
+        if hasattr(val, 'unit') and not val.unit.is_equivalent(u.degree):
+            raise u.UnitsError("The X and Y slices must be specified in "
+                                "degree-equivalent units.")
+
+    limit_dict = {}
+
+    # Match corners. If one uses a WCS coord, set 'min'/'max'
+    # To the lat or long extrema.
+    # We only care about matching spatial corners.
+    xlo_unit = hasattr(xlo, 'unit')
+    ylo_unit = hasattr(ylo, 'unit')
+
+    # Do min/max switching if the WCS grid increases/decreases
+    # with the pixel grid.
+    ymin = min if cube.wcs.wcs.cdelt[1] > 0 else max
+    xmin = min if cube.wcs.wcs.cdelt[0] > 0 else max
+    ymax = max if cube.wcs.wcs.cdelt[1] > 0 else min
+    xmax = max if cube.wcs.wcs.cdelt[0] > 0 else min
+
+    if not any([xlo_unit, ylo_unit]):
+        limit_dict['xlo'] = 0 if xlo == 'min' else xlo
+        limit_dict['ylo'] = 0 if ylo == 'min' else ylo
+    else:
+        if xlo_unit:
+            limit_dict['xlo'] = xlo
+            limit_dict['ylo'] = ymin(cube.latitude_extrema) if ylo == 'min' else ylo
+        if ylo_unit:
+            limit_dict['ylo'] = ylo
+            limit_dict['xlo'] = xmin(cube.longitude_extrema) if xlo == 'min' else xlo
+
+    xhi_unit = hasattr(xhi, 'unit')
+    yhi_unit = hasattr(yhi, 'unit')
+
+    if not any([xhi_unit, yhi_unit]):
+
+        # For 3D cube
+        if ndim == 3:
+            limit_dict['xhi'] = cube.shape[2] if xhi == 'max' else xhi
+            limit_dict['yhi'] = cube.shape[1] if yhi == 'max' else yhi
+        # For 2D spatial projection/slice
+        else:
+            limit_dict['xhi'] = cube.shape[1] if xhi == 'max' else xhi
+            limit_dict['yhi'] = cube.shape[0] if yhi == 'max' else yhi
+    else:
+        if xhi_unit:
+            limit_dict['xhi'] = xhi
+            limit_dict['yhi'] = ymax(cube.latitude_extrema) if yhi == 'max' else yhi
+        if yhi_unit:
+            limit_dict['yhi'] = yhi
+            limit_dict['xhi'] = xmax(cube.longitude_extrema) if xhi == 'max' else xhi
+
+    # list to track which entries had units
+    united = []
+
+    # Solve the spatial axes together.
+    # There's 3 options:
+    # (1) If both pixel units, do nothing
+    # (2) If both WCS units, use world_to_array_index_values
+    # (3) If mixed, minimize the distance between the spatial position grids
+    #     for the cube to find the closest spatial pixel.
+
+    for corn in ['lo', 'hi']:
+        grids = {}
+
+        # Check if either were given as a WCS value with a unit
+        x_hasunit = hasattr(limit_dict['x'+corn], 'unit')
+        y_hasunit = hasattr(limit_dict['y'+corn], 'unit')
+
+        # print(limit_dict['x'+corn], limit_dict['y'+corn])
+        # print(x_hasunit, y_hasunit)
+
+        # (1) If both pixel units, we keep in pixel units.
+        if not any([x_hasunit, y_hasunit]):
+            continue
+
+        # (2) If both WCS units, use world_to_array_index_values
+        elif all([x_hasunit, y_hasunit]):
+
+            corn_arr = np.array([limit_dict['x'+corn].value,
+                                 limit_dict['y'+corn].value])
+
+            xmin, ymin = cube.wcs.celestial.world_to_array_index_values(corn_arr.reshape((1, 2)))[0]
+
+            limit_dict['y' + corn] = ymin
+            limit_dict['x' + corn] = xmin
+
+            if corn == 'hi':
+                united.append('y' + corn)
+                united.append('x' + corn)
+
+
+        # (3) If mixed, minimize the distance between the spatial position grids
+        #     for the cube to find the closest spatial pixel, limited to the 1 pixel
+        #     value that is given.
+        else:
+
+            # We change the dimensions being sliced depending on whether the
+            # x or y dim is given in pixel units.
+            # This allows for a 1D minimization instead of needing both spatial axes.
+
+            if x_hasunit:
+                pixval = limit_dict['y' + corn]
+                lim = 'x' + corn
+                slicedim = 0
+            else:
+                pixval = limit_dict['x' + corn]
+                lim = 'y' + corn
+                slicedim = 1
+
+            if corn == 'lo':
+                slice_pixdim = slice(pixval, pixval+1)
+            else:
+                slice_pixdim = slice(pixval-1, pixval)
+
+            limval = limit_dict[lim]
+            if hasattr(limval, 'unit'):
+                united.append(lim)
+
+                sl = [slice(None)]
+                sl.insert(slicedim, slice_pixdim)
+
+                if ndim == 3:
+                    sl.insert(0, slice(0, 1))
+
+
+                sl = tuple(sl)
+
+                if slicedim == 0:
+                    spine = cube.world[sl][2 if ndim == 3 else 1]
+                else:
+                    spine = cube.world[sl][1 if ndim == 3 else 0]
+
+                val = np.argmin(np.abs(limval-spine))
+                if limval > spine.max() or limval < spine.min():
+                    log.warning("The limit {0} is out of bounds."
+                                "  Using min/max instead.".format(lim))
+
+                limit_dict[lim] = val
+
+    # Correct ordering (this shouldn't be necessary but do a quick check)
+    for xx in 'yx':
+        hi,lo = limit_dict[xx+'hi'], limit_dict[xx+'lo']
+        if hi < lo:
+            # must have high > low
+            limit_dict[xx+'hi'], limit_dict[xx+'lo'] = lo, hi
+
+        if xx+'hi' in united:
+            # End-inclusive indexing: need to add one for the high slice
+            # Only do this for converted values, not for pixel values
+            # (i.e., if the xlo/ylo/zlo value had units)
+            limit_dict[xx+'hi'] += 1
+
+    return limit_dict
