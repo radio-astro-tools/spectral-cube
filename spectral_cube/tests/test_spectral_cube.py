@@ -91,14 +91,14 @@ def cube_and_raw(filename, use_dask=None):
     if os.path.splitext(p)[-1] == '.fits':
         with fits.open(p) as hdulist:
             d = hdulist[0].data
-        c = SpectralCube.read(p, format='fits', mode='readonly', use_dask=use_dask)
+        c = SpectralCube.read(p, format='fits', mode='readonly', use_dask=use_dask, compute_commonbeam=True)
     elif os.path.splitext(p)[-1] == '.image':
         ia.open(p)
         d = ia.getchunk()
         ia.unlock()
         ia.close()
         ia.done()
-        c = SpectralCube.read(p, format='casa_image', use_dask=use_dask)
+        c = SpectralCube.read(p, format='casa_image', use_dask=use_dask, compute_commonbeam=True)
     else:
         raise ValueError("Unsupported filetype")
 
@@ -2154,8 +2154,9 @@ def test_convolve_to_with_bad_beams(data_vda_beams, use_dask):
 
     convolved = cube.convolve_to(Beam(0.5*u.arcsec))
 
+    from radio_beam.utils import BeamError
 
-    with pytest.raises(ValueError,
+    with pytest.raises((ValueError, BeamError),
                        match="Beam could not be deconvolved"):
         # should not work: biggest beam is 0.4"
         convolved = cube.convolve_to(Beam(0.35*u.arcsec))
