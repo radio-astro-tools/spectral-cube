@@ -3556,6 +3556,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         beam_threshold = kwargs.pop('beam_threshold', 0.01)
         strict_beam_match = kwargs.pop('strict_beam_match', False)
 
+        compute_commonbeam = kwargs.pop('compute_commonbeam', False)
+
         if strict_beam_match:
             beam_threshold = 0.0
 
@@ -3616,6 +3618,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         self.beams = beams
         self.beam_threshold = beam_threshold
         self.strict_beam_match = strict_beam_match
+
+        # Compute common beam on creating new cube
+        if compute_commonbeam:
+            self.common_beam = self._compute_common_beam()
 
     def __getitem__(self, view):
 

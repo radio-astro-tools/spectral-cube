@@ -569,18 +569,18 @@ class MultiBeamMixinClass(object):
 
     def average_beams(self, threshold, mask='goodbeams', warn=False):
         '''
-        This is now deprecated. See `~VaryingResolutionSpectralCube.set_common_beam.`.
+        This is now deprecated. See `~VaryingResolutionSpectralCube._compute_common_beam.`.
         '''
 
         warnings.warn("average_beams is deprecated and its functionality has been removed. "
-                      "This is because beam averaging is not the correct operation. Please use"
-                      " `cube.set_common_beam` in its place to compute the common beam. The "
+                      "This is because beam averaging is not the correct operation. Enable"
+                      " `compute_commonbeam=True` in `~VaryingResolutionSpectralCube.read`. The "
                       "common beam can then be accessed with `cube.common_beam`.",
                       DeprecationWarning)
 
-        self.set_common_beam(threshold, mask=mask, warn=warn)
+        return self._compute_common_beam(threshold, mask=mask, warn=warn)
 
-    def set_common_beam(self, threshold=None, mask='goodbeams', warn=False, **kwargs):
+    def _compute_common_beam(self, threshold=None, mask='goodbeams', warn=False, **kwargs):
         """
         Set the common beam: `~VaryingResolutionSpectralCube.common_beam`.
 
@@ -649,9 +649,9 @@ class MultiBeamMixinClass(object):
 
         # use private _beams here because the public one excludes the bad beams
         # by default
-        new_beam = self._beams.common_beam(includemask=beam_mask, **kwargs)
+        common_beam = self._beams.common_beam(includemask=beam_mask, **kwargs)
 
-        if np.isnan(new_beam):
+        if np.isnan(common_beam):
             raise ValueError("Common beam is not finite. "
                              "This either indicates that there was a problem "
                              "with the include mask, one of the beam's values, "
@@ -659,18 +659,27 @@ class MultiBeamMixinClass(object):
 
         # This will now print a warning describing whether a common beam convolution will
         # be triggered. Or if small beam variations will be ignored.
-        self._check_beam_areas(threshold, new_beam, mask=beam_mask, raise_error=False)
+        self._check_beam_areas(threshold, common_beam, mask=beam_mask, raise_error=False)
 
-        self._common_beam = new_beam
+        return common_beam
 
     @property
     def common_beam(self):
 
         if not hasattr(self, '_common_beam'):
             # Compute the common beam with the default parameters if not set.
-            self.set_common_beam()
+            # TODO: improve error message
+            raise ValueError("No common beam found.")
 
         return self._common_beam
+
+    @common_beam.setter
+    def common_beam(self, value):
+
+        if not isinstance(value, Beam):
+            raise TypeError("common_beam must be set a `~radio_beam.Beam` object.")
+
+        self._common_beam = value
 
     def _handle_beam_areas_wrapper(self, function, beam_threshold=None):
         """
@@ -851,6 +860,14 @@ class MultiBeamMixinClass(object):
         meta['beams'] = beams
 
         return self._new_thing_with(beams=beams, meta=meta)
+
+    def with_common_beam(self, common_beam, **kwargs):
+        '''
+        Attach a new common beam to VaryingResolutionSpectralCube.
+        '''
+
+        # TODO:
+        raise NotImplementedError
 
     @abc.abstractmethod
     def _new_thing_with(self):
