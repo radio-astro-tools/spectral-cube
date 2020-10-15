@@ -800,9 +800,16 @@ class MultiBeamMixinClass(object):
                           BeamAverageWarning
                          )
 
-    def mask_out_bad_beams(self, threshold=None, reference_beam=None,
-                           criteria=['sr','major','minor'],
-                           mid_value=np.nanmedian):
+    def mask_out_bad_beams(self, *args, **kwargs):
+
+        warnings.warn("`mask_out_bad_beams` is deprecated. Use `with_bad_beams_masked`.",
+                      DeprecationWarning)
+
+        return self.with_bad_beams_masked(*args, **kwargs)
+
+    def with_bad_beams_masked(self, threshold=None, reference_beam=None,
+                              criteria=['sr','major','minor'],
+                              mid_value=np.nanmedian):
         """
         See `identify_bad_beams`.  This function returns a masked cube
 

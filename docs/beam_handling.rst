@@ -153,10 +153,10 @@ the smallest common beam used above.
 This is because bad beams are identified as outliers in the set of beams.
 
 To mask the channels with bad beams, use
-`~spectral_cube.spectral_cube.VaryingResolutionSpectralCube.mask_out_bad_beams`.
+`~spectral_cube.spectral_cube.VaryingResolutionSpectralCube.with_bad_beams_masked`.
 
 
-    >>> masked_vrsc_cube = vrsc_cube.mask_out_bad_beams()  # doctest: +SKIP
+    >>> masked_vrsc_cube = vrsc_cube.with_bad_beams_masked()  # doctest: +SKIP
 
 The masked cube without the bad beams will now exlude channels with bad beams and
 can be used, for example, to convolve to a better representative common beam

@@ -54,7 +54,7 @@ There are several options to manage this problem:
 .. code::
 
    good_beams = cube.identify_bad_beams(threshold=0.1)
-   mcube = cube.mask_out_bad_beams(threshold=0.1)
+   mcube = cube.with_bad_beams_masked(threshold=0.1)
 
 
 Please see the more detailed explanation of the beam threshold treatment in

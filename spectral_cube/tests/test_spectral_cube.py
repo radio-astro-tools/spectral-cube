@@ -1933,7 +1933,7 @@ def test_mask_bad_beams(filename, use_dask):
     assert np.all(cube[:3].goodbeams_mask)
 
     # Test all beams allowed.
-    masked_cube = cube.mask_out_bad_beams(threshold=1.,
+    masked_cube = cube.with_bad_beams_masked(threshold=1.,
                                           reference_beam=Beam(0.3*u.arcsec,
                                                               0.2*u.arcsec,
                                                               60*u.deg))
@@ -1942,7 +1942,7 @@ def test_mask_bad_beams(filename, use_dask):
     assert np.all(masked_cube.goodbeams_mask == [True,True,True,True])
 
     # middle two beams have same area
-    masked_cube = cube.mask_out_bad_beams(threshold=1e-6,
+    masked_cube = cube.with_bad_beams_masked(threshold=1e-6,
                                           reference_beam=Beam(0.3*u.arcsec,
                                                               0.2*u.arcsec,
                                                               60*u.deg))
@@ -1953,16 +1953,25 @@ def test_mask_bad_beams(filename, use_dask):
     # Test if masked_cube.beam_threshold is used when no threshold is given
     # when the reference cube is given, it equals the beam for channels 1, 2
     cube.beam_threshold = 1e-6
-    masked_cube = cube.mask_out_bad_beams(reference_beam=Beam(0.3*u.arcsec,
+    masked_cube = cube.with_bad_beams_masked(reference_beam=Beam(0.3*u.arcsec,
                                                               0.2*u.arcsec,
                                                               60*u.deg))
 
     assert np.all(masked_cube.goodbeams_mask == [False,True,True,False])
 
+    # The old `mask_out_bad_beams` should give the same output, but with a DeprecationWarning
+    with pytest.warns(DeprecationWarning):
+
+        masked_cube_depcheck = cube.mask_out_bad_beams(reference_beam=Beam(0.3*u.arcsec,
+                                                                           0.2*u.arcsec,
+                                                                           60*u.deg))
+
+    assert np.all(masked_cube_depcheck.goodbeams_mask == masked_cube.goodbeams_mask)
+
     # If no reference beam is given, a very strict threshold will mask
     # everything:
     assert cube.beam_threshold == 1e-6
-    masked_cube = cube.mask_out_bad_beams()
+    masked_cube = cube.with_bad_beams_masked()
 
     assert not masked_cube.mask.include().any()
     assert not masked_cube.goodbeams_mask.any()
@@ -2531,7 +2540,7 @@ def test_varyres_mask(data_vda_beams, use_dask):
     goodbeams = cube.identify_bad_beams(0.5, )
     assert all(goodbeams == np.array([False, True, True, True]))
 
-    mcube = cube.mask_out_bad_beams(0.5)
+    mcube = cube.with_bad_beams_masked(0.5)
     assert hasattr(mcube, '_goodbeams_mask')
     assert all(mcube.goodbeams_mask == goodbeams)
     assert len(mcube.beams) == 3
