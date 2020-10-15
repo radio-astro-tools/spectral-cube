@@ -693,6 +693,10 @@ class MultiBeamMixinClass(object):
         # deferred import to avoid a circular import problem
         from .lower_dimensional_structures import LowerDimensionalObject
 
+        # Check the existence of the common beam. We need the common beam to be computed
+        # to do the beam area differences and check for allowed operations.
+        common_beam = self.common_beam
+
         if beam_threshold is None:
             beam_threshold = self.beam_threshold
 
@@ -713,7 +717,7 @@ class MultiBeamMixinClass(object):
             if need_to_handle_beams:
                 # do this check *first* so we don't do an expensive operation
                 # and crash afterward
-                self._check_beam_areas(self.beam_threshold, self.common_beam)
+                self._check_beam_areas(self.beam_threshold, common_beam)
 
             result = function(*args, **kwargs)
 
