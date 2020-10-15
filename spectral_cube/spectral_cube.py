@@ -3945,6 +3945,20 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         return newcube
 
+    def convolve_to_commonbeam(self, **kwargs):
+        """
+        Use `~VaryingResolutionSpectralCube.common_beam` to convolve the cube to the
+        smallest common beam.
+
+        Parameters
+        ----------
+        kwargs : Passed to `~VaryingResolutionSpectralCube.convolve_to`
+        """
+
+        common_beam = self.common_beam
+
+        return self.convolve_to(common_beam, **kwargs)
+
     @warn_slow
     def to(self, unit, equivalencies=()):
         """

@@ -1394,6 +1394,21 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
 
         return HDUList([hdu, bmhdu])
 
+    def convolve_to_commonbeam(self, **kwargs):
+        """
+        Use `~DaskVaryingResolutionSpectralCube.common_beam` to convolve the cube to the
+        smallest common beam.
+
+        Parameters
+        ----------
+        kwargs : Passed to `~DaskVaryingResolutionSpectralCube.convolve_to`
+        """
+
+        common_beam = self.common_beam
+
+        return self.convolve_to(common_beam, **kwargs)
+
+
     @add_save_to_tmp_dir_option
     def convolve_to(self, beam, allow_smaller=False,
                     convolve=convolution.convolve_fft,
