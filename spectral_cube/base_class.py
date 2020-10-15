@@ -569,7 +569,7 @@ class MultiBeamMixinClass(object):
 
     def average_beams(self, threshold, mask='goodbeams', warn=False):
         '''
-        This is now deprecated. See `~VaryingResolutionSpectralCube._compute_common_beam.`.
+        This is now deprecated. See `~VaryingResolutionSpectralCube.compute_common_beam.`.
         '''
 
         warnings.warn("average_beams is deprecated and its functionality has been removed. "
@@ -578,9 +578,9 @@ class MultiBeamMixinClass(object):
                       "common beam can then be accessed with `cube.common_beam`.",
                       DeprecationWarning)
 
-        return self._compute_common_beam(threshold, mask=mask, warn=warn)
+        return self.compute_common_beam(threshold, mask=mask, warn=warn)
 
-    def _compute_common_beam(self, threshold=None, mask='goodbeams', warn=False, **kwargs):
+    def compute_common_beam(self, threshold=None, mask='goodbeams', warn=False, **kwargs):
         """
         Set the common beam: `~VaryingResolutionSpectralCube.common_beam`.
 

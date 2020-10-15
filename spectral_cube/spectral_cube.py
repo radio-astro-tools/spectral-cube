@@ -3621,7 +3621,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         # Compute common beam on creating new cube
         if compute_commonbeam:
-            self.common_beam = self._compute_common_beam()
+            self.common_beam = self.compute_common_beam()
 
     def __getitem__(self, view):
 
