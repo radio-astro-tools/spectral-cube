@@ -264,6 +264,10 @@ class MaskBase(object):
     def size(self):
         return np.product(self.shape)
 
+    @property
+    def dtype(self):
+        return np.dtype('bool')
+
     def __getitem__(self):
         raise NotImplementedError("Slicing not supported by mask class {0}"
                                   .format(self.__class__.__name__))
