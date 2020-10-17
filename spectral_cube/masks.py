@@ -256,6 +256,14 @@ class MaskBase(object):
         raise NotImplementedError("{0} mask classes do not have shape attributes."
                                   .format(self.__class__.__name__))
 
+    @property
+    def ndim(self):
+        return len(self.shape)
+
+    @property
+    def size(self):
+        return np.product(self.shape)
+
     def __getitem__(self):
         raise NotImplementedError("Slicing not supported by mask class {0}"
                                   .format(self.__class__.__name__))
