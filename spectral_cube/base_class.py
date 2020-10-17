@@ -733,7 +733,10 @@ class MultiBeamMixinClass(object):
 
         use_dask = isinstance(self._data, da.Array)
         if use_dask:
-            newmask = da.logical_and(self._mask_include, includemask)
+            newmask = BooleanArrayMask(da.logical_and(self._mask_include, includemask),
+                                       wcs=self._wcs,
+                                       shape=self._data.shape
+                                      )
         elif self.mask is None:
             newmask = includemask
         else:
