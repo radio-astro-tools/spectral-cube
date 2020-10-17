@@ -1511,4 +1511,5 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
 
     @property
     def _mask_include(self):
+        # TODO: should this return a BooleanArrayMask?
         return da.from_array(MaskHandler(self), name='MaskHandler ' + str(uuid.uuid4()), chunks=self._data.chunksize)

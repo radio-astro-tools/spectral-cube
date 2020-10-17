@@ -735,9 +735,9 @@ class MultiBeamMixinClass(object):
         if use_dask:
             # is this the right way?  Or should it be `BooleanArrayMask(self._mask_include) & includemask?
             newmask = da.logical_and(BooleanArrayMask(self._mask_include,
-                                       wcs=self._wcs,
-                                       shape=self._data.shape
-                                      ), includemask)
+                                                      wcs=self._wcs,
+                                                      shape=self._data.shape),
+                                     includemask)
         elif self.mask is None:
             newmask = includemask
         else:
