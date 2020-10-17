@@ -588,7 +588,8 @@ class MultiBeamMixinClass(object):
                 beam_mask = da.any(da.logical_and(self._mask_include,
                                                   self.goodbeams_mask[:, None, None]),
                                    axis=(1, 2))
-                beam_mask = self._compute(beam_mask)
+                # da.any appears to return an object dtype instead of a bool
+                beam_mask = self._compute(beam_mask).astype('bool')
             elif self.mask is not None:
                 beam_mask = np.any(np.logical_and(self.mask.include(),
                                                   self.goodbeams_mask[:, None, None]),
