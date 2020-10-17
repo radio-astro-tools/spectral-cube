@@ -733,10 +733,11 @@ class MultiBeamMixinClass(object):
 
         use_dask = isinstance(self._data, da.Array)
         if use_dask:
-            newmask = BooleanArrayMask(da.logical_and(self._mask_include, includemask),
+            # is this the right way?  Or should it be `BooleanArrayMask(self._mask_include) & includemask?
+            newmask = da.logical_and(BooleanArrayMask(self._mask_include,
                                        wcs=self._wcs,
                                        shape=self._data.shape
-                                      )
+                                      ), includemask)
         elif self.mask is None:
             newmask = includemask
         else:
