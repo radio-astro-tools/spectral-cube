@@ -1880,6 +1880,7 @@ def test_varyres_moment_logic_issue364(data_vda_beams, use_dask):
     assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
+@pytest.mark.skipif('not casaOK')
 @pytest.mark.parametrize('filename', ['data_vda_beams',
                                       'data_vda_beams_image'],
                          indirect=['filename'])
