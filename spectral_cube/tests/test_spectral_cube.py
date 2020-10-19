@@ -1895,6 +1895,8 @@ def test_mask_bad_beams(filename, use_dask):
 
     cube, data = cube_and_raw(filename, use_dask=use_dask)
 
+    assert isinstance(cube, base_class.MultiBeamMixinClass)
+
     # make sure all of the beams are initially good (finite)
     assert np.all(cube.goodbeams_mask)
     # make sure cropping the cube maintains the mask
