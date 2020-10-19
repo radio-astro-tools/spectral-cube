@@ -1890,7 +1890,7 @@ def test_mask_bad_beams(filename, use_dask):
     that, the tests got mucked up because we can no longer have minor>major in
     the beams.
     """
-    if 'image' in filename and not use_dask:
+    if 'image' in str(filename) and not use_dask:
         pytest.skip()
 
     cube, data = cube_and_raw(filename, use_dask=use_dask)
