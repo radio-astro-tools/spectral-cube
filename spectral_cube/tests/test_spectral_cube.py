@@ -1890,6 +1890,9 @@ def test_mask_bad_beams(filename, use_dask):
     that, the tests got mucked up because we can no longer have minor>major in
     the beams.
     """
+    if 'image' in filename and not use_dask:
+        pytest.skip()
+
     cube, data = cube_and_raw(filename, use_dask=use_dask)
 
     # make sure all of the beams are initially good (finite)
@@ -2382,7 +2385,7 @@ def test_mask_none(use_dask):
 
 
 @pytest.mark.parametrize('filename', ['data_vda', 'data_vda_beams'],
-                            indirect=['filename'])
+                         indirect=['filename'])
 def test_mask_channels_preserve_mask(filename, use_dask):
 
     # Regression test for a bug that caused the mask to not be preserved.
