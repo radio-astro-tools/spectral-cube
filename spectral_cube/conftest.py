@@ -299,9 +299,9 @@ def data_vda_beams_image(tmp_path):
                 outfile=tmp_path / 'vda_beams.image',
                 overwrite=True)
     for (bmaj, bmin, bpa, chan, pol) in beams.data:
-        ia.setrestoringbeam(major=bmaj,
-                            minor=bmin,
-                            pa=bpa,
+        ia.setrestoringbeam(major={'unit': 'arcsec', 'value': bmaj},
+                            minor={'unit': 'arcsec', 'value': bmin},
+                            pa={'unit': 'deg', 'value': bpa},
                             channel=chan,
                             polarization=pol)
     ia.close()
