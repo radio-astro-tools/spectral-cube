@@ -298,6 +298,12 @@ def data_vda_beams_image(tmp_path):
     ia.fromfits(infile=tmp_path / 'vda_beams.fits',
                 outfile=tmp_path / 'vda_beams.image',
                 overwrite=True)
+    for (bmaj, bmin, bpa, chan, pol) in beams.data:
+        ia.setrestoringbeams(major=bmaj,
+                             minor=bmin,
+                             pa=bpa,
+                             channel=chan,
+                             polarization=pol)
     ia.close()
     return tmp_path / 'vda_beams.image'
 
