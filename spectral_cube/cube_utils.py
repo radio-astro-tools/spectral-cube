@@ -486,3 +486,43 @@ def convert_bunit(bunit):
             unit = None
 
     return unit
+
+
+def world_take_along_axis(cube, posn_plane, axis):
+    '''
+    Apply a 2D plane of pixel positions along collapsed along a third axis
+    to the equivalent WCS coordinates. For example, this will convert `argmax`
+    along the spectral axis to the equivalent spectral value (e.g., velocity at
+    peak intensity).
+    Parameters
+    ----------
+    cube : SpectralCube
+        A spectral cube.
+    posn_plane : 2D numpy.ndarray
+        2D array of pixel dimensions along `axis`.
+    axis : int
+        The axis that `posn_plane` is collapsed along.
+    Returns
+    -------
+    out : astropy.units.Quantity
+        2D array of WCS coordinates.
+    '''
+    # Get 1D slice along that axis.
+    world_slice = [0, 0]
+    world_slice.insert(axis, slice(None))
+
+    world_coords = cube.world[tuple(world_slice)][axis]
+
+    world_newaxis = [np.newaxis] * 2
+    world_newaxis.insert(axis, slice(None))
+    world_newaxis = tuple(world_newaxis)
+
+    plane_newaxis = [slice(None), slice(None)]
+    plane_newaxis.insert(axis, np.newaxis)
+    plane_newaxis = tuple(plane_newaxis)
+
+    out = np.take_along_axis(world_coords[world_newaxis],
+                             posn_plane[plane_newaxis], axis=axis)
+    out = out.squeeze()
+
+    return out
