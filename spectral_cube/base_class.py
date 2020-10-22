@@ -582,7 +582,7 @@ class MultiBeamMixinClass(object):
 
     def compute_common_beam(self, threshold=None, mask='goodbeams', warn=False, **kwargs):
         """
-        Set the common beam: `~VaryingResolutionSpectralCube.common_beam`.
+        Compute the common beam: `~VaryingResolutionSpectralCube.common_beam`.
 
         Many cubes will have a beam that varies by a small factor (less than a single
         spatial pixel area) across spectral channels. In that case, this method will
@@ -611,6 +611,11 @@ class MultiBeamMixinClass(object):
         kwargs :
             Additional kwargs are passed to the common beam algorithm.
             See `~radio_beam.Beams.common_beam`.
+
+        Returns
+        -------
+        common_beam : `~radio_beam.Beam`
+            The computed common beam.
 
         """
 
@@ -871,14 +876,6 @@ class MultiBeamMixinClass(object):
         meta['beams'] = beams
 
         return self._new_thing_with(beams=beams, meta=meta)
-
-    def with_common_beam(self, common_beam, **kwargs):
-        '''
-        Attach a new common beam to VaryingResolutionSpectralCube.
-        '''
-
-        # TODO:
-        raise NotImplementedError
 
     @abc.abstractmethod
     def _new_thing_with(self):
