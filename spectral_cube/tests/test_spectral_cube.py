@@ -706,11 +706,14 @@ class TestNumpyMethods(BaseTest):
         self.c = self.d = None
 
     @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
-                                        'median', 'argmin', 'argmax'))
+                                        'median', 'argmin', 'argmax',
+                                        'argmax_world', 'argmin_world'))
     def test_transpose(self, method, data_adv, data_vad, use_dask):
         c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
         c2, d2 = cube_and_raw(data_vad, use_dask=use_dask)
         for axis in [None, 0, 1, 2]:
+            if 'world' in method and axis == None:
+                continue
             assert_allclose(getattr(c1, method)(axis=axis),
                             getattr(c2, method)(axis=axis))
             if not use_dask:
