@@ -22,25 +22,25 @@ axis::
           moment is computed as the variance. For the actual formulas used for
           the moments, please see :class:`~spectral_cube.SpectralCube.moment`.
           For linewidth maps, see the `Linewidth maps`_ section.
-          
+
 You may also want to convert the unit of the datacube into a velocity one before
-you can obtain a genuine velocity map via a 1st moment map. So first it will be necessary to 
+you can obtain a genuine velocity map via a 1st moment map. So first it will be necessary to
 apply the :class:`~spectral_cube.SpectralCube.with_spectral_unit` method from this package with the proper attribute settings::
 
     >>> nii_cube = cube.with_spectral_unit(u.km/u.s,
                                            velocity_convention='optical',
                                            rest_value=6584*u.AA)  # doctest: +SKIP
 
-Note that the ``rest_value`` in the above code refers to the wavelength of the targeted line 
-in the 1D spectrum corresponding to the 3rd dimension. Also, since not all velocity values are relevant, 
-next we will use the :class:`~spectral_cube.SpectralCube.spectral_slab` method to slice out the chunk of 
+Note that the ``rest_value`` in the above code refers to the wavelength of the targeted line
+in the 1D spectrum corresponding to the 3rd dimension. Also, since not all velocity values are relevant,
+next we will use the :class:`~spectral_cube.SpectralCube.spectral_slab` method to slice out the chunk of
 the cube that actually contains the line::
 
     >>> nii_cube = cube.with_spectral_unit(u.km/u.s,
                                            velocity_convention='optical',
                                            rest_value=6584*u.AA)  # doctest: +SKIP
     >>> nii_subcube = nii_cube.spectral_slab(-60*u.km/u.s,-20*u.km/u.s)  # doctest: +SKIP
-    
+
 Finally, we can now generate the 1st moment map containing the expected velocity structure::
 
     >>> moment_1 = nii_subcube.moment(order=1)  # doctest: +SKIP
@@ -73,7 +73,7 @@ will create the quicklook grayscale image and save it to a png all in one go.
 
 Moment map equations
 ^^^^^^^^^^^^^^^^^^^^
- 
+
 The moments are defined below, using :math:`v` for the spectral (velocity,
 frequency, wavelength, or energy) axis and :math:`I_v` as the intensity,
 or otherwise measured flux, value in a given spectral channel.
@@ -85,7 +85,7 @@ The equation for the 0th moment is:
 The equation for the 1st moment is:
 
 .. math:: M_1 = \frac{\int v I_v  dv}{\int I_v dv} = \frac{\int v I_v dv}{M_0}
-   
+
 Higher-order moments (:math:`N\geq2`) are defined as:
 
 .. math:: M_N = \frac{\int I_v (v - M_1)^N dv}{M_0}
@@ -112,14 +112,47 @@ with either of these two commands::
     >>> fwhm_map = cube.linewidth_fwhm()  # doctest: +SKIP
 
 ``~spectral_cube.SpectralCube.linewidth_sigma`` computes a sigma linewidth map
-along the spectral axis, where sigma is the width of a Gaussian, while 
+along the spectral axis, where sigma is the width of a Gaussian, while
 ``~spectral_cube.SpectralCube.linewidth_fwhm`` computes a FWHM
 linewidth map along the same spectral axis.
 
 The linewidth maps are related to the second moment by
 
 .. math:: \sigma = \sqrt{M_2} \\
-          FWHM = \sigma \sqrt{8 ln{2}} 
+          FWHM = \sigma \sqrt{8 ln{2}}
 
 These functions return :class:`~spectral_cube.lower_dimensional_structures.Projection` instances as for the
 `Moment maps`_.
+
+Additional 2D maps
+------------------
+
+Other common 2D views of a spectral cube include the maximum/minimum along a dimension and
+the location of the maximum or the minimum along that dimension.
+
+To produce a 2D map of the maximum along a cube dimension, use `~spectral_cube.SpectralCube.max`
+
+    >>> max_map = cube.max(axis=0)  # doctest: +SKIP
+
+Along the spectral axis, this will return the peak intensity map.
+
+Similarly we can use `~spectral_cube.SpectralCube.min` to make a 2D minimum map:
+
+    >>> min_map = cube.min(axis=0)  # doctest: +SKIP
+
+The `~spectral_cube.SpectralCube.argmax` and `~spectral_cube.SpectralCube.argmin` operations will
+return the pixel positions of the max/min along that axis:
+
+    >>> argmax_map = cube.argmax(axis=0)  # doctest: +SKIP
+    >>> argmin_map = cube.argmin(axis=0)  # doctest: +SKIP
+
+These maps are useful for identifying where signal is located within the spectral cube, however,
+it is more useful to return the WCS values of those pixels for comparisons with other data sets
+or for modeling. The `~spectral_cube.SpectralCube.argmax_world` and
+`~spectral_cube.SpectralCube.argmin_world` should be used in this case:
+
+    >>> world_argmax_map = cube.argmax_world(axis=0)  # doctest: +SKIP
+    >>> world_argmin_map = cube.argmin_world(axis=0)  # doctest: +SKIP
+
+Along the spectral axis, `~spectral_cube.SpectralCube.argmax_world` creates the often used
+"velocity at peak intensity," which may also be called the "peak velocity."
