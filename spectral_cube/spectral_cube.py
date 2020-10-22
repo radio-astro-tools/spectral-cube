@@ -812,6 +812,66 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          reduce=False, projection=False,
                                          how=how, axis=axis, **kwargs)
 
+    @warn_slow
+    def argmax_world(self, axis, **kwargs):
+        '''
+        Return the spatial or spectral index of the maximum value
+        along a line of sight.
+        Parameters
+        ----------
+        axis : int
+            The axis to return the peak location along. e.g., `axis=0`
+            will return the value of the spectral axis at the peak value.
+        '''
+
+        argmax_plane = self.argmax(axis=axis, **kwargs)
+
+        # Convert to WCS coordinates.
+        out = cube_utils.world_take_along_axis(self, argmax_plane, axis)
+
+        # Compute whether the mask has any valid data along `axis`
+        collapsed_mask = self.mask.include().any(axis=axis)
+        out[~collapsed_mask] = np.NaN
+
+        # Return a Projection.
+        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+        meta = {'collapse_axis': axis}
+        meta.update(self._meta)
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                          unit=out.unit, header=self._nowcs_header)
+
+    @warn_slow
+    def argmin_world(self, axis, **kwargs):
+        '''
+        Return the spatial or spectral index of the minimum value
+        along a line of sight.
+        Parameters
+        ----------
+        axis : int
+            The axis to return the peak location along. e.g., `axis=0`
+            will return the value of the spectral axis at the peak value.
+        '''
+
+        argmin_plane = self.argmin(axis=axis, **kwargs)
+
+        # Convert to WCS coordinates.
+        out = cube_utils.world_take_along_axis(self, argmin_plane, axis)
+
+        # Compute whether the mask has any valid data along `axis`
+        collapsed_mask = self.mask.include().any(axis=axis)
+        out[~collapsed_mask] = np.NaN
+
+        # Return a Projection.
+        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+        meta = {'collapse_axis': axis}
+        meta.update(self._meta)
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                          unit=out.unit, header=self._nowcs_header)
+
     def chunked(self, chunksize=1000):
         """
         Not Implemented.
