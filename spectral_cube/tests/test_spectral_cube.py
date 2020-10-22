@@ -2044,7 +2044,7 @@ def test_beam_area_failure_strictmode(data_vda_similarbeams, method, use_dask):
             out = getattr(cube, method)(axis=0)
 
 
-def test_set_common_beam_masking(data_vda_beams, use_dask):
+def test_compute_common_beam_masking(data_vda_beams, use_dask):
 
     def compare_common_beams(beam1, beam2):
 
@@ -2067,18 +2067,18 @@ def test_set_common_beam_masking(data_vda_beams, use_dask):
 
     assert cube.goodbeams_mask.all()
 
-    cube.set_common_beam(mask='goodbeams')
+    common_beam = cube.compute_common_beam(mask='goodbeams')
 
     combeam1 = Beam(major=0.42187795051845506*u.arcsec,
                     minor=0.2656599390275613*u.arcsec,
                     pa=14.998843033892463*u.deg)
 
-    compare_common_beams(cube.common_beam, combeam1)
+    compare_common_beams(common_beam, combeam1)
 
     # None defaults to goodbeams
-    cube.set_common_beam(mask=None)
+    common_beam = cube.compute_common_beam(mask=None)
 
-    compare_common_beams(cube.common_beam, combeam1)
+    compare_common_beams(common_beam, combeam1)
 
     # 'compute' to include cube mask
 
@@ -2089,34 +2089,34 @@ def test_set_common_beam_masking(data_vda_beams, use_dask):
 
     assert (masked_cube.unmasked_channels == np.any(mask, axis=(1,2))).all()
 
-    masked_cube.set_common_beam(mask='compute')
+    masked_common_beam = masked_cube.compute_common_beam(mask='compute')
 
     combeam2 = Beam(major=0.41415008473115555*u.arcsec,
                     minor=0.2227545167078735*u.arcsec,
                     pa=39.03642613138831*u.deg)
 
-    compare_common_beams(masked_cube.common_beam, combeam2)
+    compare_common_beams(masked_common_beam, combeam2)
 
     # Last is passing a custom mask.
 
     mybeam_mask = np.ones(cube.shape[0], dtype='bool')
     mybeam_mask[0] = False
 
-    cube.set_common_beam(mask=mybeam_mask)
+    common_beam = cube.compute_common_beam(mask=mybeam_mask)
 
-    compare_common_beams(cube.common_beam, combeam2)
+    compare_common_beams(common_beam, combeam2)
 
     # Multidimensional custom mask
     mybeam_mask3d = np.ones(cube.shape, dtype='bool')
     mybeam_mask3d[0] = False
 
-    cube.set_common_beam(mask=mybeam_mask3d)
+    common_beam = cube.compute_common_beam(mask=mybeam_mask3d)
 
-    compare_common_beams(cube.common_beam, combeam2)
+    compare_common_beams(common_beam, combeam2)
 
-    # Otherwise, ValuError
+    # Otherwise, ValueError
     with pytest.raises(ValueError):
-        cube.set_common_beam(mask='FAILS')
+        common_beam = cube.compute_common_beam(mask='FAILS')
 
 def test_convolve_to_equal(data_vda, use_dask):
 
