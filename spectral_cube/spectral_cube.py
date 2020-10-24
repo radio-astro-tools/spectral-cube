@@ -824,7 +824,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             The axis to return the peak location along. e.g., `axis=0`
             will return the value of the spectral axis at the peak value.
         kwargs : dict
-             Passed to `~SpectralCube.argmax`.
+            Passed to `~SpectralCube.argmax`.
         '''
 
         argmax_plane = self.argmax(axis=axis, **kwargs)
@@ -850,13 +850,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         '''
         Return the spatial or spectral index of the minimum value
         along a line of sight.
+
         Parameters
         ----------
         axis : int
             The axis to return the peak location along. e.g., `axis=0`
             will return the value of the spectral axis at the peak value.
         kwargs : dict
-             Passed to `~SpectralCube.argmax`.
+            Passed to `~SpectralCube.argmax`.
         '''
 
         argmin_plane = self.argmin(axis=axis, **kwargs)
