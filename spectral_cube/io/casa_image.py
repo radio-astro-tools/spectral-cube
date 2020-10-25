@@ -39,7 +39,8 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
 
 
 def load_casa_image(filename, skipdata=False, memmap=True,
-                    skipvalid=False, skipcs=False, target_cls=None, use_dask=None, **kwargs):
+                    skipvalid=False, skipcs=False, target_cls=None, use_dask=None,
+                    **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can
