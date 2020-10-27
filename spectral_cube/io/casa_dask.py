@@ -260,7 +260,7 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False, target_chunksize=
     # chunkshape = determine_optimal_chunkshape(totalshape, chunkshape)
 
     if target_chunksize is None:
-        target_chunksize = 1000000
+        target_chunksize = 10000000
 
     if chunksize < target_chunksize:
 
