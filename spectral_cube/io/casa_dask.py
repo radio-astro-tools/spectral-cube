@@ -45,13 +45,14 @@ def combine_chunks(array_1d, shape, oversample):
     return result.reshape((size,), order='F')
 
 
-def combine_chunks_c(array_1d, shape, oversample):
+def combine_chunks_c(array_1d, itemsize, shape, oversample):
     if len(shape) == 3:
         shape = shape + (1,)
     if len(oversample) == 3:
         oversample = oversample + (1,)
     native_shape = [s // o for (s, o) in zip(shape, oversample)]
-    return _combine_chunks(array_1d, array_1d.dtype.itemsize, *native_shape[::-1], *oversample[::-1])
+    print(array_1d.dtype)
+    return _combine_chunks(array_1d, itemsize, *native_shape[::-1], *oversample[::-1])
 
 
 class CASAArrayWrapper:
@@ -133,11 +134,11 @@ class CASAArrayWrapper:
         else:
 
             if self._memmap:
-                data_bytes = np.fromfile(self._filename, dtype=self.uint8,
+                data_bytes = np.fromfile(self._filename, dtype=np.uint8,
                                          offset=offset,
-                                         count=self._chunksize)
+                                         count=self._chunksize * self._itemsize)
                 return (combine_chunks_c(data_bytes,
-                                         self.dtype.itemsize,
+                                         self._itemsize,
                                          shape=self._chunkshape,
                                          oversample=self._chunkoversample)
                                        .view(self.dtype)

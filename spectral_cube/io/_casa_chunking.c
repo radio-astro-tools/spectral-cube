@@ -49,12 +49,9 @@ static PyObject *_combine_chunks(PyObject *self, PyObject *args)
     PyArrayObject *input_array, *output_array;
     int ox, oy, oz, ow, nx, ny, nz, nw;
     npy_intp dims[1];
-    double *output;
-    NpyIter *iter;
-    NpyIter_IterNextFunc *iternext;
-    char **dataptr;
-    npy_intp *strideptr, *innersizeptr, index_in, index_out;
-    PyArray_Descr *dtype;
+    uint8_t *input, *output;
+    int index_in, index_out;
+    int itempos;
     int bx, by, bz, bw, i, j, k, l, i_o, j_o, k_o, l_o, i_f, j_f, k_f, l_f, itemsize;
 
     // NOTE: this function is written in a way to work with 4-d data as it can
@@ -154,8 +151,6 @@ static PyObject *_combine_chunks(PyObject *self, PyObject *args)
     }
 
     Py_END_ALLOW_THREADS
-
-    NpyIter_Deallocate(iter);
 
     /* Clean up. */
     Py_DECREF(input_array);
