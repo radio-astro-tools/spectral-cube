@@ -47,9 +47,9 @@ def combine_chunks(array_1d, shape, oversample):
 
 def combine_chunks_c(array_1d, itemsize, shape, oversample):
     if len(shape) == 3:
-        shape = shape + (1,)
+        shape = tuple(shape) + (1,)
     if len(oversample) == 3:
-        oversample = oversample + (1,)
+        oversample = tuple(oversample) + (1,)
     native_shape = [s // o for (s, o) in zip(shape, oversample)]
     print(array_1d.dtype)
     return _combine_chunks(array_1d, itemsize, *native_shape[::-1], *oversample[::-1])
