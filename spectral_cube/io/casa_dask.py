@@ -46,10 +46,12 @@ def combine_chunks(array_1d, shape, oversample):
 
 
 def combine_chunks_c(array_1d, shape, oversample):
-    size = int(np.product(shape))
+    if len(shape) == 3:
+        shape = shape + (1,)
+    if len(oversample) == 3:
+        oversample = oversample + (1,)
     native_shape = [s // o for (s, o) in zip(shape, oversample)]
-    result = _combine_chunks(array_1d, *native_shape[::-1], *oversample[::-1])
-    return result.reshape((size,), order='F')
+    return _combine_chunks(array_1d, array_1d.dtype.itemsize, *native_shape[::-1], *oversample[::-1])
 
 
 class CASAArrayWrapper:
@@ -118,6 +120,9 @@ class CASAArrayWrapper:
                 array_uint8 = np.fromfile(self._filename, dtype=np.uint8,
                                           offset=start, count=end - start)
                 array_bits = np.unpackbits(array_uint8, bitorder='little')
+                array_bits = combine_chunks_c(array_bits, 1,
+                                              shape=self._chunkshape,
+                                              oversample=self._chunkoversample)
                 chunk = array_bits[offset - start * 8:offset + self._chunksize - start * 8]
                 return chunk.reshape(self._chunkshape[::-1], order='F').T[item_in_chunk].astype(np.bool_)
             else:
@@ -128,10 +133,14 @@ class CASAArrayWrapper:
         else:
 
             if self._memmap:
-                return (combine_chunks_c(np.fromfile(self._filename, dtype=self.dtype,
-                                       offset=offset,
-                                       count=self._chunksize), shape=self._chunkshape,
-                                       oversample=self._chunkoversample)
+                data_bytes = np.fromfile(self._filename, dtype=self.uint8,
+                                         offset=offset,
+                                         count=self._chunksize)
+                return (combine_chunks_c(data_bytes,
+                                         self.dtype.itemsize,
+                                         shape=self._chunkshape,
+                                         oversample=self._chunkoversample)
+                                       .view(self.dtype)
                                        .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
             else:
                 return (self._array[chunk_number*self._chunksize:(chunk_number+1)*self._chunksize]
@@ -271,8 +280,8 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False, target_chunksize=
         chunkoversample = previous_chunkoversample = [1 for i in range(len(chunkshape))]
 
         finished = False
-        for dim in range(4):
-            factors = [f for f in range(stacks[0] + 1) if stacks[0] % f == 0]
+        for dim in range(len(chunkshape)):
+            factors = [f for f in range(stacks[dim] + 1) if stacks[dim] % f == 0]
             for factor in factors:
                 chunkoversample[dim] = factor
                 if np.product(chunkoversample) * chunksize > target_chunksize:
