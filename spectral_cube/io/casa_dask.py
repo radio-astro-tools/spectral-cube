@@ -121,10 +121,10 @@ class CASAArrayWrapper:
                 array_uint8 = np.fromfile(self._filename, dtype=np.uint8,
                                           offset=start, count=end - start)
                 array_bits = np.unpackbits(array_uint8, bitorder='little')
-                array_bits = combine_chunks_c(array_bits, 1,
+                chunk = array_bits[offset - start * 8:offset + self._chunksize - start * 8]
+                chunk = combine_chunks_c(chunk, 1,
                                               shape=self._chunkshape,
                                               oversample=self._chunkoversample)
-                chunk = array_bits[offset - start * 8:offset + self._chunksize - start * 8]
                 return chunk.reshape(self._chunkshape[::-1], order='F').T[item_in_chunk].astype(np.bool_)
             else:
                 ceil_chunksize = int(ceil(self._chunksize / 8)) * 8
