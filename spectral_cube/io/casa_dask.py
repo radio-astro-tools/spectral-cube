@@ -51,7 +51,7 @@ def combine_chunks_c(array_1d, itemsize, shape, oversample):
     if len(oversample) == 3:
         oversample = tuple(oversample) + (1,)
     native_shape = [s // o for (s, o) in zip(shape, oversample)]
-    return _combine_chunks(array_1d, itemsize, *native_shape[::-1], *oversample[::-1])
+    return _combine_chunks(np.ascontiguousarray(array_1d), itemsize, *native_shape[::-1], *oversample[::-1])
 
 
 class CASAArrayWrapper:
