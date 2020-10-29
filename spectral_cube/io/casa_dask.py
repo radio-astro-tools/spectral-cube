@@ -51,7 +51,6 @@ def combine_chunks_c(array_1d, itemsize, shape, oversample):
     if len(oversample) == 3:
         oversample = tuple(oversample) + (1,)
     native_shape = [s // o for (s, o) in zip(shape, oversample)]
-    print(array_1d.dtype)
     return _combine_chunks(array_1d, itemsize, *native_shape[::-1], *oversample[::-1])
 
 
@@ -293,9 +292,7 @@ def casa_image_dask_reader(imagename, memmap=True, mask=False, target_chunksize=
             if finished:
                 break
 
-    print('Original chunk shape: {0}'.format(chunkshape))
     chunkshape = [c * o for (c, o) in zip(chunkshape, chunkoversample)]
-    print('New chunk shape: {0}'.format(chunkshape))
 
     # Create a wrapper that takes slices and returns the appropriate CASA data
     wrapper = CASAArrayWrapper(img_fn, totalshape, chunkshape, chunkoversample=chunkoversample, dtype=dtype, itemsize=itemsize, memmap=memmap)
