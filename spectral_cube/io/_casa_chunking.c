@@ -145,6 +145,13 @@ static PyObject *_combine_chunks(PyObject *self, PyObject *args)
                             }
                         }
                     }
+
+                    if (itemsize == 1) {
+                        while(index_in % 8 != 0) {
+                            index_in++;
+                        }
+                    }
+
                 }
             }
         }

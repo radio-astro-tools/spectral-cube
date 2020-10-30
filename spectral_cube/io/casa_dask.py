@@ -114,16 +114,15 @@ class CASAArrayWrapper:
         if self._itemsize == 1:
 
             if self._memmap:
-                offset = offset // self._chunksize * ceil(self._chunksize / 8) * 8
-                start = floor(offset / 8)
-                end = ceil((offset + self._chunksize) / 8)
+                n_native = np.product(self._chunkoversample)
+                rounded_up_chunksize = ceil(self._chunksize / n_native / 8) * n_native
+                offset = offset // self._chunksize * rounded_up_chunksize
                 array_uint8 = np.fromfile(self._filename, dtype=np.uint8,
-                                          offset=start, count=end - start)
+                                          offset=offset, count=rounded_up_chunksize)
                 array_bits = np.unpackbits(array_uint8, bitorder='little')
-                chunk = array_bits[offset - start * 8:offset + self._chunksize - start * 8]
-                chunk = combine_chunks_c(chunk, 1,
+                chunk = combine_chunks_c(array_bits, 1,
                                               shape=self._chunkshape,
-                                              oversample=self._chunkoversample)
+                                              oversample=self._chunkoversample)[:self._chunksize]
                 return chunk.reshape(self._chunkshape[::-1], order='F').T[item_in_chunk].astype(np.bool_)
             else:
                 ceil_chunksize = int(ceil(self._chunksize / 8)) * 8
