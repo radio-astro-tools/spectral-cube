@@ -80,9 +80,9 @@ class CASAArrayWrapper:
         self._memmap = memmap
         if not memmap:
             if self._itemsize == 1:
-                self._array = np.unpackbits(np.fromfile(filename, dtype='uint8'), bitorder='little').astype(np.bool_)
+                self._array = np.unpackbits(np.fromfile(filename, dtype='uint8'), bitorder='little')
             else:
-                self._array = np.fromfile(filename, dtype=dtype)
+                self._array = np.fromfile(filename, dtype=np.uint8)
 
     def __getitem__(self, item):
 
@@ -120,14 +120,14 @@ class CASAArrayWrapper:
                 array_uint8 = np.fromfile(self._filename, dtype=np.uint8,
                                           offset=offset, count=rounded_up_chunksize)
                 array_bits = np.unpackbits(array_uint8, bitorder='little')
-                chunk = combine_chunks_c(array_bits, 1,
-                                              shape=self._chunkshape,
-                                              oversample=self._chunkoversample)[:self._chunksize]
-                return chunk.reshape(self._chunkshape[::-1], order='F').T[item_in_chunk].astype(np.bool_)
             else:
-                ceil_chunksize = int(ceil(self._chunksize / 8)) * 8
-                return (self._array[chunk_number*ceil_chunksize:(chunk_number+1)*ceil_chunksize][:self._chunksize]
-                            .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
+                array_bits = self._array[offset * 8: (offset + self._chunksize) * 8]
+
+            chunk = combine_chunks_c(array_bits, 1,
+                                            shape=self._chunkshape,
+                                            oversample=self._chunkoversample)[:self._chunksize]
+
+            return chunk.reshape(self._chunkshape[::-1], order='F').T[item_in_chunk].astype(np.bool_)
 
         else:
 
@@ -135,15 +135,15 @@ class CASAArrayWrapper:
                 data_bytes = np.fromfile(self._filename, dtype=np.uint8,
                                          offset=offset,
                                          count=self._chunksize * self._itemsize)
-                return (combine_chunks_c(data_bytes,
-                                         self._itemsize,
-                                         shape=self._chunkshape,
-                                         oversample=self._chunkoversample)
-                                       .view(self.dtype)
-                                       .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
             else:
-                return (self._array[chunk_number*self._chunksize:(chunk_number+1)*self._chunksize]
-                            .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
+                data_bytes = self._array[chunk_number*self._chunksize * self._itemsize:(chunk_number+1)*self._chunksize * self._itemsize]
+
+            return (combine_chunks_c(data_bytes,
+                                        self._itemsize,
+                                        shape=self._chunkshape,
+                                        oversample=self._chunkoversample)
+                                    .view(self.dtype)
+                                    .reshape(self._chunkshape[::-1], order='F').T[item_in_chunk])
 
 
 def from_array_fast(arrays, asarray=False, lock=False):

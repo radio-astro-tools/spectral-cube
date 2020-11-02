@@ -76,7 +76,7 @@ def read_iposition(f):
 
     nelem = read_int32(f)
 
-    return np.array([read_int32(f) for i in range(nelem)])
+    return np.array([read_int32(f) for i in range(nelem)], dtype=int)
 
 
 ARRAY_ITEM_READERS = {
@@ -84,7 +84,7 @@ ARRAY_ITEM_READERS = {
     'double': ('double', read_float64, np.float64),
     'dcomplex': ('void', read_complex128, np.complex128),
     'string': ('String', read_string, '<U16'),
-    'int': ('Int', read_int32, np.int32)
+    'int': ('Int', read_int32, int)
 }
 
 

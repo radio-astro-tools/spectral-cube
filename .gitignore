@@ -58,3 +58,4 @@ docs/api
 # Other generated stuff
 */version.py
 */cython_version.py
+.coverage*
