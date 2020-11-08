@@ -8,11 +8,10 @@ import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
-
 from astropy import units as u
+from casa_formats_io import coordsys_to_astropy_wcs
 
 from ..io.casa_masks import make_casa_mask
-from ..io.casa_wcs import wcs_casa2astropy
 from .. import StokesSpectralCube, BooleanArrayMask
 
 from .. import SpectralCube, VaryingResolutionSpectralCube
@@ -232,7 +231,7 @@ def test_casa_mask(data_adv, tmp_path):
     # Test WCS info
 
     # Convert back to an astropy wcs object so transforms are dealt with.
-    casa_wcs = wcs_casa2astropy(coords.torecord())
+    casa_wcs = coordsys_to_astropy_wcs(coords.torecord())
     header = casa_wcs.to_header()  # Invokes transform
 
     # Compare some basic properties EXCLUDING the spectral axis

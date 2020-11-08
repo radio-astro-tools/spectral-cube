@@ -11,9 +11,7 @@ from .. import cube_utils
 from .. utils import BeamWarning
 from .. import wcs_utils
 
-from .casa_low_level_io import getdesc
-from .casa_wcs import wcs_casa2astropy
-from .casa_dask import casa_image_dask_reader
+from casa_formats_io import getdesc, coordsys_to_astropy_wcs, image_to_dask
 
 # Read and write from a CASA image. This has a few
 # complications. First, by default CASA does not return the
@@ -59,14 +57,14 @@ def load_casa_image(filename, skipdata=False, memmap=True,
 
     # read in the data
     if not skipdata:
-        data = casa_image_dask_reader(filename, memmap=memmap)
+        data = image_to_dask(filename, memmap=memmap)
 
     # CASA stores validity of data as a mask
     if skipvalid:
         valid = None
     else:
         try:
-            valid = casa_image_dask_reader(filename, memmap=memmap, mask=True)
+            valid = image_to_dask(filename, memmap=memmap, mask=True)
         except FileNotFoundError:
             valid = None
 
@@ -95,7 +93,7 @@ def load_casa_image(filename, skipdata=False, memmap=True,
     else:
         beam_ = {}
 
-    wcs = wcs_casa2astropy(casa_cs)
+    wcs = coordsys_to_astropy_wcs(casa_cs)
 
     del casa_cs
 
