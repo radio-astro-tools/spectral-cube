@@ -20,6 +20,7 @@ This package has the following dependencies:
 * `zarr <https://zarr.readthedocs.io/en/stable/>`_ and `fsspec <https://pypi.org/project/fsspec/>`_,
   used for storing computations to disk when using the dask-enabled classes.
 * `six <http://pypi.python.org/pypi/six/>`_
+* `casa-formats-io <https://pypi.org/project/casa-formats-io>`_
 
 Installation
 ------------
