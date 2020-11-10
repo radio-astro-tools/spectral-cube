@@ -282,6 +282,32 @@ def data_vda_beams(tmp_path):
     return tmp_path / 'vda_beams.fits'
 
 
+@pytest.fixture
+def data_vda_beams_image(tmp_path):
+    d, h = prepare_adv_data()
+    d, h = transpose(d, h, [2, 0, 1])
+    d, h = transpose(d, h, [2, 1, 0])
+    h['BUNIT'] = ' Jy / beam '
+    del h['BMAJ'], h['BMIN'], h['BPA']
+    beams = prepare_4_beams()
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto(tmp_path / 'vda_beams.fits')
+    from casatools import image
+    ia = image()
+    ia.fromfits(infile=tmp_path / 'vda_beams.fits',
+                outfile=tmp_path / 'vda_beams.image',
+                overwrite=True)
+    for (bmaj, bmin, bpa, chan, pol) in beams.data:
+        ia.setrestoringbeam(major={'unit': 'arcsec', 'value': bmaj},
+                            minor={'unit': 'arcsec', 'value': bmin},
+                            pa={'unit': 'deg', 'value': bpa},
+                            channel=chan,
+                            polarization=pol)
+    ia.close()
+    return tmp_path / 'vda_beams.image'
+
+
 def prepare_255_header():
     # make a version with spatial pixels
     h = fits.header.Header.fromtextfile(HEADER_FILENAME)

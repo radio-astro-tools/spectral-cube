@@ -588,11 +588,14 @@ class MultiBeamMixinClass(object):
                 beam_mask = da.any(da.logical_and(self._mask_include,
                                                   self.goodbeams_mask[:, None, None]),
                                    axis=(1, 2))
-                beam_mask = self._compute(beam_mask)
-            else:
+                # da.any appears to return an object dtype instead of a bool
+                beam_mask = self._compute(beam_mask).astype('bool')
+            elif self.mask is not None:
                 beam_mask = np.any(np.logical_and(self.mask.include(),
                                                   self.goodbeams_mask[:, None, None]),
                                    axis=(1, 2))
+            else:
+                beam_mask = self.goodbeams_mask
         else:
             if mask.ndim > 1:
                 beam_mask = np.logical_and(mask, self.goodbeams_mask[:, None, None])
@@ -725,11 +728,20 @@ class MultiBeamMixinClass(object):
                                             criteria=criteria,
                                             mid_value=mid_value)
 
-        includemask = BooleanArrayMask(goodbeams[:,None,None],
+        includemask = BooleanArrayMask(goodbeams[:, None, None],
                                        self._wcs,
                                        shape=self._data.shape)
 
-        return self._new_thing_with(mask=np.bitwise_and(self.mask, includemask),
+        use_dask = isinstance(self._data, da.Array)
+        if use_dask:
+            newmask = da.logical_and(self._mask_include,
+                                     includemask)
+        elif self.mask is None:
+            newmask = includemask
+        else:
+            newmask = np.bitwise_and(self.mask, includemask)
+
+        return self._new_thing_with(mask=newmask,
                                     beam_threshold=threshold,
                                     goodbeams_mask=np.bitwise_and(self.goodbeams_mask, goodbeams),
                                    )

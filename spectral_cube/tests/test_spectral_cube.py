@@ -1880,13 +1880,22 @@ def test_varyres_moment_logic_issue364(data_vda_beams, use_dask):
     assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
-def test_mask_bad_beams(data_vda_beams, use_dask):
+@pytest.mark.skipif('not casaOK')
+@pytest.mark.parametrize('filename', ['data_vda_beams',
+                                      'data_vda_beams_image'],
+                         indirect=['filename'])
+def test_mask_bad_beams(filename, use_dask):
     """
     Prior to #543, this tested two different scenarios of beam masking.  After
     that, the tests got mucked up because we can no longer have minor>major in
     the beams.
     """
-    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+    if 'image' in str(filename) and not use_dask:
+        pytest.skip()
+
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
+
+    assert isinstance(cube, base_class.MultiBeamMixinClass)
 
     # make sure all of the beams are initially good (finite)
     assert np.all(cube.goodbeams_mask)
@@ -2378,7 +2387,7 @@ def test_mask_none(use_dask):
 
 
 @pytest.mark.parametrize('filename', ['data_vda', 'data_vda_beams'],
-                            indirect=['filename'])
+                         indirect=['filename'])
 def test_mask_channels_preserve_mask(filename, use_dask):
 
     # Regression test for a bug that caused the mask to not be preserved.
