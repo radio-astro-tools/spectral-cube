@@ -35,9 +35,12 @@ matrix:
           env: TOXENV='py36-test-casa'
           name: "Python 3.6 with minimal dependencies and CASA"
 
-        - python: 3.6
-          env: TOXENV='py36-test-casa-dev'
-          name: "Python 3.6, CASA, and dev versions of key dependencies"
+        # NOTE: The following does not work because astropy dev only supports
+        #       Python 3.7 and above. Once CASA supports Python 3.7 this can
+        #       be uncommented and the Python version updated.
+        # - python: 3.6
+        #   env: TOXENV='py36-test-casa-dev'
+        #   name: "Python 3.6, CASA, and dev versions of key dependencies"
 
         - python: 3.8
           env: TOXENV='py38-test-novis-dev'
