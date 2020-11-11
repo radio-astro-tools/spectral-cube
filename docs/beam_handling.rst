@@ -61,7 +61,7 @@ convert from Jy / beam to K::
 
     >>> vrsc_cube_K = vrsc_cube.to(u.K)  # doctest: +SKIP
 
-``VaryingResolutionSpectralCube `` will use a different beam and frequency for each plane.
+``VaryingResolutionSpectralCube`` will use a different beam and frequency for each plane.
 
 Handling variations in the beams is often a source of difficulty. Some spectral
 operations (e.g., moment maps) require a common resolution. However, a few channels
