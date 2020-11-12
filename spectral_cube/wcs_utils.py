@@ -483,16 +483,16 @@ def diagonal_wcs_to_cdelt(mywcs):
     return mywcs
 
 
-def is_pixel_axis_to_wcs_correlated(cube, axis):
+def is_pixel_axis_to_wcs_correlated(mywcs, axis):
     """
     Check if the chosen pixel axis correlates to other WCS axes. This tests
     whether the pixel axis is correlated only to 1 WCS axis and can be
     considered independent of the others.
     """
 
-    axis_corr_matrix = cube.wcs.axis_correlation_matrix
+    axis_corr_matrix = mywcs.axis_correlation_matrix
 
-    wcs_axis = cube.ndim - (axis + 1)
+    wcs_axis = mywcs.world_n_dim - (axis + 1)
 
     wcs_axis_correlations = axis_corr_matrix[:, wcs_axis]
 

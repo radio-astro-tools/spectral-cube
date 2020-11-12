@@ -51,7 +51,8 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
-                    BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning)
+                    BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning,
+                    WCSCelestialError)
 from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
                             doppler_beta, doppler_gamma, doppler_z)
 from .io.core import SpectralCubeRead, SpectralCubeWrite
@@ -827,7 +828,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to `~SpectralCube.argmax`.
         '''
 
-        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs):
+        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs, axis):
             raise WCSCelestialError("argmax_world requires the celestial axes"
                                     " to be aligned along image axes.")
 
@@ -864,7 +865,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to `~SpectralCube.argmin`.
         '''
 
-        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs):
+        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs, axis):
             raise WCSCelestialError("argmin_world requires the celestial axes"
                                     " to be aligned along image axes.")
 
