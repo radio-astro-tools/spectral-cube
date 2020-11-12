@@ -492,11 +492,14 @@ def is_pixel_axis_to_wcs_correlated(mywcs, axis):
 
     axis_corr_matrix = mywcs.axis_correlation_matrix
 
+    # Map from numpy axis to WCS axis
     wcs_axis = mywcs.world_n_dim - (axis + 1)
 
+    # Grab the row along the given spatial axis. This slice is along the WCS axes
     wcs_axis_correlations = axis_corr_matrix[:, wcs_axis]
 
-    # The trace is always one. Correlations with other axes will give
+    # The image axis should always be correlated to at least 1 WCS axis.
+    # i.e., the diagonal term is one in the matrix. Correlations with other axes will give
     # a sum > 1
     if wcs_axis_correlations.sum() > 1:
         return True
