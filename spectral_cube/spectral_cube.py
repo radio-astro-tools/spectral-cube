@@ -861,11 +861,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             The axis to return the peak location along. e.g., `axis=0`
             will return the value of the spectral axis at the peak value.
         kwargs : dict
-            Passed to `~SpectralCube.argmax`.
+            Passed to `~SpectralCube.argmin`.
         '''
 
         if is_proj_plane_distorted(self.wcs):
-            raise WCSCelestialError("argmax_world requires the celestial axes"
+            raise WCSCelestialError("argmin_world requires the celestial axes"
                                     " to be aligned along image axes.")
 
         argmin_plane = self.argmin(axis=axis, **kwargs)
