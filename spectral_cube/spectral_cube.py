@@ -827,6 +827,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to `~SpectralCube.argmax`.
         '''
 
+        if is_proj_plane_distorted(self.wcs):
+            raise WCSCelestialError("argmax_world requires the celestial axes"
+                                    " to be aligned along image axes.")
+
         argmax_plane = self.argmax(axis=axis, **kwargs)
 
         # Convert to WCS coordinates.
@@ -859,6 +863,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         kwargs : dict
             Passed to `~SpectralCube.argmax`.
         '''
+
+        if is_proj_plane_distorted(self.wcs):
+            raise WCSCelestialError("argmax_world requires the celestial axes"
+                                    " to be aligned along image axes.")
 
         argmin_plane = self.argmin(axis=axis, **kwargs)
 
