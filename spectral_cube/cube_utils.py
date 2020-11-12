@@ -12,9 +12,10 @@ import dask.array as da
 import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
-from .utils import FITSWarning, AstropyUserWarning
+from .utils import FITSWarning, AstropyUserWarning, WCSCelestialError
 from astropy import log
 from astropy.io import fits
+from astropy.wcs.utils import is_proj_plane_distorted
 from astropy.io.fits import BinTableHDU, Column
 from astropy import units as u
 import itertools
@@ -510,6 +511,11 @@ def world_take_along_axis(cube, position_plane, axis):
     out : astropy.units.Quantity
         2D array of WCS coordinates.
     '''
+
+    if is_proj_plane_distorted(cube.wcs):
+        raise WCSCelestialError("world_take_along_axis requires the celestial axes"
+                                " to be aligned along image axes.")
+
     # Get 1D slice along that axis.
     world_slice = [0, 0]
     world_slice.insert(axis, slice(None))
