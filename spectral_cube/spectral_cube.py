@@ -827,7 +827,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to `~SpectralCube.argmax`.
         '''
 
-        if is_proj_plane_distorted(self.wcs):
+        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs):
             raise WCSCelestialError("argmax_world requires the celestial axes"
                                     " to be aligned along image axes.")
 
@@ -864,7 +864,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to `~SpectralCube.argmin`.
         '''
 
-        if is_proj_plane_distorted(self.wcs):
+        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs):
             raise WCSCelestialError("argmin_world requires the celestial axes"
                                     " to be aligned along image axes.")
 

@@ -512,7 +512,7 @@ def world_take_along_axis(cube, position_plane, axis):
         2D array of WCS coordinates.
     '''
 
-    if is_proj_plane_distorted(cube.wcs):
+    if wcs_utils.is_pixel_axis_to_wcs_correlated(cube.wcs):
         raise WCSCelestialError("world_take_along_axis requires the celestial axes"
                                 " to be aligned along image axes.")
 

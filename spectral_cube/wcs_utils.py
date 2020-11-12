@@ -483,6 +483,27 @@ def diagonal_wcs_to_cdelt(mywcs):
     return mywcs
 
 
+def is_pixel_axis_to_wcs_correlated(cube, axis):
+    """
+    Check if the chosen pixel axis correlates to other WCS axes. This tests
+    whether the pixel axis is correlated only to 1 WCS axis and can be
+    considered independent of the others.
+    """
+
+    axis_corr_matrix = cube.wcs.axis_correlation_matrix
+
+    wcs_axis = cube.ndim - (axis + 1)
+
+    wcs_axis_correlations = axis_corr_matrix[:, wcs_axis]
+
+    # The trace is always one. Correlations with other axes will give
+    # a sum > 1
+    if wcs_axis_correlations.sum() > 1:
+        return True
+
+    return False
+
+
 def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
     '''
     Given low and high cuts, return the pixel coordinates for a rectangular
