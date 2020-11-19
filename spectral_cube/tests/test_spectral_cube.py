@@ -738,7 +738,7 @@ class TestNumpyMethods(BaseTest):
         for axis in [1, 2]:
 
             with pytest.raises(utils.WCSCelestialError,
-                               match=re.escape("world_take_along_axis requires the celestial axes")):
+                               match=re.escape(f"{method} requires the celestial axes")):
 
                 assert_allclose(getattr(c1, method)(axis=axis),
                                 getattr(c2, method)(axis=axis))
