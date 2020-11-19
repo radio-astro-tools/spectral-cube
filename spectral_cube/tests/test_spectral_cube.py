@@ -91,14 +91,14 @@ def cube_and_raw(filename, use_dask=None):
     if os.path.splitext(p)[-1] == '.fits':
         with fits.open(p) as hdulist:
             d = hdulist[0].data
-        c = SpectralCube.read(p, format='fits', mode='readonly', use_dask=use_dask)
+        c = SpectralCube.read(p, format='fits', mode='readonly', use_dask=use_dask, compute_commonbeam=True)
     elif os.path.splitext(p)[-1] == '.image':
         ia.open(p)
         d = ia.getchunk()
         ia.unlock()
         ia.close()
         ia.done()
-        c = SpectralCube.read(p, format='casa_image', use_dask=use_dask)
+        c = SpectralCube.read(p, format='casa_image', use_dask=use_dask, compute_commonbeam=True)
     else:
         raise ValueError("Unsupported filetype")
 
@@ -1724,10 +1724,40 @@ def test_varyres_moment(data_vda_beams, use_dask):
     # the beams are very different, but for this test we don't care
     cube.beam_threshold = 1.0
 
-    with pytest.warns(UserWarning, match="Arithmetic beam averaging is being performed"):
+    with pytest.warns(UserWarning, match="Small beam differences are being ignored in this operation."):
         m0 = cube.moment0()
 
-    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
+    # Common beam differs significantly from the average.
+    # We should get a ~0.422"x0.266" beam with PA=15.
+    # Exact values don't matter too much here; just check we return a common beam instead
+    # of the avg.
+    assert_quantity_allclose(m0.meta['beam'].major, 0.422*u.arcsec, rtol=0.005)
+    assert_quantity_allclose(m0.meta['beam'].minor, 0.266*u.arcsec, rtol=0.005)
+    assert_quantity_allclose(m0.meta['beam'].pa, 15*u.deg, rtol=0.005)
+
+
+def test_varyres_moment_logic_issue364(data_vda_beams, use_dask):
+    """ regression test for issue364 """
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    assert isinstance(cube, VaryingResolutionSpectralCube)
+
+    # the beams are very different, but for this test we don't care
+    cube.beam_threshold = 1.0
+
+    with pytest.warns(UserWarning, match="Small beam differences are being ignored in this operation."):
+        # note that cube.moment(order=0) is different from cube.moment0()
+        # because cube.moment0() calls cube.moment(order=0, axis=(whatever)),
+        # but cube.moment doesn't necessarily have to receive the axis kwarg
+        m0 = cube.moment(order=0)
+
+    # Common beam differs significantly from the average.
+    # We should get a ~0.422"x0.266" beam with PA=15.
+    # Exact values don't matter too much here; just check we return a common beam instead
+    # of the avg.
+    assert_quantity_allclose(m0.meta['beam'].major, 0.422*u.arcsec, rtol=0.005)
+    assert_quantity_allclose(m0.meta['beam'].minor, 0.266*u.arcsec, rtol=0.005)
+    assert_quantity_allclose(m0.meta['beam'].pa, 15*u.deg, rtol=0.005)
 
 
 def test_varyres_unitconversion_roundtrip(data_vda_beams, use_dask):
@@ -1870,14 +1900,11 @@ def test_varyres_moment_logic_issue364(data_vda_beams, use_dask):
     # the beams are very different, but for this test we don't care
     cube.beam_threshold = 1.0
 
-    with pytest.warns(UserWarning, match="Arithmetic beam averaging is being performed"):
+    with pytest.warns(UserWarning, match="Small beam differences are being ignored in this operation"):
         # note that cube.moment(order=0) is different from cube.moment0()
         # because cube.moment0() calls cube.moment(order=0, axis=(whatever)),
         # but cube.moment doesn't necessarily have to receive the axis kwarg
         m0 = cube.moment(order=0)
-
-    # note that this is just a sanity check; one should never use the average beam
-    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
 @pytest.mark.skipif('not casaOK')
@@ -1902,8 +1929,17 @@ def test_mask_bad_beams(filename, use_dask):
     # make sure cropping the cube maintains the mask
     assert np.all(cube[:3].goodbeams_mask)
 
+    # Test all beams allowed.
+    masked_cube = cube.with_bad_beams_masked(threshold=1.,
+                                          reference_beam=Beam(0.3*u.arcsec,
+                                                              0.2*u.arcsec,
+                                                              60*u.deg))
+
+    assert np.all(masked_cube.mask.include()[:,0,0] == [True,True,True,True])
+    assert np.all(masked_cube.goodbeams_mask == [True,True,True,True])
+
     # middle two beams have same area
-    masked_cube = cube.mask_out_bad_beams(0.01,
+    masked_cube = cube.with_bad_beams_masked(threshold=1e-6,
                                           reference_beam=Beam(0.3*u.arcsec,
                                                               0.2*u.arcsec,
                                                               60*u.deg))
@@ -1911,17 +1947,173 @@ def test_mask_bad_beams(filename, use_dask):
     assert np.all(masked_cube.mask.include()[:,0,0] == [False,True,True,False])
     assert np.all(masked_cube.goodbeams_mask == [False,True,True,False])
 
-    mean = masked_cube.mean(axis=0)
-    assert np.all(mean == cube[1:3,:,:].mean(axis=0))
+    # Test if masked_cube.beam_threshold is used when no threshold is given
+    # when the reference cube is given, it equals the beam for channels 1, 2
+    cube.beam_threshold = 1e-6
+    masked_cube = cube.with_bad_beams_masked(reference_beam=Beam(0.3*u.arcsec,
+                                                              0.2*u.arcsec,
+                                                              60*u.deg))
+
+    assert np.all(masked_cube.goodbeams_mask == [False,True,True,False])
+
+    # The old `mask_out_bad_beams` should give the same output, but with a DeprecationWarning
+    with pytest.warns(DeprecationWarning):
+
+        masked_cube_depcheck = cube.mask_out_bad_beams(reference_beam=Beam(0.3*u.arcsec,
+                                                                           0.2*u.arcsec,
+                                                                           60*u.deg))
+
+    assert np.all(masked_cube_depcheck.goodbeams_mask == masked_cube.goodbeams_mask)
+
+    # If no reference beam is given, a very strict threshold will mask
+    # everything:
+    assert cube.beam_threshold == 1e-6
+    masked_cube = cube.with_bad_beams_masked()
+
+    assert not masked_cube.mask.include().any()
+    assert not masked_cube.goodbeams_mask.any()
 
 
-    #doesn't test anything any more
-    # masked_cube2 = cube.mask_out_bad_beams(0.5,)
+spectral_ops = ('sum', 'min', 'max', 'std', 'mad_std',
+                'median', 'argmin', 'argmax',
+                'moment', 'moment0', 'moment1',
+                'moment2', 'linewidth_sigma', 'linewidth_fwhm')
 
-    # mean2 = masked_cube2.mean(axis=0)
-    # assert np.all(mean2 == (cube[2,:,:]+cube[1,:,:])/2)
-    # assert np.all(masked_cube2.goodbeams_mask == [False,True,True,False])
+@pytest.mark.parametrize('method', spectral_ops)
+def test_beam_area_failure(data_vda_beams, method, use_dask):
+    '''
+    Spectral operations should fail since the beams vary from the common beam.
 
+    **Note**: Change when an intermediate dask convolve operation is triggered automatically.
+    '''
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    # Run a range of operations that should be checking for the beam areas
+
+    with pytest.raises(ValueError,
+                       match="Convolve to a common beam before applying any spectral operation"):
+        if 'linewidth' in method:
+            # Doesn't take axis, always in spectral direction
+            out = getattr(cube, method)()
+        else:
+            out = getattr(cube, method)(axis=0)
+
+
+@pytest.mark.parametrize('method', spectral_ops)
+def test_beam_area_similar(data_vda_similarbeams, method, use_dask):
+    cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
+
+    # The beam areas doffer by <0.01. This operation is allowed.
+    if 'linewidth' in method:
+        # Doesn't take axis, always in spectral direction
+        out = getattr(cube, method)()
+    else:
+        out = getattr(cube, method)(axis=0)
+
+
+def test_deprecated_average_beams(data_vda_beams, use_dask):
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    with pytest.warns(DeprecationWarning):
+        cube.average_beams(1.0)
+
+
+@pytest.mark.parametrize('method', spectral_ops)
+def test_beam_area_failure_strictmode(data_vda_similarbeams, method, use_dask):
+    '''
+    Spectral operations should fail since the beams vary from the common beam.
+
+    **Note**: Change when an intermediate dask convolve operation is triggered automatically.
+    '''
+    cube, data = cube_and_raw(data_vda_similarbeams, use_dask=use_dask)
+
+    cube.strict_beam_match = True
+
+    # Run a range of operations that should be checking for the beam areas
+    # Match for the specific message about strict beam mode
+    with pytest.raises(ValueError,
+                       match="Strict beam match mode is enabled"):
+        if 'linewidth' in method:
+            # Doesn't take axis, always in spectral direction
+            out = getattr(cube, method)()
+        else:
+            out = getattr(cube, method)(axis=0)
+
+
+def test_compute_common_beam_masking(data_vda_beams, use_dask):
+
+    def compare_common_beams(beam1, beam2):
+
+        np.testing.assert_allclose(beam1.major.to(u.arcsec).value,
+                                   beam2.major.to(u.arcsec).value,
+                                   atol=1e-5)
+
+        np.testing.assert_allclose(beam1.minor.to(u.arcsec).value,
+                                   beam2.minor.to(u.arcsec).value,
+                                   atol=1e-5)
+
+        np.testing.assert_allclose(beam1.pa.to(u.deg).value,
+                                   beam2.pa.to(u.deg).value,
+                                   atol=1e-5)
+
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    # goodbeams (default) == None
+
+    assert cube.goodbeams_mask.all()
+
+    common_beam = cube.compute_common_beam(mask='goodbeams')
+
+    combeam1 = Beam(major=0.42187795051845506*u.arcsec,
+                    minor=0.2656599390275613*u.arcsec,
+                    pa=14.998843033892463*u.deg)
+
+    compare_common_beams(common_beam, combeam1)
+
+    # None defaults to goodbeams
+    common_beam = cube.compute_common_beam(mask=None)
+
+    compare_common_beams(common_beam, combeam1)
+
+    # 'compute' to include cube mask
+
+    # Assign the cube mask to not include the first channel
+    mask = np.ones(cube.shape, dtype='bool')
+    mask[0] = False
+    masked_cube = cube.with_mask(mask)
+
+    assert (masked_cube.unmasked_channels == np.any(mask, axis=(1,2))).all()
+
+    masked_common_beam = masked_cube.compute_common_beam(mask='compute')
+
+    combeam2 = Beam(major=0.41415008473115555*u.arcsec,
+                    minor=0.2227545167078735*u.arcsec,
+                    pa=39.03642613138831*u.deg)
+
+    compare_common_beams(masked_common_beam, combeam2)
+
+    # Last is passing a custom mask.
+
+    mybeam_mask = np.ones(cube.shape[0], dtype='bool')
+    mybeam_mask[0] = False
+
+    common_beam = cube.compute_common_beam(mask=mybeam_mask)
+
+    compare_common_beams(common_beam, combeam2)
+
+    # Multidimensional custom mask
+    mybeam_mask3d = np.ones(cube.shape, dtype='bool')
+    mybeam_mask3d[0] = False
+
+    common_beam = cube.compute_common_beam(mask=mybeam_mask3d)
+
+    compare_common_beams(common_beam, combeam2)
+
+    # Otherwise, ValueError
+    with pytest.raises(ValueError):
+        common_beam = cube.compute_common_beam(mask='FAILS')
 
 def test_convolve_to_equal(data_vda, use_dask):
 
@@ -1959,8 +2151,9 @@ def test_convolve_to_with_bad_beams(data_vda_beams, use_dask):
 
     convolved = cube.convolve_to(Beam(0.5*u.arcsec))
 
+    from radio_beam.utils import BeamError
 
-    with pytest.raises(ValueError,
+    with pytest.raises((ValueError, BeamError),
                        match="Beam could not be deconvolved"):
         # should not work: biggest beam is 0.4"
         convolved = cube.convolve_to(Beam(0.35*u.arcsec))
@@ -2345,7 +2538,7 @@ def test_varyres_mask(data_vda_beams, use_dask):
     goodbeams = cube.identify_bad_beams(0.5, )
     assert all(goodbeams == np.array([False, True, True, True]))
 
-    mcube = cube.mask_out_bad_beams(0.5)
+    mcube = cube.with_bad_beams_masked(0.5)
     assert hasattr(mcube, '_goodbeams_mask')
     assert all(mcube.goodbeams_mask == goodbeams)
     assert len(mcube.beams) == 3
@@ -2406,6 +2599,27 @@ def test_mask_channels_preserve_mask(filename, use_dask):
     expected_mask = mask.copy()
     expected_mask[::2] = False
     np.testing.assert_equal(cube.mask.include(), expected_mask)
+
+
+@pytest.mark.parametrize('filename', ['data_vda', 'data_vda_beams'],
+                         indirect=['filename'])
+def test_unmasked_channels(filename, use_dask):
+
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
+
+    # Add a mask to the cube
+    mask = np.ones(cube.shape, dtype=bool)
+    mask[0] = False
+    cube = cube.with_mask(mask)
+
+    np.testing.assert_equal(cube.unmasked_channels, mask.any(axis=(1, 2)))
+
+    # Mask by channels
+    mask_channels = np.array([False, True, False, True])
+
+    cube = cube.mask_channels(mask_channels)
+
+    np.testing.assert_equal(cube.unmasked_channels, mask_channels)
 
 
 def test_minimal_subcube(use_dask):

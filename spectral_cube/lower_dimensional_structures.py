@@ -250,7 +250,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         if mask is None:
             mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
                                     self._wcs, shape=self.value.shape)
-        elif isinstance(mask, np.ndarray):
+        elif isinstance(mask, np.ndarray) or isinstance(mask, da.Array):
             if mask.shape != self.value.shape:
                 raise ValueError("Mask shape must match the {0} shape."
                                  .format(self.__class__.__name__)

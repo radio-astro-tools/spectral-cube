@@ -346,6 +346,13 @@ class SpectralAxisMixinClass(object):
         # spectral objects should be forced to implement this
         raise NotImplementedError
 
+    @property
+    @cached
+    def unmasked_channels(self):
+        if isinstance(self._data, da.Array):
+            return self._compute(da.any(self._mask_include, axis=(1, 2)))
+
+        return self.mask.include().any(axis=(1, 2))
 
 class MaskableArrayMixinClass(object):
     """
@@ -498,7 +505,7 @@ class MultiBeamMixinClass(object):
 
         self._goodbeams_mask = value
 
-    def identify_bad_beams(self, threshold, reference_beam=None,
+    def identify_bad_beams(self, threshold=None, reference_beam=None,
                            criteria=['sr','major','minor'],
                            mid_value=np.nanmedian):
         """
@@ -507,8 +514,10 @@ class MultiBeamMixinClass(object):
 
         Parameters
         ----------
-        threshold : float
-            Fractional threshold
+        threshold : float, optional
+            The fractional difference between beam major, minor, and position angle to
+            permit. The default is to `~SpectralCube.beam_threshold`, which is initially set
+            to 0.01 (i.e., <1% changes in the beam area are allowed).
         reference_beam : Beam
             A beam to use as the reference.  If unspecified, ``mid_value`` will
             be used to select a middle beam
@@ -524,6 +533,9 @@ class MultiBeamMixinClass(object):
         includemask : np.array
             A boolean array where ``True`` indicates the good beams
         """
+
+        if threshold is None:
+            threshold = self.beam_threshold
 
         includemask = np.ones(self.unmasked_beams.size, dtype='bool')
 
@@ -541,6 +553,8 @@ class MultiBeamMixinClass(object):
                                   pa=mid_value(props['pa'])
                                  )
 
+        # Change to deviation in areas with respect to a pixel area.
+
         for prop in criteria:
             val = props[prop]
             mid = getattr(reference_beam, prop)
@@ -553,75 +567,124 @@ class MultiBeamMixinClass(object):
 
         return includemask
 
-    def average_beams(self, threshold, mask='compute', warn=False):
+    def average_beams(self, threshold, mask='goodbeams', warn=False):
+        '''
+        This is now deprecated. See `~VaryingResolutionSpectralCube.compute_common_beam.`.
+        '''
+
+        warnings.warn("average_beams is deprecated and its functionality has been removed. "
+                      "This is because beam averaging is not the correct operation. Enable"
+                      " `compute_commonbeam=True` in `~VaryingResolutionSpectralCube.read`. The "
+                      "common beam can then be accessed with `cube.common_beam`.",
+                      DeprecationWarning)
+
+        return self.compute_common_beam(threshold, mask=mask, warn=warn)
+
+    def compute_common_beam(self, threshold=None, mask='goodbeams', warn=False, **kwargs):
         """
-        Average the beams.  Note that this operation only makes sense in
-        limited contexts!  Generally one would want to convolve all the beams
-        to a common shape, but this method is meant to handle the "simple" case
-        when all your beams are the same to within some small factor and can
-        therefore be arithmetically averaged.
+        Compute the common beam: `~VaryingResolutionSpectralCube.common_beam`.
+
+        Many cubes will have a beam that varies by a small factor (less than a single
+        spatial pixel area) across spectral channels. In that case, this method will
+        handle avoid spatially-convolving to an exact common beam, which is an expensive
+        operation. To avoid this behaviour, a cube should be convolved to a common beam
+        prior to applying further operations.
+
+        This function also accounts for masked channels and will not include those beams
+        in the common beam calculation. See the description for the `mask` keyword below.
 
         Parameters
         ----------
-        threshold : float
+        threshold : float, optional
             The fractional difference between beam major, minor, and pa to
-            permit
-        mask : 'compute', None, or boolean array
+            permit. The default is to `~SpectralCube.beam_threshold`, which is initially set
+            to 0.01 (i.e., <1% changes in the beam area are allowed).
+        mask : 'compute', 'goodbeams', None, or boolean array
             The mask to apply to the beams.  Useful for excluding bad channels
-            and edge beams.
+            and edge beams. The default 'goodbeams' uses the current
+            `~VaryingResolutionSpectralCube.goodbeams_mask`. This also equivalent to`mask=None`.
+            To also mask using the full `~VaryingResolutionSpectralCube.mask`, use `mask=compute`.
+            Finally, a boolean mask can also be given, which will be combined with
+            `~VaryingResolutionSpectralCube.goodbeams_mask`.
         warn : bool
             Warn if successful?
+        kwargs :
+            Additional kwargs are passed to the common beam algorithm.
+            See `~radio_beam.Beams.common_beam`.
 
         Returns
         -------
-        new_beam : radio_beam.Beam
-            A new radio beam object that is the average of the unmasked beams
+        common_beam : `~radio_beam.Beam`
+            The computed common beam.
+
         """
 
-        use_dask = isinstance(self._data, da.Array)
+        if threshold is None:
+            threshold = self.beam_threshold
 
-        if mask == 'compute':
-            if use_dask:
-                # If we are dealing with dask arrays, we compute the beam
-                # mask once and for all since it is used multiple times in its
-                # entirety in the remainder of this method.
-                beam_mask = da.any(da.logical_and(self._mask_include,
-                                                  self.goodbeams_mask[:, None, None]),
-                                   axis=(1, 2))
-                # da.any appears to return an object dtype instead of a bool
-                beam_mask = self._compute(beam_mask).astype('bool')
-            elif self.mask is not None:
-                beam_mask = np.any(np.logical_and(self.mask.include(),
-                                                  self.goodbeams_mask[:, None, None]),
-                                   axis=(1, 2))
-            else:
-                beam_mask = self.goodbeams_mask
-        else:
+        if isinstance(mask, np.ndarray):
+
             if mask.ndim > 1:
-                beam_mask = np.logical_and(mask, self.goodbeams_mask[:, None, None])
+                beam_mask = np.any(np.logical_and(mask, self.goodbeams_mask[:, None, None]),
+                                   axis=(1,2))
             else:
                 beam_mask = np.logical_and(mask, self.goodbeams_mask)
 
+        elif mask == 'goodbeams' or mask is None:
+            beam_mask = self.goodbeams_mask
+
+            if isinstance(beam_mask, da.Array):
+                beam_mask = self._compute(beam_mask)
+        elif mask == 'compute':
+            is_dask_masks = (isinstance(self.unmasked_channels, da.Array) or
+                             isinstance(self.goodbeams_mask, da.Array))
+
+            if is_dask_masks:
+                # If we are dealing with dask arrays, we compute the beam
+                # mask once and for all since it is used multiple times in its
+                # entirety in the remainder of this method.
+                beam_mask = da.logical_and(self.unmasked_channels,
+                                           self.goodbeams_mask)
+                beam_mask = self._compute(beam_mask)
+            else:
+                beam_mask = np.logical_and(self.unmasked_channels,
+                                           self.goodbeams_mask)
+        else:
+            raise ValueError("mask must be a numpy array, 'goodbeams', 'compute' or None.")
+
         # use private _beams here because the public one excludes the bad beams
         # by default
-        new_beam = self._beams.average_beam(includemask=beam_mask)
+        common_beam = self._beams.common_beam(includemask=beam_mask, **kwargs)
 
-        if np.isnan(new_beam):
-            raise ValueError("Beam was not finite after averaging.  "
+        if np.isnan(common_beam):
+            raise ValueError("Common beam is not finite. "
                              "This either indicates that there was a problem "
                              "with the include mask, one of the beam's values, "
                              "or a bug.")
 
-        self._check_beam_areas(threshold, mean_beam=new_beam, mask=beam_mask)
-        if warn:
-            warnings.warn("Arithmetic beam averaging is being performed.  This is "
-                          "not a mathematically robust operation, but is being "
-                          "permitted because the beams differ by "
-                          "<{0}".format(threshold),
-                          BeamAverageWarning
-                         )
-        return new_beam
+        # This will now print a warning describing whether a common beam convolution will
+        # be triggered. Or if small beam variations will be ignored.
+        self._check_beam_areas(threshold, common_beam, mask=beam_mask, raise_error=False)
 
+        return common_beam
+
+    @property
+    def common_beam(self):
+
+        if not hasattr(self, '_common_beam'):
+            # Compute the common beam with the default parameters if not set.
+            # TODO: improve error message
+            raise ValueError("No common beam found.")
+
+        return self._common_beam
+
+    @common_beam.setter
+    def common_beam(self, value):
+
+        if not isinstance(value, Beam):
+            raise TypeError("common_beam must be set a `~radio_beam.Beam` object.")
+
+        self._common_beam = value
 
     def _handle_beam_areas_wrapper(self, function, beam_threshold=None):
         """
@@ -634,6 +697,10 @@ class MultiBeamMixinClass(object):
         """
         # deferred import to avoid a circular import problem
         from .lower_dimensional_structures import LowerDimensionalObject
+
+        # Check the existence of the common beam. We need the common beam to be computed
+        # to do the beam area differences and check for allowed operations.
+        common_beam = self.common_beam
 
         if beam_threshold is None:
             beam_threshold = self.beam_threshold
@@ -655,7 +722,7 @@ class MultiBeamMixinClass(object):
             if need_to_handle_beams:
                 # do this check *first* so we don't do an expensive operation
                 # and crash afterward
-                avg_beam = self.average_beams(beam_threshold, warn=True)
+                self._check_beam_areas(self.beam_threshold, common_beam)
 
             result = function(*args, **kwargs)
 
@@ -664,14 +731,15 @@ class MultiBeamMixinClass(object):
                 return result
 
             elif need_to_handle_beams:
-                result.meta['beam'] = avg_beam
-                result._beam = avg_beam
+                result.meta['beam'] = self.common_beam
+                result._beam = self.common_beam
 
             return result
 
         return newfunc
 
-    def _check_beam_areas(self, threshold, mean_beam, mask=None):
+    def _check_beam_areas(self, threshold, common_beam, mask=None,
+                          raise_error=True):
         """
         Check that the beam areas are the same to within some threshold
         """
@@ -691,16 +759,30 @@ class MultiBeamMixinClass(object):
 
         errormessage = ""
 
+        # Add a note when we have strict mode enabled.
+        if self.strict_beam_match:
+            strictmessage = "Strict beam match mode is enabled (a threshold of 0.0 is always enforced)." \
+                " To disable, set `cube.strict_beam_match = False`.\n"
+        else:
+            strictmessage = ""
+
         for (qtyname, qty) in (qtys.items()):
             minv = qty[mask].min()
             maxv = qty[mask].max()
-            mn = getattr(mean_beam, qtyname)
+            mn = getattr(common_beam, qtyname)
             maxdiff = (np.max(np.abs(u.Quantity((maxv-mn, minv-mn))))/mn).decompose()
 
             if isinstance(threshold, dict):
                 th = threshold[qtyname]
             else:
                 th = threshold
+
+            # If strict mode enabled, beams must match exactly.
+            if self.strict_beam_match:
+                if hasattr(th, 'unit'):
+                    th = 0. * th.unit
+                else:
+                    th = 0.
 
             if maxdiff > th:
                 errormessage += ("Beam {2}s differ by up to {0}x, which is greater"
@@ -709,19 +791,51 @@ class MultiBeamMixinClass(object):
                                                                     qtyname
                                                                    ))
         if errormessage != "":
-            raise ValueError(errormessage)
 
-    def mask_out_bad_beams(self, threshold, reference_beam=None,
-                           criteria=['sr','major','minor'],
-                           mid_value=np.nanmedian):
+            if raise_error or self.strict_beam_match:
+                raise ValueError(f"{strictmessage}{errormessage}\nConvolve to a common beam before applying any"
+                                 " spectral operation.")
+
+            else:
+                warnings.warn(errormessage)
+                warnings.warn(strictmessage)
+
+        else:
+            warnings.warn("Small beam differences are being ignored in this operation. "
+                          " Beams differ by <{0}".format(threshold) +
+                          " If this behavior is not desired, convolve to a common beam first.",
+                          BeamAverageWarning
+                         )
+
+    def mask_out_bad_beams(self, *args, **kwargs):
+
+        warnings.warn("`mask_out_bad_beams` is deprecated. Use `with_bad_beams_masked`.",
+                      DeprecationWarning)
+
+        return self.with_bad_beams_masked(*args, **kwargs)
+
+    def with_bad_beams_masked(self, threshold=None, reference_beam=None,
+                              criteria=['sr','major','minor'],
+                              mid_value=np.nanmedian):
         """
         See `identify_bad_beams`.  This function returns a masked cube
+
+        Parameters
+        ----------
+        threshold : float, optional
+            The fractional difference between beam major, minor, and pa to
+            permit. The default is to `~SpectralCube.beam_threshold`, which is initially set
+            to 0.01 (i.e., <1% changes in the beam area are allowed).
+
 
         Returns
         -------
         newcube : VaryingResolutionSpectralCube
             The cube with bad beams masked out
         """
+
+        if threshold is None:
+            threshold = self.beam_threshold
 
         goodbeams = self.identify_bad_beams(threshold=threshold,
                                             reference_beam=reference_beam,

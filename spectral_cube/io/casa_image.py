@@ -37,7 +37,8 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
 
 
 def load_casa_image(filename, skipdata=False, memmap=True,
-                    skipvalid=False, skipcs=False, target_cls=None, use_dask=None, **kwargs):
+                    skipvalid=False, skipcs=False, target_cls=None, use_dask=None,
+                    compute_commonbeam=False, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can
@@ -165,7 +166,8 @@ def load_casa_image(filename, skipdata=False, memmap=True,
         if 'beam' in locals():
             cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
-            cube = DaskVaryingResolutionSpectralCube(data, wcs_slice, mask, meta=meta, beams=beams)
+            cube = DaskVaryingResolutionSpectralCube(data, wcs_slice, mask, meta=meta, beams=beams,
+                                                     compute_commonbeam=compute_commonbeam)
         else:
             cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta)
         # with #592, this is no longer true
@@ -196,7 +198,8 @@ def load_casa_image(filename, skipdata=False, memmap=True,
                                                                     wcs_slice,
                                                                     mask[component],
                                                                     meta=meta,
-                                                                    beams=beams)
+                                                                    beams=beams,
+                                                                    compute_commonbeam=compute_commonbeam)
             else:
                 data[component] = DaskSpectralCube(data_, wcs_slice, mask[component],
                                                    meta=meta)

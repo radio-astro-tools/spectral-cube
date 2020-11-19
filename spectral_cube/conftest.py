@@ -72,6 +72,21 @@ def prepare_4_beams():
     return beams
 
 
+def prepare_4_similar_beams():
+    # These are chosen such that the common beam areas differs by <2%
+    # This is to test avoiding common beam operations for small differences.
+    beams = np.recarray(4, dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'),
+                                  ('BPA', '>f4'), ('CHAN', '>i4'),
+                                  ('POL', '>i4')])
+    beams['BMAJ'] = [0.420,0.419,0.418,0.419] # arcseconds
+    beams['BMIN'] = [0.200,0.200,0.200,0.199]
+    beams['BPA'] = [0,0,0,0] # degrees
+    beams['CHAN'] = [0,1,2,3]
+    beams['POL'] = [0,0,0,0]
+    beams = fits.BinTableHDU(beams)
+    return beams
+
+
 def prepare_advs_data():
     # Single Stokes
     h = fits.header.Header.fromtextfile(HEADER_FILENAME)
@@ -306,6 +321,20 @@ def data_vda_beams_image(tmp_path):
                             polarization=pol)
     ia.close()
     return tmp_path / 'vda_beams.image'
+
+@pytest.fixture
+def data_vda_similarbeams(tmp_path):
+    d, h = prepare_adv_data()
+    d, h = transpose(d, h, [2, 0, 1])
+    d, h = transpose(d, h, [2, 1, 0])
+    h['BUNIT'] = ' Jy / beam '
+    del h['BMAJ'], h['BMIN'], h['BPA']
+
+    beams = prepare_4_similar_beams()
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto(tmp_path / 'vda_similarbeams.fits')
+    return tmp_path / 'vda_similarbeams.fits'
 
 
 def prepare_255_header():

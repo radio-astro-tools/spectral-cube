@@ -134,7 +134,8 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
     return array_hdu.data, array_hdu.header, beam_table
 
 
-def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **kwargs):
+def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False,
+                   compute_commonbeam=False, **kwargs):
     """
     Read in a cube from a FITS file using astropy.
 
@@ -182,8 +183,10 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
         if beam_table is None:
             cube = SC(data, wcs, mask, meta=meta, header=header)
         else:
-            cube = VRSC(data, wcs, mask, meta=meta, header=header,
-                        beam_table=beam_table)
+            cube = VRSC(data, wcs, mask, meta=meta,
+                        header=header,
+                        beam_table=beam_table,
+                        compute_commonbeam=compute_commonbeam)
 
         if hasattr(cube._mask, '_data'):
             # check that the shape matches if there is a shape
@@ -207,7 +210,8 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
                 stokes_data[component] = VRSC(comp_data, wcs=comp_wcs,
                                               mask=comp_mask, meta=meta,
                                               header=header,
-                                              beam_table=beam_table)
+                                              beam_table=beam_table,
+                                              compute_commonbeam=compute_commonbeam)
 
         cube = StokesSpectralCube(stokes_data)
 

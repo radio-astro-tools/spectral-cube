@@ -3554,6 +3554,12 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         beam_table = kwargs.pop('beam_table', None)
         beams = kwargs.pop('beams', None)
         beam_threshold = kwargs.pop('beam_threshold', 0.01)
+        strict_beam_match = kwargs.pop('strict_beam_match', False)
+
+        compute_commonbeam = kwargs.pop('compute_commonbeam', False)
+
+        if strict_beam_match:
+            beam_threshold = 0.0
 
         if (beam_table is None and beams is None):
             raise ValueError(
@@ -3611,6 +3617,11 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         self.beams = beams
         self.beam_threshold = beam_threshold
+        self.strict_beam_match = strict_beam_match
+
+        # Compute common beam on creating new cube
+        if compute_commonbeam:
+            self.common_beam = self.compute_common_beam()
 
     def __getitem__(self, view):
 
@@ -3775,47 +3786,6 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
-    def _check_beam_areas(self, threshold, mean_beam, mask=None):
-        """
-        Check that the beam areas are the same to within some threshold
-        """
-
-        if mask is not None:
-            assert len(mask) == len(self.unmasked_beams)
-            mask = np.array(mask, dtype='bool')
-        else:
-            mask = np.ones(len(self.unmasked_beams), dtype='bool')
-
-        qtys = dict(sr=self.unmasked_beams.sr,
-                    major=self.unmasked_beams.major.to(u.deg),
-                    minor=self.unmasked_beams.minor.to(u.deg),
-                    # position angles are not really comparable
-                    #pa=u.Quantity([bm.pa for bm in self.unmasked_beams], u.deg),
-                   )
-
-        errormessage = ""
-
-        for (qtyname, qty) in (qtys.items()):
-            minv = qty[mask].min()
-            maxv = qty[mask].max()
-            mn = getattr(mean_beam, qtyname)
-            maxdiff = (np.max(np.abs(u.Quantity((maxv-mn, minv-mn))))/mn).decompose()
-
-            if isinstance(threshold, dict):
-                th = threshold[qtyname]
-            else:
-                th = threshold
-
-            if maxdiff > th:
-                errormessage += ("Beam {2}s differ by up to {0}x, which is greater"
-                                 " than the threshold {1}\n".format(maxdiff,
-                                                                    threshold,
-                                                                    qtyname
-                                                                   ))
-        if errormessage != "":
-            raise ValueError(errormessage)
-
-
     def __getattribute__(self, attrname):
         """
         For any functions that operate over the spectral axis, perform beam
@@ -3830,7 +3800,10 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         # called by some of these, maybe *only* those should be wrapped to
         # avoid redundant calls
         if attrname in ('moment', 'apply_numpy_function', 'apply_function',
-                        'apply_function_parallel_spectral'):
+                        'apply_function_parallel_spectral', 'sum',
+                        'mean', 'median', 'percentile', 'std', 'mad_std',
+                        'max', 'min', 'argmax', 'argmin'):
+
             origfunc = super(VRSC, self).__getattribute__(attrname)
             return self._handle_beam_areas_wrapper(origfunc)
         else:
@@ -3971,6 +3944,20 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                                wcs_tolerance=self._wcs_tolerance)
 
         return newcube
+
+    def convolve_to_commonbeam(self, **kwargs):
+        """
+        Use `~VaryingResolutionSpectralCube.common_beam` to convolve the cube to the
+        smallest common beam.
+
+        Parameters
+        ----------
+        kwargs : Passed to `~VaryingResolutionSpectralCube.convolve_to`
+        """
+
+        common_beam = self.common_beam
+
+        return self.convolve_to(common_beam, **kwargs)
 
     @warn_slow
     def to(self, unit, equivalencies=()):

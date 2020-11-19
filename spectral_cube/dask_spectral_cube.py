@@ -121,6 +121,8 @@ def projection_if_needed(function):
 
         if axis is None:
 
+            # TODO: avoid statistics for beam dependent units (e.g. Jy/beam)
+
             # return is scalar
             if unit is not None:
                 return u.Quantity(out, unit=unit)
@@ -281,6 +283,7 @@ class DaskSpectralCubeMixin:
         return SchedulerHandler(self, original_scheduler_kwargs)
 
     def _compute(self, array):
+
         return array.compute(**self._scheduler_kwargs)
 
     def _warn_slow(self, funcname):
@@ -1259,6 +1262,10 @@ class DaskSpectralCubeMixin:
 
         return newcube
 
+    @property
+    def _mask_include(self):
+        return da.from_array(MaskHandler(self), name='MaskHandler ' + str(uuid.uuid4()), chunks=self._data.chunksize)
+
 
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
@@ -1387,6 +1394,21 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
 
         return HDUList([hdu, bmhdu])
 
+    def convolve_to_commonbeam(self, **kwargs):
+        """
+        Use `~DaskVaryingResolutionSpectralCube.common_beam` to convolve the cube to the
+        smallest common beam.
+
+        Parameters
+        ----------
+        kwargs : Passed to `~DaskVaryingResolutionSpectralCube.convolve_to`
+        """
+
+        common_beam = self.common_beam
+
+        return self.convolve_to(common_beam, **kwargs)
+
+
     @add_save_to_tmp_dir_option
     def convolve_to(self, beam, allow_smaller=False,
                     convolve=convolution.convolve_fft,
@@ -1508,11 +1530,3 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                              "spectrally smoothed.  Convolve to a "
                              "common resolution with `convolve_to` before "
                              "attempting spectral smoothed.")
-
-    @property
-    def _mask_include(self):
-        return BooleanArrayMask(da.from_array(MaskHandler(self),
-                                              name='MaskHandler ' + str(uuid.uuid4()),
-                                              chunks=self._data.chunksize),
-                                wcs=self.wcs,
-                                shape=self.shape)
