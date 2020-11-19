@@ -706,14 +706,11 @@ class TestNumpyMethods(BaseTest):
         self.c = self.d = None
 
     @pytest.mark.parametrize('method', ('sum', 'min', 'max', 'std', 'mad_std',
-                                        'median', 'argmin', 'argmax',
-                                        'argmax_world', 'argmin_world'))
+                                        'median', 'argmin', 'argmax'))
     def test_transpose(self, method, data_adv, data_vad, use_dask):
         c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
         c2, d2 = cube_and_raw(data_vad, use_dask=use_dask)
         for axis in [None, 0, 1, 2]:
-            if 'world' in method and axis == None:
-                continue
             assert_allclose(getattr(c1, method)(axis=axis),
                             getattr(c2, method)(axis=axis))
             if not use_dask:
@@ -721,6 +718,30 @@ class TestNumpyMethods(BaseTest):
                 assert_allclose(getattr(c1, method)(axis=axis, progressbar=True),
                                 getattr(c2, method)(axis=axis, progressbar=True))
         self.c = self.d = None
+
+    @pytest.mark.parametrize('method', ('argmax_world', 'argmin_world'))
+    def test_transpose_arg_world(self, method, data_adv, data_vad, use_dask):
+        c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
+        c2, d2 = cube_and_raw(data_vad, use_dask=use_dask)
+
+        # The spectral axis should work in all of these test cases.
+        axis = 0
+        assert_allclose(getattr(c1, method)(axis=axis),
+                        getattr(c2, method)(axis=axis))
+        if not use_dask:
+            # check that all these accept progressbar kwargs
+            assert_allclose(getattr(c1, method)(axis=axis, progressbar=True),
+                            getattr(c2, method)(axis=axis, progressbar=True))
+
+        # But the spatial axes should fail since the pixel axes are correlated to
+        # the WCS celestial axes. Currently this will happen for ALL celestial axes.
+        for axis in [1, 2]:
+
+            with pytest.raises(utils.WCSCelestialError,
+                               match=re.escape("world_take_along_axis requires the celestial axes")):
+
+                assert_allclose(getattr(c1, method)(axis=axis),
+                                getattr(c2, method)(axis=axis))
 
     @pytest.mark.parametrize('method', ('argmax_world', 'argmin_world'))
     def test_arg_world(self, method, data_adv, use_dask):
