@@ -799,8 +799,6 @@ class MultiBeamMixinClass(object):
             else:
                 warnings.warn(errormessage)
                 warnings.warn(strictmessage)
-                warnings.warn("Convolution to a common beam will be triggered at an intermediate level."
-                              " To avoid this step, first convolve the SpectralCube to a common beam size.")
 
         else:
             warnings.warn("Small beam differences are being ignored in this operation. "
