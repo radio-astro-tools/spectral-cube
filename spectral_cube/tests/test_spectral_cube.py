@@ -1900,14 +1900,11 @@ def test_varyres_moment_logic_issue364(data_vda_beams, use_dask):
     # the beams are very different, but for this test we don't care
     cube.beam_threshold = 1.0
 
-    with pytest.warns(UserWarning, match="Arithmetic beam averaging is being performed"):
+    with pytest.warns(UserWarning, match="Small beam differences are being ignored in this operation"):
         # note that cube.moment(order=0) is different from cube.moment0()
         # because cube.moment0() calls cube.moment(order=0, axis=(whatever)),
         # but cube.moment doesn't necessarily have to receive the axis kwarg
         m0 = cube.moment(order=0)
-
-    # note that this is just a sanity check; one should never use the average beam
-    assert_quantity_allclose(m0.meta['beam'].major, 0.35*u.arcsec)
 
 
 @pytest.mark.skipif('not casaOK')
