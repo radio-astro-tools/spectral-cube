@@ -3481,7 +3481,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     else:
                         textcolor = 'k'
     
-                ax.tick_params(direction='in', color=textcolor)
+                ax.tick_params(color=textcolor)
 
                 ax.set_title(("{0:." + str(decimals) + "f}").format(spectral_axis[channel]),
                              x=textxloc, y=textyloc, color=textcolor)
