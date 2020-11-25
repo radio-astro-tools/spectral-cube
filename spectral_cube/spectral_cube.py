@@ -3391,8 +3391,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             List of channels to show
         cmap : str
             The name of a colormap to use for the ``imshow`` colors
-        contourcolors : list
-            A list of contour colors corresponding to the contour levels
+        contourkwargs : list
+            Keyword arguments passed to ``contour``
         textcolor : None or str
             Color of the label text to overlay.  If ``None``, will be
             determined automatically.  If ``'notext'``, no text will be added.
@@ -3480,6 +3480,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                         textcolor = 'w'
                     else:
                         textcolor = 'k'
+    
+                ax.tick_params(direction='in', color=textcolor)
 
                 ax.set_title(("{0:." + str(decimals) + "f}").format(spectral_axis[channel]),
                              x=textxloc, y=textyloc, color=textcolor)
@@ -3488,8 +3490,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if (ichannel != nx*(ny-1)):
                 ax.coords[0].set_ticklabel_position('')
                 ax.coords[1].set_ticklabel_position('')
-
-            ax.tick_params(direction='in', color=textcolor)
 
             axis_list.append(ax)
 
