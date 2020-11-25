@@ -80,6 +80,7 @@ import os
 on_travis = bool(os.environ.get('ON_TRAVIS'))
 
 from radio_beam import Beam, Beams
+from radio_beam.utils import BeamError
 
 NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
 
@@ -1959,8 +1960,11 @@ def test_convolve_to_with_bad_beams(data_vda_beams, use_dask):
 
     convolved = cube.convolve_to(Beam(0.5*u.arcsec))
 
-
-    with pytest.raises(ValueError,
+    # From: https://github.com/radio-astro-tools/radio-beam/pull/87
+    # updated exception to BeamError when the beam cannot be deconvolved.
+    # BeamError is not new in the radio_beam package, only its use here.
+    # Keeping the ValueError for testing against <v0.3.3 versions
+    with pytest.raises((BeamError, ValueError),
                        match="Beam could not be deconvolved"):
         # should not work: biggest beam is 0.4"
         convolved = cube.convolve_to(Beam(0.35*u.arcsec))
