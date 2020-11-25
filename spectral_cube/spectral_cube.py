@@ -3320,7 +3320,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             List of channels to show
         cmap : str
             The name of a colormap to use for the ``imshow`` colors
-        contourkwargs : list
+        contourkwargs : dict
             Keyword arguments passed to ``contour``
         textcolor : None or str
             Color of the label text to overlay.  If ``None``, will be
