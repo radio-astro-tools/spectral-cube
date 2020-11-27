@@ -156,3 +156,7 @@ or for modeling. The `~spectral_cube.SpectralCube.argmax_world` and
 
 Along the spectral axis, `~spectral_cube.SpectralCube.argmax_world` creates the often used
 "velocity at peak intensity," which may also be called the "peak velocity."
+
+.. note:: `cube.argmax_world` and `cube.argmin_world` are currently only defined along the spectral axis,
+as the example above shows. This is because `argmax_world` and `argmin_world` operate along the pixel axes,
+but they are not independent in WCS coordinates due to the curvature of the sky.
