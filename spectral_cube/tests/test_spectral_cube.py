@@ -743,6 +743,8 @@ class TestNumpyMethods(BaseTest):
                 assert_allclose(getattr(c1, method)(axis=axis),
                                 getattr(c2, method)(axis=axis))
 
+        self.c = self.d = None
+
     @pytest.mark.parametrize('method', ('argmax_world', 'argmin_world'))
     def test_arg_world(self, method, data_adv, use_dask):
         c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
