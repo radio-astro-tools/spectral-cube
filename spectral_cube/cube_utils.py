@@ -491,8 +491,8 @@ def convert_bunit(bunit):
 
 def world_take_along_axis(cube, position_plane, axis):
     '''
-    Apply a 2D plane of pixel positions along collapsed along a third axis
-    to the equivalent WCS coordinates. For example, this will convert `argmax`
+    Convert a 2D plane of pixel positions to the equivalent WCS coordinates.
+    For example, this will convert `argmax`
     along the spectral axis to the equivalent spectral value (e.g., velocity at
     peak intensity).
 
