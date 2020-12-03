@@ -813,6 +813,42 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          reduce=False, projection=False,
                                          how=how, axis=axis, **kwargs)
 
+    def _argmaxmin_world(self, axis, method, **kwargs):
+        '''
+        Return the spatial or spectral index of the maximum or minimum value.
+        Use `argmax_world` and `argmin_world` directly.
+        '''
+
+        operation_name = '{}_world'.format(method)
+
+        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs, axis):
+            raise WCSCelestialError("{} requires the celestial axes"
+                                    " to be aligned along image axes."
+                                    .format(operation_name))
+
+        if method == 'argmin':
+            arg_pixel_plane = self.argmin(axis=axis, **kwargs)
+        elif method == 'argmax':
+            arg_pixel_plane = self.argmax(axis=axis, **kwargs)
+        else:
+            raise ValueError("`method` must be 'argmin' or 'argmax'")
+
+        # Convert to WCS coordinates.
+        out = cube_utils.world_take_along_axis(self, arg_pixel_plane, axis)
+
+        # Compute whether the mask has any valid data along `axis`
+        collapsed_mask = self.mask.include().any(axis=axis)
+        out[~collapsed_mask] = np.NaN
+
+        # Return a Projection.
+        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+        meta = {'collapse_axis': axis}
+        meta.update(self._meta)
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                          unit=out.unit, header=self._nowcs_header)
+
     @warn_slow
     def argmax_world(self, axis, **kwargs):
         '''
@@ -828,27 +864,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to `~SpectralCube.argmax`.
         '''
 
-        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs, axis):
-            raise WCSCelestialError("argmax_world requires the celestial axes"
-                                    " to be aligned along image axes.")
-
-        argmax_plane = self.argmax(axis=axis, **kwargs)
-
-        # Convert to WCS coordinates.
-        out = cube_utils.world_take_along_axis(self, argmax_plane, axis)
-
-        # Compute whether the mask has any valid data along `axis`
-        collapsed_mask = self.mask.include().any(axis=axis)
-        out[~collapsed_mask] = np.NaN
-
-        # Return a Projection.
-        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-
-        meta = {'collapse_axis': axis}
-        meta.update(self._meta)
-
-        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
-                          unit=out.unit, header=self._nowcs_header)
+        return self._argmaxmin_world(axis, 'argmax', **kwargs)
 
     @warn_slow
     def argmin_world(self, axis, **kwargs):
@@ -865,27 +881,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to `~SpectralCube.argmin`.
         '''
 
-        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs, axis):
-            raise WCSCelestialError("argmin_world requires the celestial axes"
-                                    " to be aligned along image axes.")
-
-        argmin_plane = self.argmin(axis=axis, **kwargs)
-
-        # Convert to WCS coordinates.
-        out = cube_utils.world_take_along_axis(self, argmin_plane, axis)
-
-        # Compute whether the mask has any valid data along `axis`
-        collapsed_mask = self.mask.include().any(axis=axis)
-        out[~collapsed_mask] = np.NaN
-
-        # Return a Projection.
-        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
-
-        meta = {'collapse_axis': axis}
-        meta.update(self._meta)
-
-        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
-                          unit=out.unit, header=self._nowcs_header)
+        return self._argmaxmin_world(axis, 'argmin', **kwargs)
 
     def chunked(self, chunksize=1000):
         """
