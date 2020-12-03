@@ -147,7 +147,7 @@ return the pixel positions of the max/min along that axis:
     >>> argmin_map = cube.argmin(axis=0)  # doctest: +SKIP
 
 These maps are useful for identifying where signal is located within the spectral cube, however,
-it is more useful to return the WCS values of those pixels for comparisons with other data sets
+it is more useful to return the WCS values of those pixels for comparison with other data sets
 or for modeling. The `~spectral_cube.SpectralCube.argmax_world` and
 `~spectral_cube.SpectralCube.argmin_world` should be used in this case:
 
