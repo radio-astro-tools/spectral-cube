@@ -719,6 +719,45 @@ class TestNumpyMethods(BaseTest):
                                 getattr(c2, method)(axis=axis, progressbar=True))
         self.c = self.d = None
 
+    @pytest.mark.parametrize('method', ('argmax_world', 'argmin_world'))
+    def test_transpose_arg_world(self, method, data_adv, data_vad, use_dask):
+        c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
+        c2, d2 = cube_and_raw(data_vad, use_dask=use_dask)
+
+        # The spectral axis should work in all of these test cases.
+        axis = 0
+        assert_allclose(getattr(c1, method)(axis=axis),
+                        getattr(c2, method)(axis=axis))
+        if not use_dask:
+            # check that all these accept progressbar kwargs
+            assert_allclose(getattr(c1, method)(axis=axis, progressbar=True),
+                            getattr(c2, method)(axis=axis, progressbar=True))
+
+        # But the spatial axes should fail since the pixel axes are correlated to
+        # the WCS celestial axes. Currently this will happen for ALL celestial axes.
+        for axis in [1, 2]:
+
+            with pytest.raises(utils.WCSCelestialError,
+                               match=re.escape(f"{method} requires the celestial axes")):
+
+                assert_allclose(getattr(c1, method)(axis=axis),
+                                getattr(c2, method)(axis=axis))
+
+        self.c = self.d = None
+
+    @pytest.mark.parametrize('method', ('argmax_world', 'argmin_world'))
+    def test_arg_world(self, method, data_adv, use_dask):
+        c1, d1 = cube_and_raw(data_adv, use_dask=use_dask)
+
+        # Pixel operation is same name with "_world" removed.
+        arg0_pixel = getattr(c1, method.split("_")[0])(axis=0)
+
+        arg0_world = np.take_along_axis(c1.spectral_axis[:, np.newaxis, np.newaxis],
+                                        arg0_pixel[np.newaxis, :, :], axis=0).squeeze()
+
+        assert_allclose(getattr(c1, method)(axis=0), arg0_world)
+
+        self.c = self.d = None
 
 class TestSlab(BaseTest):
 

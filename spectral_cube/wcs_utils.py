@@ -483,6 +483,30 @@ def diagonal_wcs_to_cdelt(mywcs):
     return mywcs
 
 
+def is_pixel_axis_to_wcs_correlated(mywcs, axis):
+    """
+    Check if the chosen pixel axis correlates to other WCS axes. This tests
+    whether the pixel axis is correlated only to 1 WCS axis and can be
+    considered independent of the others.
+    """
+
+    axis_corr_matrix = mywcs.axis_correlation_matrix
+
+    # Map from numpy axis to WCS axis
+    wcs_axis = mywcs.world_n_dim - (axis + 1)
+
+    # Grab the row along the given spatial axis. This slice is along the WCS axes
+    wcs_axis_correlations = axis_corr_matrix[:, wcs_axis]
+
+    # The image axis should always be correlated to at least 1 WCS axis.
+    # i.e., the diagonal term is one in the matrix. Correlations with other axes will give
+    # a sum > 1
+    if wcs_axis_correlations.sum() > 1:
+        return True
+
+    return False
+
+
 def find_spatial_pixel_index(cube, xlo, xhi, ylo, yhi):
     '''
     Given low and high cuts, return the pixel coordinates for a rectangular

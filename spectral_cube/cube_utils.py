@@ -12,9 +12,10 @@ import dask.array as da
 import numpy as np
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
-from .utils import FITSWarning, AstropyUserWarning
+from .utils import FITSWarning, AstropyUserWarning, WCSCelestialError
 from astropy import log
 from astropy.io import fits
+from astropy.wcs.utils import is_proj_plane_distorted
 from astropy.io.fits import BinTableHDU, Column
 from astropy import units as u
 import itertools
@@ -486,3 +487,51 @@ def convert_bunit(bunit):
             unit = None
 
     return unit
+
+
+def world_take_along_axis(cube, position_plane, axis):
+    '''
+    Convert a 2D plane of pixel positions to the equivalent WCS coordinates.
+    For example, this will convert `argmax`
+    along the spectral axis to the equivalent spectral value (e.g., velocity at
+    peak intensity).
+
+    Parameters
+    ----------
+    cube : SpectralCube
+        A spectral cube.
+    position_plane : 2D numpy.ndarray
+        2D array of pixel positions along `axis`. For example, `position_plane` can
+        be the output of `argmax` or `argmin` along an axis.
+    axis : int
+        The axis that `position_plane` is collapsed along.
+
+    Returns
+    -------
+    out : astropy.units.Quantity
+        2D array of WCS coordinates.
+    '''
+
+    if wcs_utils.is_pixel_axis_to_wcs_correlated(cube.wcs, axis):
+        raise WCSCelestialError("world_take_along_axis requires the celestial axes"
+                                " to be aligned along image axes.")
+
+    # Get 1D slice along that axis.
+    world_slice = [0, 0]
+    world_slice.insert(axis, slice(None))
+
+    world_coords = cube.world[tuple(world_slice)][axis]
+
+    world_newaxis = [np.newaxis] * 2
+    world_newaxis.insert(axis, slice(None))
+    world_newaxis = tuple(world_newaxis)
+
+    plane_newaxis = [slice(None), slice(None)]
+    plane_newaxis.insert(axis, np.newaxis)
+    plane_newaxis = tuple(plane_newaxis)
+
+    out = np.take_along_axis(world_coords[world_newaxis],
+                             position_plane[plane_newaxis], axis=axis)
+    out = out.squeeze()
+
+    return out

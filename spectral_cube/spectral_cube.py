@@ -51,7 +51,8 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
-                    BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning)
+                    BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning,
+                    WCSCelestialError)
 from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
                             doppler_beta, doppler_gamma, doppler_z)
 from .io.core import SpectralCubeRead, SpectralCubeWrite
@@ -811,6 +812,76 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.apply_numpy_function(np.nanargmin, fill=np.inf,
                                          reduce=False, projection=False,
                                          how=how, axis=axis, **kwargs)
+
+    def _argmaxmin_world(self, axis, method, **kwargs):
+        '''
+        Return the spatial or spectral index of the maximum or minimum value.
+        Use `argmax_world` and `argmin_world` directly.
+        '''
+
+        operation_name = '{}_world'.format(method)
+
+        if wcs_utils.is_pixel_axis_to_wcs_correlated(self.wcs, axis):
+            raise WCSCelestialError("{} requires the celestial axes"
+                                    " to be aligned along image axes."
+                                    .format(operation_name))
+
+        if method == 'argmin':
+            arg_pixel_plane = self.argmin(axis=axis, **kwargs)
+        elif method == 'argmax':
+            arg_pixel_plane = self.argmax(axis=axis, **kwargs)
+        else:
+            raise ValueError("`method` must be 'argmin' or 'argmax'")
+
+        # Convert to WCS coordinates.
+        out = cube_utils.world_take_along_axis(self, arg_pixel_plane, axis)
+
+        # Compute whether the mask has any valid data along `axis`
+        collapsed_mask = self.mask.include().any(axis=axis)
+        out[~collapsed_mask] = np.NaN
+
+        # Return a Projection.
+        new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
+
+        meta = {'collapse_axis': axis}
+        meta.update(self._meta)
+
+        return Projection(out, copy=False, wcs=new_wcs, meta=meta,
+                          unit=out.unit, header=self._nowcs_header)
+
+    @warn_slow
+    def argmax_world(self, axis, **kwargs):
+        '''
+        Return the spatial or spectral index of the maximum value
+        along a line of sight.
+
+        Parameters
+        ----------
+        axis : int
+            The axis to return the peak location along. e.g., `axis=0`
+            will return the value of the spectral axis at the peak value.
+        kwargs : dict
+            Passed to `~SpectralCube.argmax`.
+        '''
+
+        return self._argmaxmin_world(axis, 'argmax', **kwargs)
+
+    @warn_slow
+    def argmin_world(self, axis, **kwargs):
+        '''
+        Return the spatial or spectral index of the minimum value
+        along a line of sight.
+
+        Parameters
+        ----------
+        axis : int
+            The axis to return the peak location along. e.g., `axis=0`
+            will return the value of the spectral axis at the peak value.
+        kwargs : dict
+            Passed to `~SpectralCube.argmin`.
+        '''
+
+        return self._argmaxmin_world(axis, 'argmin', **kwargs)
 
     def chunked(self, chunksize=1000):
         """

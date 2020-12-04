@@ -1,5 +1,8 @@
 0.6 (unreleased)
 ----------------
+- Add ``argmax_world`` and ``argmin_world`` to return the argmin/max position
+  in WCS coordinates. This is ONLY defined for independent WCS axes
+  (e.g., spectral) #680
 - Bugfix: subcube producing spatial offsets for large images #666
 - Switch to using standalone casa-formats-io package for reading in CASA
   .image files (this was split out from spectral-cube). #684
