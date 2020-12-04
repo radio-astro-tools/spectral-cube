@@ -18,12 +18,12 @@ Credits
 
 This package is developed by:
 
--  Chris Beaumont ([@ChrisBeaumont](http://github.com/ChrisBeaumont))
--  Adam Ginsburg ([@keflavich](http://github.com/keflavich))
--  Adam Leroy ([@akleroy](http://github.com/akleroy))
--  Thomas Robitaille ([@astrofrog](http://github.com/astrofrog))
--  Erik Rosolowsky ([@low-sky](http://github.com/low-sky))
--  Eric Koch ([@e-koch](https://github.com/e-koch))
+-  Chris Beaumont (`@ChrisBeaumont <http://github.com/ChrisBeaumont>`__)
+-  Adam Ginsburg (`@keflavich <http://github.com/keflavich>`__)
+-  Adam Leroy (`@akleroy <http://github.com/akleroy>`__)
+-  Thomas Robitaille (`@astrofrog <http://github.com/astrofrog>`__)
+-  Erik Rosolowsky (`@low-sky <http://github.com/low-sky>`__)
+-  Eric Koch (`@e-koch <https://github.com/e-koch>`__)
 
 Build and coverage status
 =========================
