@@ -3480,7 +3480,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                         textcolor = 'w'
                     else:
                         textcolor = 'k'
-    
+
                 ax.tick_params(color=textcolor)
 
                 ax.set_title(("{0:." + str(decimals) + "f}").format(spectral_axis[channel]),
@@ -3490,6 +3490,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if (ichannel != nx*(ny-1)):
                 ax.coords[0].set_ticklabel_position('')
                 ax.coords[1].set_ticklabel_position('')
+
+            ax.tick_params(direction='in')
 
             axis_list.append(ax)
 
