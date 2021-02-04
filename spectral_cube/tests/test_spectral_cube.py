@@ -1709,7 +1709,7 @@ def test_unit_conversions_general(data_advs, use_dask, init_unit):
             np.testing.assert_almost_equal(newcube.filled_data[:].value,
                                             cube.filled_data[:].value)
 
-def test_beam_jtok_array(data_advs, use_dask, init_unit):
+def test_beam_jtok_array(data_advs, use_dask):
 
     cube, data = cube_and_raw(data_advs, use_dask=use_dask)
     cube._meta['BUNIT'] = 'Jy / beam'
