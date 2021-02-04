@@ -1692,8 +1692,24 @@ def test_basic_unit_conversion_beams(data_vda_beams, use_dask):
                                     1e3))
 
 
+bunits_list = [u.Jy / u.beam, u.K, u.Jy / u.sr, u.Jy / u.pix]
 
-def test_beam_jtok_array(data_advs, use_dask):
+@pytest.mark.parametrize(('init_unit'), bunits_list)
+def test_unit_conversions_general(data_advs, use_dask, init_unit):
+
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
+    cube._meta['BUNIT'] = init_unit.to_string()
+    cube._unit = init_unit
+
+    # Check all unit conversion combos:
+    for targ_unit in bunits_list:
+        newcube = cube.to(targ_unit)
+
+        if init_unit == targ_unit:
+            np.testing.assert_almost_equal(newcube.filled_data[:].value,
+                                            cube.filled_data[:].value)
+
+def test_beam_jtok_array(data_advs, use_dask, init_unit):
 
     cube, data = cube_and_raw(data_advs, use_dask=use_dask)
     cube._meta['BUNIT'] = 'Jy / beam'
@@ -1712,7 +1728,6 @@ def test_beam_jtok_array(data_advs, use_dask):
     np.testing.assert_almost_equal(Kcube.filled_data[:].value,
                                    (cube.filled_data[:].value *
                                     jtok[:,None,None]).value)
-
 
 def test_multibeam_jtok_array(data_vda_beams, use_dask):
 
