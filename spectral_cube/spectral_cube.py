@@ -2480,7 +2480,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # No copying
             return self
 
-        if self.unit.is_equivalent(u.Jy/u.beam) or unit.is_equivalent(u.Jy/u.beam):
+        has_perbeam = self.unit.is_equivalent(u.Jy/u.beam) or unit.is_equivalent(u.Jy/u.beam)
+        has_perangarea = self.unit.is_equivalent(u.Jy/u.sr) or unit.is_equivalent(u.Jy/u.sr)
+        has_perpix = self.unit.is_equivalent(u.Jy/u.pix) or unit.is_equivalent(u.Jy/u.pix)
+
+        if has_perangarea:
+            bmequiv_angarea = u.brightness_temperature(self.with_spectral_unit(u.Hz).spectral_axis)
+
+            equivalencies = list(equivalencies) + bmequiv_angarea
+
+        if has_perbeam or has_perangarea:
             # replace "beam" with the actual beam
             if not hasattr(self, 'beam') or self._beam is None:
                 raise ValueError("To convert cubes with Jy/beam units, "
@@ -2489,7 +2498,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # create a beam equivalency for brightness temperature
             bmequiv = self.beam.jtok_equiv(self.with_spectral_unit(u.Hz).spectral_axis)
 
-            equivalencies = list(equivalencies) + bmequiv
+            # TODO: Remove check once `beamarea_equiv` is in a radio-beam release.
+            if hasattr(self.beam, 'beamarea_equiv'):
+                bmarea_equiv = self.beam.beamarea_equiv()
+            else:
+                bmarea_equiv = u.beam_angular_area(self.beam.sr)
+
+            equivalencies = list(equivalencies) + bmequiv + bmarea_equiv
 
         factor = self.unit.to(unit, equivalencies=equivalencies)
 
