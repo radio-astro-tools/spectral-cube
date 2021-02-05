@@ -1714,6 +1714,37 @@ def test_unit_conversions_general(data_advs, use_dask, init_unit):
             np.testing.assert_almost_equal(roundtrip_cube.filled_data[:].value,
                                            cube.filled_data[:].value)
 
+
+def test_beam_jpix_checks_array(data_advs, use_dask):
+
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
+    cube._meta['BUNIT'] = 'Jy / beam'
+    cube._unit = u.Jy/u.beam
+
+    equiv = cube.beam.jtok_equiv(cube.with_spectral_unit(u.GHz).spectral_axis)
+    jtok = cube.beam.jtok(cube.with_spectral_unit(u.GHz).spectral_axis)
+
+    pixperbeam = cube.pixels_per_beam * u.pix
+
+    cube_jypix = cube.to(u.Jy / u.pix)
+    np.testing.assert_almost_equal(cube_jypix.filled_data[:].value,
+                                   (cube.filled_data[:].value /
+                                    pixperbeam).value)
+
+    Kcube = cube.to(u.K, equivalencies=equiv)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   (cube_jypix.filled_data[:].value *
+                                    jtok[:,None,None] * pixperbeam).value)
+
+    # Round trips.
+    roundtrip_cube = cube_jypix.to(u.Jy / u.beam)
+    np.testing.assert_almost_equal(cube.filled_data[:].value,
+                                   roundtrip_cube.filled_data[:].value)
+
+    Kcube_from_jypix = cube_jypix.to(u.K)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   Kcube_from_jypix.filled_data[:].value)
+
 def test_beam_jtok_array(data_advs, use_dask):
 
     cube, data = cube_and_raw(data_advs, use_dask=use_dask)
