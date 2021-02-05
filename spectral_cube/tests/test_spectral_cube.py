@@ -1707,7 +1707,12 @@ def test_unit_conversions_general(data_advs, use_dask, init_unit):
 
         if init_unit == targ_unit:
             np.testing.assert_almost_equal(newcube.filled_data[:].value,
-                                            cube.filled_data[:].value)
+                                           cube.filled_data[:].value)
+
+        else:
+            roundtrip_cube = newcube.to(init_unit)
+            np.testing.assert_almost_equal(roundtrip_cube.filled_data[:].value,
+                                           cube.filled_data[:].value)
 
 def test_beam_jtok_array(data_advs, use_dask):
 
