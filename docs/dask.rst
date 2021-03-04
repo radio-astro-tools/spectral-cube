@@ -97,7 +97,7 @@ Reading in CASA data and default chunk size
 -------------------------------------------
 
 CASA datasets are typically stored on disk with very small chunks - if we mapped these directly to
-dask array chunks, this would be very inefficient as the dask tree would then contain in some cases
+dask array chunks, this would be very inefficient as the [dask task graph](https://docs.dask.org/en/latest/graphs.html) would then contain in some cases
 tens of thousands of chunks. To avoid this, the CASA loader for :class:`~spectral_cube.DaskSpectralCube`
 makes use of the `casa-formats-io <https://casa-formats-io.readthedocs.io>`_ package to re-chunk the
 data on-the-fly. The final chunk size is chosen by casa-formats-io by default, but it is also possible
