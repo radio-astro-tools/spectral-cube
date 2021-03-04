@@ -25,6 +25,7 @@ To read in a FITS cube using the dask-enabled classes, you can do::
 Most of the properties and methods that normally work with :class:`~spectral_cube.SpectralCube`
 should continue to work with :class:`~spectral_cube.DaskSpectralCube`.
 
+
 Schedulers and parallel computations
 ------------------------------------
 
@@ -91,6 +92,29 @@ installed.
 
 This can also be beneficial if you are using multiprocessing or multithreading to carry out calculations,
 because zarr works nicely with disk access from different threads and processes.
+
+Reading in CASA data and default chunk size
+-------------------------------------------
+
+CASA datasets are typically stored on disk with very small chunks - if we mapped these directly to
+dask array chunks, this would be very inefficient as the dask tree would then contain in some cases
+tens of thousands of chunks. To avoid this, the CASA loader for :class:`~spectral_cube.DaskSpectralCube`
+makes use of the `casa-formats-io <https://casa-formats-io.readthedocs.io>`_ package to re-chunk the
+data on-the-fly. The final chunk size is chosen by casa-formats-io by default, but it is also possible
+to control this by using the ``target_chunksize`` argument to the :meth:`~spectral_cube.DaskSpectralCube.read`
+method::
+
+    >>> cube = SpectralCube.read('spectral_cube.image', format='casa_image',
+    ...                          target_chunksize=100000, use_dask=True)  # doctest: +SKIP
+
+The chunk size is in number of elements, so assuming 64-bit floating point data, a target chunk size
+of 1000000 translates to a chunk size in memory of 8Mb. The target chunk size is interpreted as a
+maximum chunk size, so the largest possible chunk size smaller or equal to this limit is used.
+
+If you find that certain operations, especially ones that operate in the spectral dimension, use up
+too much memory, this may be because dask then has to also combine all chunks along the spectral
+dimension, so combined with this under-the-hood re-chunking at read time may produce large
+chunks that exceed available memory. In such cases, you can try and reduce the ``target_chunksize``.
 
 Rechunking data
 ---------------

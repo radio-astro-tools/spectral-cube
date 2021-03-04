@@ -1,5 +1,6 @@
 # Tests specific to the dask class
 
+import os
 import pytest
 
 from numpy.testing import assert_allclose
@@ -19,6 +20,8 @@ except ImportError:
         CASA_INSTALLED = True
     except ImportError:
         CASA_INSTALLED = False
+
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class Array:
@@ -74,6 +77,16 @@ def test_rechunk(data_adv):
     # note last element is 2 because the chunk size we asked for
     # is larger than cube - this is fine and deliberate in this test
     assert cube_new._data.chunksize == (1, 2, 2)
+
+
+@pytest.mark.skipif(not CASA_INSTALLED, reason='Requires CASA to be installed')
+def test_target_chunksize(data_adv, tmp_path):
+    fits.writeto((tmp_path / 'test.fits', np.random.random((128, 128, 128)))
+    make_casa_testimage(tmp_path / 'test.fits', tmp_path / 'test.image')
+    cube1 = DaskSpectralCube.read(tmp_path / 'test.image')
+    assert cube1._data.chunksize == (3, 4, 5)
+    cube2 = DaskSpectralCube.read(tmp_path / 'test.image', target_chunksize=10)
+    assert cube1._data.chunksize == (3, 4, 5)
 
 
 def test_statistics(data_adv):
