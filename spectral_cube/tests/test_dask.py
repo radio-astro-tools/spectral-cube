@@ -80,12 +80,14 @@ def test_rechunk(data_adv):
 
 
 @pytest.mark.skipif(not CASA_INSTALLED, reason='Requires CASA to be installed')
-def test_target_chunksize(data_adv, tmp_path):
-    fits.writeto((tmp_path / 'test.fits', np.random.random((128, 128, 128)))
-    make_casa_testimage(tmp_path / 'test.fits', tmp_path / 'test.image')
-    cube1 = DaskSpectralCube.read(tmp_path / 'test.image')
+def test_target_chunksize(data_adv, tmpdir):
+    tmp_fits = tmpdir.join('test.fits').strpath
+    tmp_casa = tmpdir.join('test.image').strpath
+    fits.writeto(tmp_fits, np.random.random((128, 128, 128)))
+    make_casa_testimage(tmp_fits, tmp_casa)
+    cube1 = DaskSpectralCube.read(tmp_casa)
     assert cube1._data.chunksize == (3, 4, 5)
-    cube2 = DaskSpectralCube.read(tmp_path / 'test.image', target_chunksize=10)
+    cube2 = DaskSpectralCube.read(tmp_casa, target_chunksize=10)
     assert cube1._data.chunksize == (3, 4, 5)
 
 
