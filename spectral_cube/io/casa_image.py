@@ -37,7 +37,8 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
 
 
 def load_casa_image(filename, skipdata=False, memmap=True,
-                    skipvalid=False, skipcs=False, target_cls=None, use_dask=None, **kwargs):
+                    skipvalid=False, skipcs=False, target_cls=None, use_dask=None,
+                    target_chunksize=None, **kwargs):
     """
     Load a cube (into memory?) from a CASA image. By default it will transpose
     the cube into a 'python' order and drop degenerate axes. These options can
@@ -57,14 +58,14 @@ def load_casa_image(filename, skipdata=False, memmap=True,
 
     # read in the data
     if not skipdata:
-        data = image_to_dask(filename, memmap=memmap)
+        data = image_to_dask(filename, memmap=memmap, target_chunksize=target_chunksize)
 
     # CASA stores validity of data as a mask
     if skipvalid:
         valid = None
     else:
         try:
-            valid = image_to_dask(filename, memmap=memmap, mask=True)
+            valid = image_to_dask(filename, memmap=memmap, mask=True, target_chunksize=target_chunksize)
         except FileNotFoundError:
             valid = None
 
