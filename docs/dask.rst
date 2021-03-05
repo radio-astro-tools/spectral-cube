@@ -93,29 +93,6 @@ installed.
 This can also be beneficial if you are using multiprocessing or multithreading to carry out calculations,
 because zarr works nicely with disk access from different threads and processes.
 
-Reading in CASA data and default chunk size
--------------------------------------------
-
-CASA datasets are typically stored on disk with very small chunks - if we mapped these directly to
-dask array chunks, this would be very inefficient as the [dask task graph](https://docs.dask.org/en/latest/graphs.html) would then contain in some cases
-tens of thousands of chunks. To avoid this, the CASA loader for :class:`~spectral_cube.DaskSpectralCube`
-makes use of the `casa-formats-io <https://casa-formats-io.readthedocs.io>`_ package to re-chunk the
-data on-the-fly. The final chunk size is chosen by casa-formats-io by default, but it is also possible
-to control this by using the ``target_chunksize`` argument to the :meth:`~spectral_cube.DaskSpectralCube.read`
-method::
-
-    >>> cube = SpectralCube.read('spectral_cube.image', format='casa_image',
-    ...                          target_chunksize=100000, use_dask=True)  # doctest: +SKIP
-
-The chunk size is in number of elements, so assuming 64-bit floating point data, a target chunk size
-of 1000000 translates to a chunk size in memory of 8Mb. The target chunk size is interpreted as a
-maximum chunk size, so the largest possible chunk size smaller or equal to this limit is used.
-
-If you find that certain operations, especially ones that operate in the spectral dimension, use up
-too much memory, this may be because dask then has to also combine all chunks along the spectral
-dimension, so combined with this under-the-hood re-chunking at read time may produce large
-chunks that exceed available memory. In such cases, you can try and reduce the ``target_chunksize``.
-
 Rechunking data
 ---------------
 
@@ -284,3 +261,45 @@ of statistics, which are named using the same convention as CASA's
 
 This method should respect the current scheduler, so you may be able to get better performance
 with a multi-threaded scheduler.
+
+
+Reading in CASA data and default chunk size
+-------------------------------------------
+
+CASA image datasets are typically stored on disk with very small chunks - if we
+mapped these directly to dask array chunks, this would be very inefficient as
+the `dask task graph <https://docs.dask.org/en/latest/graphs.html>`_ would then
+contain in some cases tens of thousands of chunks, and because reading the data
+from disk would be very inefficient as only small amounts of data would be read
+at a time.
+
+To avoid this, the CASA loader for :class:`~spectral_cube.DaskSpectralCube`
+makes use of the `casa-formats-io <https://casa-formats-io.readthedocs.io>`_
+package to combine neighboring chunks on disk into a single chunk. The final
+chunk size is chosen by casa-formats-io by default, but it is also possible to
+control this by using the ``target_chunksize`` argument to the
+:meth:`~spectral_cube.DaskSpectralCube.read` method::
+
+    >>> cube = SpectralCube.read('spectral_cube.image', format='casa_image',
+    ...                          target_chunksize=1000000, use_dask=True)  # doctest: +SKIP
+
+The chunk size is in number of elements, so assuming 64-bit floating point data,
+a target chunk size of 1000000 translates to a chunk size in memory of 8Mb. The
+target chunk size is interpreted as a maximum chunk size, so the largest
+possible chunk size smaller or equal to this limit is used. The chunks on disk are
+combined along the x image direction, then y, and then spectral - this cannot be
+customized since this is dependent on how the chunks are organized on disk.
+
+There is no single value of ``target_chunksize`` that will be optimal for all
+use cases - in general the chunk size should ideally be large enough that the I/O
+is not inefficient and that there are not too many chunks in the final cube,
+but at the same time, when dealing with cubes larger than memory, it is important
+that the chunks cover only part of the image plane - if chunks were combined such
+there there was only one chunk in the x and y directions, then any operation that
+requires rechunking so that there is only one chunk in the spectral dimension (such
+as spectral sigma clipping) would result in the whole cube being loaded.
+
+The default value is 1000000 - which produces 8Mb chunks - large enough that a
+large 40Gb cube would have 5000 chunks but small enough that even if 100 such
+chunks are combined in e.g. the spectral dimension, the memory usage is still
+reasonable (800Mb).
