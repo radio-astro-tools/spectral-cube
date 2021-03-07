@@ -2474,3 +2474,25 @@ def test_minimal_subcube(use_dask):
     subcube = cube.minimal_subcube()
 
     assert subcube.shape == (3, 5, 2)
+
+
+def test_minimal_subcube_nomask(use_dask):
+
+    if not use_dask:
+        pytest.importorskip('scipy')
+
+    data = np.arange(210, dtype=float).reshape((5, 6, 7))
+
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO-HEL']
+
+    cube = SpectralCube(data * u.Jy / u.beam, wcs=wcs, use_dask=use_dask)
+
+    # verify that there is no mask
+    assert cube._mask is None
+
+    # this should not raise an Exception
+    subcube = cube.minimal_subcube()
+
+    # shape is unchanged
+    assert subcube.shape == (5, 6, 7)
