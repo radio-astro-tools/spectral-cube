@@ -2525,11 +2525,19 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     raise ValueError("Conversions between K and Jy/beam or Jy/pix"
                                     "requires the cube to have a beam defined.")
 
-                jtok_factor = self.beam.jtok(self.with_spectral_unit(u.Hz).spectral_axis)
+                jtok_factor = self.beam.jtok(self.with_spectral_unit(u.Hz).spectral_axis) / (u.Jy / u.beam)
 
-                pix_area_btemp_equiv = [(u.Jy / u.pix, u.K,
-                                        lambda x: x * (jtok_factor / pix_area).value,
-                                        lambda x: x * (pix_area / jtok_factor).value)]
+                # We're going to do this piecemeal because it's easier to conceptualize
+                # We specifically anchor these conversions based on the beam area. So from
+                # beam to pix, this is beam -> angular area -> area per pixel
+                # Altogether:
+                # K ->  Jy/beam -> Jy /sr - > Jy / pix
+                forward_factor = 1 / (jtok_factor * (self.beam.sr / u.beam) / (pix_area / u.pix))
+                reverse_factor = jtok_factor * (self.beam.sr / u.beam) / (pix_area / u.pix)
+
+                pix_area_btemp_equiv = [(u.K, u.Jy / u.pix,
+                                        lambda x: x * forward_factor.value,
+                                        lambda x: x * reverse_factor.value)]
 
                 equivalencies = list(equivalencies) + pix_area_btemp_equiv
 
