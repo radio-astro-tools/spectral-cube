@@ -544,9 +544,21 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
 
         Parameters
         ----------
+        obj : {SpectralCube, LowerDimensionalObject}
+            A spectral cube or any other lower dimensional object.
+        unit : `~astropy.units.Unit`
+            Unit to convert `obj` to.
+        equivalencies : tuple, optional
+            Initial list of equivalencies.
+        freq `~astropy.unit.Quantity`, optional
+            Frequency to use for spectral conversions. If the spectral axis is available, the
+            frequencies will already be defined.
 
         Outputs
         -------
+        equivalencies : tuple
+            Output tuple of unit conversion equivalencies.
+
         '''
 
         # Add a simple check it the new unit is already equivalent, and so we don't need
