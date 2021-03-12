@@ -538,7 +538,7 @@ def world_take_along_axis(cube, position_plane, axis):
     return out
 
 
-def bunit_converters(obj, unit, equivalencies=()):
+def bunit_converters(obj, unit, equivalencies=(), freq=None):
         '''
         Handler for all brightness unit conversions.
 
@@ -549,6 +549,10 @@ def bunit_converters(obj, unit, equivalencies=()):
         -------
         '''
 
+        # Add a simple check it the new unit is already equivalent, and so we don't need
+        # any additional unit equivalencies
+        if obj.unit.is_equivalent(unit):
+            return equivalencies
 
         has_btemp = obj.unit.is_equivalent(u.K) or unit.is_equivalent(u.K)
         has_perbeam = obj.unit.is_equivalent(u.Jy/u.beam) or unit.is_equivalent(u.Jy/u.beam)
@@ -557,8 +561,24 @@ def bunit_converters(obj, unit, equivalencies=()):
 
         has_beam = hasattr(obj, 'beam') or obj._beam is None
 
+        # Define freq, if needed:
+        if any([has_perangarea, has_perbeam, has_btemp]):
+            # create a beam equivalency for brightness temperature
+            if freq is None:
+                try:
+                    freq = obj.with_spectral_unit(u.Hz).spectral_axis
+                except AttributeError:
+                    raise TypeError("Object of type {0} has no spectral "
+                                    "information. `freq` must be provided for"
+                                    " unit conversion from Jy/beam"
+                                    .format(type(obj)))
+            else:
+                if not freq.unit.is_equivalent(u.Hz):
+                    raise u.UnitsError("freq must be given in equivalent "
+                                        "frequency units.")
+
         if has_perangarea:
-            bmequiv_angarea = u.brightness_temperature(obj.with_spectral_unit(u.Hz).spectral_axis)
+            bmequiv_angarea = u.brightness_temperature(freq)
 
             equivalencies = list(equivalencies) + bmequiv_angarea
 
@@ -568,7 +588,7 @@ def bunit_converters(obj, unit, equivalencies=()):
                                  "the cube needs to have a beam defined.")
 
             # create a beam equivalency for brightness temperature
-            bmequiv = obj.beam.jtok_equiv(obj.with_spectral_unit(u.Hz).spectral_axis)
+            bmequiv = obj.beam.jtok_equiv(freq)
 
             # TODO: Remove check once `beamarea_equiv` is in a radio-beam release.
             if hasattr(obj.beam, 'beamarea_equiv'):
@@ -595,7 +615,7 @@ def bunit_converters(obj, unit, equivalencies=()):
                     raise ValueError("Conversions between K and Jy/beam or Jy/pix"
                                     "requires the cube to have a beam defined.")
 
-                jtok_factor = obj.beam.jtok(obj.with_spectral_unit(u.Hz).spectral_axis) / (u.Jy / u.beam)
+                jtok_factor = obj.beam.jtok(freq) / (u.Jy / u.beam)
 
                 # We're going to do this piecemeal because it's easier to conceptualize
                 # We specifically anchor these conversions based on the beam area. So from
