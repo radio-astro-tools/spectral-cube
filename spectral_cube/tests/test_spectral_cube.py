@@ -1692,7 +1692,8 @@ def test_basic_unit_conversion_beams(data_vda_beams, use_dask):
                                     1e3))
 
 
-bunits_list = [u.Jy / u.beam, u.K, u.Jy / u.sr, u.Jy / u.pix, u.Jy / u.arcsec**2]
+bunits_list = [u.Jy / u.beam, u.K, u.Jy / u.sr, u.Jy / u.pix, u.Jy / u.arcsec**2,
+               u.mJy / u.beam, u.mK]
 
 @pytest.mark.parametrize(('init_unit'), bunits_list)
 def test_unit_conversions_general(data_advs, use_dask, init_unit):
