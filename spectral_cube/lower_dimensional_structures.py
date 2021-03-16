@@ -165,8 +165,8 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
             freq = self.header['RESTFRQ'] * u.Hz
 
         # Create the tuple of unit conversions needed.
-        equivalencies = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies,
-                                                    freq=freq)
+        factor = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies,
+                                             freq=freq)
 
         # if ((self.unit.is_equivalent(u.Jy / u.beam) and
         #      not any({u.Jy/u.beam, u.K}.issubset(set(eq)) for eq in equivalencies))):
@@ -210,7 +210,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         # else:
 
         # scaling factor
-        factor = self.unit.to(unit, equivalencies=equivalencies)
+        # factor = self.unit.to(unit, equivalencies=equivalencies)
 
         converted_array = (self.quantity * factor).value
 

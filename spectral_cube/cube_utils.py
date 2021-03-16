@@ -618,6 +618,10 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
 
         if has_perpix:
 
+            if not obj.wcs.has_celestial:
+                raise ValueError("Spatial WCS information is required for unit conversions"
+                                 " involving spatial areas (e.g., Jy/pix, Jy/sr)")
+
             pix_area = (proj_plane_pixel_area(obj.wcs.celestial) * u.deg**2).to(u.sr)
 
             pix_area_equiv = [(u.Jy / u.pix, u.Jy / u.sr,
