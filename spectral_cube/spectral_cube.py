@@ -2481,9 +2481,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self
 
         # Create the tuple of unit conversions needed.
-        equivalencies = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies)
-
-        factor = self.unit.to(unit, equivalencies=equivalencies)
+        factor = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies)
 
         # special case: array in equivalencies
         # (I don't think this should have to be special cased, but I don't know
@@ -4051,6 +4049,11 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         if unit == self.unit:
             # No copying
             return self
+
+        # Create the tuple of unit conversions needed.
+        equivalencies = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies)
+
+        # TODO: YYY
 
         if self.unit.is_equivalent(u.Jy/u.beam) and unit.is_equivalent(u.K):
             # replace "beam" with the actual beam

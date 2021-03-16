@@ -564,14 +564,20 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         # Add a simple check it the new unit is already equivalent, and so we don't need
         # any additional unit equivalencies
         if obj.unit.is_equivalent(unit):
-            return equivalencies
+            # return equivalencies
+            factor = obj.unit.to(unit, equivalencies=equivalencies)
+            return factor
 
         has_btemp = obj.unit.is_equivalent(u.K) or unit.is_equivalent(u.K)
         has_perbeam = obj.unit.is_equivalent(u.Jy/u.beam) or unit.is_equivalent(u.Jy/u.beam)
         has_perangarea = obj.unit.is_equivalent(u.Jy/u.sr) or unit.is_equivalent(u.Jy/u.sr)
         has_perpix = obj.unit.is_equivalent(u.Jy/u.pix) or unit.is_equivalent(u.Jy/u.pix)
 
-        has_beam = hasattr(obj, 'beam') or obj._beam is None
+        # Is there any beam object defined?
+        has_beam = hasattr(obj, 'beam') or hasattr(obj, 'beams')
+
+        # Set if this is a varying resolution object
+        has_beams = hasattr(obj, 'beams')
 
         # Define freq, if needed:
         if any([has_perangarea, has_perbeam, has_btemp]):
@@ -627,7 +633,10 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
                     raise ValueError("Conversions between K and Jy/beam or Jy/pix"
                                     "requires the cube to have a beam defined.")
 
-                jtok_factor = obj.beam.jtok(freq) / (u.Jy / u.beam)
+                if has_beams:
+                    jtok_factor = obj.jtok_factors(equivalencies=equivalencies) / (u.Jy / u.beam)
+                else:
+                    jtok_factor = obj.beam.jtok(freq) / (u.Jy / u.beam)
 
                 # We're going to do this piecemeal because it's easier to conceptualize
                 # We specifically anchor these conversions based on the beam area. So from
@@ -656,4 +665,6 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
 
                 equivalencies = list(equivalencies) + pix_area_btemp_equiv
 
-        return equivalencies
+        factor = obj.unit.to(unit, equivalencies=equivalencies)
+
+        return factor
