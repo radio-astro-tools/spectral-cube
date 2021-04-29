@@ -1771,6 +1771,44 @@ def test_beam_jpix_checks_array(data_advs, use_dask):
                                    Kcube_from_jypix.filled_data[:].value)
 
 
+def test_multibeam_jpix_checks_array(data_vda_beams, use_dask):
+    '''
+    Ensure round-trip consistency in our defined K -> Jy/pix conversions.
+
+    '''
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+    cube._meta['BUNIT'] = 'Jy / beam'
+    cube._unit = u.Jy/u.beam
+
+    # NOTE: We are no longer using jtok_factors for conversions. This may need to be removed
+    # in the future
+    jtok = cube.jtok_factors()
+
+    pixperbeam = cube.pixels_per_beam * u.pix
+
+    cube_jypix = cube.to(u.Jy / u.pix)
+    np.testing.assert_almost_equal(cube_jypix.filled_data[:].value,
+                                   (cube.filled_data[:].value /
+                                    pixperbeam[:, None, None]).value)
+
+    Kcube = cube.to(u.K)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   (cube_jypix.filled_data[:].value *
+                                    jtok[:,None,None] *
+                                    pixperbeam[:, None, None]).value)
+
+    # Round trips.
+    roundtrip_cube = cube_jypix.to(u.Jy / u.beam)
+    np.testing.assert_almost_equal(cube.filled_data[:].value,
+                                   roundtrip_cube.filled_data[:].value)
+
+    Kcube_from_jypix = cube_jypix.to(u.K)
+
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   Kcube_from_jypix.filled_data[:].value)
+
+
 def test_beam_jtok_array(data_advs, use_dask):
 
     cube, data = cube_and_raw(data_advs, use_dask=use_dask)
