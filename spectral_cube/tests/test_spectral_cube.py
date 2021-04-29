@@ -1757,13 +1757,7 @@ def test_beam_jtok_array(data_advs, use_dask):
     cube._meta['BUNIT'] = 'Jy / beam'
     cube._unit = u.Jy/u.beam
 
-    equiv = cube.beam.jtok_equiv(cube.with_spectral_unit(u.GHz).spectral_axis)
     jtok = cube.beam.jtok(cube.with_spectral_unit(u.GHz).spectral_axis)
-
-    Kcube = cube.to(u.K, equivalencies=equiv)
-    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
-                                   (cube.filled_data[:].value *
-                                    jtok[:,None,None]).value)
 
     # test that the beam equivalencies are correctly automatically defined
     Kcube = cube.to(u.K)
