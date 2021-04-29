@@ -2,6 +2,7 @@ from __future__ import print_function, absolute_import, division
 
 import contextlib
 import warnings
+from copy import deepcopy
 
 try:
     import builtins
@@ -567,7 +568,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         if obj.unit.is_equivalent(unit):
             # return equivalencies
             factor = obj.unit.to(unit, equivalencies=equivalencies)
-            return factor
+            return [factor]
 
         has_btemp = obj.unit.is_equivalent(u.K) or unit.is_equivalent(u.K)
         has_perbeam = obj.unit.is_equivalent(u.Jy/u.beam) or unit.is_equivalent(u.Jy/u.beam)
@@ -624,10 +625,13 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
             else:
                 thisfreq = freq
 
+            # Changes in beam require a new equivalency for each.
+            this_equivalencies = deepcopy(equivalencies)
+
             if has_perangarea:
                 bmequiv_angarea = u.brightness_temperature(thisfreq)
 
-                equivalencies = list(equivalencies) + bmequiv_angarea
+                this_equivalencies = list(this_equivalencies) + bmequiv_angarea
 
             if has_perbeam or has_perangarea:
                 if not has_beam:
@@ -643,7 +647,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
                 else:
                     bmarea_equiv = u.beam_angular_area(beam.sr)
 
-                equivalencies = list(equivalencies) + bmequiv + bmarea_equiv
+                this_equivalencies = list(this_equivalencies) + bmequiv + bmarea_equiv
 
             if has_perpix:
 
@@ -657,7 +661,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
                                 lambda x: x / pix_area.value,
                                 lambda x: x * pix_area.value)]
 
-                equivalencies = list(equivalencies) + pix_area_equiv
+                this_equivalencies = list(this_equivalencies) + pix_area_equiv
 
                 # Define full from brightness temp to Jy / pix.
                 # Otherwise isn't working in 1 step
@@ -683,7 +687,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
                                             lambda x: x * forward_factor.value,
                                             lambda x: x * reverse_factor.value)]
 
-                    equivalencies = list(equivalencies) + pix_area_btemp_equiv
+                    this_equivalencies = list(this_equivalencies) + pix_area_btemp_equiv
 
                 if has_perbeam:
                     if not has_beam:
@@ -696,15 +700,10 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
                                             lambda x: x * (beam_area / pix_area).value,
                                             lambda x: x * (pix_area / beam_area).value)]
 
-                    equivalencies = list(equivalencies) + pix_area_btemp_equiv
+                    this_equivalencies = list(this_equivalencies) + pix_area_btemp_equiv
 
-            factor = obj.unit.to(unit, equivalencies=equivalencies)
-
-            print(f"This factor: {factor} for {obj.unit} to {unit}")
-
+            factor = obj.unit.to(unit, equivalencies=this_equivalencies)
             factors.append(factor)
-
-        print(f"All factors {factors}")
 
         if has_beams:
             return factors
