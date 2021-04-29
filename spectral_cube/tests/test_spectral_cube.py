@@ -1715,6 +1715,26 @@ def test_unit_conversions_general(data_advs, use_dask, init_unit):
             np.testing.assert_almost_equal(roundtrip_cube.filled_data[:].value,
                                            cube.filled_data[:].value)
 
+@pytest.mark.parametrize(('init_unit'), bunits_list)
+def test_multibeam_unit_conversions_general(data_vda_beams, use_dask, init_unit):
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+    cube._meta['BUNIT'] = init_unit.to_string()
+    cube._unit = init_unit
+
+    # Check all unit conversion combos:
+    for targ_unit in bunits_list:
+        newcube = cube.to(targ_unit)
+
+        if init_unit == targ_unit:
+            np.testing.assert_almost_equal(newcube.filled_data[:].value,
+                                           cube.filled_data[:].value)
+
+        else:
+            roundtrip_cube = newcube.to(init_unit)
+            np.testing.assert_almost_equal(roundtrip_cube.filled_data[:].value,
+                                           cube.filled_data[:].value)
+
 
 def test_beam_jpix_checks_array(data_advs, use_dask):
     '''
