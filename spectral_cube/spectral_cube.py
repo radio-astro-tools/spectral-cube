@@ -4051,19 +4051,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             return self
 
         # Create the tuple of unit conversions needed.
-        equivalencies = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies)
-
-        # TODO: YYY
-
-        if self.unit.is_equivalent(u.Jy/u.beam) and unit.is_equivalent(u.K):
-            # replace "beam" with the actual beam
-            if not hasattr(self, 'beams'):
-                raise ValueError("To convert cubes with Jy/beam units, "
-                                 "the cube needs to have beams defined.")
-            factor = self.jtok_factors(equivalencies=equivalencies) * (self.unit*u.beam).to(u.Jy)
-        else:
-            # scaling factor
-            factor = self.unit.to(unit, equivalencies=equivalencies)
+        factor = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies)
+        factor = np.array(factor)
 
         # special case: array in equivalencies
         # (I don't think this should have to be special cased, but I don't know

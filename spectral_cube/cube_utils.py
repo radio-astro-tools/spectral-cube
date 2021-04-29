@@ -670,9 +670,6 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
                         raise ValueError("Conversions between K and Jy/beam or Jy/pix"
                                         "requires the cube to have a beam defined.")
 
-                    # if has_beams:
-                    #     jtok_factor = obj.jtok_factors(equivalencies=equivalencies) / (u.Jy / u.beam)
-                    # else:
                     jtok_factor = beam.jtok(thisfreq) / (u.Jy / u.beam)
 
                     # We're going to do this piecemeal because it's easier to conceptualize
