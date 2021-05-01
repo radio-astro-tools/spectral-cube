@@ -1834,8 +1834,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         spatial_only: bool
             Only compute the minimal subcube in the spatial dimensions
         """
-        return self[self.subcube_slices_from_mask(self._mask,
-                                                  spatial_only=spatial_only)]
+        if self._mask is not None:
+            return self[self.subcube_slices_from_mask(self._mask,
+                                                      spatial_only=spatial_only)]
+        else:
+            return self[:]
 
     def subcube_from_mask(self, region_mask):
         """
