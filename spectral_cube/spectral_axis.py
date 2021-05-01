@@ -116,9 +116,9 @@ def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
         in_physchar = ctype[5]
     else:
         lin_cunit = LINEAR_CUNIT_DICT[ctype]
-        in_physchar = PHYSICAL_TYPE_TO_CHAR[lin_cunit.physical_type]
+        in_physchar = PHYSICAL_TYPE_TO_CHAR[str(lin_cunit.physical_type)]
 
-    if unit.physical_type == 'speed':
+    if str(unit.physical_type) == 'speed':
         if velocity_convention is None and ctype[0] == 'V':
             # Special case: velocity <-> velocity doesn't care about convention
             return ctype
@@ -135,13 +135,13 @@ def determine_ctype_from_vconv(ctype, unit, velocity_convention=None):
             
     else:
         in_phystype = CTYPE_TO_PHYSICALTYPE[in_physchar]
-        if in_phystype == unit.physical_type:
+        if in_phystype == str(unit.physical_type):
             # Linear case
             return ALL_CTYPES[in_phystype]
         else:
             # Nonlinear case
-            out_physchar = PHYSICAL_TYPE_TO_CTYPE[unit.physical_type]
-            return "{type}-{s1}2{s2}".format(type=ALL_CTYPES[unit.physical_type],
+            out_physchar = PHYSICAL_TYPE_TO_CTYPE[str(unit.physical_type)]
+            return "{type}-{s1}2{s2}".format(type=ALL_CTYPES[str(unit.physical_type)],
                                              s1=in_physchar,
                                              s2=out_physchar)
 
@@ -209,14 +209,14 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
 
     # If wcs_rv is set and speed -> speed, then we're changing the reference
     # location and we need to convert to meters or Hz first
-    if ((inunit.physical_type == 'speed' and
-         outunit.physical_type == 'speed' and
+    if ((str(inunit.physical_type) == 'speed' and
+         str(outunit.physical_type) == 'speed' and
          wcs_rv is not None)):
         mywcs = convert_spectral_axis(mywcs, wcs_rv.unit,
-                                      ALL_CTYPES[wcs_rv.unit.physical_type],
+                                      ALL_CTYPES[str(wcs_rv.unit.physical_type)],
                                       rest_value=wcs_rv)
         inunit = u.Unit(mywcs.wcs.cunit[mywcs.wcs.spec])
-    elif (inunit.physical_type == 'speed' and outunit.physical_type == 'speed'
+    elif (str(inunit.physical_type) == 'speed' and str(outunit.physical_type) == 'speed'
           and wcs_rv is None):
         # If there is no reference change, we want an identical WCS, since
         # WCS doesn't know about units *at all*
@@ -234,14 +234,14 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
 
     # Check whether we need to convert the rest value first
     ref_value = None
-    if outunit.physical_type == 'speed':
+    if str(outunit.physical_type) == 'speed':
         if rest_value is None:
             rest_value = wcs_rv
             if rest_value is None:
                 raise ValueError("If converting from wavelength/frequency to speed, "
                                  "a reference wavelength/frequency is required.")
         ref_value = rest_value.to(u.Hz, u.spectral())
-    elif inunit.physical_type == 'speed':
+    elif str(inunit.physical_type) == 'speed':
         # The rest frequency and wavelength should be equivalent
         if rest_value is not None:
             ref_value = rest_value
@@ -293,7 +293,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
                                   cdelt_in,
                                   # equivalent: inunit.physical_type
                                   intype=CTYPE_TO_PHYSICALTYPE[in_spec_ctype[:4]],
-                                  outtype=lin_cunit.physical_type,
+                                  outtype=str(lin_cunit.physical_type),
                                   rest=ref_value,
                                   linear=True
                                   )
@@ -313,7 +313,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     linear_middle = in_vcequiv == out_vcequiv
 
     cdelt_lin2 = cdelt_derivative(crval_lin1, cdelt_lin1,
-                                  intype=lin_cunit.physical_type,
+                                  intype=str(lin_cunit.physical_type),
                                   outtype=CTYPE_TO_PHYSICALTYPE[out_ctype_conv],
                                   rest=ref_value,
                                   linear=linear_middle)
@@ -325,7 +325,7 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
         cdelt_out = cdelt_derivative(crval_lin2,
                                      cdelt_lin2,
                                      intype=CTYPE_TO_PHYSICALTYPE[out_ctype_conv],
-                                     outtype=outunit.physical_type,
+                                     outtype=str(outunit.physical_type),
                                      rest=ref_value,
                                      linear=True
                                      ).to(outunit)
@@ -354,9 +354,9 @@ def convert_spectral_axis(mywcs, outunit, out_ctype, rest_value=None):
     newwcs.wcs.crval[newwcs.wcs.spec] = crval_out.value
     newwcs.wcs.ctype[newwcs.wcs.spec] = out_ctype
     if rest_value is not None:
-        if rest_value.unit.physical_type == 'frequency':
+        if str(rest_value.unit.physical_type) == 'frequency':
             newwcs.wcs.restfrq = rest_value.to(u.Hz).value
-        elif rest_value.unit.physical_type == 'length':
+        elif str(rest_value.unit.physical_type) == 'length':
             newwcs.wcs.restwav = rest_value.to(u.m).value
         else:
             raise ValueError("Rest Value was specified, but not in frequency or length units")
