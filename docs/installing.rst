@@ -6,9 +6,9 @@ Requirements
 
 This package has the following dependencies:
 
-* `Python <http://www.python.org>`_ 2.7 or later (Python 3.x is supported)
+* `Python <http://www.python.org>`_ Python 3.x
 * `Numpy <http://www.numpy.org>`_ 1.8 or later
-* `Astropy <http://www.astropy.org>`__ 1.0 or later
+* `Astropy <http://www.astropy.org>`__ 4.0 or later
 * `radio_beam <https://github.com/radio-astro-tools/radio_beam>`_, used when
   reading in spectral cubes that use the BMAJ/BMIN convention for specifying the beam size.
 * `Bottleneck <http://berkeleyanalytics.com/bottleneck/>`_, optional (speeds
@@ -34,6 +34,9 @@ or you can download the latest tar file from
 
     python setup.py install
 
+If you are using python2.7 (e.g., if you are using CASA version 5 or earlier),
+the latest spectral-cube version that is compatible is v0.4.4.
+
 Developer version
 -----------------
 
@@ -45,7 +48,7 @@ can do so from the git repository::
     python setup.py install
 
 You may need to add the ``--user`` option to the last line `if you do not
-have root access <https://docs.python.org/2/install/#alternate-installation-the-user-scheme>`_.
+have root access <https://docs.python.org/3/install/#alternate-installation-the-user-scheme>`_.
 You can also install the latest developer version in a single line with pip::
 
     pip install git+https://github.com/radio-astro-tools/spectral-cube.git
