@@ -182,21 +182,24 @@ class FilledArrayHandler:
     """
 
     def __init__(self, cube, fill=np.nan):
-        self._cube = cube
+        self._data = cube._data
+        self._mask = cube._mask
         self._fill = fill
+        self._wcs = cube._wcs
+        self._wcs_tolerance = cube._wcs_tolerance
         self.shape = cube._data.shape
         self.dtype = cube._data.dtype
         self.ndim = len(self.shape)
 
     def __getitem__(self, view):
-        if self._cube._data[view].size == 0:
+        if self._data[view].size == 0:
             return 0.
         else:
-            return self._cube._mask._filled(data=self._cube._data,
-                                            view=view,
-                                            wcs=self._cube._wcs,
-                                            fill=self._fill,
-                                            wcs_tolerance=self._cube._wcs_tolerance)
+            return self._mask._filled(data=self._data,
+                                      view=view,
+                                      wcs=self._wcs,
+                                      fill=self._fill,
+                                      wcs_tolerance=self._wcs_tolerance)
 
 
 class MaskHandler:
@@ -207,14 +210,14 @@ class MaskHandler:
     """
 
     def __init__(self, cube):
-        self._cube = cube
+        self._data = cube._data
         self._mask = cube.mask
         self.shape = cube._data.shape
         self.dtype = cube._data.dtype
         self.ndim = len(self.shape)
 
     def __getitem__(self, view):
-        if self._cube._data[view].size == 0:
+        if self._data[view].size == 0:
             return False
         else:
             result = self._mask.include(view=view)

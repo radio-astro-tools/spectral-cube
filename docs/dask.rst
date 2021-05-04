@@ -49,6 +49,18 @@ You can optionally specify the number of threads/processes to use with ``num_wor
 If you don't specify the number of threads, this could end up being quite large, and cause you to
 run out of memory for certain operations.
 
+If you want to use `dask.distributed <https://distributed.dask.org/en/latest/>`_ you will need to
+make sure you pass the client to the :meth:`~spectral_cube.DaskSpectralCube.use_dask_scheduler`
+method, e.g.::
+
+    >>> from dask.distributed import Client, LocalCluster  # doctest: +SKIP
+    >>> cluster = LocalCluster(n_workers=4,
+    ...                        threads_per_worker=4,
+    ...                        memory_limit='10GB')  # doctest: +SKIP
+    >>> client = Client(cluster)  # doctest: +SKIP
+    >>> cube = SpectralCube.read(...)  # doctest: +SKIP
+    >>> cube.use_dask_scheduler(client)  # doctest: +SKIP
+
 Note that running operations in parallel may sometimes be less efficient than running them in
 serial depending on how your data is stored, so don't assume that it will always be faster.
 
