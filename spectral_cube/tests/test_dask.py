@@ -1,10 +1,13 @@
 # Tests specific to the dask class
 
+import os
 import pytest
 
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
 from astropy import units as u
+
+from distributed.utils_test import client, loop, cluster_fixture  # noqa
 
 from spectral_cube import DaskSpectralCube
 from .test_casafuncs import make_casa_testimage
@@ -19,6 +22,8 @@ except ImportError:
         CASA_INSTALLED = True
     except ImportError:
         CASA_INSTALLED = False
+
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class Array:
@@ -110,3 +115,14 @@ def test_statistics_consistency_casa(data_adv, tmp_path):
         else:
             value = stats[key]
         assert_allclose(value, stats_casa[key])
+
+
+def test_dask_distributed(client, tmpdir):  # noqa
+
+    # Make sure that we can use dask distributed. This is a regression test for
+    # a bug caused by FilledArrayHandler not being serializable.
+
+    cube = DaskSpectralCube.read(os.path.join(DATA, 'basic.image'))
+    cube.use_dask_scheduler(client)
+
+    cube.sigma_clip_spectrally(2, save_to_tmp_dir=tmpdir.strpath)
