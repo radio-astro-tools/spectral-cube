@@ -7,6 +7,7 @@
 - Switch to using standalone casa-formats-io package for reading in CASA
   .image files (this was split out from spectral-cube). #684
 - Make it possible to customize ``target_chunksize`` in the CASA reader. #705
+- Fix support for dask.distributed. #712
 
 0.5 (2020-09-17)
 ----------------
