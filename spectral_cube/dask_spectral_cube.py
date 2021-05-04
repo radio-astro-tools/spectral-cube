@@ -808,8 +808,8 @@ class DaskSpectralCubeMixin:
         """
 
         def spectral_sigma_clip(array):
-            result = stats.sigma_clip(array, sigma=threshold, axis=0, **kwargs)
-            return result.filled(np.nan)
+            return stats.sigma_clip(array, sigma=threshold, axis=0,
+                                    masked=False, copy=True, **kwargs)
 
         return self.apply_function_parallel_spectral(spectral_sigma_clip,
                                                      accepts_chunks=True)
