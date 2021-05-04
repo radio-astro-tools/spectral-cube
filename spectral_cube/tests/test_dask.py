@@ -7,7 +7,11 @@ from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
 from astropy import units as u
 
-from distributed.utils_test import client, loop, cluster_fixture  # noqa
+try:
+    from distributed.utils_test import client, loop, cluster_fixture  # noqa
+    DISTRIBUTED_INSTALLED = True
+except ImportError:
+    DISTRIBUTED_INSTALLED = False
 
 from spectral_cube import DaskSpectralCube
 from .test_casafuncs import make_casa_testimage
@@ -117,12 +121,14 @@ def test_statistics_consistency_casa(data_adv, tmp_path):
         assert_allclose(value, stats_casa[key])
 
 
-def test_dask_distributed(client, tmpdir):  # noqa
+if DISTRIBUTED_INSTALLED:
 
-    # Make sure that we can use dask distributed. This is a regression test for
-    # a bug caused by FilledArrayHandler not being serializable.
+    def test_dask_distributed(client, tmpdir):  # noqa
 
-    cube = DaskSpectralCube.read(os.path.join(DATA, 'basic.image'))
-    cube.use_dask_scheduler(client)
+        # Make sure that we can use dask distributed. This is a regression test for
+        # a bug caused by FilledArrayHandler not being serializable.
 
-    cube.sigma_clip_spectrally(2, save_to_tmp_dir=tmpdir.strpath)
+        cube = DaskSpectralCube.read(os.path.join(DATA, 'basic.image'))
+        cube.use_dask_scheduler(client)
+
+        cube.sigma_clip_spectrally(2, save_to_tmp_dir=tmpdir.strpath)
