@@ -568,7 +568,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         if obj.unit.is_equivalent(unit):
             # return equivalencies
             factor = obj.unit.to(unit, equivalencies=equivalencies)
-            return [factor]
+            return np.array([factor])
 
         has_btemp = obj.unit.is_equivalent(u.K) or unit.is_equivalent(u.K)
         has_perbeam = obj.unit.is_equivalent(u.Jy/u.beam) or unit.is_equivalent(u.Jy/u.beam)
