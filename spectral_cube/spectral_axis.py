@@ -74,8 +74,9 @@ def wcs_unit_scale(unit):
 
 def parse_phys_type(unit):
     '''
-    As of astropy 4.3.dev1499+g5b09f9dd9, the physical type of a speed if "speed".
-    This is to parse those types and return "speed" that works with our dictionary defintions.
+    As of astropy 4.3.dev1499+g5b09f9dd9, the physical type of a speed is now "speed/velocity".
+    This is to parse those types and return "speed" that works with our dictionary defintions,
+    and will also continue to work with previous astropy versions.
     '''
     return 'speed' if 'speed' in str(unit.physical_type) else str(unit.physical_type)
 
