@@ -623,14 +623,14 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         factors = []
 
         # Iterate through spectral channels.
-        for i in iter:
+        for ii in iter:
 
-            beam = beams[i]
+            beam = beams[ii]
 
             # Use the range of frequencies when the beam does not change. Otherwise, select the
             # frequency corresponding to this beam.
             if has_beams:
-                thisfreq = freq[i]
+                thisfreq = freq[ii]
             else:
                 thisfreq = freq
 
@@ -720,4 +720,3 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         else:
             # Slice along first axis to return a 1D array.
             return factors[0]
-
