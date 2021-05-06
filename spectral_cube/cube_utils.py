@@ -542,7 +542,9 @@ def world_take_along_axis(cube, position_plane, axis):
 
 def bunit_converters(obj, unit, equivalencies=(), freq=None):
         '''
-        Handler for all brightness unit conversions.
+        Handler for all brightness unit conversions, including: K, Jy/beam, Jy/pix, Jy/sr.
+        This also includes varying resolution spectral cubes, where the beam size varies along
+        the frequency axis.
 
         Parameters
         ----------
@@ -552,7 +554,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
             Unit to convert `obj` to.
         equivalencies : tuple, optional
             Initial list of equivalencies.
-        freq `~astropy.unit.Quantity`, optional
+        freq : `~astropy.unit.Quantity`, optional
             Frequency to use for spectral conversions. If the spectral axis is available, the
             frequencies will already be defined.
 
@@ -570,6 +572,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
             factor = obj.unit.to(unit, equivalencies=equivalencies)
             return np.array([factor])
 
+        # Determine the bunit "type". This will determine what information we need for the unit conversion.
         has_btemp = obj.unit.is_equivalent(u.K) or unit.is_equivalent(u.K)
         has_perbeam = obj.unit.is_equivalent(u.Jy/u.beam) or unit.is_equivalent(u.Jy/u.beam)
         has_perangarea = obj.unit.is_equivalent(u.Jy/u.sr) or unit.is_equivalent(u.Jy/u.sr)
@@ -583,7 +586,8 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
 
         # Define freq, if needed:
         if any([has_perangarea, has_perbeam, has_btemp]):
-            # create a beam equivalency for brightness temperature
+            # Create a beam equivalency for brightness temperature
+            # This requires knowing the frequency along the spectral axis.
             if freq is None:
                 try:
                     freq = obj.with_spectral_unit(u.Hz).spectral_axis
@@ -604,6 +608,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
 
         # To handle varying resolution objects, loop through "channels"
         # Default to a single iteration for a 2D spatial object or when a beam is not defined
+        # This allows handling all 1D, 2D, and 3D data products.
         if has_beams:
             iter = range(len(obj.beams))
             beams = obj.beams
@@ -614,12 +619,16 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
             iter = range(0, 1)
             beams = [None]
 
+        # Append the unit conversion factors
         factors = []
 
+        # Iterate through spectral channels.
         for i in iter:
 
             beam = beams[i]
 
+            # Use the range of frequencies when the beam does not change. Otherwise, select the
+            # frequency corresponding to this beam.
             if has_beams:
                 thisfreq = freq[i]
             else:
@@ -628,11 +637,13 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
             # Changes in beam require a new equivalency for each.
             this_equivalencies = deepcopy(equivalencies)
 
+            # Equivalencies for Jy per ang area.
             if has_perangarea:
                 bmequiv_angarea = u.brightness_temperature(thisfreq)
 
                 this_equivalencies = list(this_equivalencies) + bmequiv_angarea
 
+            # Beam area equivalencies for Jy per beam and/or Jy per ang area
             if has_perbeam or has_perangarea:
                 if not has_beam:
                     raise ValueError("To convert cubes with Jy/beam units, "
@@ -649,6 +660,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
 
                 this_equivalencies = list(this_equivalencies) + bmequiv + bmarea_equiv
 
+            # Equivalencies for Jy per pixel area.
             if has_perpix:
 
                 if not obj.wcs.has_celestial:
@@ -686,6 +698,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
 
                     this_equivalencies = list(this_equivalencies) + pix_area_btemp_equiv
 
+                # Equivalencies between pixel and angular areas.
                 if has_perbeam:
                     if not has_beam:
                         raise ValueError("Conversions between Jy/beam or Jy/pix"
@@ -705,5 +718,6 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         if has_beams:
             return factors
         else:
+            # Slice along first axis to return a 1D array.
             return factors[0]
 
