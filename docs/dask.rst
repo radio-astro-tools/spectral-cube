@@ -61,8 +61,24 @@ method, e.g.::
     >>> cube = SpectralCube.read(...)  # doctest: +SKIP
     >>> cube.use_dask_scheduler(client)  # doctest: +SKIP
 
-Note that running operations in parallel may sometimes be less efficient than running them in
-serial depending on how your data is stored, so don't assume that it will always be faster.
+If you run into the following error when using `dask.distributed`_::
+
+    An attempt has been made to start a new process before the
+    current process has finished its bootstrapping phase.
+
+    This probably means that you are not using fork to start your
+    child processes and you have forgotten to use the proper idiom
+    in the main module:
+
+        if __name__ == '__main__':
+            freeze_support()
+
+You should place the main code in your script inside::
+
+        if __name__ == '__main__':
+
+.. note:: Running operations in parallel may sometimes be less efficient than running them in
+          serial depending on how your data is stored, so don't assume that it will always be faster.
 
 If you want to see a progress bar when carrying out calculations, you can make use of the
 `dask.diagnostics <https://docs.dask.org/en/latest/diagnostics-local.html>`_ sub-package - run
