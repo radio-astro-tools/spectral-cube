@@ -652,7 +652,8 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
                 # create a beam equivalency for brightness temperature
                 bmequiv = beam.jtok_equiv(thisfreq)
 
-                # TODO: Remove check once `beamarea_equiv` is in a radio-beam release.
+                # NOTE: `beamarea_equiv` was included in the radio-beam v0.3.3 release
+                # The if/else here handles potential cases where earlier releases are installed.
                 if hasattr(beam, 'beamarea_equiv'):
                     bmarea_equiv = beam.beamarea_equiv
                 else:
