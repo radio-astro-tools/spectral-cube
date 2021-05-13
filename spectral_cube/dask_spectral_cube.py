@@ -805,7 +805,6 @@ class DaskSpectralCubeMixin:
             data = data.rechunk(rechunk)
 
         if additional_arrays is None:
-            # newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
             newdata = da.map_blocks(function, data, dtype=data.dtype, **kwargs)
         else:
             additional_arrays = [array.rechunk(data.chunksize) for array in additional_arrays]
