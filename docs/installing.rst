@@ -35,7 +35,7 @@ or you can download the latest tar file from
     python setup.py install
 
 If you are using python2.7 (e.g., if you are using CASA version 5 or earlier),
-the latest spectral-cube version that is compatible is v0.4.4.
+the latest spectral-cube version that is compatible is v0.4.4. Note that `Astropy v2.0 <https://docs.astropy.org/en/v2.0.16/install.html>__` is the last version to support python2.7.
 
 Developer version
 -----------------
