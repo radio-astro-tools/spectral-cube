@@ -529,6 +529,7 @@ class DaskSpectralCubeMixin:
     def apply_function_parallel_spectral(self,
                                          function,
                                          accepts_chunks=False,
+                                         return_new_cube=True,
                                          **kwargs):
         """
         Apply a function in parallel along the spectral dimension.  The
@@ -553,19 +554,34 @@ class DaskSpectralCubeMixin:
             especially if carrying out several operations sequentially. If
             `False`, the computation is only carried out when accessing
             specific parts of the data or writing to disk.
+        return_new_cube : bool
+            If `True`, a new `~SpectralCube` object will be returned. This is the default
+            for when the function will return another version of the new spectral cube
+            with the operation applied (for example, spectral smoothing). If `False`,
+            an array will be returned from `function`. This is useful, for example,
+            when fitting a model to spectra and the output is the fitted model parameters.
         kwargs : dict
             Passed to ``function``
         """
 
-        def wrapper(data, **kwargs):
+        def wrapper(data, block_info=None, **kwargs):
             if data.size > 0:
-                return function(data, **kwargs)
+                return function(data, block_info=block_info, **kwargs)
             else:
                 return data
 
         if accepts_chunks:
+            # Check if the spectral axis is already one chunk. If it is, there is no need to rechunk the data
+            current_chunksize = self._data.chunksize
+            if current_chunksize[0] == self.shape[0]:
+                rechunk = None
+            else:
+                rechunk = (-1, 'auto', 'auto')
+
             return self._map_blocks_to_cube(wrapper,
-                                            rechunk=(-1, 'auto', 'auto'), **kwargs)
+                                            return_new_cube=return_new_cube,
+                                            rechunk=rechunk, **kwargs)
+
         else:
             data = self._get_filled_data(fill=self._fill_value)
             # apply_along_axis returns an array with a single chunk, but we
@@ -573,11 +589,16 @@ class DaskSpectralCubeMixin:
             # even if it results in a poorer performance.
             data = data.rechunk((-1, 'auto', 'auto'))
             newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],))
-            return self._new_cube_with(data=newdata,
-                                       wcs=self.wcs,
-                                       mask=self.mask,
-                                       meta=self.meta,
-                                       fill_value=self.fill_value)
+
+            if return_new_cube:
+                return self._new_cube_with(data=newdata,
+                                        wcs=self.wcs,
+                                        mask=self.mask,
+                                        meta=self.meta,
+                                        fill_value=self.fill_value)
+            else:
+                return newdata
+
 
     @projection_if_needed
     @ignore_warnings
@@ -758,7 +779,9 @@ class DaskSpectralCubeMixin:
 
         return stats
 
-    def _map_blocks_to_cube(self, function, additional_arrays=None, fill=np.nan, rechunk=None, **kwargs):
+    def _map_blocks_to_cube(self, function, additional_arrays=None, fill=np.nan, rechunk=None,
+                            return_new_cube=True,
+                            **kwargs):
         """
         Call dask's map_blocks, returning a new spectral cube.
         """
@@ -769,19 +792,23 @@ class DaskSpectralCubeMixin:
             data = data.rechunk(rechunk)
 
         if additional_arrays is None:
-            newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
+            # newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
+            newdata = da.map_blocks(function, data, dtype=data.dtype, **kwargs)
         else:
             additional_arrays = [array.rechunk(data.chunksize) for array in additional_arrays]
             newdata = da.map_blocks(function, data, *additional_arrays, dtype=data.dtype, **kwargs)
 
         # Create final output cube
-        newcube = self._new_cube_with(data=newdata,
-                                      wcs=self.wcs,
-                                      mask=self.mask,
-                                      meta=self.meta,
-                                      fill_value=self.fill_value)
+        if return_new_cube:
+            newcube = self._new_cube_with(data=newdata,
+                                          wcs=self.wcs,
+                                          mask=self.mask,
+                                          meta=self.meta,
+                                          fill_value=self.fill_value)
 
-        return newcube
+            return newcube
+        else:
+            return newdata
 
     # NOTE: the following three methods could also be implemented spaxel by
     # spaxel using apply_function_parallel_spectral but then take longer (but
