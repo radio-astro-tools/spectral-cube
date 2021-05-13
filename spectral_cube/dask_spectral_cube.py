@@ -564,11 +564,24 @@ class DaskSpectralCubeMixin:
             Passed to ``function``
         """
 
-        def wrapper(data, block_info=None, **kwargs):
-            if data.size > 0:
-                return function(data, block_info=block_info, **kwargs)
-            else:
-                return data
+        # NOTE: `block_info` should always be available for `dask.array.map_blocks` to pass to
+        # Because we use this wrapper, this always should be an available kwarg, then we check
+        # if that kwarg should be passed to `function`
+        _has_blockinfo = 'block_info' in inspect.signature(function).parameters
+
+        # if/else to avoid an if/else in every single wrapper call.
+        if _has_blockinfo:
+            def wrapper(data, block_info=None, **kwargs):
+                if data.size > 0:
+                    return function(data, block_info=block_info, **kwargs)
+                else:
+                    return data
+        else:
+            def wrapper(data, **kwargs):
+                if data.size > 0:
+                    return function(data, **kwargs)
+                else:
+                    return data
 
         if accepts_chunks:
             # Check if the spectral axis is already one chunk. If it is, there is no need to rechunk the data
