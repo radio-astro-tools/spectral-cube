@@ -1692,6 +1692,122 @@ def test_basic_unit_conversion_beams(data_vda_beams, use_dask):
                                     1e3))
 
 
+bunits_list = [u.Jy / u.beam, u.K, u.Jy / u.sr, u.Jy / u.pix, u.Jy / u.arcsec**2,
+               u.mJy / u.beam, u.mK]
+
+@pytest.mark.parametrize(('init_unit'), bunits_list)
+def test_unit_conversions_general(data_advs, use_dask, init_unit):
+
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
+    cube._meta['BUNIT'] = init_unit.to_string()
+    cube._unit = init_unit
+
+    # Check all unit conversion combos:
+    for targ_unit in bunits_list:
+        newcube = cube.to(targ_unit)
+
+        if init_unit == targ_unit:
+            np.testing.assert_almost_equal(newcube.filled_data[:].value,
+                                           cube.filled_data[:].value)
+
+        else:
+            roundtrip_cube = newcube.to(init_unit)
+            np.testing.assert_almost_equal(roundtrip_cube.filled_data[:].value,
+                                           cube.filled_data[:].value)
+
+@pytest.mark.parametrize(('init_unit'), bunits_list)
+def test_multibeam_unit_conversions_general(data_vda_beams, use_dask, init_unit):
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+    cube._meta['BUNIT'] = init_unit.to_string()
+    cube._unit = init_unit
+
+    # Check all unit conversion combos:
+    for targ_unit in bunits_list:
+        newcube = cube.to(targ_unit)
+
+        if init_unit == targ_unit:
+            np.testing.assert_almost_equal(newcube.filled_data[:].value,
+                                           cube.filled_data[:].value)
+
+        else:
+            roundtrip_cube = newcube.to(init_unit)
+            np.testing.assert_almost_equal(roundtrip_cube.filled_data[:].value,
+                                           cube.filled_data[:].value)
+
+
+def test_beam_jpix_checks_array(data_advs, use_dask):
+    '''
+    Ensure round-trip consistency in our defined K -> Jy/pix conversions.
+
+    '''
+
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
+    cube._meta['BUNIT'] = 'Jy / beam'
+    cube._unit = u.Jy/u.beam
+
+    jtok = cube.beam.jtok(cube.with_spectral_unit(u.GHz).spectral_axis)
+
+    pixperbeam = cube.pixels_per_beam * u.pix
+
+    cube_jypix = cube.to(u.Jy / u.pix)
+    np.testing.assert_almost_equal(cube_jypix.filled_data[:].value,
+                                   (cube.filled_data[:].value /
+                                    pixperbeam).value)
+
+    Kcube = cube.to(u.K)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   (cube_jypix.filled_data[:].value *
+                                    jtok[:,None,None] * pixperbeam).value)
+
+    # Round trips.
+    roundtrip_cube = cube_jypix.to(u.Jy / u.beam)
+    np.testing.assert_almost_equal(cube.filled_data[:].value,
+                                   roundtrip_cube.filled_data[:].value)
+
+    Kcube_from_jypix = cube_jypix.to(u.K)
+
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   Kcube_from_jypix.filled_data[:].value)
+
+
+def test_multibeam_jpix_checks_array(data_vda_beams, use_dask):
+    '''
+    Ensure round-trip consistency in our defined K -> Jy/pix conversions.
+
+    '''
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+    cube._meta['BUNIT'] = 'Jy / beam'
+    cube._unit = u.Jy/u.beam
+
+    # NOTE: We are no longer using jtok_factors for conversions. This may need to be removed
+    # in the future
+    jtok = cube.jtok_factors()
+
+    pixperbeam = cube.pixels_per_beam * u.pix
+
+    cube_jypix = cube.to(u.Jy / u.pix)
+    np.testing.assert_almost_equal(cube_jypix.filled_data[:].value,
+                                   (cube.filled_data[:].value /
+                                    pixperbeam[:, None, None]).value)
+
+    Kcube = cube.to(u.K)
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   (cube_jypix.filled_data[:].value *
+                                    jtok[:,None,None] *
+                                    pixperbeam[:, None, None]).value)
+
+    # Round trips.
+    roundtrip_cube = cube_jypix.to(u.Jy / u.beam)
+    np.testing.assert_almost_equal(cube.filled_data[:].value,
+                                   roundtrip_cube.filled_data[:].value)
+
+    Kcube_from_jypix = cube_jypix.to(u.K)
+
+    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
+                                   Kcube_from_jypix.filled_data[:].value)
+
 
 def test_beam_jtok_array(data_advs, use_dask):
 
@@ -1699,20 +1815,13 @@ def test_beam_jtok_array(data_advs, use_dask):
     cube._meta['BUNIT'] = 'Jy / beam'
     cube._unit = u.Jy/u.beam
 
-    equiv = cube.beam.jtok_equiv(cube.with_spectral_unit(u.GHz).spectral_axis)
     jtok = cube.beam.jtok(cube.with_spectral_unit(u.GHz).spectral_axis)
-
-    Kcube = cube.to(u.K, equivalencies=equiv)
-    np.testing.assert_almost_equal(Kcube.filled_data[:].value,
-                                   (cube.filled_data[:].value *
-                                    jtok[:,None,None]).value)
 
     # test that the beam equivalencies are correctly automatically defined
     Kcube = cube.to(u.K)
     np.testing.assert_almost_equal(Kcube.filled_data[:].value,
                                    (cube.filled_data[:].value *
                                     jtok[:,None,None]).value)
-
 
 def test_multibeam_jtok_array(data_vda_beams, use_dask):
 

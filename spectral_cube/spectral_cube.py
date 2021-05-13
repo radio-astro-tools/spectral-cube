@@ -2480,20 +2480,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             # No copying
             return self
 
-        if self.unit.is_equivalent(u.Jy/u.beam):
-            # replace "beam" with the actual beam
-            if not hasattr(self, 'beam') or self._beam is None:
-                raise ValueError("To convert cubes with Jy/beam units, "
-                                 "the cube needs to have a beam defined.")
-            brightness_unit = self.unit * u.beam
-
-            # create a beam equivalency for brightness temperature
-            bmequiv = self.beam.jtok_equiv(self.with_spectral_unit(u.Hz).spectral_axis)
-            factor = brightness_unit.to(unit,
-                                        equivalencies=bmequiv+list(equivalencies))
-        else:
-            # scaling factor
-            factor = self.unit.to(unit, equivalencies=equivalencies)
+        # Create the tuple of unit conversions needed.
+        factor = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies)
 
         # special case: array in equivalencies
         # (I don't think this should have to be special cased, but I don't know
@@ -4062,15 +4050,9 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             # No copying
             return self
 
-        if self.unit.is_equivalent(u.Jy/u.beam) and unit.is_equivalent(u.K):
-            # replace "beam" with the actual beam
-            if not hasattr(self, 'beams'):
-                raise ValueError("To convert cubes with Jy/beam units, "
-                                 "the cube needs to have beams defined.")
-            factor = self.jtok_factors(equivalencies=equivalencies) * (self.unit*u.beam).to(u.Jy)
-        else:
-            # scaling factor
-            factor = self.unit.to(unit, equivalencies=equivalencies)
+        # Create the tuple of unit conversions needed.
+        factor = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies)
+        factor = np.array(factor)
 
         # special case: array in equivalencies
         # (I don't think this should have to be special cased, but I don't know

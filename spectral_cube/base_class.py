@@ -480,6 +480,15 @@ class MultiBeamMixinClass(object):
         self._beams = obj
 
     @property
+    @cached
+    def pixels_per_beam(self):
+        pixels_per_beam = [(beam.sr /
+                (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
+                 u.deg**2)).to(u.one).value for beam in self.beams]
+
+        return pixels_per_beam
+
+    @property
     def unmasked_beams(self):
         return self._beams
 

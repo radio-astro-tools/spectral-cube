@@ -17,7 +17,7 @@ from astropy.io.registry import UnifiedReadWriteMethod
 from . import spectral_axis
 from .io.core import LowerDimensionalObjectWrite
 from .utils import SliceWarning, BeamWarning, SmoothingWarning, FITSWarning
-from .cube_utils import convert_bunit
+from . import cube_utils
 from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
 
@@ -26,7 +26,6 @@ from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          MultiBeamMixinClass, BeamMixinClass,
                          HeaderMixinClass
                         )
-from . import cube_utils
 
 __all__ = ['LowerDimensionalObject', 'Projection', 'Slice', 'OneDSpectrum']
 class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
@@ -162,48 +161,15 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
             # No copying
             return self
 
-        if ((self.unit.is_equivalent(u.Jy / u.beam) and
-             not any({u.Jy/u.beam, u.K}.issubset(set(eq)) for eq in equivalencies))):
-            # the 'not any' above checks that there is not already a defined
-            # Jy<->K equivalency.  If there is, the code below is redundant
-            # and will cause problems.
+        if hasattr(self, 'with_spectral_unit'):
+            freq = self.with_spectral_unit(u.Hz).spectral_axis
 
-            if hasattr(self, 'beams'):
-                factor = (self.jtok_factors(equivalencies=equivalencies) *
-                          (self.unit*u.beam).to(u.Jy))
-            else:
-                # replace "beam" with the actual beam
-                if not hasattr(self, 'beam'):
-                    raise ValueError("To convert objects with Jy/beam units, "
-                                     "the object needs to have a beam defined.")
-                brightness_unit = self.unit * u.beam
+        if freq is None and 'RESTFRQ' in self.header:
+            freq = self.header['RESTFRQ'] * u.Hz
 
-                # create a beam equivalency for brightness temperature
-                if freq is None:
-                    try:
-                        freq = self.with_spectral_unit(u.Hz).spectral_axis
-                    except AttributeError:
-                        raise TypeError("Object of type {0} has no spectral "
-                                        "information. `freq` must be provided for"
-                                        " unit conversion from Jy/beam"
-                                        .format(type(self)))
-                else:
-                    if not freq.unit.is_equivalent(u.Hz):
-                        raise u.UnitsError("freq must be given in equivalent "
-                                           "frequency units.")
-
-                bmequiv = self.beam.jtok_equiv(freq)
-                # backport to handle astropy < 3: the beam equivalency was only
-                # modified to handle jy/beam in astropy 3
-                if bmequiv[0] == u.Jy:
-                    bmequiv.append([u.Jy/u.beam, u.K, bmequiv[2], bmequiv[3]])
-
-                factor = brightness_unit.to(unit,
-                                            equivalencies=bmequiv + list(equivalencies))
-
-        else:
-            # scaling factor
-            factor = self.unit.to(unit, equivalencies=equivalencies)
+        # Create the tuple of unit conversions needed.
+        factor = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies,
+                                             freq=freq)
 
         converted_array = (self.quantity * factor).value
 
@@ -412,7 +378,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         mywcs = wcs.WCS(hdu.header)
 
         if "BUNIT" in hdu.header:
-            unit = convert_bunit(hdu.header["BUNIT"])
+            unit = cube_utils.convert_bunit(hdu.header["BUNIT"])
             meta["BUNIT"] = hdu.header["BUNIT"]
         else:
             unit = None
@@ -673,7 +639,7 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         mywcs = wcs.WCS(hdu.header)
 
         if "BUNIT" in hdu.header:
-            unit = convert_bunit(hdu.header["BUNIT"])
+            unit = cube_utils.convert_bunit(hdu.header["BUNIT"])
             meta["BUNIT"] = hdu.header["BUNIT"]
         else:
             unit = None

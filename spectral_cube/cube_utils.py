@@ -2,6 +2,8 @@ from __future__ import print_function, absolute_import, division
 
 import contextlib
 import warnings
+from copy import deepcopy
+
 try:
     import builtins
 except ImportError:
@@ -10,6 +12,7 @@ except ImportError:
 
 import dask.array as da
 import numpy as np
+from astropy.wcs.utils import proj_plane_pixel_area
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from . import wcs_utils
 from .utils import FITSWarning, AstropyUserWarning, WCSCelestialError
@@ -535,3 +538,186 @@ def world_take_along_axis(cube, position_plane, axis):
     out = out.squeeze()
 
     return out
+
+
+def bunit_converters(obj, unit, equivalencies=(), freq=None):
+        '''
+        Handler for all brightness unit conversions, including: K, Jy/beam, Jy/pix, Jy/sr.
+        This also includes varying resolution spectral cubes, where the beam size varies along
+        the frequency axis.
+
+        Parameters
+        ----------
+        obj : {SpectralCube, LowerDimensionalObject}
+            A spectral cube or any other lower dimensional object.
+        unit : `~astropy.units.Unit`
+            Unit to convert `obj` to.
+        equivalencies : tuple, optional
+            Initial list of equivalencies.
+        freq : `~astropy.unit.Quantity`, optional
+            Frequency to use for spectral conversions. If the spectral axis is available, the
+            frequencies will already be defined.
+
+        Outputs
+        -------
+        factor : `~numpy.ndarray`
+            Array of factors for the unit conversion.
+
+        '''
+
+        # Add a simple check it the new unit is already equivalent, and so we don't need
+        # any additional unit equivalencies
+        if obj.unit.is_equivalent(unit):
+            # return equivalencies
+            factor = obj.unit.to(unit, equivalencies=equivalencies)
+            return np.array([factor])
+
+        # Determine the bunit "type". This will determine what information we need for the unit conversion.
+        has_btemp = obj.unit.is_equivalent(u.K) or unit.is_equivalent(u.K)
+        has_perbeam = obj.unit.is_equivalent(u.Jy/u.beam) or unit.is_equivalent(u.Jy/u.beam)
+        has_perangarea = obj.unit.is_equivalent(u.Jy/u.sr) or unit.is_equivalent(u.Jy/u.sr)
+        has_perpix = obj.unit.is_equivalent(u.Jy/u.pix) or unit.is_equivalent(u.Jy/u.pix)
+
+        # Is there any beam object defined?
+        has_beam = hasattr(obj, 'beam') or hasattr(obj, 'beams')
+
+        # Set if this is a varying resolution object
+        has_beams = hasattr(obj, 'beams')
+
+        # Define freq, if needed:
+        if any([has_perangarea, has_perbeam, has_btemp]):
+            # Create a beam equivalency for brightness temperature
+            # This requires knowing the frequency along the spectral axis.
+            if freq is None:
+                try:
+                    freq = obj.with_spectral_unit(u.Hz).spectral_axis
+                except AttributeError:
+                    raise TypeError("Object of type {0} has no spectral "
+                                    "information. `freq` must be provided for"
+                                    " unit conversion from Jy/beam"
+                                    .format(type(obj)))
+            else:
+                if not freq.unit.is_equivalent(u.Hz):
+                    raise u.UnitsError("freq must be given in equivalent "
+                                        "frequency units.")
+
+                freq = freq.reshape((-1,))
+
+        else:
+            freq = [None]
+
+        # To handle varying resolution objects, loop through "channels"
+        # Default to a single iteration for a 2D spatial object or when a beam is not defined
+        # This allows handling all 1D, 2D, and 3D data products.
+        if has_beams:
+            iter = range(len(obj.beams))
+            beams = obj.beams
+        elif has_beam:
+            iter = range(0, 1)
+            beams = [obj.beam]
+        else:
+            iter = range(0, 1)
+            beams = [None]
+
+        # Append the unit conversion factors
+        factors = []
+
+        # Iterate through spectral channels.
+        for ii in iter:
+
+            beam = beams[ii]
+
+            # Use the range of frequencies when the beam does not change. Otherwise, select the
+            # frequency corresponding to this beam.
+            if has_beams:
+                thisfreq = freq[ii]
+            else:
+                thisfreq = freq
+
+            # Changes in beam require a new equivalency for each.
+            this_equivalencies = deepcopy(equivalencies)
+
+            # Equivalencies for Jy per ang area.
+            if has_perangarea:
+                bmequiv_angarea = u.brightness_temperature(thisfreq)
+
+                this_equivalencies = list(this_equivalencies) + bmequiv_angarea
+
+            # Beam area equivalencies for Jy per beam and/or Jy per ang area
+            if has_perbeam or has_perangarea:
+                if not has_beam:
+                    raise ValueError("To convert cubes with Jy/beam units, "
+                                    "the cube needs to have a beam defined.")
+
+                # create a beam equivalency for brightness temperature
+                bmequiv = beam.jtok_equiv(thisfreq)
+
+                # NOTE: `beamarea_equiv` was included in the radio-beam v0.3.3 release
+                # The if/else here handles potential cases where earlier releases are installed.
+                if hasattr(beam, 'beamarea_equiv'):
+                    bmarea_equiv = beam.beamarea_equiv
+                else:
+                    bmarea_equiv = u.beam_angular_area(beam.sr)
+
+                this_equivalencies = list(this_equivalencies) + bmequiv + bmarea_equiv
+
+            # Equivalencies for Jy per pixel area.
+            if has_perpix:
+
+                if not obj.wcs.has_celestial:
+                    raise ValueError("Spatial WCS information is required for unit conversions"
+                                    " involving spatial areas (e.g., Jy/pix, Jy/sr)")
+
+                pix_area = (proj_plane_pixel_area(obj.wcs.celestial) * u.deg**2).to(u.sr)
+
+                pix_area_equiv = [(u.Jy / u.pix, u.Jy / u.sr,
+                                lambda x: x / pix_area.value,
+                                lambda x: x * pix_area.value)]
+
+                this_equivalencies = list(this_equivalencies) + pix_area_equiv
+
+                # Define full from brightness temp to Jy / pix.
+                # Otherwise isn't working in 1 step
+                if has_btemp:
+                    if not has_beam:
+                        raise ValueError("Conversions between K and Jy/beam or Jy/pix"
+                                        "requires the cube to have a beam defined.")
+
+                    jtok_factor = beam.jtok(thisfreq) / (u.Jy / u.beam)
+
+                    # We're going to do this piecemeal because it's easier to conceptualize
+                    # We specifically anchor these conversions based on the beam area. So from
+                    # beam to pix, this is beam -> angular area -> area per pixel
+                    # Altogether:
+                    # K ->  Jy/beam -> Jy /sr - > Jy / pix
+                    forward_factor = 1 / (jtok_factor * (beam.sr / u.beam) / (pix_area / u.pix))
+                    reverse_factor = jtok_factor * (beam.sr / u.beam) / (pix_area / u.pix)
+
+                    pix_area_btemp_equiv = [(u.K, u.Jy / u.pix,
+                                            lambda x: x * forward_factor.value,
+                                            lambda x: x * reverse_factor.value)]
+
+                    this_equivalencies = list(this_equivalencies) + pix_area_btemp_equiv
+
+                # Equivalencies between pixel and angular areas.
+                if has_perbeam:
+                    if not has_beam:
+                        raise ValueError("Conversions between Jy/beam or Jy/pix"
+                                        "requires the cube to have a beam defined.")
+
+                    beam_area = beam.sr
+
+                    pix_area_btemp_equiv = [(u.Jy / u.pix, u.Jy / u.beam,
+                                            lambda x: x * (beam_area / pix_area).value,
+                                            lambda x: x * (pix_area / beam_area).value)]
+
+                    this_equivalencies = list(this_equivalencies) + pix_area_btemp_equiv
+
+            factor = obj.unit.to(unit, equivalencies=this_equivalencies)
+            factors.append(factor)
+
+        if has_beams:
+            return factors
+        else:
+            # Slice along first axis to return a 1D array.
+            return factors[0]

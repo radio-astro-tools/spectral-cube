@@ -744,6 +744,81 @@ def test_beam_jtok_2D(data_advs, use_dask):
     np.testing.assert_almost_equal(Kplane.value,
                                    (plane.value * jtok).value)
 
+bunits_list = [u.Jy / u.beam, u.K, u.Jy / u.sr, u.Jy / u.pix, u.Jy / u.arcsec**2,
+               u.mJy / u.beam, u.mK]
+
+@pytest.mark.parametrize(('init_unit'), bunits_list)
+def test_unit_conversions_general_2D(data_advs, use_dask, init_unit):
+
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
+    cube._meta['BUNIT'] = init_unit.to_string()
+    cube._unit = init_unit
+
+    plane = cube[0]
+
+    # Check all unit conversion combos:
+    for targ_unit in bunits_list:
+        newplane = plane.to(targ_unit)
+
+        if init_unit == targ_unit:
+            np.testing.assert_almost_equal(newplane.value,
+                                           plane.value)
+
+        else:
+            roundtrip_plane = newplane.to(init_unit)
+            np.testing.assert_almost_equal(roundtrip_plane.value,
+                                           plane.value)
+
+# TODO: Our 1D object do NOT retain spatial info that is needed for other BUNIT conversion
+# e.g., Jy/sr, Jy/pix. So we're limited to Jy/beam -> K conversion for now
+# See: https://github.com/radio-astro-tools/spectral-cube/pull/395
+bunits_list_1D = [u.Jy / u.beam, u.K,
+                  u.mJy / u.beam, u.mK]
+
+@pytest.mark.parametrize(('init_unit'), bunits_list_1D)
+def test_unit_conversions_general_1D(data_advs, use_dask, init_unit):
+
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
+    cube._meta['BUNIT'] = init_unit.to_string()
+    cube._unit = init_unit
+
+    spec = cube[:, 0, 0]
+
+    # Check all unit conversion combos:
+    for targ_unit in bunits_list_1D:
+        newspec = spec.to(targ_unit)
+
+        if init_unit == targ_unit:
+            np.testing.assert_almost_equal(newspec.value,
+                                           spec.value)
+
+        else:
+            roundtrip_spec = newspec.to(init_unit)
+            np.testing.assert_almost_equal(roundtrip_spec.value,
+                                           spec.value)
+
+@pytest.mark.parametrize(('init_unit'), bunits_list_1D)
+def test_multibeams_unit_conversions_general_1D(data_vda_beams, use_dask, init_unit):
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+    cube._meta['BUNIT'] = init_unit.to_string()
+    cube._unit = init_unit
+
+    spec = cube[:, 0, 0]
+
+    # Check all unit conversion combos:
+    for targ_unit in bunits_list_1D:
+        newspec = spec.to(targ_unit)
+
+        if init_unit == targ_unit:
+            np.testing.assert_almost_equal(newspec.value,
+                                           spec.value)
+
+        else:
+            roundtrip_spec = newspec.to(init_unit)
+            np.testing.assert_almost_equal(roundtrip_spec.value,
+                                           spec.value)
+
 
 def test_basic_arrayness(data_adv, use_dask):
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
