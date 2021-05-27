@@ -53,26 +53,54 @@ Getting started
 ^^^^^^^^^^^^^^^
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    installing.rst
    creating_reading.rst
    accessing.rst
-   masking.rst
-   arithmetic.rst
-   manipulating.rst
-   metadata.rst
-   smoothing.rst
-   writing.rst
+
+Cube Analysis
+^^^^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 2
+
    moments.rst
    errors.rst
-   quick_looks.rst
+   writing.rst
    beam_handling.rst
+   masking.rst
+   arithmetic.rst
+   metadata.rst
+   smoothing.rst
+
+Subsets
+^^^^^^^
+
+.. toctree::
+   :maxdepth: 2
+
+   manipulating.rst
    spectral_extraction.rst
    continuum_subtraction.rst
-   examples.rst
+
+Visualization
+^^^^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 2
+
+   quick_looks.rst
    visualization.rst
-   dask.rst
+
+
+Other Examples
+^^^^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 2
+
+   examples.rst
 
 There is also an `astropy tutorial
 <http://learn.astropy.org/rst-tutorials/FITS-cubes.html>`__ on accessing and
@@ -84,6 +112,7 @@ Advanced
 .. toctree::
    :maxdepth: 1
 
+   dask.rst
    yt_example.rst
    big_data.rst
    api.rst
