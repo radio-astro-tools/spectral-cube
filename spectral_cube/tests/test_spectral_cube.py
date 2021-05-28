@@ -2605,3 +2605,30 @@ def test_minimal_subcube_nomask(use_dask):
 
     # shape is unchanged
     assert subcube.shape == (5, 6, 7)
+
+
+def test_regression_719(data_adv, use_dask):
+    """
+    Issue 719: exception raised when checking for beam
+    """
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+
+    assert hasattr(cube, 'beam')
+
+    slc = cube[0,:,:]
+
+    # check that the hasattr tests work
+    from .. cube_utils import _has_beam, _has_beams
+
+    assert _has_beam(slc)
+    assert not _has_beams(slc)
+
+    # regression test: full example that broke
+    mx = cube.max(axis=0)
+    beam = cube.beam
+    cfrq = 100*u.GHz
+
+    # This should not raise an exception
+    mx_K = (mx*u.beam).to(u.K,
+                          u.brightness_temperature(beam_area=beam,
+                                                   frequency=cfrq))
