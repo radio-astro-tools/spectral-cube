@@ -2613,6 +2613,9 @@ def test_regression_719(data_adv, use_dask):
     """
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
+    # force unit for use below
+    cube._unit = u.Jy/u.beam
+
     assert hasattr(cube, 'beam')
 
     slc = cube[0,:,:]
