@@ -121,6 +121,34 @@ def test_statistics_consistency_casa(data_adv, tmp_path):
         assert_allclose(value, stats_casa[key])
 
 
+def test_apply_function_parallel_spectral_noncube(data_adv):
+    '''
+    Testing returning a non-SpectralCube object with a user-defined
+    function for spectral operations.
+    '''
+
+    chunk_size = (-1, 1, 2)
+    cube = DaskSpectralCube.read(data_adv).rechunk(chunks=chunk_size)
+
+    def sum_blocks_spectral(data_chunk):
+        return data_chunk.sum(0)
+
+    # Tell dask.map_blocks that we expect the zeroth axis to be (1,)
+    output_chunk_size = (1, 2)
+
+    test = cube.apply_function_parallel_spectral(sum_blocks_spectral,
+                                                return_new_cube=False,
+                                                accepts_chunks=True,
+                                                drop_axis=[0], # The output will no longer contain the spectral axis
+                                                chunks=output_chunk_size)
+
+    # The total shape of test should be the (1,) + cube.shape[1:]
+    assert test.shape == cube.shape[1:]
+
+    # Test we get the same output as the builtin sum
+    assert_allclose(test.compute(), cube.sum(axis=0).unitless_filled_data[:])
+
+
 if DISTRIBUTED_INSTALLED:
 
     def test_dask_distributed(client, tmpdir):  # noqa
