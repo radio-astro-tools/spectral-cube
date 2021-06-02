@@ -1,7 +1,9 @@
 # Tests specific to the dask class
 
 import os
+from numpy.core.shape_base import block
 import pytest
+import numpy as np
 
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
@@ -147,6 +149,61 @@ def test_apply_function_parallel_spectral_noncube(data_adv):
 
     # Test we get the same output as the builtin sum
     assert_allclose(test.compute(), cube.sum(axis=0).unitless_filled_data[:])
+
+
+def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
+    '''
+    Test receiving block_info information from da.map_blocks so we can place
+    the chunk's location in the whole cube when needed.
+
+    https://docs.dask.org/en/latest/array-api.html#dask.array.map_blocks
+
+    '''
+
+    chunk_size = (-1, 1, 2)
+    cube = DaskSpectralCube.read(data_adv).rechunk(chunks=chunk_size)
+
+    sum_spectral_plane = cube.sum(axis=0).unitless_filled_data[:]
+    # Each value should be different. This is important to check the right positions being used
+    # for the check in sums_block_spectral
+    assert np.unique(sum_spectral_plane).size == sum_spectral_plane.size
+
+
+    def sum_blocks_spectral(data_chunk, block_info=None, comparison_array=None):
+
+        chunk_sum = data_chunk.sum(0)
+
+        # When the block_info kwarg is defined, it should not be None
+        assert block_info is not None
+
+        # Check the block location compared to `comparison_array`
+
+        # Get the lower corner location in the whole cube.
+        loc = [block_range[0] for block_range in block_info[0]['array-location']]
+        # Should have 3 dimensions for the corner.
+        assert len(loc) == 3
+
+        # Slice comparison array to compare with this data chunk
+        thisslice = (slice(loc[1], loc[1] + chunk_sum.shape[0]),
+                     slice(loc[2], loc[2] + chunk_sum.shape[1]),)
+
+        return chunk_sum == comparison_array[thisslice]
+
+    # Tell dask.map_blocks that we expect the zeroth axis to be (1,)
+    output_chunk_size = (1, 2)
+
+    test = cube.apply_function_parallel_spectral(sum_blocks_spectral,
+                                                return_new_cube=False,
+                                                accepts_chunks=True,
+                                                drop_axis=[0], # The output will no longer contain the spectral axis
+                                                chunks=output_chunk_size,
+                                                comparison_array=sum_spectral_plane) # Passed to `sum_blocks_spectral`
+
+    # The total shape of test should be the (1,) + cube.shape[1:]
+    assert test.shape == cube.shape[1:]
+
+    # Test all True
+    assert np.all(test.compute())
 
 
 if DISTRIBUTED_INSTALLED:
