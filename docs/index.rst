@@ -95,7 +95,7 @@ Visualization
 
 
 Other Examples
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 
 .. toctree::
    :maxdepth: 2
