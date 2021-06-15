@@ -352,7 +352,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         _spectral_min = self.spectral_axis.min()
         _spectral_max = self.spectral_axis.max()
 
-        return _spectral_min, _spectral_max
+        return u.Quantity((_spectral_min, _spectral_max))
 
     def apply_numpy_function(self, function, fill=np.nan,
                              reduce=True, how='auto',
