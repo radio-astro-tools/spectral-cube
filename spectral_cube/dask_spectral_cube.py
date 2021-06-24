@@ -1265,18 +1265,18 @@ class DaskSpectralCubeMixin:
             warnings.warn("Input grid has too small a spacing. The data should "
                           "be smoothed prior to resampling.", SmoothingWarning)
 
-        def interp_wrapper(y, args):
-            if y.size == 1:
-                return y
-            else:
-                return np.interp(args[0], args[1], y[:, 0, 0],
-                                 left=fill_value, right=fill_value).reshape((-1, 1, 1))
-
         if reverse_in:
             cubedata = cubedata[::-1, :, :]
 
         cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
         chunkshape = (len(spectral_grid),) + cubedata.chunksize[1:]
+
+        def interp_wrapper(y, args):
+            if y.size == 1:
+                return y
+            else:
+                return np.interp(args[0], args[1], y[:, 0, 0],
+                                 left=fill_value, right=fill_value).reshape(chunkshape)
 
         newcube = cubedata.map_blocks(interp_wrapper,
                                       args=(spectral_grid.value, inaxis.value),
