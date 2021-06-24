@@ -1276,7 +1276,7 @@ class DaskSpectralCubeMixin:
             cubedata = cubedata[::-1, :, :]
 
         cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
-        chunkshape = cubedata.chunksize
+        chunkshape = (len(spectral_grid),) + cubedata.chunksize[1:]
 
         newcube = cubedata.map_blocks(interp_wrapper,
                                       args=(spectral_grid.value, inaxis.value),
