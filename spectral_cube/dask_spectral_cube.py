@@ -1278,8 +1278,8 @@ class DaskSpectralCubeMixin:
             else:
                 #return np.interp(args[0], args[1], y[:, 0, 0],
                 #                 left=fill_value, right=fill_value).reshape(chunkshape)
-                interp = scipy.interpolate.interp1d(args[0], y, fill_value=fill_value)
-                return interp(args[1])
+                interp = scipy.interpolate.interp1d(args[1], y, fill_value=fill_value)
+                return interp(args[0])
 
         newcube = cubedata.map_blocks(interp_wrapper,
                                       args=(spectral_grid.value, inaxis.value),
