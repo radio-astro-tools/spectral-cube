@@ -36,6 +36,7 @@ __all__ = ['DaskSpectralCube', 'DaskVaryingResolutionSpectralCube']
 
 try:
     from scipy import ndimage
+    import scipy.interpolate
     SCIPY_INSTALLED = True
 except ImportError:
     SCIPY_INSTALLED = False
@@ -1275,8 +1276,10 @@ class DaskSpectralCubeMixin:
             if y.size == 1:
                 return y
             else:
-                return np.interp(args[0], args[1], y[:, 0, 0],
-                                 left=fill_value, right=fill_value).reshape(chunkshape)
+                #return np.interp(args[0], args[1], y[:, 0, 0],
+                #                 left=fill_value, right=fill_value).reshape(chunkshape)
+                interp = scipy.interpolate.interp1d(args[0], y, fill_value=fill_value)
+                return interp(args[1])
 
         newcube = cubedata.map_blocks(interp_wrapper,
                                       args=(spectral_grid.value, inaxis.value),
