@@ -1275,7 +1275,7 @@ class DaskSpectralCubeMixin:
         if reverse_in:
             cubedata = cubedata[::-1, :, :]
 
-        cubedata = cubedata.rechunk((-1, 1, 1))
+        cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
 
         newcube = cubedata.map_blocks(interp_wrapper,
                                       args=(spectral_grid.value, inaxis.value),
