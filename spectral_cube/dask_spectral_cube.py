@@ -1276,8 +1276,6 @@ class DaskSpectralCubeMixin:
             if y.size == 1:
                 return y
             else:
-                #return np.interp(args[0], args[1], y[:, 0, 0],
-                #                 left=fill_value, right=fill_value).reshape(chunkshape)
                 interp = scipy.interpolate.interp1d(args[1], y.T,
                                                     fill_value=fill_value,
                                                     bounds_error=False)
