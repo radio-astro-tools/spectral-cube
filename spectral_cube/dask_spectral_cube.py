@@ -36,6 +36,7 @@ __all__ = ['DaskSpectralCube', 'DaskVaryingResolutionSpectralCube']
 
 try:
     from scipy import ndimage
+    import scipy.interpolate
     SCIPY_INSTALLED = True
 except ImportError:
     SCIPY_INSTALLED = False
@@ -1265,21 +1266,24 @@ class DaskSpectralCubeMixin:
             warnings.warn("Input grid has too small a spacing. The data should "
                           "be smoothed prior to resampling.", SmoothingWarning)
 
+        if reverse_in:
+            cubedata = cubedata[::-1, :, :]
+
+        cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
+        chunkshape = (len(spectral_grid),) + cubedata.chunksize[1:]
+
         def interp_wrapper(y, args):
             if y.size == 1:
                 return y
             else:
-                return np.interp(args[0], args[1], y[:, 0, 0],
-                                 left=fill_value, right=fill_value).reshape((-1, 1, 1))
-
-        if reverse_in:
-            cubedata = cubedata[::-1, :, :]
-
-        cubedata = cubedata.rechunk((-1, 1, 1))
+                interp = scipy.interpolate.interp1d(args[1], y.T,
+                                                    fill_value=fill_value,
+                                                    bounds_error=False)
+                return interp(args[0]).T
 
         newcube = cubedata.map_blocks(interp_wrapper,
                                       args=(spectral_grid.value, inaxis.value),
-                                      chunks=(len(spectral_grid), 1, 1))
+                                      chunks=chunkshape)
 
         newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[2] = 1
