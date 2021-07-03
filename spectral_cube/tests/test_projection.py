@@ -893,3 +893,26 @@ def test_spatial_world(view, data_adv, use_dask):
     for result, expected in zip(w2_flat, world):
         print(result.shape, expected.flatten().shape)
         assert_allclose(result, expected.flatten())
+
+
+def test_LDO_fill_value():
+    new_quant = twelve_qty_2d.copy()
+
+    new_quant[0, :] = np.NaN
+
+    proj = Projection(new_quant)
+
+    proj_fill0 = proj.with_fill_value(0.)
+
+    assert (np.isfinite(new_quant) == np.isfinite(proj)).all()
+
+    # Try using the filled data.
+    assert proj_fill0.fill_value == 0.0
+
+    assert np.isfinite(proj._get_filled_data(fill=0.)).all()
+
+    assert np.isfinite(proj_fill0.filled_data[:]).all()
+    assert np.isfinite(proj_fill0.unitless_filled_data[:]).all()
+
+    assert np.isfinite(proj_fill0.quantity).all()
+    assert np.isfinite(proj_fill0.value).all()

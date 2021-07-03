@@ -88,6 +88,10 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         else:
             newwcs = None
 
+        print(new_qty)
+        print(new_qty._data)
+        print(new_qty.value)
+
         new = self.__class__(value=new_qty.value,
                              unit=new_qty.unit,
                              copy=False,
@@ -131,20 +135,28 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         Get a pure array representation of the LDO.  Useful when multiplying
         and using numpy indexing tricks.
         """
-        return np.asarray(self)
+        return self.filled_data[:].value
 
-    @property
-    def _data(self):
-        # the _data property is required by several other mixins
-        # (which probably means defining it here is a bad design)
-        return self.array
+    # @property
+    # def _data(self):
+    #     # the _data property is required by several other mixins
+    #     # (which probably means defining it here is a bad design)
+    #     return self.__data
 
     @property
     def quantity(self):
         """
         Get a pure `~astropy.units.Quantity` representation of the LDO.
         """
-        return u.Quantity(self)
+        return u.Quantity(self.filled_data[:])
+
+    @property
+    def value(self):
+        """
+        Get a unitless numpy array with the mask applied.
+        """
+        return np.asarray(self.filled_data[:])
+        # return np.asarray(self)
 
     def to(self, unit, equivalencies=[], freq=None):
         """
@@ -214,14 +226,15 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         matters: ``self`` must have ``_wcs``, for example.
         """
         if mask is None:
-            mask = BooleanArrayMask(np.ones_like(self.value, dtype=bool),
-                                    self._wcs, shape=self.value.shape)
+            mask = BooleanArrayMask(np.isfinite(self._data),
+                                    self._wcs, shape=self._data.shape)
+
         elif isinstance(mask, np.ndarray):
-            if mask.shape != self.value.shape:
+            if mask.shape != self._data.shape:
                 raise ValueError("Mask shape must match the {0} shape."
                                  .format(self.__class__.__name__)
                                 )
-            mask = BooleanArrayMask(mask, self._wcs, shape=self.value.shape)
+            mask = BooleanArrayMask(mask, self._wcs, shape=self._data.shape)
         elif isinstance(mask, MaskBase):
             pass
         else:
@@ -229,10 +242,16 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
                             "type.".format(type(mask)))
 
         # Validate the mask before setting
-        mask._validate_wcs(new_data=self.value, new_wcs=self._wcs,
+        mask._validate_wcs(new_data=self._data, new_wcs=self._wcs,
                            wcs_tolerance=self._wcs_tolerance)
 
         self._mask = mask
+
+    def __repr__(self):
+        prefixstr = '<' + self.__class__.__name__ + ' '
+        arrstr = np.array2string(self.filled_data[:].value, separator=',',
+                                 prefix=prefixstr)
+        return '{0}{1}{2:s}>'.format(prefixstr, arrstr, self._unitstr)
 
 
 class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
@@ -248,8 +267,16 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         if wcs is not None and wcs.wcs.naxis != 2:
             raise ValueError("wcs should have two dimension")
 
-        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
-                                  copy=copy).view(cls)
+        # self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
+        #                           copy=copy).view(cls)
+
+        self = super().__new__(cls, value, unit=unit, dtype=dtype,
+                               copy=copy).view(cls)
+
+        # self = cls.__new__(cls, value, unit=unit, dtype=dtype,
+        #                    copy=copy).view(cls)
+
+        self._data = np.asarray(value)
         self._wcs = wcs
         self._meta = {} if meta is None else meta
         self._wcs_tolerance = wcs_tolerance
@@ -349,7 +376,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         fill_value = self._fill_value if fill_value is None else fill_value
 
         if beam is None:
-            if hasattr(self, 'beam'):
+            if self._beam is not None:
                 beam = self.beam
 
         newproj = self.__class__(value=data, wcs=wcs, mask=mask, meta=meta,
@@ -589,8 +616,13 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         if wcs is not None and wcs.wcs.naxis != 1:
             raise ValueError("wcs should have two dimension")
 
-        self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
-                                  copy=copy).view(cls)
+        self = super().__new__(cls, value, unit=unit, dtype=dtype,
+                               copy=copy).view(cls)
+
+        # self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
+        #                           copy=copy).view(cls)
+
+        self._data = np.asarray(value)
         self._wcs = wcs
         self._meta = {} if meta is None else meta
         self._wcs_tolerance = wcs_tolerance
@@ -612,12 +644,6 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
                 self._spectral_unit = u.Unit(self._wcs.wcs.cunit[0])
 
         return self
-
-    def __repr__(self):
-        prefixstr = '<' + self.__class__.__name__ + ' '
-        arrstr = np.array2string(self.filled_data[:].value, separator=',',
-                                 prefix=prefixstr)
-        return '{0}{1}{2:s}>'.format(prefixstr, arrstr, self._unitstr)
 
     @staticmethod
     def from_hdu(hdu):
