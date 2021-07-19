@@ -36,6 +36,7 @@ __all__ = ['DaskSpectralCube', 'DaskVaryingResolutionSpectralCube']
 
 try:
     from scipy import ndimage
+    import scipy.interpolate
     SCIPY_INSTALLED = True
 except ImportError:
     SCIPY_INSTALLED = False
@@ -529,6 +530,7 @@ class DaskSpectralCubeMixin:
     def apply_function_parallel_spectral(self,
                                          function,
                                          accepts_chunks=False,
+                                         return_new_cube=True,
                                          **kwargs):
         """
         Apply a function in parallel along the spectral dimension.  The
@@ -553,19 +555,47 @@ class DaskSpectralCubeMixin:
             especially if carrying out several operations sequentially. If
             `False`, the computation is only carried out when accessing
             specific parts of the data or writing to disk.
+        return_new_cube : bool
+            If `True`, a new `~SpectralCube` object will be returned. This is the default
+            for when the function will return another version of the new spectral cube
+            with the operation applied (for example, spectral smoothing). If `False`,
+            an array will be returned from `function`. This is useful, for example,
+            when fitting a model to spectra and the output is the fitted model parameters.
         kwargs : dict
             Passed to ``function``
         """
 
-        def wrapper(data, **kwargs):
-            if data.size > 0:
-                return function(data, **kwargs)
-            else:
-                return data
+        # NOTE: `block_info` should always be available for `dask.array.map_blocks` to pass to
+        # Because we use this wrapper, this always should be an available kwarg, then we check
+        # if that kwarg should be passed to `function`
+        _has_blockinfo = 'block_info' in inspect.signature(function).parameters
+
+        # if/else to avoid an if/else in every single wrapper call.
+        if _has_blockinfo:
+            def wrapper(data, block_info=None, **kwargs):
+                if data.size > 0:
+                    return function(data, block_info=block_info, **kwargs)
+                else:
+                    return data
+        else:
+            def wrapper(data, **kwargs):
+                if data.size > 0:
+                    return function(data, **kwargs)
+                else:
+                    return data
 
         if accepts_chunks:
+            # Check if the spectral axis is already one chunk. If it is, there is no need to rechunk the data
+            current_chunksize = self._data.chunksize
+            if current_chunksize[0] == self.shape[0]:
+                rechunk = None
+            else:
+                rechunk = (-1, 'auto', 'auto')
+
             return self._map_blocks_to_cube(wrapper,
-                                            rechunk=(-1, 'auto', 'auto'), **kwargs)
+                                            return_new_cube=return_new_cube,
+                                            rechunk=rechunk, **kwargs)
+
         else:
             data = self._get_filled_data(fill=self._fill_value)
             # apply_along_axis returns an array with a single chunk, but we
@@ -573,11 +603,16 @@ class DaskSpectralCubeMixin:
             # even if it results in a poorer performance.
             data = data.rechunk((-1, 'auto', 'auto'))
             newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],))
-            return self._new_cube_with(data=newdata,
-                                       wcs=self.wcs,
-                                       mask=self.mask,
-                                       meta=self.meta,
-                                       fill_value=self.fill_value)
+
+            if return_new_cube:
+                return self._new_cube_with(data=newdata,
+                                        wcs=self.wcs,
+                                        mask=self.mask,
+                                        meta=self.meta,
+                                        fill_value=self.fill_value)
+            else:
+                return newdata
+
 
     @projection_if_needed
     @ignore_warnings
@@ -758,7 +793,9 @@ class DaskSpectralCubeMixin:
 
         return stats
 
-    def _map_blocks_to_cube(self, function, additional_arrays=None, fill=np.nan, rechunk=None, **kwargs):
+    def _map_blocks_to_cube(self, function, additional_arrays=None, fill=np.nan, rechunk=None,
+                            return_new_cube=True,
+                            **kwargs):
         """
         Call dask's map_blocks, returning a new spectral cube.
         """
@@ -769,19 +806,22 @@ class DaskSpectralCubeMixin:
             data = data.rechunk(rechunk)
 
         if additional_arrays is None:
-            newdata = data.map_blocks(function, dtype=data.dtype, **kwargs)
+            newdata = da.map_blocks(function, data, dtype=data.dtype, **kwargs)
         else:
             additional_arrays = [array.rechunk(data.chunksize) for array in additional_arrays]
             newdata = da.map_blocks(function, data, *additional_arrays, dtype=data.dtype, **kwargs)
 
         # Create final output cube
-        newcube = self._new_cube_with(data=newdata,
-                                      wcs=self.wcs,
-                                      mask=self.mask,
-                                      meta=self.meta,
-                                      fill_value=self.fill_value)
+        if return_new_cube:
+            newcube = self._new_cube_with(data=newdata,
+                                          wcs=self.wcs,
+                                          mask=self.mask,
+                                          meta=self.meta,
+                                          fill_value=self.fill_value)
 
-        return newcube
+            return newcube
+        else:
+            return newdata
 
     # NOTE: the following three methods could also be implemented spaxel by
     # spaxel using apply_function_parallel_spectral but then take longer (but
@@ -1226,21 +1266,24 @@ class DaskSpectralCubeMixin:
             warnings.warn("Input grid has too small a spacing. The data should "
                           "be smoothed prior to resampling.", SmoothingWarning)
 
+        if reverse_in:
+            cubedata = cubedata[::-1, :, :]
+
+        cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
+        chunkshape = (len(spectral_grid),) + cubedata.chunksize[1:]
+
         def interp_wrapper(y, args):
             if y.size == 1:
                 return y
             else:
-                return np.interp(args[0], args[1], y[:, 0, 0],
-                                 left=fill_value, right=fill_value).reshape((-1, 1, 1))
-
-        if reverse_in:
-            cubedata = cubedata[::-1, :, :]
-
-        cubedata = cubedata.rechunk((-1, 1, 1))
+                interp = scipy.interpolate.interp1d(args[1], y.T,
+                                                    fill_value=fill_value,
+                                                    bounds_error=False)
+                return interp(args[0]).T
 
         newcube = cubedata.map_blocks(interp_wrapper,
                                       args=(spectral_grid.value, inaxis.value),
-                                      chunks=(len(spectral_grid), 1, 1))
+                                      chunks=chunkshape)
 
         newwcs = self.wcs.deepcopy()
         newwcs.wcs.crpix[2] = 1
