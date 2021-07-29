@@ -2109,7 +2109,7 @@ def test_convolve_to_jybeam_onebeam(point_source_5_one_beam, use_dask):
     convolved = cube.convolve_to(Beam(10*u.arcsec))
 
     # The peak of the point source should remain constant in Jy/beam
-    np.testing.assert_allclose(convolved[:, 5, 5].value, 1., atol=1e-5, rtol=1e-5)
+    np.testing.assert_allclose(convolved[:, 5, 5].value, cube[:, 5, 5].value, atol=1e-5, rtol=1e-5)
 
     assert cube.unit == u.Jy / u.beam
 
@@ -2121,7 +2121,7 @@ def test_convolve_to_jybeam_multibeams(point_source_5_spectral_beams, use_dask):
     convolved = cube.convolve_to(Beam(10*u.arcsec))
 
     # The peak of the point source should remain constant in Jy/beam
-    np.testing.assert_allclose(convolved[:, 5, 5].value, 1., atol=1e-5, rtol=1e-5)
+    np.testing.assert_allclose(convolved[:, 5, 5].value, cube[:, 5, 5].value, atol=1e-5, rtol=1e-5)
 
     assert cube.unit == u.Jy / u.beam
 
