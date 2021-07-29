@@ -5,6 +5,7 @@ from __future__ import print_function, absolute_import, division
 
 import os
 from distutils.version import LooseVersion
+from astropy.units.equivalencies import pixel_scale
 
 # Import casatools and casatasks here if available as they can otherwise
 # cause a segfault if imported later on during tests.
@@ -433,3 +434,55 @@ def data_5_spectral_beams(tmp_path):
                          beams])
     hdul.writeto(tmp_path / '5_spectral_beams.fits')
     return tmp_path / '5_spectral_beams.fits'
+
+
+def prepare_5_beams_with_pixscale(pixel_scale):
+    beams = np.recarray(5, dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'),
+                                ('BPA', '>f4'), ('CHAN', '>i4'),
+                                ('POL', '>i4')])
+
+    pixel_scale = pixel_scale.to(u.arcsec)
+
+    beams['BMAJ'] = [4 * pixel_scale,4 * pixel_scale,3 * pixel_scale,4 * pixel_scale,4 * pixel_scale] # arcseconds
+    beams['BMIN'] = [2 * pixel_scale,2.5 * pixel_scale,3 * pixel_scale,2.5 * pixel_scale,2 * pixel_scale]
+    beams['BPA'] = [0,45,60,30,0] # degrees
+    beams['CHAN'] = [0,1,2,3,4]
+    beams['POL'] = [0,0,0,0,0]
+    beams = fits.BinTableHDU(beams)
+    return beams
+
+
+@pytest.fixture
+def point_source_5_spectral_beams(tmp_path):
+
+    from radio_beam import Beams
+    from astropy.convolution import convolve_fft
+    import astropy.units as u
+
+    h = prepare_55_header()
+    h['BUNIT'] = "Jy/beam"
+
+    d = np.zeros((5, 11, 11), dtype=float)
+    d[:, 5, 5] = 1.
+
+    # NOTE: this matches the header. Should take that directly from the header instead of setting.
+    pixel_scale = 2. * u.arcsec
+
+    beams = prepare_5_beams_with_pixscale(pixel_scale)
+
+    for i, beam in enumerate(Beams.from_fits_bintable(beams)):
+        # Convolve point source to the beams.
+        d[i] = convolve_fft(d[i], beam.as_kernel(pixel_scale))
+
+        # Correct for the beam area in Jy/beam
+        # So effectively Jy / pixel -> Jy/beam
+        pix_to_beam = beam.sr.to(u.arcsec**2) / pixel_scale**2
+        d[i] *= pix_to_beam.value
+
+    # Ensure that the scaling is correct. The center pixel should remain ~1.
+    np.testing.assert_allclose(d[:, 5, 5], 1., atol=1e-5)
+
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto(tmp_path / 'point_source_conv_5_spectral_beams.fits')
+    return tmp_path / 'point_source_conv_5_spectral_beams.fits'
