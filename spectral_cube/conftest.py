@@ -504,6 +504,10 @@ def point_source_5_one_beam(tmp_path):
 
     beam = Beam(3 * pixel_scale)
 
+    beamprops = beam.to_header_keywords()
+    for key in beamprops:
+        h[key] = beamprops[key]
+
     for i in range(5):
         # Convolve point source to the beams.
         d[i] = convolve_fft(d[i], beam.as_kernel(pixel_scale))
