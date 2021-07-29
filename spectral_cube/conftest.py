@@ -19,7 +19,7 @@ import pytest
 import numpy as np
 from astropy.io import fits
 from astropy import wcs
-from astropy.version import version as astropy_version
+from astropy import units
 
 from astropy.version import version as astropy_version
 
@@ -441,9 +441,9 @@ def prepare_5_beams_with_pixscale(pixel_scale):
                                 ('BPA', '>f4'), ('CHAN', '>i4'),
                                 ('POL', '>i4')])
 
-    pixel_scale = pixel_scale.to(u.arcsec)
+    pixel_scale = pixel_scale.to(units.arcsec).value
 
-    beams['BMAJ'] = [4 * pixel_scale,4 * pixel_scale,3 * pixel_scale,4 * pixel_scale,4 * pixel_scale] # arcseconds
+    beams['BMAJ'] = [3.5 * pixel_scale,3 * pixel_scale,3 * pixel_scale,3 * pixel_scale,3 * pixel_scale] # arcseconds
     beams['BMIN'] = [2 * pixel_scale,2.5 * pixel_scale,3 * pixel_scale,2.5 * pixel_scale,2 * pixel_scale]
     beams['BPA'] = [0,45,60,30,0] # degrees
     beams['CHAN'] = [0,1,2,3,4]
@@ -457,16 +457,15 @@ def point_source_5_spectral_beams(tmp_path):
 
     from radio_beam import Beams
     from astropy.convolution import convolve_fft
-    import astropy.units as u
 
-    h = prepare_55_header()
+    h = fits.header.Header.fromtextfile(HEADER_FILENAME)
     h['BUNIT'] = "Jy/beam"
 
     d = np.zeros((5, 11, 11), dtype=float)
     d[:, 5, 5] = 1.
 
     # NOTE: this matches the header. Should take that directly from the header instead of setting.
-    pixel_scale = 2. * u.arcsec
+    pixel_scale = 2. * units.arcsec
 
     beams = prepare_5_beams_with_pixscale(pixel_scale)
 
@@ -476,7 +475,7 @@ def point_source_5_spectral_beams(tmp_path):
 
         # Correct for the beam area in Jy/beam
         # So effectively Jy / pixel -> Jy/beam
-        pix_to_beam = beam.sr.to(u.arcsec**2) / pixel_scale**2
+        pix_to_beam = beam.sr.to(units.arcsec**2) / pixel_scale**2
         d[i] *= pix_to_beam.value
 
     # Ensure that the scaling is correct. The center pixel should remain ~1.
@@ -486,3 +485,37 @@ def point_source_5_spectral_beams(tmp_path):
                          beams])
     hdul.writeto(tmp_path / 'point_source_conv_5_spectral_beams.fits')
     return tmp_path / 'point_source_conv_5_spectral_beams.fits'
+
+
+@pytest.fixture
+def point_source_5_one_beam(tmp_path):
+
+    from radio_beam import Beam
+    from astropy.convolution import convolve_fft
+
+    h = fits.header.Header.fromtextfile(HEADER_FILENAME)
+    h['BUNIT'] = "Jy/beam"
+
+    d = np.zeros((5, 11, 11), dtype=float)
+    d[:, 5, 5] = 1.
+
+    # NOTE: this matches the header. Should take that directly from the header instead of setting.
+    pixel_scale = 2. * units.arcsec
+
+    beam = Beam(3 * pixel_scale)
+
+    for i in range(5):
+        # Convolve point source to the beams.
+        d[i] = convolve_fft(d[i], beam.as_kernel(pixel_scale))
+
+        # Correct for the beam area in Jy/beam
+        # So effectively Jy / pixel -> Jy/beam
+        pix_to_beam = beam.sr.to(units.arcsec**2) / pixel_scale**2
+        d[i] *= pix_to_beam.value
+
+    # Ensure that the scaling is correct. The center pixel should remain ~1.
+    np.testing.assert_allclose(d[:, 5, 5], 1., atol=1e-5)
+
+    hdul = fits.PrimaryHDU(data=d, header=h)
+    hdul.writeto(tmp_path / 'point_source_conv_5_one_beam.fits')
+    return tmp_path / 'point_source_conv_5_one_beam.fits'
