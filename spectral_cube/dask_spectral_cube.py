@@ -1376,9 +1376,14 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
         kernel = convolution_kernel.array.reshape((1,) + convolution_kernel.array.shape)
 
+        if self.unit.is_equivalent(u.Jy / u.beam):
+            beam_ratio_factor = (beam.sr / self.beam.sr).value
+        else:
+            beam_ratio_factor = 1.
+
         # See #631: kwargs get passed within self.apply_function_parallel_spatial
         def convfunc(img, **kwargs):
-            return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
+            return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape) * beam_ratio_factor
 
         return self.apply_function_parallel_spatial(convfunc,
                                                     accepts_chunks=True,
