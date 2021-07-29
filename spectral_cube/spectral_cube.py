@@ -3990,24 +3990,33 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
+        beam_ratio_factors = []
         for bm,valid in zip(self.unmasked_beams, self.goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
                 convolution_kernels.append(None)
+                beam_ratio_factors.append(1.)
                 continue
             elif beam == bm:
                 # Point response when beams are equal, don't convolve.
                 convolution_kernels.append(None)
+                beam_ratio_factors.append(1.)
                 continue
             try:
                 cb = beam.deconvolve(bm)
                 ck = cb.as_kernel(pixscale)
                 convolution_kernels.append(ck)
+                beam_ratio_factors.append((beam.sr / bm.sr))
             except ValueError:
                 if allow_smaller:
                     convolution_kernels.append(None)
+                    beam_ratio_factors.append(1.)
                 else:
                     raise
+
+        # Only use the beam ratios when convolving in Jy/beam
+        if not self.unit.is_equivalent(u.Jy / u.beam):
+            beam_ratio_factors = [1.] * len(convolution_kernels)
 
         if update_function is None:
             pb = ProgressBar(self.shape[0])
@@ -4028,7 +4037,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                 # See #631: kwargs get passed within self.apply_function_parallel_spatial
                 newdata[ii, :, :] = convolve(img, kernel,
                                              normalize_kernel=True,
-                                             **kwargs)
+                                             **kwargs) * beam_ratio_factors[ii]
             update_function()
 
         newcube = SpectralCube(data=newdata, wcs=self.wcs, mask=self.mask,
