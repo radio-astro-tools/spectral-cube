@@ -3199,6 +3199,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         newcube = self.apply_function_parallel_spatial(convfunc,
                                                        **kwargs).with_beam(beam)
 
+        # Scale Jy/beam units by the change in beam size
+        if self.unit.is_equivalent(u.Jy / u.beam):
+            newcube *= (beam.sr / self.beam.sr).value
+
         return newcube
 
     def mask_channels(self, goodchannels):
