@@ -1512,6 +1512,11 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         beams = da.from_array(np.array(beams, dtype=np.object)
                               .reshape((len(beams), 1, 1)), chunks=(-1, -1, -1))
 
+        if self.unit.is_equivalent(u.Jy / u.beam):
+            beam_ratio_factor = (beam.sr / self.beams.sr).value
+        else:
+            beam_ratio_factor = np.ones_like(beams.sr.value)
+
         # See #631: kwargs get passed within self.apply_function_parallel_spatial
         def convfunc(img, beam, **kwargs):
             if img.size > 0:
@@ -1521,7 +1526,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                         out[index] = img[index]
                     else:
                         kernel = beam[index, 0, 0].as_kernel(pixscale)
-                        out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
+                        out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs) * beam_ratio_factor[index]
                 return out
             else:
                 return img
