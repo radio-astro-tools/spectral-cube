@@ -2103,6 +2103,29 @@ def test_convolve_to(data_vda_beams, use_dask):
                                  nan_treatment='fill')
 
 
+def test_convolve_to_jybeam_onebeam(point_source_5_one_beam, use_dask):
+    cube, data = cube_and_raw(point_source_5_one_beam, use_dask=use_dask)
+
+    convolved = cube.convolve_to(Beam(10*u.arcsec))
+
+    # The peak of the point source should remain constant in Jy/beam
+    np.testing.assert_allclose(convolved[:, 5, 5].value, 1., atol=1e-5, rtol=1e-5)
+
+    assert cube.unit == u.Jy / u.beam
+
+
+def test_convolve_to_jybeam_multibeams(point_source_5_spectral_beams, use_dask):
+    cube, data = cube_and_raw(point_source_5_spectral_beams, use_dask=use_dask)
+
+
+    convolved = cube.convolve_to(Beam(10*u.arcsec))
+
+    # The peak of the point source should remain constant in Jy/beam
+    np.testing.assert_allclose(convolved[:, 5, 5].value, 1., atol=1e-5, rtol=1e-5)
+
+    assert cube.unit == u.Jy / u.beam
+
+
 def test_convolve_to_with_bad_beams(data_vda_beams, use_dask):
     cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
 
