@@ -104,6 +104,22 @@ class HeaderMixinClass(object):
 
         return header
 
+    def check_jybeam_smoothing(self, raise_error_jybm=True):
+        '''
+        Runs for spatial resolution operations (e.g. `spatial_smooth`) and either an error or warning
+        when smoothing will affect brightness in Jy/beam operations.
+
+        This is also true for using the `with_beam` and `with_beams` methods, including 1D spectra with
+        Jy/beam units.
+        '''
+
+        if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the spatial resolution of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the spatial resolution of a cube with Jy/beam units."
+                              " The brightness units may be wrong!", BeamWarning)
 
 class SpatialCoordMixinClass(object):
 

@@ -296,13 +296,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         if not isinstance(beam, Beam):
             raise TypeError("beam must be a radio_beam.Beam object.")
 
-        if self.unit.is_equivalent(u.Jy/u.beam) and self.beam is not None:
-
-            if raise_error_jybm:
-                raise BeamUnitsError("Attempting to change the beams of a cube with Jy/beam units."
-                                     " To ignore this error, set `raise_error_jybm=False`.")
-            else:
-                warnings.warn("Changing the beams of a cube with Jy/beam units. The brightness units may be wrong!", BeamWarning)
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         meta = self.meta.copy()
         meta['beam'] = beam
@@ -1033,13 +1027,7 @@ class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
         if not isinstance(beam, Beam):
             raise TypeError("beam must be a radio_beam.Beam object.")
 
-        if self.unit.is_equivalent(u.Jy/u.beam) and self.beam is not None:
-
-            if raise_error_jybm:
-                raise BeamUnitsError("Attempting to change the beams of a cube with Jy/beam units."
-                                     " To ignore this error, set `raise_error_jybm=False`.")
-            else:
-                warnings.warn("Changing the beams of a cube with Jy/beam units. The brightness units may be wrong!", BeamWarning)
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         meta = self.meta.copy()
         meta['beam'] = beam

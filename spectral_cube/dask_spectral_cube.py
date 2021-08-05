@@ -954,14 +954,7 @@ class DaskSpectralCubeMixin:
             Passed to the convolve function
         """
 
-        if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:
-            if raise_error_jybm:
-                raise BeamUnitsError("Attempting to change the spatial resolution of a cube with Jy/beam units."
-                                     " To ignore this error, set `raise_error_jybm=False`.")
-            else:
-                warnings.warn("Changing the spatial resolution of a cube with Jy/beam units."
-                              " The brightness units may be wrong!", BeamWarning)
-
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def convolve_wrapper(data, kernel=None, **kwargs):
             return convolve(data, kernel, normalize_kernel=True, **kwargs)
@@ -987,13 +980,7 @@ class DaskSpectralCubeMixin:
         if not SCIPY_INSTALLED:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:
-            if raise_error_jybm:
-                raise BeamUnitsError("Attempting to change the spatial resolution of a cube with Jy/beam units."
-                                     " To ignore this error, set `raise_error_jybm=False`.")
-            else:
-                warnings.warn("Changing the spatial resolution of a cube with Jy/beam units."
-                              " The brightness units may be wrong!", BeamWarning)
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def median_filter_wrapper(data, ksize=None, **kwargs):
             return ndimage.median_filter(data, ksize, **kwargs)
