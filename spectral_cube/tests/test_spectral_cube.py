@@ -1610,7 +1610,7 @@ def test_multibeam_custom(data_vda_beams, use_dask):
     new_beams = Beams([1.] * cube.shape[0] * u.deg)
 
     # Attach the beam
-    newcube = cube.with_beams(new_beams)
+    newcube = cube.with_beams(new_beams, raise_error_jybm=False)
 
     try:
         assert all(new_beams == newcube.beams)
@@ -1630,7 +1630,20 @@ def test_multibeam_custom_wrongshape(data_vda_beams, use_dask):
     new_beams = Beams([1.] * cube.shape[0] * u.deg)
 
     # Attach the beam
-    cube.with_beams(new_beams[:1])
+    cube.with_beams(new_beams[:1], raise_error_jybm=False)
+
+
+@pytest.mark.openfiles_ignore
+@pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
+def test_multibeam_jybm_error(data_vda_beams, use_dask):
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    # Make a new set of beams that differs from the original.
+    new_beams = Beams([1.] * cube.shape[0] * u.deg)
+
+    # Attach the beam
+    newcube = cube.with_beams(new_beams, raise_error_jybm=True)
 
 
 def test_multibeam_slice(data_vda_beams, use_dask):
