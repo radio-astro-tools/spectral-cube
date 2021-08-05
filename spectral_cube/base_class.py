@@ -782,13 +782,7 @@ class MultiBeamMixinClass(object):
         '''
 
         # Catch cases with units in Jy/beam where new beams will alter the units.
-        if self.unit.is_equivalent(u.Jy/u.beam) and self.beams is not None:
-
-            if raise_error_jybm:
-                raise BeamUnitsError("Attempting to change the beams of a cube with Jy/beam units."
-                                     " To ignore this error, set `raise_error_jybm=False`.")
-            else:
-                warnings.warn("Changing the beams of a cube with Jy/beam units. The brightness units may be wrong!", BeamWarning)
+        self.check_jybeam_smoothing(raise_error_jybm=True)
 
         meta = self.meta.copy()
         meta['beams'] = beams
