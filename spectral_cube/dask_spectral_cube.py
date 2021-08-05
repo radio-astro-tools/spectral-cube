@@ -1387,7 +1387,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
         return self.apply_function_parallel_spatial(convfunc,
                                                     accepts_chunks=True,
-                                                    **kwargs).with_beam(beam)
+                                                    **kwargs).with_beam(beam, raise_error_jybm=False)
 
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):

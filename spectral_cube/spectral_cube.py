@@ -3197,7 +3197,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                             **kwargs)
 
         newcube = self.apply_function_parallel_spatial(convfunc,
-                                                       **kwargs).with_beam(beam)
+                                                       **kwargs).with_beam(beam, raise_error_jybm=False)
 
         # Scale Jy/beam units by the change in beam size
         if self.unit.is_equivalent(u.Jy / u.beam):
