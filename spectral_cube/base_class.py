@@ -11,7 +11,7 @@ import dask.array as da
 
 from . import wcs_utils
 from . import cube_utils
-from .utils import cached, WCSCelestialError, BeamAverageWarning, NoBeamError
+from .utils import BeamWarning, cached, WCSCelestialError, BeamAverageWarning, NoBeamError, BeamUnitsError
 from .masks import BooleanArrayMask
 
 
@@ -755,7 +755,7 @@ class MultiBeamMixinClass(object):
                                     goodbeams_mask=np.bitwise_and(self.goodbeams_mask, goodbeams),
                                    )
 
-    def with_beams(self, beams, goodbeams_mask=None,):
+    def with_beams(self, beams, goodbeams_mask=None, raise_error_jybm=True):
         '''
         Attach a new beams object to the VaryingResolutionSpectralCube.
 
@@ -764,6 +764,15 @@ class MultiBeamMixinClass(object):
         beams : `~radio_beam.Beams`
             A new beams object.
         '''
+
+        # Catch cases with units in Jy/beam where new beams will alter the units.
+        if self.unit.is_equivalent(u.Jy/u.beam) and self.beams is not None:
+
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the beams of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the beams of a cube with Jy/beam units. The brightness units may be wrong!", BeamWarning)
 
         meta = self.meta.copy()
         meta['beams'] = beams

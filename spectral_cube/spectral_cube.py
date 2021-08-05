@@ -52,7 +52,7 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
                     BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning,
-                    WCSCelestialError)
+                    WCSCelestialError, BeamUnitsError)
 from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
                             doppler_beta, doppler_gamma, doppler_z)
 from .io.core import SpectralCubeRead, SpectralCubeWrite
@@ -3550,7 +3550,7 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
-    def with_beam(self, beam):
+    def with_beam(self, beam, raise_error_jybm=True):
         '''
         Attach a beam object to the `~SpectralCube`.
 
@@ -3563,6 +3563,14 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
 
         if not isinstance(beam, Beam):
             raise TypeError("beam must be a radio_beam.Beam object.")
+
+        if self.unit.is_equivalent(u.Jy/u.beam) and self.beam is not None:
+
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the beams of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the beams of a cube with Jy/beam units. The brightness units may be wrong!", BeamWarning)
 
         meta = self._meta.copy()
         meta['beam'] = beam
