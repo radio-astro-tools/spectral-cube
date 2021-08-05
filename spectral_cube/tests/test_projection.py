@@ -16,7 +16,7 @@ from ..spectral_cube import SpectralCube
 from ..masks import BooleanArrayMask
 from ..lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
                                             VaryingResolutionOneDSpectrum)
-from ..utils import SliceWarning, WCSCelestialError
+from ..utils import SliceWarning, WCSCelestialError, BeamUnitsError
 from . import path
 
 # set up for parametrization
@@ -425,6 +425,26 @@ def test_ldo_attach_beam(LDO, data):
 
     assert new_p.beam == newbeam
     assert new_p.meta['beam'] == newbeam
+
+
+
+@pytest.mark.xfail(raises=BeamUnitsError, strict=True)
+@pytest.mark.parametrize(('LDO', 'data'),
+                         zip(LDOs, data_twelve))
+def test_ldo_attach_beam_jybm_error(LDO, data):
+
+    exp_beam = Beam(1.0 * u.arcsec)
+    newbeam = Beam(2.0 * u.arcsec)
+
+    data = data.value * u.Jy / u.beam
+
+    p = LDO(data, copy=False, beam=exp_beam)
+
+    # Attaching with no beam should work.
+    new_p = p.with_beam(newbeam)
+
+    # Trying to change the beam should now raise a BeamUnitsError
+    new_p = new_p.with_beam(newbeam)
 
 
 @pytest.mark.parametrize(('LDO', 'data'),

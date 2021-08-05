@@ -16,7 +16,7 @@ from astropy.io.registry import UnifiedReadWriteMethod
 
 from . import spectral_axis
 from .io.core import LowerDimensionalObjectWrite
-from .utils import SliceWarning, BeamWarning, SmoothingWarning, FITSWarning
+from .utils import SliceWarning, BeamWarning, SmoothingWarning, FITSWarning, BeamUnitsError
 from . import cube_utils
 from . import wcs_utils
 from .masks import BooleanArrayMask, MaskBase
@@ -283,7 +283,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
         return self
 
-    def with_beam(self, beam):
+    def with_beam(self, beam, raise_error_jybm=True):
         '''
         Attach a new beam object to the Projection.
 
@@ -292,6 +292,17 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         beam : `~radio_beam.Beam`
             A new beam object.
         '''
+
+        if not isinstance(beam, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        if self.unit.is_equivalent(u.Jy/u.beam) and self.beam is not None:
+
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the beams of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the beams of a cube with Jy/beam units. The brightness units may be wrong!", BeamWarning)
 
         meta = self.meta.copy()
         meta['beam'] = beam
@@ -1009,7 +1020,7 @@ class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
         out = super(OneDSpectrum, self)._new_spectrum_with(beam=beam, **kwargs)
         return out
 
-    def with_beam(self, beam):
+    def with_beam(self, beam, raise_error_jybm=True):
         '''
         Attach a new beam object to the OneDSpectrum.
 
@@ -1018,6 +1029,17 @@ class OneDSpectrum(BaseOneDSpectrum, BeamMixinClass):
         beam : `~radio_beam.Beam`
             A new beam object.
         '''
+
+        if not isinstance(beam, Beam):
+            raise TypeError("beam must be a radio_beam.Beam object.")
+
+        if self.unit.is_equivalent(u.Jy/u.beam) and self.beam is not None:
+
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the beams of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the beams of a cube with Jy/beam units. The brightness units may be wrong!", BeamWarning)
 
         meta = self.meta.copy()
         meta['beam'] = beam
