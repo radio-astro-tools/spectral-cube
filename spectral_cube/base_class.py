@@ -782,7 +782,7 @@ class MultiBeamMixinClass(object):
         '''
 
         # Catch cases with units in Jy/beam where new beams will alter the units.
-        self.check_jybeam_smoothing(raise_error_jybm=True)
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         meta = self.meta.copy()
         meta['beams'] = beams
