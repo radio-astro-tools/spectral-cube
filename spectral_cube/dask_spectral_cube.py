@@ -27,7 +27,7 @@ from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning
+from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 from .np_compat import allbadtonan
@@ -896,7 +896,7 @@ class DaskSpectralCubeMixin:
                                                      accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
-    def spectral_smooth_median(self, ksize, **kwargs):
+    def spectral_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
         """
         Smooth the cube along the spectral dimension
 
@@ -929,7 +929,7 @@ class DaskSpectralCubeMixin:
                                                      accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
-    def spatial_smooth(self, kernel, convolve=convolution.convolve, **kwargs):
+    def spatial_smooth(self, kernel, convolve=convolution.convolve, raise_error_jybm=True, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
 
@@ -941,6 +941,9 @@ class DaskSpectralCubeMixin:
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
         save_to_tmp_dir : bool
             If `True`, the computation will be carried out straight away and
             saved to a temporary directory. This can improve performance,
@@ -951,13 +954,22 @@ class DaskSpectralCubeMixin:
             Passed to the convolve function
         """
 
+        if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the spatial resolution of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the spatial resolution of a cube with Jy/beam units."
+                              " The brightness units may be wrong!", BeamWarning)
+
+
         def convolve_wrapper(data, kernel=None, **kwargs):
             return convolve(data, kernel, normalize_kernel=True, **kwargs)
 
         return self.apply_function_parallel_spatial(convolve_wrapper, kernel=kernel.array)
 
     @add_save_to_tmp_dir_option
-    def spatial_smooth_median(self, ksize, **kwargs):
+    def spatial_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
@@ -965,6 +977,9 @@ class DaskSpectralCubeMixin:
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
         kwargs : dict
             Passed to the median_filter function
         """
@@ -972,8 +987,16 @@ class DaskSpectralCubeMixin:
         if not SCIPY_INSTALLED:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        def median_filter_wrapper(data, ksize=None):
-            return ndimage.median_filter(data, ksize)
+        if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the spatial resolution of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the spatial resolution of a cube with Jy/beam units."
+                              " The brightness units may be wrong!", BeamWarning)
+
+        def median_filter_wrapper(data, ksize=None, **kwargs):
+            return ndimage.median_filter(data, ksize, **kwargs)
 
         return self.apply_function_parallel_spatial(median_filter_wrapper, ksize=ksize)
 

@@ -2639,7 +2639,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
 
     @parallel_docstring
-    def spatial_smooth_median(self, ksize, update_function=None, **kwargs):
+    def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
@@ -2650,11 +2650,22 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
         kwargs : dict
             Passed to the convolve function
         """
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
+
+        if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the spatial resolution of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the spatial resolution of a cube with Jy/beam units."
+                              " The brightness units may be wrong!", BeamWarning)
 
         def _msmooth_image(im, **kwargs):
             return ndimage.filters.median_filter(im, size=ksize, **kwargs)
@@ -2667,6 +2678,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     @parallel_docstring
     def spatial_smooth(self, kernel,
                        convolve=convolution.convolve,
+                       raise_error_jybm=True,
                        **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
@@ -2679,9 +2691,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
         kwargs : dict
             Passed to the convolve function
         """
+
+        if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the spatial resolution of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the spatial resolution of a cube with Jy/beam units."
+                              " The brightness units may be wrong!", BeamWarning)
 
         def _gsmooth_image(img, **kwargs):
             """

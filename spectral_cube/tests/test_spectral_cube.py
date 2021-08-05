@@ -2359,6 +2359,32 @@ def test_spatial_smooth_t2d(data_adv, use_dask):
     np.testing.assert_almost_equal(cube_t2d[2].value, result2)
 
 
+@pytest.mark.openfiles_ignore
+@pytest.mark.parametrize('filename', ['point_source_5_one_beam', 'point_source_5_spectral_beams'],
+                         indirect=['filename'])
+@pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
+def test_spatial_smooth_jybm_error(filename, use_dask):
+    '''Raise an error when Jy/beam units are getting spatially smoothed. This tests SCs and VRSCs'''
+
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
+
+    # Tophat 2D smoothing test
+    t2d = Tophat2DKernel(3)
+    cube_t2d = cube.spatial_smooth(t2d)
+
+
+@pytest.mark.openfiles_ignore
+@pytest.mark.parametrize('filename', ['point_source_5_one_beam', 'point_source_5_spectral_beams'],
+                         indirect=['filename'])
+@pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
+def test_spatial_smooth_median_jybm_error(filename, use_dask):
+    '''Raise an error when Jy/beam units are getting spatially median smoothed. This tests SCs and VRSCs'''
+
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
+
+    cube_median = cube.spatial_smooth_median(3)
+
+
 def test_spatial_smooth_median(data_adv, use_dask):
 
     pytest.importorskip('scipy.ndimage')
