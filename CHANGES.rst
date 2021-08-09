@@ -1,5 +1,7 @@
 0.6 (unreleased)
 ----------------
+- Fix `convolve_to` when units are in Jy/beam. Add error/warnings for operations
+  for all operations that change the spatial resolution for Jy/beam cubes.
 - Add ``argmax_world`` and ``argmin_world`` to return the argmin/max position
   in WCS coordinates. This is ONLY defined for independent WCS axes
   (e.g., spectral) #680
