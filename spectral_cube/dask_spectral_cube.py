@@ -1534,7 +1534,6 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
             if img.size > 0:
                 out = np.zeros(img.shape, dtype=img.dtype)
                 for index in range(img.shape[0]):
-                    print(beam[index, 0, 0])
                     if beam[index, 0, 0] is None:
                         out[index] = img[index]
                     else:

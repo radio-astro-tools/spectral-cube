@@ -106,11 +106,20 @@ class HeaderMixinClass(object):
 
     def check_jybeam_smoothing(self, raise_error_jybm=True):
         '''
-        Runs for spatial resolution operations (e.g. `spatial_smooth`) and either an error or warning
+        This runs for spatial resolution operations (e.g. `spatial_smooth`) and either an error or warning
         when smoothing will affect brightness in Jy/beam operations.
 
         This is also true for using the `with_beam` and `with_beams` methods, including 1D spectra with
         Jy/beam units.
+
+        Parameters
+        ----------
+        raise_error_jybeam : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when True (default). When False, it triggers a
+            `~spectral_cube.utils.BeamWarning`.
+
+            .. note: This is a reminder to expose raise_error_jybm to top-level functions.
+
         '''
 
         if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:

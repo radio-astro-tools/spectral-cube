@@ -3202,17 +3202,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
 
+        # Scale Jy/beam units by the change in beam size
+        if self.unit.is_equivalent(u.Jy / u.beam):
+            beam_ratio_factor = (beam.sr / self.beam.sr).value
+        else:
+            beam_ratio_factor = 1.
+
         # See #631: kwargs get passed within self.apply_function_parallel_spatial
         def convfunc(img, **kwargs):
             return convolve(img, convolution_kernel, normalize_kernel=True,
-                            **kwargs)
+                            **kwargs) * beam_ratio_factor
 
         newcube = self.apply_function_parallel_spatial(convfunc,
                                                        **kwargs).with_beam(beam, raise_error_jybm=False)
 
-        # Scale Jy/beam units by the change in beam size
-        if self.unit.is_equivalent(u.Jy / u.beam):
-            newcube *= (beam.sr / self.beam.sr).value
 
         return newcube
 
