@@ -105,3 +105,6 @@ class FITSReadError(Exception):
 
 class NoBeamError(Exception):
     pass
+
+class BeamUnitsError(Exception):
+    pass

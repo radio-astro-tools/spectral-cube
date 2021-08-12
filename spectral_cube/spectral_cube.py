@@ -52,7 +52,7 @@ from .utils import (cached, warn_slow, VarianceWarning, BeamWarning,
                     NotImplementedWarning, SliceWarning, SmoothingWarning,
                     StokesWarning, ExperimentalImplementationWarning,
                     BeamAverageWarning, NonFiniteBeamsWarning, BeamWarning,
-                    WCSCelestialError)
+                    WCSCelestialError, BeamUnitsError)
 from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
                             doppler_beta, doppler_gamma, doppler_z)
 from .io.core import SpectralCubeRead, SpectralCubeWrite
@@ -2639,7 +2639,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
 
     @parallel_docstring
-    def spatial_smooth_median(self, ksize, update_function=None, **kwargs):
+    def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
@@ -2650,11 +2650,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
         kwargs : dict
             Passed to the convolve function
         """
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
+
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def _msmooth_image(im, **kwargs):
             return ndimage.filters.median_filter(im, size=ksize, **kwargs)
@@ -2667,6 +2672,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     @parallel_docstring
     def spatial_smooth(self, kernel,
                        convolve=convolution.convolve,
+                       raise_error_jybm=True,
                        **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
@@ -2679,9 +2685,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
         kwargs : dict
             Passed to the convolve function
         """
+
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def _gsmooth_image(img, **kwargs):
             """
@@ -3191,13 +3202,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
 
+        # Scale Jy/beam units by the change in beam size
+        if self.unit.is_equivalent(u.Jy / u.beam):
+            beam_ratio_factor = (beam.sr / self.beam.sr).value
+        else:
+            beam_ratio_factor = 1.
+
         # See #631: kwargs get passed within self.apply_function_parallel_spatial
         def convfunc(img, **kwargs):
             return convolve(img, convolution_kernel, normalize_kernel=True,
-                            **kwargs)
+                            **kwargs) * beam_ratio_factor
 
         newcube = self.apply_function_parallel_spatial(convfunc,
-                                                       **kwargs).with_beam(beam)
+                                                       **kwargs).with_beam(beam, raise_error_jybm=False)
+
 
         return newcube
 
@@ -3546,7 +3564,7 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
 
     _new_cube_with.__doc__ = BaseSpectralCube._new_cube_with.__doc__
 
-    def with_beam(self, beam):
+    def with_beam(self, beam, raise_error_jybm=True):
         '''
         Attach a beam object to the `~SpectralCube`.
 
@@ -3559,6 +3577,8 @@ class SpectralCube(BaseSpectralCube, BeamMixinClass):
 
         if not isinstance(beam, Beam):
             raise TypeError("beam must be a radio_beam.Beam object.")
+
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         meta = self._meta.copy()
         meta['beam'] = beam
@@ -3986,24 +4006,33 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         convolution_kernels = []
+        beam_ratio_factors = []
         for bm,valid in zip(self.unmasked_beams, self.goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
                 convolution_kernels.append(None)
+                beam_ratio_factors.append(1.)
                 continue
             elif beam == bm:
                 # Point response when beams are equal, don't convolve.
                 convolution_kernels.append(None)
+                beam_ratio_factors.append(1.)
                 continue
             try:
                 cb = beam.deconvolve(bm)
                 ck = cb.as_kernel(pixscale)
                 convolution_kernels.append(ck)
+                beam_ratio_factors.append((beam.sr / bm.sr))
             except ValueError:
                 if allow_smaller:
                     convolution_kernels.append(None)
+                    beam_ratio_factors.append(1.)
                 else:
                     raise
+
+        # Only use the beam ratios when convolving in Jy/beam
+        if not self.unit.is_equivalent(u.Jy / u.beam):
+            beam_ratio_factors = [1.] * len(convolution_kernels)
 
         if update_function is None:
             pb = ProgressBar(self.shape[0])
@@ -4024,7 +4053,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
                 # See #631: kwargs get passed within self.apply_function_parallel_spatial
                 newdata[ii, :, :] = convolve(img, kernel,
                                              normalize_kernel=True,
-                                             **kwargs)
+                                             **kwargs) * beam_ratio_factors[ii]
             update_function()
 
         newcube = SpectralCube(data=newdata, wcs=self.wcs, mask=self.mask,

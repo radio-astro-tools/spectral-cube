@@ -27,7 +27,7 @@ from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning
+from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 from .np_compat import allbadtonan
@@ -897,7 +897,7 @@ class DaskSpectralCubeMixin:
                                                      accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
-    def spectral_smooth_median(self, ksize, **kwargs):
+    def spectral_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
         """
         Smooth the cube along the spectral dimension
 
@@ -930,7 +930,7 @@ class DaskSpectralCubeMixin:
                                                      accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
-    def spatial_smooth(self, kernel, convolve=convolution.convolve, **kwargs):
+    def spatial_smooth(self, kernel, convolve=convolution.convolve, raise_error_jybm=True, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube.
 
@@ -942,6 +942,9 @@ class DaskSpectralCubeMixin:
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
         save_to_tmp_dir : bool
             If `True`, the computation will be carried out straight away and
             saved to a temporary directory. This can improve performance,
@@ -952,13 +955,15 @@ class DaskSpectralCubeMixin:
             Passed to the convolve function
         """
 
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
+
         def convolve_wrapper(data, kernel=None, **kwargs):
             return convolve(data, kernel, normalize_kernel=True, **kwargs)
 
         return self.apply_function_parallel_spatial(convolve_wrapper, kernel=kernel.array)
 
     @add_save_to_tmp_dir_option
-    def spatial_smooth_median(self, ksize, **kwargs):
+    def spatial_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
@@ -966,6 +971,9 @@ class DaskSpectralCubeMixin:
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
         kwargs : dict
             Passed to the median_filter function
         """
@@ -973,8 +981,10 @@ class DaskSpectralCubeMixin:
         if not SCIPY_INSTALLED:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        def median_filter_wrapper(data, ksize=None):
-            return ndimage.median_filter(data, ksize)
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
+
+        def median_filter_wrapper(data, ksize=None, **kwargs):
+            return ndimage.median_filter(data, ksize, **kwargs)
 
         return self.apply_function_parallel_spatial(median_filter_wrapper, ksize=ksize)
 
@@ -1380,13 +1390,18 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         convolution_kernel = beam.deconvolve(self.beam).as_kernel(pixscale)
         kernel = convolution_kernel.array.reshape((1,) + convolution_kernel.array.shape)
 
+        if self.unit.is_equivalent(u.Jy / u.beam):
+            beam_ratio_factor = (beam.sr / self.beam.sr).value
+        else:
+            beam_ratio_factor = 1.
+
         # See #631: kwargs get passed within self.apply_function_parallel_spatial
         def convfunc(img, **kwargs):
-            return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape)
+            return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape) * beam_ratio_factor
 
         return self.apply_function_parallel_spatial(convfunc,
                                                     accepts_chunks=True,
-                                                    **kwargs).with_beam(beam)
+                                                    **kwargs).with_beam(beam, raise_error_jybm=False)
 
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
@@ -1489,20 +1504,25 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         pixscale = wcs.utils.proj_plane_pixel_area(self.wcs.celestial)**0.5*u.deg
 
         beams = []
+        beam_ratio_factors = []
         for bm, valid in zip(self.unmasked_beams, self.goodbeams_mask):
             if not valid:
                 # just skip masked-out beams
                 beams.append(None)
+                beam_ratio_factors.append(None)
                 continue
             elif beam == bm:
                 # Point response when beams are equal, don't convolve.
                 beams.append(None)
+                beam_ratio_factors.append(None)
                 continue
             try:
                 beams.append(beam.deconvolve(bm))
+                beam_ratio_factors.append((beam.sr / bm.sr).value)
             except ValueError:
                 if allow_smaller:
                     beams.append(None)
+                    beam_ratio_factors.append(None)
                 else:
                     raise
 
@@ -1510,6 +1530,8 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
         # that can then be chunked like the data.
         beams = da.from_array(np.array(beams, dtype=np.object)
                               .reshape((len(beams), 1, 1)), chunks=(-1, -1, -1))
+
+        needs_beam_ratio = self.unit.is_equivalent(u.Jy / u.beam)
 
         # See #631: kwargs get passed within self.apply_function_parallel_spatial
         def convfunc(img, beam, **kwargs):
@@ -1521,6 +1543,10 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                     else:
                         kernel = beam[index, 0, 0].as_kernel(pixscale)
                         out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
+
+                        if needs_beam_ratio:
+                            out[index] *= beam_ratio_factors[index]
+
                 return out
             else:
                 return img

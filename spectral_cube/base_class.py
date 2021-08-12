@@ -11,7 +11,7 @@ import dask.array as da
 
 from . import wcs_utils
 from . import cube_utils
-from .utils import cached, WCSCelestialError, BeamAverageWarning, NoBeamError
+from .utils import BeamWarning, cached, WCSCelestialError, BeamAverageWarning, NoBeamError, BeamUnitsError
 from .masks import BooleanArrayMask
 
 
@@ -104,6 +104,31 @@ class HeaderMixinClass(object):
 
         return header
 
+    def check_jybeam_smoothing(self, raise_error_jybm=True):
+        '''
+        This runs for spatial resolution operations (e.g. `spatial_smooth`) and either an error or warning
+        when smoothing will affect brightness in Jy/beam operations.
+
+        This is also true for using the `with_beam` and `with_beams` methods, including 1D spectra with
+        Jy/beam units.
+
+        Parameters
+        ----------
+        raise_error_jybeam : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when True (default). When False, it triggers a
+            `~spectral_cube.utils.BeamWarning`.
+
+            .. note: This is a reminder to expose raise_error_jybm to top-level functions.
+
+        '''
+
+        if self.unit.is_equivalent(u.Jy / u.beam) and raise_error_jybm:
+            if raise_error_jybm:
+                raise BeamUnitsError("Attempting to change the spatial resolution of a cube with Jy/beam units."
+                                     " To ignore this error, set `raise_error_jybm=False`.")
+            else:
+                warnings.warn("Changing the spatial resolution of a cube with Jy/beam units."
+                              " The brightness units may be wrong!", BeamWarning)
 
 class SpatialCoordMixinClass(object):
 
@@ -755,7 +780,7 @@ class MultiBeamMixinClass(object):
                                     goodbeams_mask=np.bitwise_and(self.goodbeams_mask, goodbeams),
                                    )
 
-    def with_beams(self, beams, goodbeams_mask=None,):
+    def with_beams(self, beams, goodbeams_mask=None, raise_error_jybm=True):
         '''
         Attach a new beams object to the VaryingResolutionSpectralCube.
 
@@ -764,6 +789,9 @@ class MultiBeamMixinClass(object):
         beams : `~radio_beam.Beams`
             A new beams object.
         '''
+
+        # Catch cases with units in Jy/beam where new beams will alter the units.
+        self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         meta = self.meta.copy()
         meta['beams'] = beams

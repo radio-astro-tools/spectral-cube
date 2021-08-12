@@ -1610,7 +1610,7 @@ def test_multibeam_custom(data_vda_beams, use_dask):
     new_beams = Beams([1.] * cube.shape[0] * u.deg)
 
     # Attach the beam
-    newcube = cube.with_beams(new_beams)
+    newcube = cube.with_beams(new_beams, raise_error_jybm=False)
 
     try:
         assert all(new_beams == newcube.beams)
@@ -1630,7 +1630,20 @@ def test_multibeam_custom_wrongshape(data_vda_beams, use_dask):
     new_beams = Beams([1.] * cube.shape[0] * u.deg)
 
     # Attach the beam
-    cube.with_beams(new_beams[:1])
+    cube.with_beams(new_beams[:1], raise_error_jybm=False)
+
+
+@pytest.mark.openfiles_ignore
+@pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
+def test_multibeam_jybm_error(data_vda_beams, use_dask):
+
+    cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
+
+    # Make a new set of beams that differs from the original.
+    new_beams = Beams([1.] * cube.shape[0] * u.deg)
+
+    # Attach the beam
+    newcube = cube.with_beams(new_beams, raise_error_jybm=True)
 
 
 def test_multibeam_slice(data_vda_beams, use_dask):
@@ -2103,6 +2116,29 @@ def test_convolve_to(data_vda_beams, use_dask):
                                  nan_treatment='fill')
 
 
+def test_convolve_to_jybeam_onebeam(point_source_5_one_beam, use_dask):
+    cube, data = cube_and_raw(point_source_5_one_beam, use_dask=use_dask)
+
+    convolved = cube.convolve_to(Beam(10*u.arcsec))
+
+    # The peak of the point source should remain constant in Jy/beam
+    np.testing.assert_allclose(convolved[:, 5, 5].value, cube[:, 5, 5].value, atol=1e-5, rtol=1e-5)
+
+    assert cube.unit == u.Jy / u.beam
+
+
+def test_convolve_to_jybeam_multibeams(point_source_5_spectral_beams, use_dask):
+    cube, data = cube_and_raw(point_source_5_spectral_beams, use_dask=use_dask)
+
+
+    convolved = cube.convolve_to(Beam(10*u.arcsec))
+
+    # The peak of the point source should remain constant in Jy/beam
+    np.testing.assert_allclose(convolved[:, 5, 5].value, cube[:, 5, 5].value, atol=1e-5, rtol=1e-5)
+
+    assert cube.unit == u.Jy / u.beam
+
+
 def test_convolve_to_with_bad_beams(data_vda_beams, use_dask):
     cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
 
@@ -2321,6 +2357,32 @@ def test_spatial_smooth_t2d(data_adv, use_dask):
                         [0.0585135, 0.0585135]])
 
     np.testing.assert_almost_equal(cube_t2d[2].value, result2)
+
+
+@pytest.mark.openfiles_ignore
+@pytest.mark.parametrize('filename', ['point_source_5_one_beam', 'point_source_5_spectral_beams'],
+                         indirect=['filename'])
+@pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
+def test_spatial_smooth_jybm_error(filename, use_dask):
+    '''Raise an error when Jy/beam units are getting spatially smoothed. This tests SCs and VRSCs'''
+
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
+
+    # Tophat 2D smoothing test
+    t2d = Tophat2DKernel(3)
+    cube_t2d = cube.spatial_smooth(t2d)
+
+
+@pytest.mark.openfiles_ignore
+@pytest.mark.parametrize('filename', ['point_source_5_one_beam', 'point_source_5_spectral_beams'],
+                         indirect=['filename'])
+@pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
+def test_spatial_smooth_median_jybm_error(filename, use_dask):
+    '''Raise an error when Jy/beam units are getting spatially median smoothed. This tests SCs and VRSCs'''
+
+    cube, data = cube_and_raw(filename, use_dask=use_dask)
+
+    cube_median = cube.spatial_smooth_median(3)
 
 
 def test_spatial_smooth_median(data_adv, use_dask):
