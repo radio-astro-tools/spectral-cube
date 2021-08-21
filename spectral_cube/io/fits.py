@@ -11,6 +11,7 @@ from astropy.wcs import WCS
 from collections import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
 from astropy.io.fits.connect import FITS_SIGNATURE
+from astropy import units as u
 
 import numpy as np
 import datetime

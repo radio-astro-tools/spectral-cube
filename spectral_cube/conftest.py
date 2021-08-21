@@ -70,6 +70,14 @@ def prepare_4_beams():
     beams['CHAN'] = [0,1,2,3]
     beams['POL'] = [0,0,0,0]
     beams = fits.BinTableHDU(beams)
+
+    beams.header['TTYPE1'] = 'BMAJ'
+    beams.header['TUNIT1'] = 'arcsec'
+    beams.header['TTYPE2'] = 'BMIN'
+    beams.header['TUNIT2'] = 'arcsec'
+    beams.header['TTYPE3'] = 'BPA'
+    beams.header['TUNIT3'] = 'deg'
+
     return beams
 
 
@@ -351,6 +359,27 @@ def data_455_delta_beams(tmp_path):
 
 
 @pytest.fixture
+def data_455_degree_beams(tmp_path):
+    """
+    Test cube for AIPS-style beam specfication
+    """
+    h = prepare_255_header()
+    d = np.zeros([4,5,5], dtype='float')
+    beams = prepare_4_beams()
+    beams.data['BMAJ'] /= 3600
+    beams.data['BMIN'] /= 3600
+    beams.header['TTYPE1'] = 'BMAJ'
+    beams.header['TUNIT1'] = 'DEGREES'
+    beams.header['TTYPE2'] = 'BMIN'
+    beams.header['TUNIT2'] = 'DEGREES'
+
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto(tmp_path / '455_degree_beams.fits')
+    return tmp_path / '455_degree_beams.fits'
+
+
+@pytest.fixture
 def data_522_delta(tmp_path):
     h = prepare_255_header()
     d = np.zeros([5,2,2], dtype='float')
@@ -369,6 +398,12 @@ def prepare_5_beams():
     beams['CHAN'] = [0,1,2,3,4]
     beams['POL'] = [0,0,0,0,0]
     beams = fits.BinTableHDU(beams)
+    beams.header['TTYPE1'] = 'BMAJ'
+    beams.header['TUNIT1'] = 'arcsec'
+    beams.header['TTYPE2'] = 'BMIN'
+    beams.header['TUNIT2'] = 'arcsec'
+    beams.header['TTYPE3'] = 'BPA'
+    beams.header['TUNIT3'] = 'deg'
     return beams
 
 
