@@ -27,7 +27,7 @@ from ..dask_spectral_cube import DaskSpectralCube, DaskVaryingResolutionSpectral
 from ..lower_dimensional_structures import LowerDimensionalObject
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from ..utils import FITSWarning, FITSReadError, StokesWarning
+from ..utils import BeamUnitsError, FITSWarning, FITSReadError, StokesWarning
 
 
 def first(iterable):
@@ -98,6 +98,14 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
             elif isinstance(hdu_item, fits.BinTableHDU):
                 if 'BPA' in hdu_item.data.names:
                     beam_table = hdu_item.data
+
+                    # Check that the table has the expected form for beam units:
+                    # 1: BMAJ 2: BMIN 3: BPA
+                    for key in ['TUNIT']:
+                        for i in range(1, 4):
+                            if not f"{key}{i}" in hdu_item.header:
+                                raise BeamUnitsError(f"Missing beam units keyword {key}{i}"
+                                                     " in the header.")
 
                     # Read the bmaj/bmin units from the header
                     # (we still assume BPA is degrees because we've never seen an exceptional case)
