@@ -484,6 +484,14 @@ def prepare_5_beams_with_pixscale(pixel_scale):
     beams['CHAN'] = [0,1,2,3,4]
     beams['POL'] = [0,0,0,0,0]
     beams = fits.BinTableHDU(beams)
+
+    beams.header['TTYPE1'] = 'BMAJ'
+    beams.header['TUNIT1'] = 'arcsec'
+    beams.header['TTYPE2'] = 'BMIN'
+    beams.header['TUNIT2'] = 'arcsec'
+    beams.header['TTYPE3'] = 'BPA'
+    beams.header['TUNIT3'] = 'deg'
+
     return beams
 
 
