@@ -122,3 +122,15 @@ def test_1d_beams(data_5_spectral_beams, use_dask):
     assert hasattr(spec, 'beams')
     assert len(spec.beams) == 5
     hdu.close()
+
+
+
+def test_aips_beams_units(tmpdir, data_455_degree_beams, use_dask):
+    """
+    regression test for #737, AIPS beam unit specs (degrees)
+    """
+    c = SpectralCube.read(data_455_degree_beams, use_dask=use_dask)
+    np.testing.assert_almost_equal(c.beams[0].major.value, 0.4/3600)
+    np.testing.assert_almost_equal(c.beams[0].minor.value, 0.1/3600)
+    np.testing.assert_almost_equal(c.beams[0].major.to(u.arcsec).value, 0.4)
+    np.testing.assert_almost_equal(c.beams[0].minor.to(u.arcsec).value, 0.1)

@@ -11,6 +11,7 @@ from astropy.wcs import WCS
 from collections import OrderedDict
 from astropy.io.fits.hdu.hdulist import fitsopen as fits_open
 from astropy.io.fits.connect import FITS_SIGNATURE
+from astropy import units as u
 
 import numpy as np
 import datetime
@@ -26,7 +27,7 @@ from ..dask_spectral_cube import DaskSpectralCube, DaskVaryingResolutionSpectral
 from ..lower_dimensional_structures import LowerDimensionalObject
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from ..utils import FITSWarning, FITSReadError, StokesWarning
+from ..utils import BeamUnitsError, FITSWarning, FITSReadError, StokesWarning
 
 
 def first(iterable):
@@ -85,6 +86,8 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
 
     beam_table = None
 
+    beam_units = (u.arcsec, u.arcsec)
+
     if isinstance(input, fits.HDUList):
 
         # Parse all array objects
@@ -95,6 +98,33 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
             elif isinstance(hdu_item, fits.BinTableHDU):
                 if 'BPA' in hdu_item.data.names:
                     beam_table = hdu_item.data
+
+                    # Check that the table has the expected form for beam units:
+                    # 1: BMAJ 2: BMIN 3: BPA
+                    for i in range(1, 4):
+                        if not f"TUNIT{i}" in hdu_item.header:
+                            raise BeamUnitsError(f"Missing beam units keyword {key}{i}"
+                                                    " in the header.")
+
+                    # Read the bmaj/bmin units from the header
+                    # (we still assume BPA is degrees because we've never seen an exceptional case)
+                    # this will crash if there is no appropriate header info
+                    maj_kw = [kw for kw, val in hdu_item.header.items() if val == 'BMAJ'][0]
+                    min_kw = [kw for kw, val in hdu_item.header.items() if val == 'BMIN'][0]
+                    maj_unit = hdu_item.header[maj_kw.replace('TTYPE', 'TUNIT')]
+                    min_unit = hdu_item.header[min_kw.replace('TTYPE', 'TUNIT')]
+
+                    # AIPS uses non-FITS-standard unit names; this catches the
+                    # only case we've seen so far
+                    if maj_unit == 'DEGREES':
+                        maj_unit = 'degree'
+                    if min_unit == 'DEGREES':
+                        min_unit = 'degree'
+
+                    maj_unit = u.Unit(maj_unit)
+                    min_unit = u.Unit(min_unit)
+
+                    beam_units = (maj_unit, min_unit)
 
         if len(arrays) > 1:
             if hdu is None:
@@ -131,7 +161,7 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
         with fits_open(input, mode=mode, **kwargs) as hdulist:
             return read_data_fits(hdulist, hdu=hdu)
 
-    return array_hdu.data, array_hdu.header, beam_table
+    return array_hdu.data, array_hdu.header, beam_table, beam_units
 
 
 def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **kwargs):
@@ -155,7 +185,7 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
         SC = SpectralCube
         VRSC = VaryingResolutionSpectralCube
 
-    data, header, beam_table = read_data_fits(input, hdu=hdu, **kwargs)
+    data, header, beam_table, beam_units = read_data_fits(input, hdu=hdu, **kwargs)
 
     if data is None:
         raise FITSReadError('No data found in HDU {0}. You can try using the hdu= '
@@ -183,7 +213,8 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
             cube = SC(data, wcs, mask, meta=meta, header=header)
         else:
             cube = VRSC(data, wcs, mask, meta=meta, header=header,
-                        beam_table=beam_table)
+                        beam_table=beam_table, major_unit=beam_units[0],
+                        minor_unit=beam_units[1])
 
         if hasattr(cube._mask, '_data'):
             # check that the shape matches if there is a shape
@@ -207,7 +238,10 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
                 stokes_data[component] = VRSC(comp_data, wcs=comp_wcs,
                                               mask=comp_mask, meta=meta,
                                               header=header,
-                                              beam_table=beam_table)
+                                              beam_table=beam_table,
+                                              major_unit=beam_units[0],
+                                              minor_unit=beam_units[1]
+                                             )
 
         cube = StokesSpectralCube(stokes_data)
 

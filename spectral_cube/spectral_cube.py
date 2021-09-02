@@ -3607,7 +3607,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
         else:
             return super().__new__(cls)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, major_unit=u.arcsec, minor_unit=u.arcsec, **kwargs):
         """
         Create a SpectralCube with an associated beam table.  The new
         VaryingResolutionSpectralCube will have a ``beams`` attribute and a
@@ -3653,8 +3653,8 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
 
         if beam_table is not None:
             # CASA beam tables are in arcsec, and that's what we support
-            beams = Beams(major=u.Quantity(beam_data_table['BMAJ'], u.arcsec),
-                          minor=u.Quantity(beam_data_table['BMIN'], u.arcsec),
+            beams = Beams(major=u.Quantity(beam_data_table['BMAJ'], major_unit),
+                          minor=u.Quantity(beam_data_table['BMIN'], minor_unit),
                           pa=u.Quantity(beam_data_table['BPA'], u.deg),
                           meta=[{key: row[key] for key in beam_data_table.names
                                  if key not in ('BMAJ','BPA', 'BMIN')}
