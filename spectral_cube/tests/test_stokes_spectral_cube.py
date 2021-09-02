@@ -45,7 +45,11 @@ class TestStokesSpectralCube():
             cube = StokesSpectralCube(stokes_data)
         assert exc.value.args[0] == "All spectral cubes should have the same shape"
 
-    @pytest.mark.parametrize('component', ('I', 'Q', 'U', 'V', 'RR', 'RL', 'LR', 'LL'))
+    @pytest.mark.parametrize('component', ('I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR', 'XX', 'XY', 'YX', 'YY',
+                                           'RX', 'RY', 'LX', 'LY', 'XR,', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ', 
+                                           'RCircular', 'LCircular', 'Linear', 'Ptotal', 'Plinear', 'PFtotal', 
+                                           'PFlinear', 'Pangle'))
+
     def test_valid_component_name(self, component, use_dask):
         stokes_data = {component: SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)}
         cube = StokesSpectralCube(stokes_data)
@@ -56,7 +60,7 @@ class TestStokesSpectralCube():
         stokes_data = {component: SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)}
         with pytest.raises(ValueError) as exc:
             cube = StokesSpectralCube(stokes_data)
-        assert exc.value.args[0] == "Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR".format(component)
+        assert exc.value.args[0] == "Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component)
 
     def test_invalid_wcs(self, use_dask):
         wcs2 = WCS(naxis=3)
@@ -115,7 +119,7 @@ class TestStokesSpectralCube():
         stokes_data = {'BANANA': SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)}
         with pytest.raises(ValueError) as exc:
             cube = StokesSpectralCube(stokes_data)
-        assert exc.value.args[0] == "Invalid Stokes component: BANANA - should be one of I, Q, U, V, RR, LL, RL, LR"
+        assert exc.value.args[0] == "Invalid Stokes component: BANANA - should be one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle"
 
     def test_mask_invalid_shape(self, use_dask):
         stokes_data = dict(I=SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask),
