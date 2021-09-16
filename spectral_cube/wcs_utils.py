@@ -392,7 +392,7 @@ def check_equality(wcs1, wcs2, warn_missing=False,
                     else:
                         OK = False
                         log.debug("Header 1, {0}: {1} != {2}".format(key,u1,u2))
-            elif isinstance(c1[1], (float, np.float)):
+            elif isinstance(c1[1], float):
                 try:
                     if exact:
                         assert c1[1] == c2[1]
