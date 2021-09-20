@@ -16,8 +16,8 @@ jobs:
             toxenv: py39-test
           - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9 with all dependencies + coverage
-            toxenv: py39-test-all-cov
+            name: Python 3.9 with no visualization + coverage
+            toxenv: py39-test-novis-cov
           - os: ubuntu-latest
             python-version: 3.8
             name: Python 3.8 with minimal dependencies
