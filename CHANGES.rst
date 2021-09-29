@@ -10,6 +10,7 @@
   .image files (this was split out from spectral-cube). #684
 - Make it possible to customize ``target_chunksize`` in the CASA reader. #705
 - Fix support for dask.distributed. #712
+- Bugfix: PhysicalType are now strings.  #709
 
 0.5 (2020-09-17)
 ----------------
