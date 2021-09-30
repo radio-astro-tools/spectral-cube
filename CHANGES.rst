@@ -1,4 +1,4 @@
-0.6 (unreleased)
+0.6 (2021-09-30)
 ----------------
 - Fix `convolve_to` when units are in Jy/beam. Add error/warnings for operations
   for all operations that change the spatial resolution for Jy/beam cubes.
