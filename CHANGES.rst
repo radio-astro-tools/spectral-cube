@@ -1,3 +1,7 @@
+0.6.1.dev (unreleased)
+----------------------
+- none yet
+
 0.6 (2021-09-30)
 ----------------
 - Fix `convolve_to` when units are in Jy/beam. Add error/warnings for operations
