@@ -766,14 +766,14 @@ class DaskSpectralCubeMixin:
             from numpy import nanmin, nanmax, nansum
 
         def compute_stats(chunk, *args):
-            return np.array([np.sum(~np.isnan(chunk)),
+            return np.array([[[[np.sum(~np.isnan(chunk)),
                              nanmin(chunk),
                              nanmax(chunk),
                              nansum(chunk),
-                             nansum(chunk * chunk)])
+                                nansum(chunk * chunk)]]]])
 
         with dask.config.set(**self._scheduler_kwargs):
-            results = da.map_blocks(compute_stats, data.reshape(-1)).compute()
+            results = da.map_blocks(compute_stats, data, new_axis=3).compute()
 
         count_values, min_values, max_values, sum_values, ssum_values = results.reshape((-1, 5)).T
 
