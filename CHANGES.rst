@@ -1,6 +1,6 @@
 0.6.1.dev (unreleased)
 ----------------------
-- none yet
+- Fix memory issue when calling statistics() on FITS cubes. #752
 
 0.6 (2021-09-30)
 ----------------
