@@ -760,17 +760,15 @@ class DaskSpectralCubeMixin:
 
         data = self._get_filled_data(fill=np.nan)
 
-        try:
-            from bottleneck import nanmin, nanmax, nansum
-        except ImportError:
-            from numpy import nanmin, nanmax, nansum
-
         def compute_stats(chunk, *args):
+            # NOTE: we used to but do not use bottleneck here anymore, as it
+            # does not seem to provide any performance improvements and also
+            # has a memory leak when dealing with >f4 dtypes.
             return np.array([[[[np.sum(~np.isnan(chunk)),
-                             nanmin(chunk),
-                             nanmax(chunk),
-                             nansum(chunk),
-                                nansum(chunk * chunk)]]]])
+                                np.nanmin(chunk),
+                                np.nanmax(chunk),
+                                np.nansum(chunk),
+                                np.nansum(chunk * chunk)]]]])
 
         with dask.config.set(**self._scheduler_kwargs):
             results = da.map_blocks(compute_stats, data, new_axis=3).compute()
