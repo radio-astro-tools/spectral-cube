@@ -61,6 +61,19 @@ class StokesSpectralCube(object):
 
         self._mask = mask
 
+    def __getitem__(self, key):
+        if key in self._stokes_data:
+            return self._stokes_data[key]
+        else:
+            raise KeyError("Key {0} does not exist in this cube.".format(key))
+
+    def __setitem__(self, key, item):
+        if key in self._stokes_data:
+            self._stokes_data[key] = item
+        else:
+            errmsg = "Assigning new Stokes axes is not yet supported."
+            raise NotImplementedError(errmsg)
+
     @property
     def shape(self):
         return self._shape
