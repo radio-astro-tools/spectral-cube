@@ -152,3 +152,15 @@ class TestStokesSpectralCube():
 
         cube2 = cube1.I.with_mask(mask3)
         assert_equal(cube2.mask.include(), (mask1 & mask2[0] & mask3).include())
+
+    def test_key_access_valid(self, use_dask):
+        stokes_data = OrderedDict()
+        stokes_data['I'] = SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['Q'] = SpectralCube(self.data[1], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['U'] = SpectralCube(self.data[2], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['V'] = SpectralCube(self.data[3], wcs=self.wcs, use_dask=use_dask)
+        cube = StokesSpectralCube(stokes_data)
+        assert_equal(cube['I'],cube._stokes_data['I'])
+        assert_equal(cube['Q'],cube._stokes_data['Q'])
+        assert_equal(cube['U'],cube._stokes_data['U'])
+        assert_equal(cube['V'],cube._stokes_data['V'])
