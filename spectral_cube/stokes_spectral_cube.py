@@ -9,7 +9,7 @@ from .spectral_cube import SpectralCube, BaseSpectralCube
 from . import wcs_utils
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 
-__all__ = ['StokesSpectalCube']
+__all__ = ['StokesSpectralCube']
 
 VALID_STOKES = ['I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR', 'XX', 'XY', 'YX', 'YY', 
                 'RX', 'RY', 'LX', 'LY', 'XR,', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ', 
@@ -61,9 +61,29 @@ class StokesSpectralCube(object):
 
         self._mask = mask
 
+    def __getitem__(self, key):
+        if key in self._stokes_data:
+            return self._stokes_data[key]
+        else:
+            raise KeyError("Key {0} does not exist in this cube.".format(key))
+
+    def __setitem__(self, key, item):
+        if key in self._stokes_data:
+            self._stokes_data[key] = item
+        else:
+            errmsg = "Assigning new Stokes axes is not yet supported."
+            raise NotImplementedError(errmsg)
+
     @property
     def shape(self):
         return self._shape
+
+    @property
+    def stokes_data(self):
+        """
+        The underlying data
+        """
+        return self._stokes_data
 
     @property
     def mask(self):
