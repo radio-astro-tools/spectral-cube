@@ -64,7 +64,6 @@ jobs:
     - name: Install testing dependencies
       run: python -m pip install tox codecov
     - name: Run tests with ${{ matrix.name }}
-      if: ${{ contains(matrix.toxenv,'-cov') }}
       run: tox -v -e ${{ matrix.toxenv }}
     - name: Upload coverage to codecov
       if: ${{ contains(matrix.toxenv,'-cov') }}
