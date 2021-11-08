@@ -60,7 +60,9 @@ class TestStokesSpectralCube():
         stokes_data = {component: SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)}
         with pytest.raises(ValueError) as exc:
             cube = StokesSpectralCube(stokes_data)
-        assert exc.value.args[0] == "Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component)
+        assert exc.value.args[0] == "Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR,\
+                                    XX, XY, YX, YY, RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, \
+                                    RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component)
 
     def test_invalid_wcs(self, use_dask):
         wcs2 = WCS(naxis=3)
@@ -83,6 +85,40 @@ class TestStokesSpectralCube():
         assert_allclose(cube.U.unmasked_data[...], 2)
         assert_allclose(cube.V.unmasked_data[...], 3)
         assert cube.components == ['I', 'Q', 'U', 'V']
+
+    def test_stokes_type_sky(self, use_dask):
+        stokes_data = OrderedDict()
+        stokes_data['I'] = SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['Q'] = SpectralCube(self.data[1], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['U'] = SpectralCube(self.data[2], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['V'] = SpectralCube(self.data[3], wcs=self.wcs, use_dask=use_dask)
+        cube = StokesSpectralCube(stokes_data)
+        assert cube.stokes_type == "SKY_STOKES"
+
+    def test_stokes_type_feed_circular(self, use_dask):
+        stokes_data = OrderedDict()
+        stokes_data['RR'] = SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['RL'] = SpectralCube(self.data[1], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['LR'] = SpectralCube(self.data[2], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['LL'] = SpectralCube(self.data[3], wcs=self.wcs, use_dask=use_dask)
+        cube = StokesSpectralCube(stokes_data)
+        assert cube.stokes_type == "FEED_CIRCULAR"
+
+    def test_stokes_type_feed_linear(self, use_dask):
+        stokes_data = OrderedDict()
+        stokes_data['XX'] = SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['XY'] = SpectralCube(self.data[1], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['YX'] = SpectralCube(self.data[2], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['YY'] = SpectralCube(self.data[3], wcs=self.wcs, use_dask=use_dask)
+        cube = StokesSpectralCube(stokes_data)
+        assert cube.stokes_type == "FEED_LINEAR"
+
+    def test_stokes_type_feed_linear_partial(self, use_dask):
+        stokes_data = OrderedDict()
+        stokes_data['XX'] = SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)
+        stokes_data['YY'] = SpectralCube(self.data[1], wcs=self.wcs, use_dask=use_dask)
+        cube = StokesSpectralCube(stokes_data)
+        assert cube.stokes_type == "FEED_LINEAR"
 
     def test_dir(self, use_dask):
         stokes_data = dict(I=SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask),
@@ -119,7 +155,9 @@ class TestStokesSpectralCube():
         stokes_data = {'BANANA': SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)}
         with pytest.raises(ValueError) as exc:
             cube = StokesSpectralCube(stokes_data)
-        assert exc.value.args[0] == "Invalid Stokes component: BANANA - should be one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle"
+        assert exc.value.args[0] == "Invalid Stokes component: BANANA - should be one of I, Q, U, V, RR, LL, RL, LR, \
+                                        XX, XY, YX, YY, RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, \
+                                        RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle"
 
     def test_mask_invalid_shape(self, use_dask):
         stokes_data = dict(I=SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask),

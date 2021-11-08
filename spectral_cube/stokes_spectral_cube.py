@@ -15,6 +15,10 @@ VALID_STOKES = ['I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR', 'XX', 'XY', 'YX', 'Y
                 'RX', 'RY', 'LX', 'LY', 'XR,', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ', 
                 'RCircular', 'LCircular', 'Linear', 'Ptotal', 'Plinear', 'PFtotal', 
                 'PFlinear', 'Pangle']
+STOKES_SKY = ['I','Q','U','V']
+STOKES_FEED_LINEAR = ['XX', 'XY', 'YX', 'YY']
+STOKES_FEED_CIRCULAR = ['RR', 'RL', 'LR', 'LL']
+STOKES_FEED_GENERIC = ['PP', 'PQ', 'QP', 'QQ']
 
 
 class StokesSpectralCube(object):
@@ -30,6 +34,7 @@ class StokesSpectralCube(object):
         self._stokes_data = stokes_data
         self._meta = meta or {}
         self._fill_value = fill_value
+        self._stokes_type = ''
 
         reference = tuple(stokes_data.keys())[0]
 
@@ -46,7 +51,9 @@ class StokesSpectralCube(object):
 
             if component not in VALID_STOKES:
                 raise ValueError("Invalid Stokes component: {0} - should be "
-                                 "one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component))
+                                 "one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, \
+                                 RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, \
+                                 RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component))
 
             if stokes_data[component].shape != stokes_data[reference].shape:
                 raise ValueError("All spectral cubes should have the same shape")
@@ -58,6 +65,17 @@ class StokesSpectralCube(object):
             if not is_broadcastable_and_smaller(mask.shape, self._shape):
                 raise ValueError("Mask shape is not broadcastable to data shape:"
                                  " {0} vs {1}".format(mask.shape, self._shape))
+
+        if set(stokes_data).issubset(set(STOKES_SKY)):
+            self._stokes_type = 'SKY_STOKES'
+        elif set(stokes_data).issubset(set(STOKES_FEED_LINEAR)):
+            self._stokes_type = 'FEED_LINEAR'
+        elif set(stokes_data).issubset(set(STOKES_FEED_CIRCULAR)):
+            self._stokes_type = 'FEED_CIRCULAR'
+        elif set(stokes_data).issubset(set(STOKES_FEED_GENERIC)):
+            self._stokes_type = 'FEED_GENERIC'
+        elif set(stokes_data).issubset(set(VALID_STOKES)):
+            self._stokes_type = 'VALID_STOKES'
 
         self._mask = mask
 
@@ -105,6 +123,19 @@ class StokesSpectralCube(object):
     @property
     def components(self):
         return list(self._stokes_data.keys())
+
+    @property
+    def stokes_type(self):
+        """
+        What kind of stokes has been setup.
+        It can sky, linear, circular, generic or other.
+        Where the sky refers to the the stokes in sky basis.
+        Linear to the stokes in linear feed basis.
+        Circular to stokes in circularl feed basis.
+        Generic to the a general four orthagonal components.
+        Other refers to the non standard stokes types.
+        """
+        return self._stokes_type
 
     def __getattr__(self, attribute):
         """
