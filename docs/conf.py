@@ -111,7 +111,7 @@ html_theme_options = {
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = 'radiosnakes_nostruts2.svg'
+# html_logo = 'radiosnakes_nostruts2.svg'
 
 # Static files to copy after template files
 html_static_path = ['_static']
