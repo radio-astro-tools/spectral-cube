@@ -1,0 +1,8 @@
+@import url("bootstrap-astropy.css");
+
+div.topbar a.brand {
+  background: transparent url("spectral-cube.svg") no-repeat 10px 4px;
+  background-image: url("spectral-cube.svg"), none;
+  background-size: 32px 32px;
+
+}
