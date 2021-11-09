@@ -46,7 +46,7 @@ class TestStokesSpectralCube():
         assert exc.value.args[0] == "All spectral cubes should have the same shape"
 
     @pytest.mark.parametrize('component', ('I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR', 'XX', 'XY', 'YX', 'YY',
-                                           'RX', 'RY', 'LX', 'LY', 'XR,', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ',
+                                           'RX', 'RY', 'LX', 'LY', 'XR', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ',
                                            'RCircular', 'LCircular', 'Linear', 'Ptotal', 'Plinear', 'PFtotal',
                                            'PFlinear', 'Pangle'))
 

@@ -12,7 +12,7 @@ from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 __all__ = ['StokesSpectralCube']
 
 VALID_STOKES = ['I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR', 'XX', 'XY', 'YX', 'YY', 
-                'RX', 'RY', 'LX', 'LY', 'XR,', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ', 
+                'RX', 'RY', 'LX', 'LY', 'XR', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ', 
                 'RCircular', 'LCircular', 'Linear', 'Ptotal', 'Plinear', 'PFtotal', 
                 'PFlinear', 'Pangle']
 STOKES_SKY = ['I','Q','U','V']
