@@ -86,6 +86,47 @@ def test_stacking(use_dask):
                                test_cube.spectral_axis.value)
 
 
+def test_multi_stacking(use_dask):
+    '''
+    Test passing a list of cubes
+
+    This test simply averages two copies of the same thing, therefore it should
+    have the same result as `test_stacking`.
+
+    A more thorough test might be to verify that cubes with different frequency
+    supports also yield good results.
+    '''
+
+    amp = 1.
+    v0 = 0. * u.km / u.s
+    sigma = 8.
+    noise = None
+    shape = (100, 25, 25)
+
+    test_cube, test_vels = \
+        generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
+                               shape=shape, use_dask=use_dask)
+
+    true_spectrum = gaussian(test_cube.spectral_axis.value,
+                             amp, v0.value, sigma)
+
+    # Stack the spectra in the cube
+    stacked = \
+        stack_spectra([test_cube, test_cube], test_vels, v0=v0,
+                      stack_function=np.nanmean,
+                      xy_posns=None, num_cores=1,
+                      chunk_size=-1,
+                      progressbar=False, pad_edges=False)
+
+    # Calculate residuals
+    resid = np.abs(stacked.value - true_spectrum)
+    assert np.std(resid) <= 1e-3
+
+    # The stacked spectrum should have the same spectral axis
+    np.testing.assert_allclose(stacked.spectral_axis.value,
+                               test_cube.spectral_axis.value)
+
+
 def test_stacking_badvels(use_dask):
     '''
     Regression test for #493: don't include bad velocities when stacking
