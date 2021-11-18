@@ -321,7 +321,8 @@ def stack_spectra(cube, velocity_surface, v0=None,
 
 
 def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
-               convolve_beam=None, return_cutouts=False):
+               convolve_beam=None, return_hdu=False,
+               return_cutouts=False):
     """
     Create a stacked cube by averaging on a common velocity grid.
 
@@ -343,13 +344,17 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
         If the cube is a VaryingResolutionSpectralCube, a convolution beam is
         required to put the cube onto a common grid prior to spectral
         interpolation.
+    return_hdu : bool
+        Return an HDU instead of a spectral-cube
     return_cutouts : bool
         Also return the individual cube cutouts?
 
     Returns
     =======
-    hdu : fits.PrimaryHDU
-        The HDU object containing the reprojected cube
+    cube : SpectralCube
+        The SpectralCube object containing the reprojected cube.  Its header
+        will be based on the first cube but will have no reference frequency.
+        Its spectral axis will be in velocity units.
     cutout_cubes : list
         A list of cube cutouts projected into the same space (optional; see
         ``return_cutouts``)
@@ -366,6 +371,7 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
         cubes = [cube]
 
     slabs = []
+    included_lines = []
 
     # loop over linelist first to keep the cutouts in the same order as the
     # input line frequencies
@@ -379,6 +385,8 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
                 log.debug(f"Skipped line {restval} for cube {cube} because it resulted"
                           "in a size-1 spectral axis")
                 continue
+            else:
+                included_lines.append(restval)
 
             assert line_cutout.shape[0] > 1
 
@@ -396,11 +404,22 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
 
     stacked_cube = average(cutout_cubes, axis=0)
 
-    hdu = reference_cube.hdu
+    ww = reference_cube.wcs.copy()
+    # set restfreq to zero: it is not defined any more.
+    ww.wcs.restfreq = 0.0
+    meta = reference_cube.meta
+    meta.update({'stacked_lines': included_lines})
+    result_cube = SpectralCube(data=stacked_cube,
+                               wcs=ww,
+                               meta=meta,
+                               header=reference_cube.header)
 
-    hdu.data = stacked_cube
+    if return_hdu:
+        retval = result_cube.hdu
+    else:
+        retval = result_cube
 
     if return_cutouts:
-        return hdu, cutout_cubes
-
-    return hdu
+        return retval, cutout_cubes
+    else:
+        return retval
