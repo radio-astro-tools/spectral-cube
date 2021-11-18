@@ -116,7 +116,7 @@ def test_cube_stacking(use_dask):
                          vmin=vmin, vmax=vmax, average=np.nanmean,
                          convolve_beam=None, return_cutouts=False)
 
-    np.testing.assert_allclose(stacked.data,
+    np.testing.assert_allclose(stacked.filled_data[:],
                                test_cube.spectral_slab(vmin, vmax).filled_data[:])
 
     # Stack one cube with two frequencies, one that's out of band
@@ -124,7 +124,7 @@ def test_cube_stacking(use_dask):
                          vmin=vmin, vmax=vmax, average=np.nanmean,
                          convolve_beam=None, return_cutouts=False)
 
-    np.testing.assert_allclose(stacked.data,
+    np.testing.assert_allclose(stacked.filled_data[:],
                                test_cube.spectral_slab(vmin, vmax).filled_data[:])
 
     # TODO: add tests of multiple lines in the same cube
