@@ -155,6 +155,16 @@ You can also shrink any cube by this mechanism::
 
     >>> sub_cube = cube.with_mask(smaller_region).minimal_subcube()  # doctest: +SKIP
 
+If you have many cubes that are the same shape, and you want to cut them out in
+the same way (e.g., for CASA image, model, residual, and other cubes), you can
+get the slice to make the cutout and reuse it.  It can also be helpful to cut
+only in the spatial dimensions::
+
+    >>> subcube_slice = cube.subcube_slices_from_mask(cube.mask, spatial_only=True)
+    >>> mod_subcube = modcube[subcube_slice]
+    >>> resid_subcube = residcube[subcube_slice]
+    >>> subcube = cube[subcube_slice]
+
 
 Extract a spatial and spectral subcube
 --------------------------------------
