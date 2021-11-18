@@ -10,7 +10,7 @@ import warnings
 from .utils import BadVelocitiesWarning
 from .cube_utils import _map_context
 from .lower_dimensional_structures import VaryingResolutionOneDSpectrum, OneDSpectrum
-from .spectral_cube import VaryingResolutionSpectralCube
+from .spectral_cube import VaryingResolutionSpectralCube, SpectralCube
 
 
 def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
@@ -406,7 +406,7 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
 
     ww = reference_cube.wcs.copy()
     # set restfreq to zero: it is not defined any more.
-    ww.wcs.restfreq = 0.0
+    ww.wcs.restfrq = 0.0
     meta = reference_cube.meta
     meta.update({'stacked_lines': included_lines})
     result_cube = SpectralCube(data=stacked_cube,
