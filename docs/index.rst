@@ -13,6 +13,9 @@ optionally with Stokes parameters. It provides the following main features:
 - Basic summary statistic methods like moments and array aggregates.
 - Designed to work with datasets too large to load into memory.
 
+You can find the latest version and the issue tracker on `github
+<https://github.com/radio-astro-tools/spectral-cube>`_.
+
 Quick start
 -----------
 
