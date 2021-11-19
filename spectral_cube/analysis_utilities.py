@@ -371,7 +371,7 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
                 raise ValueError("If you pass multiple cubes, they must have the "
                                  "same spatial shape.")
         if convolve_beam is None and (any(hasattr(cb, 'beams') for cb in cubes) or
-                                      len(set([cb.beam for cb in cubes])) > 1):
+                                      not all([cb.beam == cube.beam for cb in cubes[1:]])):
             raise ValueError("If the cubes have different resolution, `convolve_beam` must be specified.")
     else:
         cubes = [cube]
