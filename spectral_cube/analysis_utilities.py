@@ -326,6 +326,9 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
     """
     Create a stacked cube by averaging on a common velocity grid.
 
+    If the input cubes have varying resolution, this will trigger potentially
+    expensive convolutions.
+
     Parameters
     ----------
     cube : SpectralCube
@@ -367,6 +370,9 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
             if cb.shape[1:] != cube.shape[1:]:
                 raise ValueError("If you pass multiple cubes, they must have the "
                                  "same spatial shape.")
+        if convolve_beam is None and (any(hasattr(cb, 'beams') for cb in cubes) or
+                                      len(set([cb.beam for cb in cubes])) > 1):
+            raise ValueError("If the cubes have different resolution, `convolve_beam` must be specified.")
     else:
         cubes = [cube]
 
@@ -391,6 +397,9 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
             assert line_cutout.shape[0] > 1
 
             if isinstance(line_cutout, VaryingResolutionSpectralCube):
+                if convolve_beam is None:
+                    raise ValueError("If any of the input cubes have varyin resolution, "
+                                     "a target `common_beam` must be specified.")
                 line_cutout = line_cutout.convolve_to(convolve_beam)
 
             assert not isinstance(line_cutout, VaryingResolutionSpectralCube)
