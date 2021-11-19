@@ -5,7 +5,7 @@ import numpy as np
 import astropy.units as u
 # from astropy.modeling import models, fitting
 
-from ..analysis_utilities import stack_spectra, fourier_shift
+from ..analysis_utilities import stack_spectra, fourier_shift, stack_cube
 from .utilities import generate_gaussian_cube, gaussian
 from ..utils import BadVelocitiesWarning
 
@@ -84,6 +84,52 @@ def test_stacking(use_dask):
     # The stacked spectrum should have the same spectral axis
     np.testing.assert_allclose(stacked.spectral_axis.value,
                                test_cube.spectral_axis.value)
+
+
+def test_cube_stacking(use_dask):
+    '''
+    Test passing a list of cubes
+
+    This test simply averages two copies of the same thing.
+
+    A more thorough test might be to verify that cubes with different frequency
+    supports also yield good results.
+    '''
+
+    amp = 1.
+    sigma = 8.
+    noise = None
+    shape = (100, 25, 25)
+
+    test_cube, test_vels = \
+        generate_gaussian_cube(amp=amp, sigma=sigma, noise=noise,
+                               shape=shape, use_dask=use_dask)
+
+    test_cube1 = test_cube.with_spectral_unit(u.GHz, rest_value=1*u.GHz, velocity_convention='radio')
+    test_cube2 = test_cube.with_spectral_unit(u.GHz, rest_value=2*u.GHz, velocity_convention='radio')
+
+    vmin = -10*u.km/u.s
+    vmax = 10*u.km/u.s
+
+    # Stack two cubes
+    stacked = stack_cube([test_cube1, test_cube2], linelist=[1.,2.]*u.GHz,
+                         vmin=vmin, vmax=vmax, average=np.nanmean,
+                         convolve_beam=None, return_cutouts=False)
+
+    np.testing.assert_allclose(stacked.filled_data[:],
+                               test_cube.spectral_slab(vmin, vmax).filled_data[:])
+
+    # Stack one cube with two frequencies, one that's out of band
+    stacked = stack_cube(test_cube1, linelist=[1.,2.]*u.GHz,
+                         vmin=vmin, vmax=vmax, average=np.nanmean,
+                         convolve_beam=None, return_cutouts=False)
+
+    np.testing.assert_allclose(stacked.filled_data[:],
+                               test_cube.spectral_slab(vmin, vmax).filled_data[:])
+
+    # TODO: add tests of multiple lines in the same cube
+    # (this requires a different test cube setup)
+
 
 
 def test_stacking_badvels(use_dask):
