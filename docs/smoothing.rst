@@ -160,3 +160,27 @@ done in the unit of pixel.  In our example, each channel is 0.1 km/s wide::
 
 `gaussian_width` is in pixel units but is defined as a unitless `~astropy.units.Quantity`.
 By using `gaussian_width.value`, we convert the pixel width into a float.
+
+Reprojection
+============
+
+Smoothing changes the data properties but not the underlying grid.  It is often
+helpful to re-project the data in either the spatial or spectral directions to
+match cubes in pixel space.
+
+Spatial reprojection can be achieved with the `SpectralCube.reproject` method::
+
+    reproj_cube = cube.reproject(new_header)
+
+This method will loop over each channel using the `reproject
+<https://reproject.readthedocs.io/en/stable/>`_ model to regrid each channel.
+The regridding is done with interpolation.
+
+It may also be necessary to first spectrally regrid, which can be done
+following the `Spectral Smoothing`_ approach above.
+
+For a full example showing appropriate resampling and reprojection to match two
+cubes, please see the `reprojection tutorial
+<https://github.com/radio-astro-tools/tutorials/pull/17>`_.
+
+
