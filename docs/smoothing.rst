@@ -168,7 +168,7 @@ Smoothing changes the data properties but not the underlying grid.  It is often
 helpful to re-project the data in either the spatial or spectral directions to
 match cubes in pixel space.
 
-Spatial reprojection can be achieved with the `SpectralCube.reproject` method::
+Spatial reprojection can be achieved with the :class:`~spectral_cube.SpectralCube.reproject` method::
 
     reproj_cube = cube.reproject(new_header)
 
