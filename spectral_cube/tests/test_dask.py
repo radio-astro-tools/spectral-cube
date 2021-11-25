@@ -207,31 +207,30 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
 
 def test_apply_function_parallel_shape():
     # regression test for #772
-    def func(x, add = None):
-        print ("\nSpectral axis within func: ", x)
-        print ("\nAdd. keyword (should be 1) = ", add)
+    def func(x, add=None):
         if add is not None:
             y = x + add
         else:
-            y = x * 2
+            raise ValueError("This test is supposed to have add=1")
         return y
 
 
     fn = data.get_pkg_data_filename('tests/data/example_cube.fits', 'spectral_cube')
-    cube = SpectralCube.read(fn, use_dask = True)
-    cube2 = SpectralCube.read(fn, use_dask = False)
-    print(cube)
+    cube = SpectralCube.read(fn, use_dask=True)
+    cube2 = SpectralCube.read(fn, use_dask=False)
 
-    print ("\n\n\nSpectral axis of cube[0, :, :] = ", cube[:, 0, 0])
-
-    with cube.use_dask_scheduler('threads', num_workers = 4):
-        rslt = cube.apply_function_parallel_spectral(func, add = 1)
-    rslt2 = cube2.apply_function_parallel_spectral(func, add = 1)
+    # Check dask w/both threaded and unthreaded
+    rslt3 = cube.apply_function_parallel_spectral(func, add=1)
+    with cube.use_dask_scheduler('threads', num_workers=4):
+        rslt = cube.apply_function_parallel_spectral(func, add=1)
+    rslt2 = cube2.apply_function_parallel_spectral(func, add=1)
 
     np.testing.assert_almost_equal(cube.filled_data[:].value,
                                    cube2.filled_data[:].value)
     np.testing.assert_almost_equal(rslt.filled_data[:].value,
                                    rslt2.filled_data[:].value)
+    np.testing.assert_almost_equal(rslt.filled_data[:].value,
+                                   rslt3.filled_data[:].value)
 
 
 if DISTRIBUTED_INSTALLED:
