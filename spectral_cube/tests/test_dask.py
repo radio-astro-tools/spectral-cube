@@ -207,6 +207,8 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
 
 def test_apply_function_parallel_shape():
     # regression test for #772
+    from astropy.utils import data
+
     def func(x, add=None):
         if add is not None:
             y = x + add
