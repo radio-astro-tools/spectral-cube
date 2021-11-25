@@ -124,12 +124,11 @@ class StokesSpectralCube(object):
     @property
     def stokes_type(self):
         """
-        Defines the type of stokes that has been setup.
-        It can be sky, linear, circular, generic or other.
-        Where the sky refers to stokes in sky basis namely I,Q,U,V
-        Linear to the stokes in linear feed basis namely, XX, XY, YX, YY
-        Circular to stokes in circular feed basis namely RR, RL, LR, LL
-        Generic to the a general four orthagonal components PP, PQ, QP, QQ
+        Defines the type of stokes that has been setup.  `stokes_type` can be sky, linear, circular, generic, or other.
+          * `Sky` refers to stokes in sky basis, I,Q,U,V
+          * `Linear` refers to the stokes in linear feed basis, XX, XY, YX, YY
+          * `Circular` refers to stokes in circular feed basis, RR, RL, LR, LL
+          * `Generic` refers to the general four orthogonal components, PP, PQ, QP, QQ
         """
         return self._stokes_type
 
