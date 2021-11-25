@@ -8,6 +8,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
 from astropy import units as u
+from astropy.utils import data
 
 try:
     from distributed.utils_test import client, loop, cluster_fixture  # noqa
@@ -15,7 +16,7 @@ try:
 except ImportError:
     DISTRIBUTED_INSTALLED = False
 
-from spectral_cube import DaskSpectralCube
+from spectral_cube import DaskSpectralCube, SpectralCube
 from .test_casafuncs import make_casa_testimage
 
 try:
@@ -207,7 +208,6 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
 
 def test_apply_function_parallel_shape():
     # regression test for #772
-    from astropy.utils import data
 
     def func(x, add=None):
         if add is not None:
