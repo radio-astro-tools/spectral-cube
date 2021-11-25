@@ -1792,6 +1792,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         ilo = self.closest_spectral_channel(lo)
         ihi = self.closest_spectral_channel(hi)
 
+        if ilo == ihi:
+            warnings.warn("The maxmimum and minimum spectral channel in the spectral"
+                          "slab are identical; this indicates that one or both are "
+                          "likely incorrect and/or out of range.",
+                          SliceWarning)
+
         if ilo > ihi:
             ilo, ihi = ihi, ilo
         ihi += 1

@@ -30,6 +30,7 @@ To install the latest stable release, you can type::
 
     pip install spectral-cube
 
+(you may need to add ``--upgrade`` if you already have an older version installed) 
 or you can download the latest tar file from
 `PyPI <https://pypi.python.org/pypi/spectral-cube>`_ and install it using::
 
