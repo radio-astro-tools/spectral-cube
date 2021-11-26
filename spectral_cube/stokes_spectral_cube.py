@@ -196,6 +196,59 @@ class StokesSpectralCube(object):
 
         return cube
 
+    def transform_basis(self, stokes_basis=''):
+        """
+        The goal of this function is to transform the stokes basis of the cube to
+        the one specified if possible. In principle one needs at least two related
+        stokes of a given basis for the transformation to be possible. At this moment
+        we are limiting it to the cases where all four stokes parameters in a given
+        basis be available within the cube. 
+        """
+        if self.shape[0] < 4:
+            errmsg = "Transformation of a subset of Stokes axes is not yet supported."
+            raise NotImplementedError(errmsg)
+        elif stokes_basis == "Generic":
+            data =  self._stokes_data
+        elif self.stokes_type == "Linear":
+            if stokes_basis == "Circular":
+                errmsg = "Transformation from %s to %s is not yet supported."% ("Linear","Circular")
+                raise NotImplementedError(errmsg)
+            if stokes_basis == "Sky":
+                data = dict(I = SpectralCube(self._stokes_data['XX'] + self._stokes_data['YY'], wcs = self.wcs, mask=self._mask['XX']|self._mask['YY']),
+                            Q = SpectralCube(self._stokes_data['XX'] - self._stokes_data['YY'], wcs = self.wcs, mask=self._mask['XX']|self._mask['YY']),
+                            U = SpectralCube(self._stokes_data['XY'] + self._stokes_data['YX'], wcs = self.wcs, mask=self._mask['XY']|self._mask['YX']),
+                            V = SpectralCube(1j*(self._stokes_data['XY'] - self._stokes_data['YX']), wcs = self.wcs, mask=self._mask['XY']|self._mask['YX']))
+            if stokes_basis == "Linear":
+                data = self._stokes_data
+
+        elif self.stokes_type == "Circular":
+            if stokes_basis == "Linear":
+                errmsg = "Transformation from %s to %s is not yet supported."% ("Circular","Linear")
+                raise NotImplementedError(errmsg)
+            if stokes_basis == "Sky":
+                data = dict(I = SpectralCube(self._stokes_data['RR'] + self._stokes_data['LL'], wcs = self.wcs, mask=self._mask['RR']|self._mask['LL']),
+                            Q = SpectralCube(self._stokes_data['RL'] + self._stokes_data['RL'], wcs = self.wcs, mask=self._mask['RL']|self._mask['LR']),
+                            U = SpectralCube(1j*(self._stokes_data['RL'] - self._stokes_data['LR']), wcs = self.wcs, mask=self._mask['RL']|self._mask['LR']),
+                            V = SpectralCube(self._stokes_data['RR'] - self._stokes_data['LL'], wcs = self.wcs, mask=self._mask['RR']|self._mask['LL']))
+            if stokes_basis == "Circular":
+                data = self._stokes_data
+
+        elif self.stokes_type == "Sky":
+            if stokes_basis == "Linear":
+                data = dict(XX = SpectralCube(0.5*(self._stokes_data['I'] + self._stokes_data['Q']), wcs = self.wcs, mask=self._mask['I']|self._mask['Q']),
+                            XY = SpectralCube(0.5*(self._stokes_data['U'] + 1j*self._stokes_data['V']), wcs = self.wcs, mask=self._mask['U']|self._mask['V']),
+                            YX = SpectralCube(0.5*(self._stokes_data['U'] - 1j*self._stokes_data['V']), wcs = self.wcs, mask=self._mask['U']|self._mask['V']),
+                            YY = SpectralCube(0.5*(self._stokes_data['I'] - self._stokes_data['Q']), wcs = self.wcs, mask=self._mask['I']|self._mask['Q']))
+            if stokes_basis == "Sky":
+                data = dict(RR = SpectralCube(0.5*(self._stokes_data['I'] + self._stokes_data['V']), wcs = self.wcs, mask=self._mask['I']|self._mask['LL']),
+                            RL = SpectralCube(0.5*(self._stokes_data['Q'] + 1j*self._stokes_data['U']), wcs = self.wcs, mask=self._mask['Q']|self._mask['U']),
+                            LR = SpectralCube(0.5*(self._stokes_data['Q'] - 1j*self._stokes_data['U']), wcs = self.wcs, mask=self._mask['Q']|self._mask['U']),
+                            LL = SpectralCube(0.5*(self._stokes_data['I'] - self._stokes_data['V']), wcs = self.wcs, mask=self._mask['I']|self._mask['V']))
+            if stokes_basis == "Sky":
+                data = self._stokes_data        
+        return self._new_cube_with(stokes_data=data)
+        
+
     def with_spectral_unit(self, unit, **kwargs):
 
         stokes_data = {k: self._stokes_data[k].with_spectral_unit(unit, **kwargs)
