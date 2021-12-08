@@ -418,13 +418,11 @@ class MaskableArrayMixinClass(object):
         data : Quantity
             The masked data.
         """
-        return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
-                          self.unit, copy=False)
+        return self._get_filled_data(view, fill=self._fill_value) * self.unit
 
     def filled(self, fill_value=None):
         if fill_value is not None:
-            return u.Quantity(self._get_filled_data(fill=fill_value),
-                              self.unit, copy=False)
+            return self._get_filled_data(fill=fill_value) * self.unit
         return self.filled_data[:]
 
     @cube_utils.slice_syntax

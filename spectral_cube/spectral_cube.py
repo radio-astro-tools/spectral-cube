@@ -259,7 +259,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                        "does not match the input unit '{1}'."
                                        .format(unit, data.unit))
             else:
-                data = u.Quantity(data, unit=unit, copy=False)
+                data = data * unit
         elif self._unit is not None:
             unit = self.unit
 
@@ -445,7 +445,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if axis is None:
             # return is scalar
             if unit is not None:
-                return u.Quantity(out, unit=unit)
+                return out * unit
             else:
                 return out
         elif projection and reduce:
@@ -922,8 +922,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
 
-        data = function(u.Quantity(self._get_filled_data(fill=self._fill_value),
-                                   self.unit, copy=False),
+        data = function(self._get_filled_data(fill=self._fill_value) * self.unit),
                         *args)
 
         return self._new_cube_with(data=data, unit=data.unit)
@@ -1020,7 +1019,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if axis is None:
             out = function(self.flattened(), **kwargs)
             if unit is not None:
-                return u.Quantity(out, unit=unit)
+                return out * unit
             else:
                 return out
         if hasattr(axis, '__len__'):
@@ -1131,9 +1130,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             data = self._compute(data)
         if weights is not None:
             weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
-            return u.Quantity(data * weights, self.unit, copy=False)
+            return data * weights * self.unit
         else:
-            return u.Quantity(data, self.unit, copy=False)
+            return data * self.unit
 
     def median(self, axis=None, iterate_rays=False, **kwargs):
         """
@@ -1395,7 +1394,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Astropy Quantities don't play well with dask arrays with shape ()
         if isinstance(values, da.Array) and values.shape == ():
             values = values.compute()
-        return u.Quantity(values, self.unit, copy=False)
+        return values * self.unit
 
     def unmasked_copy(self):
         """
@@ -1649,13 +1648,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 axunit = unit = self._spectral_unit
             else:
                 axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
-            out = u.Quantity(out, self.unit * axunit, copy=False)
+            out = out * self.unit * axunit
         else:
             if axis == 0 and self._spectral_unit is not None:
                 unit = self._spectral_unit ** max(order, 1)
             else:
                 unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
-            out = u.Quantity(out, unit, copy=False)
+            out = out * unit
 
         # special case: for order=1, axis=0, you usually want
         # the absolute velocity and not the offset
