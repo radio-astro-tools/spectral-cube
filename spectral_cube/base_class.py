@@ -418,6 +418,7 @@ class MaskableArrayMixinClass(object):
         data : Quantity
             The masked data.
         """
+<<<<<<< HEAD
         return LazyQuantity(self._get_filled_data(view, fill=self._fill_value),
                 self.unit)
 
@@ -425,6 +426,13 @@ class MaskableArrayMixinClass(object):
         if fill_value is not None:
             return LazyQuantity(self._get_filled_data(fill=fill_value),
                     self.unit)
+=======
+        return self._get_filled_data(view, fill=self._fill_value) * self.unit
+
+    def filled(self, fill_value=None):
+        if fill_value is not None:
+            return self._get_filled_data(fill=fill_value) * self.unit
+>>>>>>> 3e9660d686e2d8a4d741e9555607c005a20b3414
         return self.filled_data[:]
 
     @cube_utils.slice_syntax

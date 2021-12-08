@@ -341,7 +341,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                                        "does not match the input unit '{1}'."
                                        .format(unit, data.unit))
             else:
-                data = u.Quantity(data, unit=unit, copy=False)
+                data = data * unit
 
         wcs = self._wcs if wcs is None else wcs
         mask = self._mask if mask is None else mask
