@@ -922,7 +922,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
 
-        data = function(self._get_filled_data(fill=self._fill_value) * self.unit),
+        data = function(self._get_filled_data(fill=self._fill_value) * self.unit,
                         *args)
 
         return self._new_cube_with(data=data, unit=data.unit)
