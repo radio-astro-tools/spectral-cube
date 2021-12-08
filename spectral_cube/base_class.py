@@ -418,13 +418,13 @@ class MaskableArrayMixinClass(object):
         data : Quantity
             The masked data.
         """
-        return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
-                          self.unit, copy=False)
+        return LazyQuantity(self._get_filled_data(view, fill=self._fill_value),
+                self.unit)
 
     def filled(self, fill_value=None):
         if fill_value is not None:
-            return u.Quantity(self._get_filled_data(fill=fill_value),
-                              self.unit, copy=False)
+            return LazyQuantity(self._get_filled_data(fill=fill_value),
+                    self.unit)
         return self.filled_data[:]
 
     @cube_utils.slice_syntax
@@ -839,3 +839,19 @@ class BeamMixinClass(object):
         return (self.beam.sr /
                 (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
                  u.deg**2)).to(u.one).value
+
+class LazyQuantity:
+    def __init__(self, data, unit, **kwargs):
+        self.data = data
+        self.unit = unit
+
+    def __getattr__(self, attr):
+        if hasattr(self.data, attr):
+            return getattr(self.data, attr)
+
+    def to(self, unit):
+        if self.unit == unit:
+            return self.data * unit
+        else:
+            conversion = self.unit.to(unit)
+            return self.data * conversion * unit

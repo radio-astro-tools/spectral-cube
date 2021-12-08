@@ -171,18 +171,22 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                        HeaderMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, wcs_tolerance=0.0):
+                 header=None, allow_huge_operations=False, wcs_tolerance=0.0,
+                 unit=None):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
 
         # must extract unit from data before stripping it
-        if 'BUNIT' in self._meta:
-            self._unit = cube_utils.convert_bunit(self._meta["BUNIT"])
-        elif hasattr(data, 'unit'):
-            self._unit = data.unit
+        if unit is None:
+            if 'BUNIT' in self._meta:
+                self._unit = cube_utils.convert_bunit(self._meta["BUNIT"])
+            elif hasattr(data, 'unit'):
+                self._unit = data.unit
+            else:
+                self._unit = None
         else:
-            self._unit = None
+            self._unit = unit
 
         # data must not be a quantity when stored in self._data
         if hasattr(data, 'unit'):
@@ -259,7 +263,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                        "does not match the input unit '{1}'."
                                        .format(unit, data.unit))
             else:
-                data = u.Quantity(data, unit=unit, copy=False)
+                pass
+                # there is no need to turn Data into a quantity here; doing so
+                # triggers a read-into-memory if it is dask
+                # data = u.Quantity(data, unit=unit, copy=False)
         elif self._unit is not None:
             unit = self.unit
 
@@ -278,6 +285,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                               fill_value=fill_value, header=self._header,
                               allow_huge_operations=self.allow_huge_operations,
                               wcs_tolerance=wcs_tolerance or self._wcs_tolerance,
+                              unit=unit,
                               **kwargs)
         cube._spectral_unit = spectral_unit
         cube._spectral_scale = spectral_axis.wcs_unit_scale(spectral_unit)
