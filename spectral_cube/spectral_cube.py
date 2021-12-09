@@ -183,6 +183,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 self._unit = cube_utils.convert_bunit(self._meta["BUNIT"])
             elif hasattr(data, 'unit'):
                 self._unit = data.unit
+            elif hasattr(data, '_meta'):
+                self._unit = getattr(data._meta, 'unit', None)
             else:
                 self._unit = None
         else:
