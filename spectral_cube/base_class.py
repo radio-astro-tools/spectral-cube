@@ -3,6 +3,7 @@ from astropy import log
 import numpy as np
 import warnings
 import abc
+import copy
 
 import astropy
 from astropy.io.fits import Card
@@ -418,21 +419,14 @@ class MaskableArrayMixinClass(object):
         data : Quantity
             The masked data.
         """
-<<<<<<< HEAD
-        return LazyQuantity(self._get_filled_data(view, fill=self._fill_value),
-                self.unit)
+        return lazy_quantity(self._get_filled_data(view,
+                                                   fill=self._fill_value),
+                             self.unit)
 
     def filled(self, fill_value=None):
         if fill_value is not None:
-            return LazyQuantity(self._get_filled_data(fill=fill_value),
-                    self.unit)
-=======
-        return self._get_filled_data(view, fill=self._fill_value) * self.unit
-
-    def filled(self, fill_value=None):
-        if fill_value is not None:
-            return self._get_filled_data(fill=fill_value) * self.unit
->>>>>>> 3e9660d686e2d8a4d741e9555607c005a20b3414
+            return lazy_quantity(self._get_filled_data(fill=fill_value),
+                                 self.unit)
         return self.filled_data[:]
 
     @cube_utils.slice_syntax
@@ -848,18 +842,14 @@ class BeamMixinClass(object):
                 (astropy.wcs.utils.proj_plane_pixel_area(self.wcs) *
                  u.deg**2)).to(u.one).value
 
-class LazyQuantity:
-    def __init__(self, data, unit, **kwargs):
-        self.data = data
-        self.unit = unit
-
-    def __getattr__(self, attr):
-        if hasattr(self.data, attr):
-            return getattr(self.data, attr)
-
-    def to(self, unit):
-        if self.unit == unit:
-            return self.data * unit
+def lazy_quantity(data, unit, **kwargs):
+    if hasattr(data, 'unit'):
+        if data.unit == unit:
+            return data
         else:
-            conversion = self.unit.to(unit)
-            return self.data * conversion * unit
+            conversion = data.unit.to(unit)
+            datacopy = copy.copy(data)
+            datacopy.unit = unit
+            return datacopy * conversion
+    else:
+        return data * unit

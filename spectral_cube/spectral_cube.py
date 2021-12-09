@@ -46,6 +46,7 @@ from .base_class import (BaseNDClass, SpectralAxisMixinClass,
                          DOPPLER_CONVENTIONS, SpatialCoordMixinClass,
                          MaskableArrayMixinClass, MultiBeamMixinClass,
                          HeaderMixinClass, BeamMixinClass,
+                         lazy_quantity
                         )
 from .utils import (cached, warn_slow, VarianceWarning, BeamWarning,
                     UnsupportedIterationStrategyWarning, WCSMismatchWarning,
@@ -265,14 +266,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                        "does not match the input unit '{1}'."
                                        .format(unit, data.unit))
             else:
-<<<<<<< HEAD
-                pass
-                # there is no need to turn Data into a quantity here; doing so
-                # triggers a read-into-memory if it is dask
-                # data = u.Quantity(data, unit=unit, copy=False)
-=======
-                data = data * unit
->>>>>>> 3e9660d686e2d8a4d741e9555607c005a20b3414
+                data = lazy_quantity(data, unit)
         elif self._unit is not None:
             unit = self.unit
 
@@ -459,7 +453,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if axis is None:
             # return is scalar
             if unit is not None:
-                return out * unit
+                return lazy_quantity(out, unit)
             else:
                 return out
         elif projection and reduce:
@@ -936,7 +930,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
 
-        data = function(self._get_filled_data(fill=self._fill_value) * self.unit,
+        data = function(lazy_quantity(self._get_filled_data(fill=self._fill_value), self.unit),
                         *args)
 
         return self._new_cube_with(data=data, unit=data.unit)
@@ -1033,7 +1027,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if axis is None:
             out = function(self.flattened(), **kwargs)
             if unit is not None:
-                return out * unit
+                return lazy_quantity(out, unit)
             else:
                 return out
         if hasattr(axis, '__len__'):
@@ -1144,9 +1138,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             data = self._compute(data)
         if weights is not None:
             weights = self._mask._flattened(data=weights, wcs=self._wcs, view=slice)
-            return data * weights * self.unit
+            return lazy_quantity(data * weights, self.unit)
         else:
-            return data * self.unit
+            return lazy_quantity(data, self.unit)
 
     def median(self, axis=None, iterate_rays=False, **kwargs):
         """
@@ -1408,7 +1402,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Astropy Quantities don't play well with dask arrays with shape ()
         if isinstance(values, da.Array) and values.shape == ():
             values = values.compute()
-        return values * self.unit
+        return lazy_quantity(values, self.unit)
 
     def unmasked_copy(self):
         """
@@ -1662,13 +1656,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 axunit = unit = self._spectral_unit
             else:
                 axunit = unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]])
-            out = out * self.unit * axunit
+            out = lazy_quantity(out, self.unit*axunit)
         else:
             if axis == 0 and self._spectral_unit is not None:
                 unit = self._spectral_unit ** max(order, 1)
             else:
                 unit = u.Unit(self._wcs.wcs.cunit[np2wcs[axis]]) ** max(order, 1)
-            out = out * unit
+            out = lazy_quantity(out, unit)
 
         # special case: for order=1, axis=0, you usually want
         # the absolute velocity and not the offset
