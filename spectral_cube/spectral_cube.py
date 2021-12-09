@@ -2670,16 +2670,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             reproj_kwargs['independent_celestial_slices'] = True
 
         from reproject import reproject_interp
-        from astropy.wcs.wcsapi import HighLevelWCS
+        from astropy.wcs.wcsapi import HighLevelWCSWrapper
 
         # TODO: Find the minimal subcube that contains the header and only reproject that
         # (see FITS_tools.regrid_cube for a guide on how to do this)
 
-        if isinstance(header, HighLevelWCS):
+        if isinstance(header, HighLevelWCSWrapper):
             newwcs = header
         else:
             # try this; if it fails, the user should get the error
-            newwcs = HighLevelWCS(wcs.WCS(header))
+            newwcs = HighLevelWCSWrapper(wcs.WCS(header))
 
         shape_out = newwcs.array_shape
         if shape_out is None:
