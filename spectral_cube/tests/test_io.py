@@ -42,6 +42,13 @@ def test_3d_4d_stokes(data_adv, data_advs, use_dask):
     f3.close()
     f4.close()
 
+    # Try to fix Windows fail-to-close-files error
+    # shouldn't be needed, it only exists in memory
+    f3b.close()
+
+    # try explicit deletion of files
+    del c1, c2, c3
+
 
 def test_4d_stokes(data_advs, use_dask):
     f = pyfits.open(data_advs)
