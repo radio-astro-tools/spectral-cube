@@ -49,7 +49,7 @@ jobs:
           - os: windows-latest
             python-version: 3.9
             name: Python 3.9, all dependencies, and dev versions of key dependencies on Windows
-            toxenv: py39-test-all-dev
+            toxenv: py39-test-all-dev-noopenfiles
           - os: ubuntu-latest
             python-version: 3.9
             name: Documentation
