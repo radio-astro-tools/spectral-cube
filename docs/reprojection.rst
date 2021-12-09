@@ -1,3 +1,6 @@
+.. doctest-skip-all
+.. The example below isn't meant to work
+
 ============
 Reprojection
 ============
@@ -28,6 +31,7 @@ Interpolation onto a differently-spaced grid, after appropriate :doc:`smoothing`
 be used to rebin or decimate the data.
 
 A simple example for rebinning, assuming no smoothing is needed (the data are oversampled)::
+
 
     from spectral_cube import SpectralCube
 
