@@ -205,6 +205,9 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
     # Test all True
     assert np.all(test.compute())
 
+    # Attempt to fix #779
+    del test
+
 
 if DISTRIBUTED_INSTALLED:
 
@@ -217,3 +220,7 @@ if DISTRIBUTED_INSTALLED:
         cube.use_dask_scheduler(client)
 
         cube.sigma_clip_spectrally(2, save_to_tmp_dir=tmpdir.strpath)
+
+        # attempt to fix #779
+        os.remove(cube._filename)
+        del cube
