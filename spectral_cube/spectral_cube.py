@@ -930,8 +930,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
 
-        data = function(lazy_quantity(self._get_filled_data(fill=self._fill_value), self.unit),
-                        *args)
+        ldata = lazy_quantity(self._get_filled_data(fill=self._fill_value), self.unit)
+
+        data = function(ldata, *args)
+        assert hasattr(data, 'unit')
 
         return self._new_cube_with(data=data, unit=data.unit)
 

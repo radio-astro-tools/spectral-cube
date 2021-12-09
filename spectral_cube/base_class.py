@@ -850,7 +850,6 @@ def lazy_quantity(data, unit, **kwargs):
             conversion = data.unit.to(unit)
             datacopy = copy.copy(data)
             datacopy.unit = unit
-            datacopy._unit = unit
             return datacopy * conversion
     else:
         mul = data * unit
@@ -858,6 +857,5 @@ def lazy_quantity(data, unit, **kwargs):
         # dask arrays don't get the attribute
         if not hasattr(mul, 'unit'):
             mul.unit = unit
-            mul._unit = unit
 
         return mul
