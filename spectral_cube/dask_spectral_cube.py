@@ -83,7 +83,6 @@ def add_save_to_tmp_dir_option(function):
             filename = tempfile.mktemp()
             with dask.config.set(**cube._scheduler_kwargs):
                 cube._data.to_zarr(filename)
-            cube._filename = filename
             cube._data = da.from_zarr(filename)
         return cube
 
