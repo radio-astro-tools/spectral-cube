@@ -8,7 +8,7 @@ Reprojection
 Spectral-cube has several tools to enable reprojection of cubes onto different spatial and spectral grids.
 
 Prior to reprojecting data, in order to minimize resampling artifacts, it is a
-good idea to :doc:`smoothing` the data first.  A worked example of spatial
+good idea to :doc:`smooth <smoothing>` the data first.  A worked example of spatial
 and spectral smoothing is given on the `reprojection tutorial
 <https://github.com/radio-astro-tools/tutorials/blob/master/SpectralCubeReprojectExample.ipynb>`_.
 
@@ -27,7 +27,7 @@ manually editing a FITS header.
 
 The spatial reprojection tool uses reproject_ under the hood and defaults to
 using a bilinear interpolation scheme, though this is configurable.
-Interpolation onto a differently-spaced grid, after appropriate :doc:`smoothing`, can
+Interpolation onto a differently-spaced grid, after appropriate :doc:`smoothing <smoothing>`, can
 be used to rebin or decimate the data.
 
 A simple example for rebinning, assuming no smoothing is needed (the data are oversampled)::
