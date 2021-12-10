@@ -39,7 +39,7 @@ using a bilinear interpolation scheme, though this is configurable.
 Interpolation onto a differently-spaced grid, after appropriate :doc:`smoothing <smoothing>`, can
 be used to rebin or decimate the data.
 
-A simple example for rebinning, assuming no smoothing is needed (the data are oversampled)::
+A simple example for rebinning, assuming no smoothing is needed (appropriate for when the data are oversampled)::
 
 
     from spectral_cube import SpectralCube
