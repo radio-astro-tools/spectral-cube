@@ -2079,7 +2079,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             ylo = 0
 
         # If None, then the whole spectral range of the cube is selected.
-        if all(x is None for x in ranges):
+        if None in ranges:
             subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
         else:
             ranges = self._velocity_freq_conversion_regions(ranges, veltypes, restfreqs)
