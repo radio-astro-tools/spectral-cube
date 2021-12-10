@@ -107,7 +107,7 @@ def test_ds9region_255(regfile, data_255, use_dask):
     # specific test for correctness
     cube, data = cube_and_raw(data_255, use_dask=use_dask)
 
-    shapelist = regions.read_ds9(path(regfile))
+    shapelist = regions.Regions.read(path(regfile))
 
     subcube = cube.subcube_from_regions(shapelist)
     assert_array_equal(subcube[0, :, :].value,
@@ -130,7 +130,7 @@ def test_ds9region_255(regfile, data_255, use_dask):
 def test_ds9region_new(regfile, result, data_adv, use_dask):
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
-    regionlist = regions.read_ds9(path(regfile))
+    regionlist = regions.Regions.read(path(regfile))
 
     if isinstance(result, type) and issubclass(result, Exception):
         with pytest.raises(result):
