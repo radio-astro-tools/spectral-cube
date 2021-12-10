@@ -2105,8 +2105,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 raise ValueError("The derived subset is empty: the region does not"
                                  " overlap with the cube.")
 
-        # cropping the mask from top left corner so that it fits the subcube.
-        maskarray = mask.data[:subcube.shape[1], :subcube.shape[2]].astype('bool')
+        shp = self.shape[1:]
+        _, slices_small = mask.get_overlap_slices(shp)
+
+        maskarray = np.zeros(subcube.shape[1:], dtype='bool')
+        maskarray[:] = mask.data[slices_small]
 
         masked_subcube = subcube.with_mask(BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape))
         # by using ceil / floor above, we potentially introduced a NaN buffer
