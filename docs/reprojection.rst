@@ -53,6 +53,16 @@ A simple example for rebinning, assuming no smoothing is needed (appropriate for
 
     downsampled_cube = cube.reproject(target_header)
 
+Reprojection for 2D images uses the same syntax with a `~spectral_cube.Projection` or `~spectral_cube.Slice` object. For example, to match the spatial grid of a 2D image to that of a cube::
+
+        from spectral_cube import SpectralCube, Projection
+        from astropy.io import fits
+    
+        cube = SpectralCube.read('/some_path/some_file.fits')
+        image = Projection.from_hdu(fits.open('/some_path/twod_image.fits')[0])
+        
+        cube_header_spatial = cube.wcs.celestial.to_header()
+        reprojected_image = image.reproject(cube_header_spatial)
 
 
 Spectral Reprojection
