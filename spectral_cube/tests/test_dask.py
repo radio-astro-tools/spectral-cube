@@ -206,7 +206,9 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
     # Test all True
     assert np.all(test.compute())
 
-def test_apply_function_parallel_shape():
+@pytest.mark.parametrize(('accepts_chunks'),
+                         ((True, False)))
+def test_apply_function_parallel_shape(accepts_chunks):
     # regression test for #772
 
     def func(x, add=None):
@@ -222,9 +224,11 @@ def test_apply_function_parallel_shape():
     cube2 = SpectralCube.read(fn, use_dask=False)
 
     # Check dask w/both threaded and unthreaded
-    rslt3 = cube.apply_function_parallel_spectral(func, add=1)
+    rslt3 = cube.apply_function_parallel_spectral(func, add=1,
+                                                  accepts_chunks=accepts_chunks)
     with cube.use_dask_scheduler('threads', num_workers=4):
-        rslt = cube.apply_function_parallel_spectral(func, add=1)
+        rslt = cube.apply_function_parallel_spectral(func, add=1,
+                                                     accepts_chunks=accepts_chunks)
     rslt2 = cube2.apply_function_parallel_spectral(func, add=1)
 
     np.testing.assert_almost_equal(cube.filled_data[:].value,
