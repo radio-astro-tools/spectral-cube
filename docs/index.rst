@@ -76,6 +76,7 @@ Cube Analysis
    arithmetic.rst
    metadata.rst
    smoothing.rst
+   reprojection.rst
 
 Subsets
 ^^^^^^^
