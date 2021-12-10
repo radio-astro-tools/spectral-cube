@@ -93,11 +93,11 @@ mask corresponding to the DS9/CRTF region.  `Regions
 parsing.  CRTF regions may also contain spectral cutout information.
 
 This example shows extraction of a subcube from a ds9 region file ``file.reg``.
-`~regions.read_ds9` parses the ds9 file and converts it to a list of
+`~regions.Regions.read` parses the ds9 file and converts it to a list of
 `~regions.Region` objects::
 
     >>> import regions # doctest: +SKIP
-    >>> region_list = regions.read_ds9('file.reg')  # doctest: +SKIP
+    >>> region_list = regions.Regions.read('file.reg')  # doctest: +SKIP
     >>> sub_cube = cube.subcube_from_regions(region_list)  # doctest: +SKIP
 
 This one shows extraction of a subcube from a CRTF region file ``file.crtf``,
@@ -110,7 +110,7 @@ parsed using `~regions.read_crtf`::
 If you want to loop over individual regions with a single region file, you need
 to convert the individual regions to lists of that region::
 
-    >>> region_list = regions.read_ds9('file.reg')  #doctest: +SKIP
+    >>> region_list = regions.Regions.read('file.reg')  #doctest: +SKIP
     >>> for region in region_list: #doctest: +SKIP
     >>>     sub_cube = cube.subcube_from_regions([region]) #doctest: +SKIP
     
