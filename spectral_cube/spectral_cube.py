@@ -3222,6 +3222,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return convolve(img, convolution_kernel, normalize_kernel=True,
                             **kwargs) * beam_ratio_factor
 
+        if convolve is convolution.convolve_fft and 'allow_huge' not in kwargs:
+            kwargs['allow_huge'] = self.allow_huge_operations
+
         newcube = self.apply_function_parallel_spatial(convfunc,
                                                        **kwargs).with_beam(beam, raise_error_jybm=False)
 

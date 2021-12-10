@@ -2,6 +2,7 @@ import sys
 import pytest
 import tempfile
 import numpy as np
+import os
 
 from astropy import units as u
 from astropy import convolution
@@ -32,8 +33,11 @@ from . import path, utilities
 WINDOWS = sys.platform == "win32"
 
 
-def test_convolution(data_255_delta, use_dask):
+@pytest.mark.parametrize('allow_huge_operations', (True, False))
+def test_convolution(data_255_delta, allow_huge_operations, use_dask):
     cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
+
+    cube.allow_huge_operations = allow_huge_operations
 
     # 1" convolved with 1.5" -> 1.8027....
     target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
@@ -56,8 +60,11 @@ def test_convolution(data_255_delta, use_dask):
     assert np.all(conv_cube.filled_data[1,:,:] == 0.0)
 
 
-def test_beams_convolution(data_455_delta_beams, use_dask):
+@pytest.mark.parametrize('allow_huge_operations', (True, False))
+def test_beams_convolution(data_455_delta_beams, allow_huge_operations, use_dask):
     cube, data = cube_and_raw(data_455_delta_beams, use_dask=use_dask)
+
+    cube.allow_huge_operations = allow_huge_operations
 
     # 1" convolved with 1.5" -> 1.8027....
     target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
