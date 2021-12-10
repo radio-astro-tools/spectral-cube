@@ -46,7 +46,7 @@ A simple example for rebinning, assuming no smoothing is needed (appropriate for
 
     cube = SpectralCube.read('/some_path/some_file.fits')
 
-    # create a target header to reproject to
+    # create a target header to reproject to by making the pixel size 2 times larger
     target_header = cube.wcs.celestial[::2, ::2].to_header()
     target_header['NAXIS1'] = cube.shape[2] / 2
     target_header['NAXIS2'] = cube.shape[1] / 2
