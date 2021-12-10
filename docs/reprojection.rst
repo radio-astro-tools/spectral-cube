@@ -32,7 +32,7 @@ Instead, the target header can be generated it with a helper tool (e.g., the
 `find_optimal_celestial_wcs
 <https://reproject.readthedocs.io/en/stable/mosaicking.html#computing-an-optimal-wcs>`_
 function in the `reproject <https://reproject.readthedocs.io/>`_ package), or
-manually editing a FITS header.
+by manually editing a FITS header.
 
 The spatial reprojection tool uses reproject_ under the hood and defaults to
 using a bilinear interpolation scheme, though this is configurable.
