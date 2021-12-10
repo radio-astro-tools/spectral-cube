@@ -137,6 +137,15 @@ def test_ds9region_new(regfile, result, data_adv, use_dask):
             sc = cube.subcube_from_regions(regionlist)
     else:
         sc = cube.subcube_from_regions(regionlist)
+
+        # Shapes and size should be the same.
+        # squeeze on the cube is b/c is retains dimensions of size 1
+        assert sc.size == data[result].size
+        assert sc.filled_data[:].squeeze().shape == data[result].shape
+
+        # If sizes are the same, values should then be the same.
+        assert (sc.unitless_filled_data[:].squeeze() == data[result]).all()
+
         scsum = sc.sum()
         dsum = data[result].sum()
         assert_allclose(scsum, dsum)
