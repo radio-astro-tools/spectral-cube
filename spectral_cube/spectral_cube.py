@@ -2079,7 +2079,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             ylo = 0
 
         # If None, then the whole spectral range of the cube is selected.
-        if set(ranges) == {None}:
+        if all(x is None for x in ranges):
             subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
         else:
             ranges = self._velocity_freq_conversion_regions(ranges, veltypes, restfreqs)
@@ -2096,15 +2096,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 raise ValueError("The derived subset is empty: the region does not"
                                  " overlap with the cube.")
 
-        shp = subcube.shape[1:]
-        slices_big, slices_small = mask.get_overlap_slices(shp)
+        shp = self.shape[1:]
+        _, slices_small = mask.get_overlap_slices(shp)
 
-        # the slices don't start at the bottom left, as get_overlap_slices says they
-        # do, because we already cropped at the bbox
-        slices_small = (slice(slices_small[0].start+ylo, slices_small[0].stop+ylo),
-                        slice(slices_small[1].start+xlo, slices_small[1].stop+xlo))
-        maskarray = np.zeros(shp, dtype='bool')
-        maskarray[slices_big] = mask.data[slices_small]
+        maskarray = np.zeros(subcube.shape[1:], dtype='bool')
+        maskarray[:] = mask.data[slices_small]
 
         masked_subcube = subcube.with_mask(BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape))
         # by using ceil / floor above, we potentially introduced a NaN buffer
