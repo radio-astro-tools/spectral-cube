@@ -35,7 +35,8 @@ function in the `reproject <https://reproject.readthedocs.io/>`_ package), or
 by manually editing a FITS header.
 
 The spatial reprojection tool uses reproject_ under the hood and defaults to
-using a bilinear interpolation scheme, though this is configurable.
+using a bilinear interpolation scheme, though this is configurable using the
+`order` keyword in `~spectral_cube.SpectralCube.reproject`.
 Interpolation onto a differently-spaced grid, after appropriate :doc:`smoothing <smoothing>`, can
 be used to rebin or decimate the data.
 
