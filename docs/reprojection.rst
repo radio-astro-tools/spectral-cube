@@ -19,7 +19,16 @@ Spatial Reprojection
 To reproject a cube onto a different spatial world coordinate system, use the
 :meth:`~spectral_cube.SpectralCube.reproject` function.  The function requires
 a target header as an input.  You might generate this header by grabbing it
-from another FITS file, generating it with a helper tool (e.g., the
+from another FITS file, for example, from another `SpectralCube`::
+
+    from spectral_cube import SpectralCube
+    
+    cube = SpectralCube.read('/some_path/some_file.fits')
+    other_cube = SpectralCube.read('/some_path/other_file.fits')
+
+    reprojected_cube = cube.reproject(other_cube.header)
+
+Instead, the target header can be generated it with a helper tool (e.g., the
 `find_optimal_celestial_wcs
 <https://reproject.readthedocs.io/en/stable/mosaicking.html#computing-an-optimal-wcs>`_
 function in the `reproject <https://reproject.readthedocs.io/>`_ package), or
