@@ -8,6 +8,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
 from astropy import units as u
+from astropy.utils import data
 
 try:
     from distributed.utils_test import client, loop, cluster_fixture  # noqa
@@ -15,7 +16,7 @@ try:
 except ImportError:
     DISTRIBUTED_INSTALLED = False
 
-from spectral_cube import DaskSpectralCube
+from spectral_cube import DaskSpectralCube, SpectralCube
 from .test_casafuncs import make_casa_testimage
 
 try:
@@ -204,6 +205,38 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
 
     # Test all True
     assert np.all(test.compute())
+
+@pytest.mark.parametrize(('accepts_chunks'),
+                         ((True, False)))
+def test_apply_function_parallel_shape(accepts_chunks):
+    # regression test for #772
+
+    def func(x, add=None):
+        if add is not None:
+            y = x + add
+        else:
+            raise ValueError("This test is supposed to have add=1")
+        return y
+
+
+    fn = data.get_pkg_data_filename('tests/data/example_cube.fits', 'spectral_cube')
+    cube = SpectralCube.read(fn, use_dask=True)
+    cube2 = SpectralCube.read(fn, use_dask=False)
+
+    # Check dask w/both threaded and unthreaded
+    rslt3 = cube.apply_function_parallel_spectral(func, add=1,
+                                                  accepts_chunks=accepts_chunks)
+    with cube.use_dask_scheduler('threads', num_workers=4):
+        rslt = cube.apply_function_parallel_spectral(func, add=1,
+                                                     accepts_chunks=accepts_chunks)
+    rslt2 = cube2.apply_function_parallel_spectral(func, add=1)
+
+    np.testing.assert_almost_equal(cube.filled_data[:].value,
+                                   cube2.filled_data[:].value)
+    np.testing.assert_almost_equal(rslt.filled_data[:].value,
+                                   rslt2.filled_data[:].value)
+    np.testing.assert_almost_equal(rslt.filled_data[:].value,
+                                   rslt3.filled_data[:].value)
 
 
 if DISTRIBUTED_INSTALLED:

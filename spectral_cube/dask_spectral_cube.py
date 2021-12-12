@@ -602,14 +602,13 @@ class DaskSpectralCubeMixin:
             # need to rechunk here to avoid issues when writing out the data
             # even if it results in a poorer performance.
             data = data.rechunk((-1, 'auto', 'auto'))
-            newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],))
+            newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],),
+                                          **kwargs)
 
             if return_new_cube:
-                return self._new_cube_with(data=newdata,
-                                        wcs=self.wcs,
-                                        mask=self.mask,
-                                        meta=self.meta,
-                                        fill_value=self.fill_value)
+                return self._new_cube_with(data=newdata, wcs=self.wcs,
+                                           mask=self.mask, meta=self.meta,
+                                           fill_value=self.fill_value)
             else:
                 return newdata
 
