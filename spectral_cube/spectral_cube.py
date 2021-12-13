@@ -258,8 +258,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     raise u.UnitsError("The specified new cube unit '{0}' "
                                        "does not match the input unit '{1}'."
                                        .format(unit, data.unit))
-            else:
-                self._unit = unit
         elif self._unit is not None:
             unit = self.unit
 
