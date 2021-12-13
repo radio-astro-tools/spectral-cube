@@ -2243,7 +2243,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._cube_on_cube_operation(operator.add, value)
         else:
             value = self._val_to_own_unit(value, operation='add', tofrom='from',
-                                          keepunit=True)
+                                          keepunit=False)
             return self._apply_everywhere(operator.add, value, check_units=False)
 
     def __sub__(self, value):
@@ -2251,7 +2251,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._cube_on_cube_operation(operator.sub, value)
         else:
             value = self._val_to_own_unit(value, operation='subtract',
-                                          tofrom='from', keepunit=True)
+                                          tofrom='from', keepunit=False)
             return self._apply_everywhere(operator.sub, value, check_units=False)
 
     def __mul__(self, value):
