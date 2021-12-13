@@ -327,9 +327,7 @@ class TestSpectralCube(object):
 
 
     @pytest.mark.parametrize(('operation', 'value'),
-                             ((operator.add, 0.5*u.K),
-                              (operator.sub, 0.5*u.K),
-                              (operator.mul, 0.5*u.K),
+                             ((operator.mul, 0.5*u.K),
                               (operator.truediv, 0.5*u.K),
                               (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
                              ))
@@ -343,6 +341,21 @@ class TestSpectralCube(object):
         assert np.all(d1o == c1o.filled_data[:])
         # allclose fails on identical data?
         #assert_allclose(d1o, c1o.filled_data[:])
+
+
+    @pytest.mark.parametrize(('operation', 'value'), ((operator.add, 0.5*u.K),
+                                                      (operator.sub, 0.5*u.K),))
+    def test_apply_everywhere_plusminus(self, operation, value, data_advs, use_dask):
+        c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
+
+        assert c1.unit == value.unit
+
+        # append 'o' to indicate that it has been operated on
+        c1o = c1._apply_everywhere(operation, value, check_units=False)
+        d1o = operation(u.Quantity(d1, u.K), value)
+
+        assert np.all(d1o == c1o.filled_data[:])
+
 
     @pytest.mark.parametrize(('filename', 'trans'), translist, indirect=['filename'])
     def test_getitem(self, filename, trans, use_dask):
@@ -444,6 +457,16 @@ class TestArithmetic(object):
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
         self.c1 = self.d1 = None
+
+        with pytest.raises(AssertionError,
+                           match="Can only add cube objects from SpectralCubes or Quantities with a unit attribute."):
+            # c1 is something with Kelvin units, but you can't add a scalar
+            _ = self.c1 + value
+
+        with pytest.raises(AssertionError,
+                           match="UnitConversionError: Jy (spectral flux density) and 'K' (temperature) are not convertible"):
+            # c1 is something with Kelvin units, but you can't add a scalar
+            _ = self.c1 + value*u.Jy
 
     def test_add_cubes(self):
         d2 = self.d1 + self.d1
