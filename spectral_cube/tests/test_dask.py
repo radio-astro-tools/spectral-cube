@@ -4,6 +4,7 @@ import os
 from numpy.core.shape_base import block
 import pytest
 import numpy as np
+from mock import patch
 
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
@@ -206,6 +207,7 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
     # Test all True
     assert np.all(test.compute())
 
+
 @pytest.mark.parametrize(('accepts_chunks'),
                          ((True, False)))
 def test_apply_function_parallel_shape(accepts_chunks):
@@ -237,6 +239,15 @@ def test_apply_function_parallel_shape(accepts_chunks):
                                    rslt2.filled_data[:].value)
     np.testing.assert_almost_equal(rslt.filled_data[:].value,
                                    rslt3.filled_data[:].value)
+
+
+def test_cube_on_cube(data_adv):
+    # regression test for #782
+    cube = DaskSpectralCube.read(data_adv)
+
+    with patch.object(cube, '_cube_on_cube_operation') as mock:
+        cube * cube
+    mock.assert_called_once()
 
 
 if DISTRIBUTED_INSTALLED:
