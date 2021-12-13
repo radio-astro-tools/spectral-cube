@@ -19,6 +19,7 @@ from astropy.wcs import WCS
 from astropy.wcs import _wcs
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.convolution import Gaussian2DKernel, Tophat2DKernel
+from astropy.utils.exceptions import AstropyWarning
 import numpy as np
 
 from .. import (BooleanArrayMask,
@@ -2553,10 +2554,14 @@ def test_parallel_bad_params(data_adv):
                               "multiple cores were: these are incompatible "
                               "options.  Either specify num_cores=1 or "
                               "parallel=True")):
-        cube.spectral_smooth_median(3, num_cores=2, parallel=False,
-                                    update_function=update_function)
+        with warnings.catch_warnings():
+            # FITSFixed warnings can pop up here and break the raises check
+            warnings.simplefilter('ignore', AstropyWarning)
+            cube.spectral_smooth_median(3, num_cores=2, parallel=False,
+                                        update_function=update_function)
 
     with warnings.catch_warnings(record=True) as wrn:
+        warnings.simplefilter('ignore', AstropyWarning)
         cube.spectral_smooth_median(3, num_cores=1, parallel=True,
                                     update_function=update_function)
 
