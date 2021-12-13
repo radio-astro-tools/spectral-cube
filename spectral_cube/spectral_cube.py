@@ -921,7 +921,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                  "cube.  The error was: {0}".format(ex))
 
         # We don't need to convert to a quantity here because the shape check
-        data = function(self._get_filled_data(fill=self._fill_value), *args)
+        data_in = self._get_filled_data(fill=self._fill_value)
+        data = function(data_in, *args)
 
         return self._new_cube_with(data=data)
 
