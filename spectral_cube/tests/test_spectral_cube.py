@@ -359,18 +359,16 @@ class TestSpectralCube(object):
 
         assert np.all(d1o == c1o.filled_data[:])
 
-    # The workaround for dask data-loading prevents this test from succeeding
-    @pytest.mark.xfail(raises=u.UnitConversionError, strict=True)
     @pytest.mark.parametrize(('operation', 'value'),
                              ((operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),))
     def test_apply_everywhere_floordivide(self, operation, value, data_advs, use_dask):
         c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
 
-        # append 'o' to indicate that it has been operated on
-        c1o = c1._apply_everywhere(operation, value)
-        d1o = operation(u.Quantity(d1, u.K), value)
+        # floordiv doesn't work, which is why it's NotImplemented
+        with pytest.raises(u.UnitCoversionError):
+            c1o = c1._apply_everywhere(operation, value)
 
-        assert np.all(d1o == c1o.filled_data[:])
+        del c1
 
     @pytest.mark.parametrize(('filename', 'trans'), translist, indirect=['filename'])
     def test_getitem(self, filename, trans, use_dask):
