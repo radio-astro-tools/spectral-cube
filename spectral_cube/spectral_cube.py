@@ -927,8 +927,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         try:
             if check_units:
                 test_result = function(np.ones([1,1,1])*self.unit, *args)
+                new_unit = test_result.unit
             else:
                 test_result = function(np.ones([1,1,1]), *args)
+                new_unit = self.unit
             # First, check that function returns same # of dims?
             assert test_result.ndim == 3,"Output is not 3-dimensional"
         except Exception as ex:
@@ -939,7 +941,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         data_in = self._get_filled_data(fill=self._fill_value)
         data = function(data_in, *args)
 
-        return self._new_cube_with(data=data)
+        return self._new_cube_with(data=data, unit=new_unit)
 
     @warn_slow
     def _cube_on_cube_operation(self, function, cube, equivalencies=[], **kwargs):
