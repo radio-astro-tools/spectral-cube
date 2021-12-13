@@ -329,7 +329,8 @@ class TestSpectralCube(object):
     @pytest.mark.parametrize(('operation', 'value'),
                              ((operator.mul, 0.5*u.K),
                               (operator.truediv, 0.5*u.K),
-                              (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
+                              # This isn't allowed by astropy normally!
+                              # (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
                              ))
     def test_apply_everywhere(self, operation, value, data_advs, use_dask):
         c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
