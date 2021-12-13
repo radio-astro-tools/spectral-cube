@@ -2280,10 +2280,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.floordiv, value)
         else:
-            if hasattr(value, 'unit'):
-                raise NotImplementedError("Floor-division (division with truncation) with "
-                                          "quantities is not supported.")
-            return self._apply_everywhere(operator.floordiv, value)
+            # only cube-on-cube division allowed
+            #
+            # we don't support this:
+            # (Pdb) np.array([5,5,5])*u.K // (2*u.K)
+            # <Quantity [2., 2., 2.]>
+            # astropy doesn't support this:
+            # >>> np.array([5,5,5])*u.K // (2*u.Jy)
+            # astropy.units.core.UnitConversionError: Can only apply 'floor_divide' function to quantities with compatible dimensions
+            # >>> np.array([5,5,5])*u.K // (np.array([2])*u.Jy)
+            # astropy.units.core.UnitConversionError: Can only apply 'floor_divide' function to quantities with compatible dimensions
+            raise NotImplementedError("Floor-division (division with truncation) "
+                                      "is not supported.")
 
     def __pow__(self, value):
         if isinstance(value, BaseSpectralCube):

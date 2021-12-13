@@ -350,8 +350,11 @@ class TestSpectralCube(object):
         assert c1.unit == value.unit
 
         # append 'o' to indicate that it has been operated on
-        c1o = c1._apply_everywhere(operation, value, check_units=False)
+        # value.value: the __add__ function explicitly drops the units
+        c1o = c1._apply_everywhere(operation, value.value, check_units=False)
         d1o = operation(u.Quantity(d1, u.K), value)
+        assert c1o.unit == c1.unit
+        assert c1o.unit == value.unit
 
         assert np.all(d1o == c1o.filled_data[:])
 
@@ -467,17 +470,19 @@ class TestArithmetic(object):
         c2 = self.c1 + value*u.K
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
-        self.c1 = self.d1 = None
 
-        with pytest.raises(AssertionError,
+        with pytest.raises(ValueError,
                            match="Can only add cube objects from SpectralCubes or Quantities with a unit attribute."):
             # c1 is something with Kelvin units, but you can't add a scalar
             _ = self.c1 + value
 
-        with pytest.raises(AssertionError,
-                           match="UnitConversionError: Jy (spectral flux density) and 'K' (temperature) are not convertible"):
+        with pytest.raises(u.UnitConversionError,
+                           match=re.escape("'Jy' (spectral flux density) and 'K' (temperature) are not convertible")):
             # c1 is something with Kelvin units, but you can't add a scalar
             _ = self.c1 + value*u.Jy
+
+        # cleanup
+        self.c1 = self.d1 = None
 
     def test_add_cubes(self):
         d2 = self.d1 + self.d1
@@ -543,18 +548,19 @@ class TestArithmetic(object):
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_floordiv(self, value):
-        d2 = self.d1 // value
-        c2 = self.c1 // value
-        assert np.all(d2 == c2.filled_data[:].value)
-        assert c2.unit == u.K
+        with pytest.raises(NotImplementedError,
+                           match=("Floor-division (division with truncation) "
+                                  "is not supported.")):
+            c2 = self.c1 // value
         self.c1 = self.d1 = None
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0)*u.K)
     def test_floordiv_fails(self, value):
         with pytest.raises(NotImplementedError,
-                           match=("Floor-division (division with truncation) with "
-                                  "quantities is not supported.")):
+                           match=("Floor-division (division with truncation) "
+                                  "is not supported.")):
             c2 = self.c1 // value
+        self.c1 = self.d1 = None
 
     def test_floordiv_cubes(self):
         d2 = self.d1 // self.d1
