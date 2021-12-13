@@ -916,15 +916,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             test_result = function(np.ones([1,1,1])*self.unit, *args)
             # First, check that function returns same # of dims?
             assert test_result.ndim == 3,"Output is not 3-dimensional"
+        except UnitConversionError as ex:
+            raise ex
         except Exception as ex:
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
 
-        data = function(u.Quantity(self._get_filled_data(fill=self._fill_value),
-                                   self.unit, copy=False),
-                        *args)
+        # We don't need to convert to a quantity here because the shape check
+        data = function(self._get_filled_data(fill=self._fill_value), *args)
 
-        return self._new_cube_with(data=data, unit=data.unit)
+        return self._new_cube_with(data=data)
 
     @warn_slow
     def _cube_on_cube_operation(self, function, cube, equivalencies=[], **kwargs):
