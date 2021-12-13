@@ -549,16 +549,16 @@ class TestArithmetic(object):
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_floordiv(self, value):
         with pytest.raises(NotImplementedError,
-                           match=("Floor-division (division with truncation) "
-                                  "is not supported.")):
+                           match=re.escape("Floor-division (division with truncation) "
+                                           "is not supported.")):
             c2 = self.c1 // value
         self.c1 = self.d1 = None
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0)*u.K)
     def test_floordiv_fails(self, value):
         with pytest.raises(NotImplementedError,
-                           match=("Floor-division (division with truncation) "
-                                  "is not supported.")):
+                           match=re.escape("Floor-division (division with truncation) "
+                                           "is not supported.")):
             c2 = self.c1 // value
         self.c1 = self.d1 = None
 
@@ -566,7 +566,9 @@ class TestArithmetic(object):
         d2 = self.d1 // self.d1
         c2 = self.c1 // self.c1
         assert np.all((d2 == c2.filled_data[:].value) | (np.isnan(c2.filled_data[:])))
-        assert np.all((c2.filled_data[:] == 1) | (np.isnan(c2.filled_data[:])))
+        # why is c2.filled_data[:] == 1 returning a scalar?
+        # the .value here is a hack because the test is broken
+        assert np.all((c2.filled_data[:].value == 1) | (np.isnan(c2.filled_data[:])))
         assert c2.unit == u.one
         self.c1 = self.d1 = None
 
