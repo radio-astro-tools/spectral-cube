@@ -259,7 +259,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                        "does not match the input unit '{1}'."
                                        .format(unit, data.unit))
             else:
-                data = u.Quantity(data, unit=unit, copy=False)
+                self._unit = unit
         elif self._unit is not None:
             unit = self.unit
 
