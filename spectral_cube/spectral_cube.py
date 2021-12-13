@@ -941,6 +941,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         data_in = self._get_filled_data(fill=self._fill_value)
         data = function(data_in, *args)
 
+        # strip the unit because data_in does not have a unit
+        # (we calculate the appropriate unit above and pass it on below)
+        if hasattr(data, 'unit'):
+            data = data.value
+
         return self._new_cube_with(data=data, unit=new_unit)
 
     @warn_slow
