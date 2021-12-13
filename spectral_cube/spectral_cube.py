@@ -901,11 +901,23 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return nx, ny
 
     @warn_slow
-    def _apply_everywhere(self, function, *args):
+    def _apply_everywhere(self, function, *args, check_units=True):
         """
         Return a new cube with ``function`` applied to all pixels
 
         Private because this doesn't have an obvious and easy-to-use API
+
+        Parameters
+        ----------
+        function : function
+            An operator that takes the data (self) and any number of additional
+            arguments
+        check_units : bool
+            When doing the initial test before running the full operation,
+            should units be included on the 'fake' test quantity?  This is
+            specifically added as an option to enable using the subtraction and
+            addition operators without checking unit compatibility here because
+            they _already_ enforce unit compatibility.
 
         Examples
         --------
@@ -913,7 +925,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
 
         try:
-            test_result = function(np.ones([1,1,1])*self.unit, *args)
+            if check_units:
+                test_result = function(np.ones([1,1,1])*self.unit, *args)
+            else:
+                test_result = function(np.ones([1,1,1]), *args)
             # First, check that function returns same # of dims?
             assert test_result.ndim == 3,"Output is not 3-dimensional"
         except Exception as ex:
@@ -2228,16 +2243,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._cube_on_cube_operation(operator.add, value)
         else:
             value = self._val_to_own_unit(value, operation='add', tofrom='from',
-                                          keepunit=False)
-            return self._apply_everywhere(operator.add, value)
+                                          keepunit=True)
+            return self._apply_everywhere(operator.add, value, check_units=False)
 
     def __sub__(self, value):
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.sub, value)
         else:
             value = self._val_to_own_unit(value, operation='subtract',
-                                          tofrom='from', keepunit=False)
-            return self._apply_everywhere(operator.sub, value)
+                                          tofrom='from', keepunit=True)
+            return self._apply_everywhere(operator.sub, value, check_units=False)
 
     def __mul__(self, value):
         if isinstance(value, BaseSpectralCube):
