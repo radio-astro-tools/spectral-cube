@@ -358,6 +358,9 @@ class TestSpectralCube(object):
         assert c1o.unit == value.unit
 
         assert np.all(d1o == c1o.filled_data[:])
+        
+        del c1
+        del c1o
 
     @pytest.mark.parametrize(('operation', 'value'),
                              ((operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),))
