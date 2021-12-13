@@ -329,8 +329,6 @@ class TestSpectralCube(object):
     @pytest.mark.parametrize(('operation', 'value'),
                              ((operator.mul, 0.5*u.K),
                               (operator.truediv, 0.5*u.K),
-                              # This isn't allowed by astropy normally!
-                              # (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
                              ))
     def test_apply_everywhere(self, operation, value, data_advs, use_dask):
         c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
@@ -357,6 +355,18 @@ class TestSpectralCube(object):
 
         assert np.all(d1o == c1o.filled_data[:])
 
+    # The workaround for dask data-loading prevents this test from succeeding
+    @pytest.mark.xfail(raises=u.UnitConversionError, strict=True)
+    @pytest.mark.parametrize(('operation', 'value'),
+                             ((operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),))
+    def test_apply_everywhere_floordivide(self, operation, value, data_advs, use_dask):
+        c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
+
+        # append 'o' to indicate that it has been operated on
+        c1o = c1._apply_everywhere(operation, value)
+        d1o = operation(u.Quantity(d1, u.K), value)
+
+        assert np.all(d1o == c1o.filled_data[:])
 
     @pytest.mark.parametrize(('filename', 'trans'), translist, indirect=['filename'])
     def test_getitem(self, filename, trans, use_dask):
@@ -526,6 +536,29 @@ class TestArithmetic(object):
     def test_div_cubes(self):
         d2 = self.d1 / self.d1
         c2 = self.c1 / self.c1
+        assert np.all((d2 == c2.filled_data[:].value) | (np.isnan(c2.filled_data[:])))
+        assert np.all((c2.filled_data[:] == 1) | (np.isnan(c2.filled_data[:])))
+        assert c2.unit == u.one
+        self.c1 = self.d1 = None
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
+    def test_floordiv(self, value):
+        d2 = self.d1 // value
+        c2 = self.c1 // value
+        assert np.all(d2 == c2.filled_data[:].value)
+        assert c2.unit == u.K
+        self.c1 = self.d1 = None
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0)*u.K)
+    def test_floordiv_fails(self, value):
+        with pytest.raises(NotImplementedError,
+                           match=("Floor-division (division with truncation) with "
+                                  "quantities is not supported.")):
+            c2 = self.c1 // value
+
+    def test_floordiv_cubes(self):
+        d2 = self.d1 // self.d1
+        c2 = self.c1 // self.c1
         assert np.all((d2 == c2.filled_data[:].value) | (np.isnan(c2.filled_data[:])))
         assert np.all((c2.filled_data[:] == 1) | (np.isnan(c2.filled_data[:])))
         assert c2.unit == u.one

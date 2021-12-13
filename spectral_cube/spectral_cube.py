@@ -2276,6 +2276,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         else:
             return self._apply_everywhere(operator.truediv, value)
 
+    def __floordiv__(self, value):
+        if isinstance(value, BaseSpectralCube):
+            return self._cube_on_cube_operation(operator.floordiv, value)
+        else:
+            if hasattr(value, 'unit'):
+                raise NotImplementedError("Floor-division (division with truncation) with "
+                                          "quantities is not supported.")
+            return self._apply_everywhere(operator.floordiv, value)
+
     def __pow__(self, value):
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.pow, value)
