@@ -241,13 +241,32 @@ def test_apply_function_parallel_shape(accepts_chunks):
                                    rslt3.filled_data[:].value)
 
 
-def test_cube_on_cube(data_adv):
+@pytest.mark.parametrize('filename', ('data_adv', 'data_adv_beams',
+    'data_vda_beams', 'data_vda_beams_image'))
+def test_cube_on_cube(filename, request):
+    dataname = request.getfixturevalue(filename)
+
     # regression test for #782
+    # (the regression applies only to CASA .image files)
     cube = DaskSpectralCube.read(data_adv)
+    assert isinstance(cube, DaskSpectralCube)
+    cube2 = SpectralCube.read(data_adv, use_dask=False)
+    assert not isinstance(cube, DaskSpectralCube)
 
     with patch.object(cube, '_cube_on_cube_operation') as mock:
         cube * cube
     mock.assert_called_once()
+
+    with patch.object(cube, '_cube_on_cube_operation') as mock:
+        cube * cube2
+    mock.assert_called_once()
+
+    with patch.object(cube, '_cube_on_cube_operation') as mock:
+        cube2 * cube
+    mock.assert_called_once()
+
+    del cube
+    del cube2
 
 
 if DISTRIBUTED_INSTALLED:
