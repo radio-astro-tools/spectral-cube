@@ -244,6 +244,8 @@ def test_apply_function_parallel_shape(accepts_chunks):
 @pytest.mark.parametrize('filename', ('data_adv', 'data_adv_beams',
     'data_vda_beams', 'data_vda_beams_image'))
 def test_cube_on_cube(filename, request):
+    if 'image' in filename and not CASA_INSTALLED:
+        pytest.skip(reason='Requires CASA to be installed')
     dataname = request.getfixturevalue(filename)
 
     # regression test for #782
