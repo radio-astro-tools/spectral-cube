@@ -2510,7 +2510,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         HDU version of self
         """
         log.debug("Creating HDU")
-        hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
+        hdu = PrimaryHDU(self.unitless_filled_data[:], header=self.header)
         return hdu
 
     @property
