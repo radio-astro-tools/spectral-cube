@@ -17,7 +17,7 @@ try:
 except ImportError:
     DISTRIBUTED_INSTALLED = False
 
-from spectral_cube import DaskSpectralCube, SpectralCube
+from spectral_cube import DaskSpectralCube, SpectralCube, DaskVaryingResolutionSpectralCube
 from .test_casafuncs import make_casa_testimage
 
 try:
@@ -245,16 +245,18 @@ def test_apply_function_parallel_shape(accepts_chunks):
     'data_vda_beams', 'data_vda_beams_image'))
 def test_cube_on_cube(filename, request):
     if 'image' in filename and not CASA_INSTALLED:
-        pytest.skip(reason='Requires CASA to be installed')
+        pytest.skip('Requires CASA to be installed')
     dataname = request.getfixturevalue(filename)
 
     # regression test for #782
     # the regression applies only to VaryingResolutionSpectralCubes
     # since they are not SpectralCube subclasses
     cube = DaskSpectralCube.read(dataname)
-    assert isinstance(cube, DaskSpectralCube)
+    assert isinstance(cube, (DaskSpectralCube, DaskVaryingResolutionSpectralCube))
     cube2 = SpectralCube.read(dataname, use_dask=False)
-    assert not isinstance(cube, DaskSpectralCube)
+    if 'image' not in filename:
+        # 'image' would be CASA and must be dask
+        assert not isinstance(cube2, (DaskSpectralCube, DaskVaryingResolutionSpectralCube))
 
     with patch.object(cube, '_cube_on_cube_operation') as mock:
         cube * cube
