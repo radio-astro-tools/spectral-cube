@@ -249,7 +249,8 @@ def test_cube_on_cube(filename, request):
     dataname = request.getfixturevalue(filename)
 
     # regression test for #782
-    # (the regression applies only to CASA .image files)
+    # the regression applies only to VaryingResolutionSpectralCubes
+    # since they are not SpectralCube subclasses
     cube = DaskSpectralCube.read(dataname)
     assert isinstance(cube, DaskSpectralCube)
     cube2 = SpectralCube.read(dataname, use_dask=False)
@@ -263,7 +264,7 @@ def test_cube_on_cube(filename, request):
         cube * cube2
     mock.assert_called_once()
 
-    with patch.object(cube, '_cube_on_cube_operation') as mock:
+    with patch.object(cube2, '_cube_on_cube_operation') as mock:
         cube2 * cube
     mock.assert_called_once()
 
