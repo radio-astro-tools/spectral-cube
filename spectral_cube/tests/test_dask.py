@@ -248,9 +248,9 @@ def test_cube_on_cube(filename, request):
 
     # regression test for #782
     # (the regression applies only to CASA .image files)
-    cube = DaskSpectralCube.read(data_adv)
+    cube = DaskSpectralCube.read(dataname)
     assert isinstance(cube, DaskSpectralCube)
-    cube2 = SpectralCube.read(data_adv, use_dask=False)
+    cube2 = SpectralCube.read(dataname, use_dask=False)
     assert not isinstance(cube, DaskSpectralCube)
 
     with patch.object(cube, '_cube_on_cube_operation') as mock:
