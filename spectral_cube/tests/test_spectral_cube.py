@@ -335,7 +335,7 @@ class TestSpectralCube(object):
         c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
 
         # append 'o' to indicate that it has been operated on
-        c1o = c1._apply_everywhere(operation, value)
+        c1o = c1._apply_everywhere(operation, value, check_units=True)
         d1o = operation(u.Quantity(d1, u.K), value)
 
         assert np.all(d1o == c1o.filled_data[:])

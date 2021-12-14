@@ -1040,6 +1040,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if axis is None:
             out = function(self.flattened(), **kwargs)
             if unit is not None:
+                # return is scalar
                 return u.Quantity(out, unit=unit)
             else:
                 return out
