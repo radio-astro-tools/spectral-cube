@@ -261,7 +261,6 @@ def test_cube_on_cube(filename, request):
     with patch.object(cube, '_cube_on_cube_operation') as mock:
         cube * cube
     mock.assert_called_once()
-    del cube
 
     with patch.object(cube, '_cube_on_cube_operation') as mock:
         cube * cube2
