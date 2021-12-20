@@ -171,10 +171,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                        HeaderMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, wcs_tolerance=0.0):
+                 header=None, allow_huge_operations=False, wcs_tolerance=0.0,
+                 history=None):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
+
+        # add the "history", which needs to be read specially for some cubes
+        self._history = history
 
         # must extract unit from data before stripping it
         if 'BUNIT' in self._meta:

@@ -36,6 +36,30 @@ def is_casa_image(origin, filepath, fileobj, *args, **kwargs):
     return filepath is not None and filepath.lower().endswith('.image')
 
 
+def make_fits_history(logtable):
+    """
+    Convert a CASA logtable to a FITS history
+
+    https://github.com/casacore/casacore/blob/dbf28794ef446bbf4e6150653dbe404379a3c429/fits/FITS/FITSHistoryUtil.cc
+    """
+    from astropy.time import Time
+
+    history_rows = []
+    for row in logtable:
+        head_row = f"{Time(row['TIME']*u.s, format='mjd').isot} {row['PRIORITY']} SRCCODE::{row['LOCATION']}"
+        msg = row['MESSAGE']
+        if len(msg) <= 72:
+            datarows = [msg]
+        else:
+            datarows = []
+            datarows.append(msg[:72])
+            for ii in range(72, len(msg), 71):
+                datarows.append('>' + msg[ii:ii+71])
+        history_rows.append(head_row)
+        history_rows.extend(datarows)
+    return history_rows
+
+
 def load_casa_image(filename, skipdata=False, memmap=True,
                     skipvalid=False, skipcs=False, target_cls=None, use_dask=None,
                     target_chunksize=None, **kwargs):
@@ -74,6 +98,9 @@ def load_casa_image(filename, skipdata=False, memmap=True,
     # read in coordinate system object
 
     desc = getdesc(filename)
+
+    logtable = Table.read(filename + "/logtable")
+    history = make_fits_history(logtable)
 
     casa_cs = desc['_keywords_']['coords']
 
@@ -168,12 +195,14 @@ def load_casa_image(filename, skipdata=False, memmap=True,
             mask = None
 
         if 'beam' in locals():
-            cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta, beam=beam)
+            cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta, beam=beam, history=history)
         elif 'beams' in locals():
-            cube = DaskVaryingResolutionSpectralCube(data, wcs_slice, mask, meta=meta,
-                                                     beams=beams['I'])
+            cube = DaskVaryingResolutionSpectralCube(data, wcs_slice, mask,
+                                                     meta=meta,
+                                                     beams=beams['I'],
+                                                     history=history)
         else:
-            cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta)
+            cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta, history=history)
         # with #592, this is no longer true
         # we've already loaded the cube into memory because of CASA
         # limitations, so there's no reason to disallow operations
@@ -196,16 +225,17 @@ def load_casa_image(filename, skipdata=False, memmap=True,
 
             if 'beam' in locals():
                 data[component] = DaskSpectralCube(data_, wcs_slice, mask[component],
-                                                   meta=meta, beam=beam)
+                                                   meta=meta, beam=beam, history=history)
             elif 'beams' in locals():
                 data[component] = DaskVaryingResolutionSpectralCube(data_,
                                                                     wcs_slice,
                                                                     mask[component],
                                                                     meta=meta,
-                                                                    beams=beams[component])
+                                                                    beams=beams[component],
+                                                                    history=history)
             else:
                 data[component] = DaskSpectralCube(data_, wcs_slice, mask[component],
-                                                   meta=meta)
+                                                   meta=meta, history=history)
 
             data[component].allow_huge_operations = True
 
