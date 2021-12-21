@@ -2174,7 +2174,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         Given a value, check if it has a unit.  If it does, convert to the
         cube's unit.  If it doesn't, raise an exception.
         """
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             if self.unit.is_equivalent(value.unit):
                 return value
             else:
@@ -2226,7 +2226,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return LazyComparisonMask(operator.ne, value, data=self._data, wcs=self._wcs)
 
     def __add__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.add, value)
         else:
             value = self._val_to_own_unit(value, operation='add', tofrom='from',
@@ -2234,7 +2234,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._apply_everywhere(operator.add, value)
 
     def __sub__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.sub, value)
         else:
             value = self._val_to_own_unit(value, operation='subtract',
@@ -2242,7 +2242,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._apply_everywhere(operator.sub, value)
 
     def __mul__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.mul, value)
         else:
             return self._apply_everywhere(operator.mul, value)
@@ -2251,13 +2251,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.__div__(value)
 
     def __div__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.truediv, value)
         else:
             return self._apply_everywhere(operator.truediv, value)
 
     def __pow__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.pow, value)
         else:
             return self._apply_everywhere(operator.pow, value)

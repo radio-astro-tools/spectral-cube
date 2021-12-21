@@ -4,6 +4,7 @@ import os
 from numpy.core.shape_base import block
 import pytest
 import numpy as np
+from mock import patch
 
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
@@ -16,7 +17,7 @@ try:
 except ImportError:
     DISTRIBUTED_INSTALLED = False
 
-from spectral_cube import DaskSpectralCube, SpectralCube
+from spectral_cube import DaskSpectralCube, SpectralCube, DaskVaryingResolutionSpectralCube
 from .test_casafuncs import make_casa_testimage
 
 try:
@@ -206,6 +207,7 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
     # Test all True
     assert np.all(test.compute())
 
+
 @pytest.mark.parametrize(('accepts_chunks'),
                          ((True, False)))
 def test_apply_function_parallel_shape(accepts_chunks):
@@ -237,6 +239,39 @@ def test_apply_function_parallel_shape(accepts_chunks):
                                    rslt2.filled_data[:].value)
     np.testing.assert_almost_equal(rslt.filled_data[:].value,
                                    rslt3.filled_data[:].value)
+
+
+@pytest.mark.parametrize('filename', ('data_adv', 'data_adv_beams',
+    'data_vda_beams', 'data_vda_beams_image'))
+def test_cube_on_cube(filename, request):
+    if 'image' in filename and not CASA_INSTALLED:
+        pytest.skip('Requires CASA to be installed')
+    dataname = request.getfixturevalue(filename)
+
+    # regression test for #782
+    # the regression applies only to VaryingResolutionSpectralCubes
+    # since they are not SpectralCube subclasses
+    cube = DaskSpectralCube.read(dataname)
+    assert isinstance(cube, (DaskSpectralCube, DaskVaryingResolutionSpectralCube))
+    cube2 = SpectralCube.read(dataname, use_dask=False)
+    if 'image' not in filename:
+        # 'image' would be CASA and must be dask
+        assert not isinstance(cube2, (DaskSpectralCube, DaskVaryingResolutionSpectralCube))
+
+    with patch.object(cube, '_cube_on_cube_operation') as mock:
+        cube * cube
+    mock.assert_called_once()
+
+    with patch.object(cube, '_cube_on_cube_operation') as mock:
+        cube * cube2
+    mock.assert_called_once()
+
+    with patch.object(cube2, '_cube_on_cube_operation') as mock:
+        cube2 * cube
+    mock.assert_called_once()
+
+    del cube
+    del cube2
 
 
 if DISTRIBUTED_INSTALLED:
