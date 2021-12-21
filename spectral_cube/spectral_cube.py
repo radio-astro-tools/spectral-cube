@@ -258,8 +258,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     raise u.UnitsError("The specified new cube unit '{0}' "
                                        "does not match the input unit '{1}'."
                                        .format(unit, data.unit))
-            else:
-                data = u.Quantity(data, unit=unit, copy=False)
         elif self._unit is not None:
             unit = self.unit
 
@@ -903,11 +901,23 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return nx, ny
 
     @warn_slow
-    def _apply_everywhere(self, function, *args):
+    def _apply_everywhere(self, function, *args, check_units=True):
         """
         Return a new cube with ``function`` applied to all pixels
 
         Private because this doesn't have an obvious and easy-to-use API
+
+        Parameters
+        ----------
+        function : function
+            An operator that takes the data (self) and any number of additional
+            arguments
+        check_units : bool
+            When doing the initial test before running the full operation,
+            should units be included on the 'fake' test quantity?  This is
+            specifically added as an option to enable using the subtraction and
+            addition operators without checking unit compatibility here because
+            they _already_ enforce unit compatibility.
 
         Examples
         --------
@@ -915,18 +925,28 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
 
         try:
-            test_result = function(np.ones([1,1,1])*self.unit, *args)
+            if check_units:
+                test_result = function(np.ones([1,1,1])*self.unit, *args)
+                new_unit = test_result.unit
+            else:
+                test_result = function(np.ones([1,1,1]), *args)
+                new_unit = self.unit
             # First, check that function returns same # of dims?
             assert test_result.ndim == 3,"Output is not 3-dimensional"
         except Exception as ex:
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
 
-        data = function(u.Quantity(self._get_filled_data(fill=self._fill_value),
-                                   self.unit, copy=False),
-                        *args)
+        # We don't need to convert to a quantity here because the shape check
+        data_in = self._get_filled_data(fill=self._fill_value)
+        data = function(data_in, *args)
 
-        return self._new_cube_with(data=data, unit=data.unit)
+        # strip the unit because data_in does not have a unit
+        # (we calculate the appropriate unit above and pass it on below)
+        if hasattr(data, 'unit'):
+            data = data.value
+
+        return self._new_cube_with(data=data, unit=new_unit)
 
     @warn_slow
     def _cube_on_cube_operation(self, function, cube, equivalencies=[], **kwargs):
@@ -1020,6 +1040,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if axis is None:
             out = function(self.flattened(), **kwargs)
             if unit is not None:
+                # return is scalar
                 return u.Quantity(out, unit=unit)
             else:
                 return out
@@ -2230,16 +2251,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._cube_on_cube_operation(operator.add, value)
         else:
             value = self._val_to_own_unit(value, operation='add', tofrom='from',
-                                          keepunit=True)
-            return self._apply_everywhere(operator.add, value)
+                                          keepunit=False)
+            return self._apply_everywhere(operator.add, value, check_units=False)
 
     def __sub__(self, value):
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.sub, value)
         else:
             value = self._val_to_own_unit(value, operation='subtract',
-                                          tofrom='from', keepunit=True)
-            return self._apply_everywhere(operator.sub, value)
+                                          tofrom='from', keepunit=False)
+            return self._apply_everywhere(operator.sub, value, check_units=False)
 
     def __mul__(self, value):
         if isinstance(value, BaseSpectralCube):
@@ -2255,6 +2276,27 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._cube_on_cube_operation(operator.truediv, value)
         else:
             return self._apply_everywhere(operator.truediv, value)
+
+    def __floordiv__(self, value):
+        raise NotImplementedError("Floor-division (division with truncation) "
+                                  "is not supported.")
+        #if isinstance(value, BaseSpectralCube):
+        #    # (Pdb) operator.floordiv(u.K, u.K)
+        #    # *** TypeError: unsupported operand type(s) for //: 'IrreducibleUnit' and 'IrreducibleUnit'
+        #    return self._cube_on_cube_operation(operator.floordiv, value)
+        #else:
+        #    # only cube-on-cube division allowed
+        #    #
+        #    # we don't support this:
+        #    # (Pdb) np.array([5,5,5])*u.K // (2*u.K)
+        #    # <Quantity [2., 2., 2.]>
+        #    # astropy doesn't support this:
+        #    # >>> np.array([5,5,5])*u.K // (2*u.Jy)
+        #    # astropy.units.core.UnitConversionError: Can only apply 'floor_divide' function to quantities with compatible dimensions
+        #    # >>> np.array([5,5,5])*u.K // (np.array([2])*u.Jy)
+        #    # astropy.units.core.UnitConversionError: Can only apply 'floor_divide' function to quantities with compatible dimensions
+        #    raise NotImplementedError("Floor-division (division with truncation) "
+        #                              "is not supported.")
 
     def __pow__(self, value):
         if isinstance(value, BaseSpectralCube):
@@ -2468,7 +2510,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         HDU version of self
         """
         log.debug("Creating HDU")
-        hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
+        hdu = PrimaryHDU(self.unitless_filled_data[:], header=self.header)
         return hdu
 
     @property

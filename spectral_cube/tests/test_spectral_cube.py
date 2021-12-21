@@ -19,6 +19,7 @@ from astropy.wcs import WCS
 from astropy.wcs import _wcs
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.convolution import Gaussian2DKernel, Tophat2DKernel
+from astropy.utils.exceptions import AstropyWarning
 import numpy as np
 
 from .. import (BooleanArrayMask,
@@ -327,22 +328,51 @@ class TestSpectralCube(object):
 
 
     @pytest.mark.parametrize(('operation', 'value'),
-                             ((operator.add, 0.5*u.K),
-                              (operator.sub, 0.5*u.K),
-                              (operator.mul, 0.5*u.K),
+                             ((operator.mul, 0.5*u.K),
                               (operator.truediv, 0.5*u.K),
-                              (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
                              ))
     def test_apply_everywhere(self, operation, value, data_advs, use_dask):
         c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
 
         # append 'o' to indicate that it has been operated on
-        c1o = c1._apply_everywhere(operation, value)
+        c1o = c1._apply_everywhere(operation, value, check_units=True)
         d1o = operation(u.Quantity(d1, u.K), value)
 
         assert np.all(d1o == c1o.filled_data[:])
         # allclose fails on identical data?
         #assert_allclose(d1o, c1o.filled_data[:])
+
+
+    @pytest.mark.parametrize(('operation', 'value'), ((operator.add, 0.5*u.K),
+                                                      (operator.sub, 0.5*u.K),))
+    def test_apply_everywhere_plusminus(self, operation, value, data_advs, use_dask):
+        c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
+
+        assert c1.unit == value.unit
+
+        # append 'o' to indicate that it has been operated on
+        # value.value: the __add__ function explicitly drops the units
+        c1o = c1._apply_everywhere(operation, value.value, check_units=False)
+        d1o = operation(u.Quantity(d1, u.K), value)
+        assert c1o.unit == c1.unit
+        assert c1o.unit == value.unit
+
+        assert np.all(d1o == c1o.filled_data[:])
+        
+        del c1
+        del c1o
+
+
+    # This test appears to leave things open even if we delete variables
+    #@pytest.mark.parametrize(('operation', 'value'),
+    #                         ((operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),))
+    #def test_apply_everywhere_floordivide(self, operation, value, data_advs, use_dask):
+    #    c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
+    #    # floordiv doesn't work, which is why it's NotImplemented
+    #    with pytest.raises(u.UnitCoversionError):
+    #        c1o = c1._apply_everywhere(operation, value)
+
+    #    del c1
 
     @pytest.mark.parametrize(('filename', 'trans'), translist, indirect=['filename'])
     def test_getitem(self, filename, trans, use_dask):
@@ -443,6 +473,18 @@ class TestArithmetic(object):
         c2 = self.c1 + value*u.K
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
+
+        with pytest.raises(ValueError,
+                           match="Can only add cube objects from SpectralCubes or Quantities with a unit attribute."):
+            # c1 is something with Kelvin units, but you can't add a scalar
+            _ = self.c1 + value
+
+        with pytest.raises(u.UnitConversionError,
+                           match=re.escape("'Jy' (spectral flux density) and 'K' (temperature) are not convertible")):
+            # c1 is something with Kelvin units, but you can't add a scalar
+            _ = self.c1 + value*u.Jy
+
+        # cleanup
         self.c1 = self.d1 = None
 
     def test_add_cubes(self):
@@ -505,6 +547,29 @@ class TestArithmetic(object):
         assert np.all((d2 == c2.filled_data[:].value) | (np.isnan(c2.filled_data[:])))
         assert np.all((c2.filled_data[:] == 1) | (np.isnan(c2.filled_data[:])))
         assert c2.unit == u.one
+        self.c1 = self.d1 = None
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
+    def test_floordiv(self, value):
+        with pytest.raises(NotImplementedError,
+                           match=re.escape("Floor-division (division with truncation) "
+                                           "is not supported.")):
+            c2 = self.c1 // value
+        self.c1 = self.d1 = None
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0)*u.K)
+    def test_floordiv_fails(self, value):
+        with pytest.raises(NotImplementedError,
+                           match=re.escape("Floor-division (division with truncation) "
+                                           "is not supported.")):
+            c2 = self.c1 // value
+        self.c1 = self.d1 = None
+
+    def test_floordiv_cubes(self):
+        with pytest.raises(NotImplementedError,
+                           match=re.escape("Floor-division (division with truncation) "
+                                           "is not supported.")):
+            c2 = self.c1 // self.c1
         self.c1 = self.d1 = None
 
     @pytest.mark.parametrize(('value'),
@@ -2491,10 +2556,14 @@ def test_parallel_bad_params(data_adv):
                               "multiple cores were: these are incompatible "
                               "options.  Either specify num_cores=1 or "
                               "parallel=True")):
-        cube.spectral_smooth_median(3, num_cores=2, parallel=False,
-                                    update_function=update_function)
+        with warnings.catch_warnings():
+            # FITSFixed warnings can pop up here and break the raises check
+            warnings.simplefilter('ignore', AstropyWarning)
+            cube.spectral_smooth_median(3, num_cores=2, parallel=False,
+                                        update_function=update_function)
 
     with warnings.catch_warnings(record=True) as wrn:
+        warnings.simplefilter('ignore', AstropyWarning)
         cube.spectral_smooth_median(3, num_cores=1, parallel=True,
                                     update_function=update_function)
 
