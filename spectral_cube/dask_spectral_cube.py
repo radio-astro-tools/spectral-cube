@@ -80,7 +80,7 @@ def add_save_to_tmp_dir_option(function):
                 raise ImportError("saving the cube to a temporary directory "
                                   "requires the zarr and fsspec packages to "
                                   "be installed.")
-            filename = tempfile.mkstemp()
+            filenum, filename = tempfile.mkstemp()
             with dask.config.set(**cube._scheduler_kwargs):
                 cube._data.to_zarr(filename)
             cube._data = da.from_zarr(filename)
