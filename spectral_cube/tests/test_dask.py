@@ -270,9 +270,6 @@ def test_cube_on_cube(filename, request):
         cube2 * cube
     mock.assert_called_once()
 
-    del cube
-    del cube2
-
 
 if DISTRIBUTED_INSTALLED:
 
