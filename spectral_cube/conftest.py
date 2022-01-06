@@ -138,6 +138,30 @@ def data_sdav(tmp_path):
 
 
 @pytest.fixture
+def data_sdav_beams_nounits(tmp_path):
+    """
+    For testing io when units are not specified
+    (they should be arcsec by default
+    """
+    d, h = prepare_advs_data()
+    d, h = transpose(d, h, [1, 2, 3, 0])
+    d, h = transpose(d, h, [1, 2, 3, 0])
+    d, h = transpose(d, h, [1, 2, 3, 0])
+    d, h = transpose(d, h, [0, 2, 1, 3])
+    del h['BMAJ'], h['BMIN'], h['BPA']
+    # want 4 spectral channels
+    np.random.seed(42)
+    d = np.random.random((4, 3, 2, 1))
+    beams = prepare_4_beams()
+    for ii in (1,2,3):
+        del beams[f'TUNIT{ii}']
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto(tmp_path / 'sdav_beams_nounits.fits')
+    return tmp_path / 'sdav_beams_nounits.fits'
+
+
+@pytest.fixture
 def data_sdav_beams(tmp_path):
     d, h = prepare_advs_data()
     d, h = transpose(d, h, [1, 2, 3, 0])
