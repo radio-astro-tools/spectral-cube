@@ -358,21 +358,16 @@ class TestSpectralCube(object):
         assert c1o.unit == value.unit
 
         assert np.all(d1o == c1o.filled_data[:])
-        
-        del c1
-        del c1o
 
 
-    # This test appears to leave things open even if we delete variables
-    #@pytest.mark.parametrize(('operation', 'value'),
-    #                         ((operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),))
-    #def test_apply_everywhere_floordivide(self, operation, value, data_advs, use_dask):
-    #    c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
-    #    # floordiv doesn't work, which is why it's NotImplemented
-    #    with pytest.raises(u.UnitCoversionError):
-    #        c1o = c1._apply_everywhere(operation, value)
+    @pytest.mark.parametrize(('operation', 'value'),
+                             ((operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),))
+    def test_apply_everywhere_floordivide(self, operation, value, data_advs, use_dask):
+        c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
+        # floordiv doesn't work, which is why it's NotImplemented
+        with pytest.raises(u.UnitConversionError):
+            c1o = c1._apply_everywhere(operation, value)
 
-    #    del c1
 
     @pytest.mark.parametrize(('filename', 'trans'), translist, indirect=['filename'])
     def test_getitem(self, filename, trans, use_dask):
@@ -1334,17 +1329,17 @@ def test_twod_numpy(func, how, axis, filename, use_dask):
     # one axis
     # This is partly a regression test for #211
 
+    if use_dask and how != 'cube':
+        pytest.skip()
+
     cube, data = cube_and_raw(filename, use_dask=use_dask)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     if use_dask:
-        if how != 'cube':
-            pytest.skip()
-        else:
-            proj = getattr(cube,func)(axis=axis)
+        proj = getattr(cube, func)(axis=axis)
     else:
-        proj = getattr(cube,func)(axis=axis, how=how)
+        proj = getattr(cube, func)(axis=axis, how=how)
 
     # data has a redundant 1st axis
     dproj = getattr(data,func)(axis=(0,axis+1)).squeeze()
@@ -1363,18 +1358,18 @@ def test_twod_numpy_twoaxes(func, how, axis, filename, use_dask):
     # one axis
     # This is partly a regression test for #211
 
+    if use_dask and how != 'cube':
+        pytest.skip()
+
     cube, data = cube_and_raw(filename, use_dask=use_dask)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     with warnings.catch_warnings(record=True) as wrn:
         if use_dask:
-            if how != 'cube':
-                pytest.skip()
-            else:
-                spec = getattr(cube,func)(axis=axis)
+            spec = getattr(cube, func)(axis=axis)
         else:
-             spec = getattr(cube,func)(axis=axis, how=how)
+            spec = getattr(cube, func)(axis=axis, how=how)
 
     if func == 'mean' and axis != (1,2):
         assert 'Averaging over a spatial and a spectral' in str(wrn[-1].message)
@@ -1512,15 +1507,15 @@ def test_oned_collapse(how, data_advs, use_dask):
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
 
+    if use_dask and how != 'cube':
+        pytest.skip()
+
     cube, data = cube_and_raw(data_advs, use_dask=use_dask)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     if use_dask:
-        if how != 'cube':
-            pytest.skip()
-        else:
-            spec = cube.mean(axis=(1,2))
+        spec = cube.mean(axis=(1,2))
     else:
         spec = cube.mean(axis=(1,2), how=how)
 
@@ -1529,7 +1524,6 @@ def test_oned_collapse(how, data_advs, use_dask):
     np.testing.assert_equal(spec.value, data.mean(axis=(0,2,3)))
     assert cube.unit == spec.unit
     assert spec.header['BUNIT'] == cube.header['BUNIT']
-
 
 def test_oned_collapse_beams(data_sdav_beams, use_dask):
     # Check that an operation along the spatial dims returns an appropriate
