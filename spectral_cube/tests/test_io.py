@@ -96,6 +96,8 @@ def test_3d_beams_roundtrip(tmpdir, data_vda_beams, use_dask):
 
     np.testing.assert_almost_equal(c2.beams[0].major.value, 0.4)
     np.testing.assert_almost_equal(c2.beams[0].minor.value, 0.1)
+    assert c2.beams[0].major.unit == u.arcsec
+    assert c2.beams[0].minor.unit == u.arcsec
 
 
 def test_4d_beams_roundtrip(tmpdir, data_sdav_beams, use_dask):
@@ -112,6 +114,9 @@ def test_4d_beams_roundtrip(tmpdir, data_sdav_beams, use_dask):
 
     np.testing.assert_almost_equal(c2.beams[0].major.value, 0.4)
     np.testing.assert_almost_equal(c2.beams[0].minor.value, 0.1)
+    assert c2.beams[0].major.unit == u.arcsec
+    assert c2.beams[0].minor.unit == u.arcsec
+
 
 def test_1d(data_5_spectral):
     hdul = pyfits.open(data_5_spectral)
