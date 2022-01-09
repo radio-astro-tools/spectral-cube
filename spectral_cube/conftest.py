@@ -154,7 +154,7 @@ def data_sdav_beams_nounits(tmp_path):
     d = np.random.random((4, 3, 2, 1))
     beams = prepare_4_beams()
     for ii in (1,2,3):
-        del beams[f'TUNIT{ii}']
+        del beams.header[f'TUNIT{ii}']
     hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
                          beams])
     hdul.writeto(tmp_path / 'sdav_beams_nounits.fits')
