@@ -708,9 +708,12 @@ def test_1d_slice_reductions(method, data_255_delta, use_dask):
     sp = cube[:,0,0]
 
     if hasattr(cube, method):
-        assert getattr(sp, method)() == getattr(cube, method)(axis=0)[0,0]
+        spmethod = getattr(sp, method)
+        cubemethod = getattr(cube, method)
+        assert spmethod() == cubemethod(axis=0)[0,0]
     else:
-        getattr(sp, method)()
+        method = getattr(sp, method)
+        result = method()
 
     assert hasattr(sp, '_fill_value')
 
