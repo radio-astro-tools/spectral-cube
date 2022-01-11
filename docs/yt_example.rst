@@ -58,7 +58,7 @@ in yt.
     following, but use of version 3.0 or later is recommended due to
     substantial improvements in support for FITS data. For more information on
     how yt handles FITS datasets, see `the yt docs
-    <http://yt-project.org/docs/3.0/examining/loading_data.html#fits-data>`_.
+    <http://yt-project.org/doc/examining/loading_data.html#fits-data>`_.
 
 Visualization example
 ---------------------
@@ -106,10 +106,10 @@ produce a 3-d isocontour visualization using an object returned by
 
     # Take a snapshot and save to a file
     snapshot = camera.snapshot()
-    write_bitmap(snapshot, 'cube_rendering.png', transpose=True)
+    yt.write_bitmap(snapshot, 'cube_rendering.png', transpose=True)
 
 You can move the camera around; see the `yt camera docs
-<http://yt-project.org/docs/dev/reference/api/generated/yt.visualization.volume_rendering.camera.Camera.html>`_.
+<https://yt-project.org/doc/reference/api/yt.visualization.volume_rendering.camera.html>`_.
 
 Movie Making
 ------------
