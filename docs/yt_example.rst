@@ -69,7 +69,7 @@ produce a 3-d isocontour visualization using an object returned by
 
     import numpy as np
     from spectral_cube import SpectralCube
-    from yt.mods import ColorTransferFunction, write_bitmap
+    import yt
     import astropy.units as u
 
     # Read in spectral cube
@@ -87,7 +87,7 @@ produce a 3-d isocontour visualization using an object returned by
     dv = 0.02
 
     # Set up color transfer function
-    transfer = ColorTransferFunction((vmin, vmax))
+    transfer = yt.ColorTransferFunction((vmin, vmax))
     transfer.add_layers(n_v, dv, colormap='RdBu_r')
 
     # Set up the camera parameters

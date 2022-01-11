@@ -2363,7 +2363,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         else:
 
-            from yt.mods import load_uniform_grid
+            from yt import load_uniform_grid
 
             data = {'flux': self._get_filled_data(fill=0.).transpose()}
 
