@@ -21,7 +21,12 @@ from . import path
 
 # needed for regression in numpy
 import sys
-from astropy.utils.compat import NUMPY_LT_1_22
+try:
+    from astropy.utils.compat import NUMPY_LT_1_22
+except ImportError:
+    # if astropy is an old version, we'll just skip the test
+    # (this is only used in one place)
+    NUMPY_LT_1_22 = False
 
 # set up for parametrization
 LDOs = (Projection, Slice, OneDSpectrum)
