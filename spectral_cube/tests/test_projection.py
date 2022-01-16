@@ -19,6 +19,10 @@ from ..lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
 from ..utils import SliceWarning, WCSCelestialError, BeamUnitsError
 from . import path
 
+# needed for regression in numpy
+import sys
+from astropy.utils.compat import NUMPY_LT_1_22
+
 # set up for parametrization
 LDOs = (Projection, Slice, OneDSpectrum)
 LDOs_2d = (Projection, Slice,)
@@ -697,6 +701,9 @@ def test_1d_slices(data_255_delta, use_dask):
     assert not isinstance(sp.max(), OneDSpectrum)
 
 
+# TODO: Unpin when Numpy bug is resolved.
+@pytest.mark.skipif(not NUMPY_LT_1_22 and sys.platform == 'win32',
+                    reason='https://github.com/numpy/numpy/issues/20699')
 @pytest.mark.parametrize('method',
                          ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
                           'nansum', 'ptp', 'var'),
