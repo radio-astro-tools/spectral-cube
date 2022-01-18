@@ -2318,7 +2318,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         If using yt 3.0 or later, additional keyword arguments will be passed
         onto yt's ``FITSDataset`` constructor. See the yt documentation
-        (http://yt-project.org/docs/3.0/examining/loading_data.html?#fits-data)
+        (http://yt-project.org/doc/examining/loading_data.html?#fits-data)
         for details on options for reading FITS data.
         """
 
@@ -2363,7 +2363,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         else:
 
-            from yt.mods import load_uniform_grid
+            from yt import load_uniform_grid
 
             data = {'flux': self._get_filled_data(fill=0.).transpose()}
 
