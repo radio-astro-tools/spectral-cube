@@ -80,6 +80,19 @@ def test_save_to_tmp_dir(data_adv):
     assert cube_new._data.name.startswith('from-zarr')
 
 
+def test_cleanup_tmp_dir(data_adv):
+    '''Test that temporary directory is removed after deleting cube.'''
+    pytest.importorskip('zarr')
+    cube = DaskSpectralCube.read(data_adv)
+    cube_new = cube.sigma_clip_spectrally(3, save_to_tmp_dir=True)
+    tmp_dir = cube_new._tmpdir.name
+    assert os.path.exists(tmp_dir)
+    assert '.zarray' in os.listdir(tmp_dir)
+
+    del cube_new
+    assert not os.path.exists(tmp_dir)
+
+
 def test_rechunk(data_adv):
     cube = DaskSpectralCube.read(data_adv)
     assert cube._data.chunksize == (4, 3, 2)

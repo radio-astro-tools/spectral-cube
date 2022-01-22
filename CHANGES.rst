@@ -1,6 +1,8 @@
 0.6.1.dev (unreleased)
 ----------------------
 - Fix memory issue when calling statistics() on FITS cubes. #752
+- Replace deprecated and insecure `mktemp` with `TemporaryDirectory` for
+  ``save_to_tmp_dir`` and add custom deletor to ensure cleanup. #796
 
 0.6 (2021-09-30)
 ----------------

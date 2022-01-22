@@ -42,8 +42,8 @@ except ImportError:
     SCIPY_INSTALLED = False
 
 try:
-    import zarr
-    import fsspec
+    import zarr    # noqa: F401
+    import fsspec  # noqa: F401
 except ImportError:
     ZARR_INSTALLED = False
 else:
@@ -80,10 +80,10 @@ def add_save_to_tmp_dir_option(function):
                 raise ImportError("saving the cube to a temporary directory "
                                   "requires the zarr and fsspec packages to "
                                   "be installed.")
-            filename = tempfile.mktemp()
+            cube._tmpdir = tempfile.TemporaryDirectory()
             with dask.config.set(**cube._scheduler_kwargs):
-                cube._data.to_zarr(filename)
-            cube._data = da.from_zarr(filename)
+                cube._data.to_zarr(cube._tmpdir.name)
+            cube._data = da.from_zarr(cube._tmpdir.name)
         return cube
 
     return wrapper
@@ -237,6 +237,11 @@ class DaskSpectralCubeMixin:
         new_cube = super()._new_cube_with(*args, **kwargs)
         new_cube._scheduler_kwargs = self._scheduler_kwargs
         return new_cube
+
+    def __del__(self):
+        # Clean up any `tempfile.TemporaryDirectory` created by `save_to_tmp_dir`.
+        if hasattr(self, '_tmpdir'):
+            self._tmpdir.cleanup()
 
     @property
     def _data(self):
