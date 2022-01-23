@@ -320,6 +320,13 @@ class DaskSpectralCubeMixin:
         lines[0] = lines[0][:-1] + ' and chunk size {0}:'.format(self._data.chunksize)
         return '\n'.join(lines)
 
+    def display_dask_array(self):
+        try:
+            from IPython.display import display
+            return display(self._data)
+        except ImportError:
+            warnings.warn("Requires IPython to display.")
+
     @add_save_to_tmp_dir_option
     def rechunk(self, chunks='auto', threshold=None, block_size_limit=None,
                 **kwargs):
