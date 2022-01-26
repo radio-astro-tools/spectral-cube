@@ -27,7 +27,7 @@ Masking operations can be performed "lazily", where the computation is completed
 only when a view of the underlying boolean mask array is returned.
 See :ref:`doc_masking` for details on these implementations.
 
-Further strategies for handling large data is given in :ref:`_doc_handling_large_datasets`.
+Further strategies for handling large data is given in :ref:`doc_handling_large_datasets`.
 
 
 Parallelizing operations
