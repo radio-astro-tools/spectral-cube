@@ -6,14 +6,14 @@ Notes for development using spectral-cube
 
 spectral-cube is flexible and can used within other packages for
 development beyond the core package's capabilities. Two significant strengths
-are the use of memory-mapping and  the integration with `dask <https://dask.org/>`_
-(:ref:`doc_dask`) to efficiently larger than memory data.
+are the use of memory-mapping and the integration with `dask <https://dask.org/>`_
+(:ref:`doc_dask`) to efficiently handle larger than memory data.
 
 This page provides suggestions for developing using spectral-cube in other
 packages.
 
 The following two sections give information on standard usage of  :class:`SpectralCube`.
-The third discusses usage with dask integration.
+The third discusses usage with dask integration in :class:`DaskSpectralCube`.
 
 Handling large data cubes
 -------------------------
@@ -24,7 +24,8 @@ and provides options for executing operations with only subsets of the data
 (for example, the `how` keyword in `~SpectralCube.moment`).
 
 Masking operations can be performed "lazily", where the computation is completed
-only when a view of the underlying boolean mask array is returned (:ref:`doc_masking`).
+only when a view of the underlying boolean mask array is returned.
+See :ref:`doc_masking` for details on these implementations.
 
 Further strategies for handling large data is given in :ref:`_doc_handling_large_datasets`.
 
@@ -40,7 +41,7 @@ New methods can take advantage of these features by using creating custom functi
 to pass to :meth:`SpectralCube.apply_function_parallel_spatial` and
 :meth:`SpectralCube.apply_function_parallel_spectral`. These methods expect
 functions with a data and mask array input, with optional `**kwargs` that can be
-passed, and expect an output array of the same shape as the input.
+passed and expect an output array of the same shape as the input.
 
 
 Unifying large-data handling and parallelization with dask
@@ -61,7 +62,7 @@ the `Guide to Dask Optimization <https://github.com/radio-astro-tools/tutorials/
 
 For further development, we highlight the ability to apply custom functions using dask.
 A :class:`DaskSpectralCube` loads the data as a `dask Array <https://docs.dask.org/en/stable/array.html>`_.
-Similar to the non-dask :class:`SpectralCube`, custom function can be used with
+Similar to the non-dask :class:`SpectralCube`, custom functions can be used with
 :meth:`DaskSpectralCube.apply_function_parallel_spectral` and
 :meth:`DaskSpectralCube.apply_function_parallel_spatial`. Effectively these are
 wrappers on `dask.array.map_blocks <https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html#dask.array.map_blocks>`_
