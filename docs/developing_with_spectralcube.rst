@@ -21,7 +21,7 @@ Handling large data cubes
 spectral-cube is specifically designed for handling larger-than-memory data
 and minimizes creating copies of the data. :class:`SpectralCube` uses memory-mapping
 and provides options for executing operations with only subsets of the data
-(for example, the `how` keyword in `~SpectralCube.moment`).
+(for example, the `how` keyword in :meth:`SpectralCube.moment`).
 
 Masking operations can be performed "lazily", where the computation is completed
 only when a view of the underlying boolean mask array is returned.
