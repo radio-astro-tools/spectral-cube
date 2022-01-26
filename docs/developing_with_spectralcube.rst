@@ -58,7 +58,8 @@ of general usage and recommended practices, including:
 
 For an interactive demonstration of these features, see
 the `Guide to Dask Optimization <https://github.com/radio-astro-tools/tutorials/pull/21>`_.
-.. TODO: UPDATE THE LINK TO THE TUTORIAL once merged
+..
+    TODO: UPDATE THE LINK TO THE TUTORIAL once merged
 
 For further development, we highlight the ability to apply custom functions using dask.
 A :class:`DaskSpectralCube` loads the data as a `dask Array <https://docs.dask.org/en/stable/array.html>`_.
@@ -86,5 +87,6 @@ in parallel over chunks of the data. This fitting example is a guide for using
     * A change in array shape and dimensions in the output (`drop_axis` and `chunks` in `dask.array.map_blocks <https://docs.dask.org/en/stable/generated/dask.array.map_blocks.html#dask.array.map_blocks>`_)
     * Using dask's `block_info` dictionary in a custom function to track the location of a chunk in the cube
 
-.. TODO: UPDATE THE LINK TO THE TUTORIAL once merged
+..
+    TODO: UPDATE THE LINK TO THE TUTORIAL once merged
 
