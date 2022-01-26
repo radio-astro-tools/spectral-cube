@@ -58,6 +58,7 @@ of general usage and recommended practices, including:
 
 For an interactive demonstration of these features, see
 the `Guide to Dask Optimization <https://github.com/radio-astro-tools/tutorials/pull/21>`_.
+
 ..
     TODO: UPDATE THE LINK TO THE TUTORIAL once merged
 
