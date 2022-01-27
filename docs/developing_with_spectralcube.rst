@@ -9,7 +9,7 @@ development beyond the core package's capabilities. Two significant strengths
 are the use of memory-mapping and the integration with `dask <https://dask.org/>`_
 (:ref:`doc_dask`) to efficiently handle larger than memory data.
 
-This page provides suggestions for developing using spectral-cube in other
+This page provides suggestions for software development using spectral-cube in other
 packages.
 
 The following two sections give information on standard usage of  :class:`SpectralCube`.
@@ -37,11 +37,11 @@ Several operations implemented in :class:`SpectralCube` can be parallelized
 using the `joblib <https://joblib.readthedocs.io/en/latest/>`_ package. Builtin methods
 in :class:`SpectralCube` with the `parallel` keyword will enable using joblib.
 
-New methods can take advantage of these features by using creating custom functions
+New methods can take advantage of these features by creating custom functions
 to pass to :meth:`SpectralCube.apply_function_parallel_spatial` and
-:meth:`SpectralCube.apply_function_parallel_spectral`. These methods expect
-functions with a data and mask array input, with optional `**kwargs` that can be
-passed and expect an output array of the same shape as the input.
+:meth:`SpectralCube.apply_function_parallel_spectral`. These methods accept
+functions that take a data and mask array input, with optional `**kwargs`, 
+and that return an output array of the same shape as the input.
 
 
 Unifying large-data handling and parallelization with dask
