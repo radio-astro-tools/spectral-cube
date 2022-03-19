@@ -245,7 +245,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
     pix_shifts = vdiff_sign * ((velocity_surface.to(vel_unit) -
                                 v0.to(vel_unit)) / vdiff).value[xy_posns]
 
-    # May a header copy so we can start altering
+    # Make a header copy so we can start altering
     new_header = cube[:, 0, 0].header.copy()
 
     if pad_edges:

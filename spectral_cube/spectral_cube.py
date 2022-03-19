@@ -2050,7 +2050,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.subcube_from_regions(region_list, allow_empty)
 
-    def subcube_from_regions(self, region_list, allow_empty=False):
+    def subcube_from_regions(self, region_list, allow_empty=False,
+                             minimize=False):
         """
         Extract a masked subcube from a list of ``regions.Region`` object
         (only functions on celestial dimensions)
@@ -2062,6 +2063,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         allow_empty: bool, optional
             If this is False, an exception will be raised if the region
             contains no overlap with the cube. Default is False.
+        minimize : bool
+            Run `minimal_subcube`?  This should be redundant, since the
+            bounding box of the region is already used, but it might slice off
+            an extra few pixels depending on the details of the region shape.
         """
         import regions
 
@@ -2123,10 +2128,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         maskarray = np.zeros(subcube.shape[1:], dtype='bool')
         maskarray[:] = mask.data[slices_small]
 
-        masked_subcube = subcube.with_mask(BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape))
+        BAM = BooleanArrayMask(maskarray, subcube.wcs.celestial, shape=subcube.shape[1:])
+        masked_subcube = subcube.with_mask(BAM)
         # by using ceil / floor above, we potentially introduced a NaN buffer
         # that we can now crop out
-        return masked_subcube.minimal_subcube(spatial_only=True)
+        if minimize:
+            return masked_subcube.minimal_subcube(spatial_only=True)
+        else:
+            return masked_subcube
 
     def _velocity_freq_conversion_regions(self, ranges, veltypes, restfreqs):
         """
