@@ -1568,7 +1568,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                         kernel = beam[index, 0, 0].as_kernel(pixscale)
                         out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
 
-                        if needs_beam_ratio:
+                        if needs_beam_ratio and beam_ratio_factors[index] is not None:
                             out[index] *= beam_ratio_factors[index]
 
                 return out
