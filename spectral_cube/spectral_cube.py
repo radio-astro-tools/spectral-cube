@@ -3339,7 +3339,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         tighten : bool
             Call ``plt.tight_layout()`` after plotting?
         colorbar : bool
-            plot a colorbar next the t
+            plot a colorbar
         colorbar_title : str
             title of the colorbar, default is empty. 
         cax : list
