@@ -3425,7 +3425,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         if colorbar:
             cax = plt.axes(cax)
-            fig = plt.gcf()
             cbar = fig.colorbar(im, cax=cax)
             cbar.ax.set_title(colorbar_title)
 
