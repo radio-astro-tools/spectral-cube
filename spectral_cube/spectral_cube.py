@@ -2708,14 +2708,42 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
 
     @parallel_docstring
-    def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True, **kwargs):
+    def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True,
+                              filter=ndimage.filters.median_filter, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.median_filter)
+            Size of the median filter (scipy.ndimage.filters.*_filter)
+        filter : function
+            A filter from scipy.ndimage.filters
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
+        kwargs : dict
+            Passed to the convolve function
+        """
+        return self.spatial_filter(ksize, filter,
+                update_function=update_funciton,
+                raise_error_jybeam=raise_error_jybeam, **kwargs)
+
+
+    @parallel_docstring
+    def spatial_filter(self, ksize, filter, update_function=None, raise_error_jybm=True, **kwargs):
+        """
+        Smooth the image in each spatial-spatial plane of the cube using a filter.
+
+        Parameters
+        ----------
+        ksize : int
+            Size of the median filter (scipy.ndimage.filters.*_filter)
+        filter : function
+            A filter from scipy.ndimage.filters
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
@@ -2731,7 +2759,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def _msmooth_image(im, **kwargs):
-            return ndimage.filters.median_filter(im, size=ksize, **kwargs)
+            return filter(im, size=ksize, **kwargs)
 
         newcube = self.apply_function_parallel_spatial(_msmooth_image,
                                                        **kwargs)

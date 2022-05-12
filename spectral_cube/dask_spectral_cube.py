@@ -902,13 +902,22 @@ class DaskSpectralCubeMixin:
 
     @add_save_to_tmp_dir_option
     def spectral_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
+        return self.spectral_filter(ksize,
+                function=ndimage.filters.median_filter, raise_error_jybm=True,
+                **kwargs)
+
+    @add_save_to_tmp_dir_option
+    def spectral_filter(self, ksize, filter, raise_error_jybm=True,
+                        **kwargs):
         """
-        Smooth the cube along the spectral dimension
+        Smooth the cube along the spectral dimension using a filter
 
         Parameters
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
+        filter : function
+            A filter from scipy.ndimage.filters
         save_to_tmp_dir : bool
             If `True`, the computation will be carried out straight away and
             saved to a temporary directory. This can improve performance,
@@ -928,7 +937,7 @@ class DaskSpectralCubeMixin:
             raise TypeError('ksize should be an integer (got {0})'.format(ksize))
 
         def median_filter_wrapper(img, **kwargs):
-            return ndimage.median_filter(img, (ksize, 1, 1), **kwargs)
+            return filter(img, (ksize, 1, 1), **kwargs)
 
         return self.apply_function_parallel_spectral(median_filter_wrapper,
                                                      accepts_chunks=True)
