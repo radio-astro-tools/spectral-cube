@@ -2051,7 +2051,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.subcube_from_regions(region_list, allow_empty)
 
     def subcube_from_regions(self, region_list, allow_empty=False,
-                             minimize=False):
+                             minimize=True):
         """
         Extract a masked subcube from a list of ``regions.Region`` object
         (only functions on celestial dimensions)
