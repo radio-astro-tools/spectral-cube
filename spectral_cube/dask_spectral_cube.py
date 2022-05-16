@@ -1214,7 +1214,8 @@ class DaskSpectralCubeMixin:
     @add_save_to_tmp_dir_option
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
-                             fill_value=None):
+                             fill_value=None,
+                             force_rechunk=True):
         """Resample the cube spectrally onto a specific grid
 
         Parameters
@@ -1236,6 +1237,11 @@ class DaskSpectralCubeMixin:
             especially if carrying out several operations sequentially. If
             `False`, the computation is only carried out when accessing
             specific parts of the data or writing to disk.
+        force_rechunk : bool
+            If `True`, forces rechunking of the dask array to have a single chunk
+            along the spectral axis. If `False`, the data will not be rechunked, but
+            a ValueError is raised if rechunking is required to have a single chunk
+            along the spectral axis.
 
         Returns
         -------
@@ -1283,7 +1289,18 @@ class DaskSpectralCubeMixin:
         if reverse_in:
             cubedata = cubedata[::-1, :, :]
 
-        cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
+        if force_rechunk:
+            cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
+        else:
+            # There should be one chunk size along the spectral
+            # axis if there is only 1 chunk already defined.
+            # Otherwise, the data needs to be rechunked.
+            if len(cubedata.chunks[0]) > 1:
+                raise ValueError(f"The cube currently has {len(cubedata.chunks[0])} chunks along"
+                                 " the spectral axis but DaskSpectralCube.spectral_interpolate"
+                                 " requires one. Rechunk the data first or enable"
+                                 " `force_rechunk=True`.")
+
         chunkshape = (len(spectral_grid),) + cubedata.chunks[1:]
 
         def interp_wrapper(y, args):
