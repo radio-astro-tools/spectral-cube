@@ -1284,7 +1284,7 @@ class DaskSpectralCubeMixin:
             cubedata = cubedata[::-1, :, :]
 
         cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
-        chunkshape = (len(spectral_grid),) + cubedata.chunksize[1:]
+        chunkshape = (len(spectral_grid),) + cubedata.chunks[1:]
 
         def interp_wrapper(y, args):
             if y.size == 1:
