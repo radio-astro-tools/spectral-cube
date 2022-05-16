@@ -249,6 +249,23 @@ def test_spectral_interpolate_varying_chunksize(data_255_delta):
     assert result._data.chunks[1] == (2, 2, 1)
 
 
+def test_spectral_interpolate_rechunk_fail(data_255_delta):
+
+    cube, data = cube_and_raw(data_255_delta, use_dask=True)
+
+    orig_wcs = cube.wcs.deepcopy()
+
+    # midpoint between each position
+    sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
+
+    # Force >1 chunk in spectral dimension
+    cube = cube.rechunk((1, -1, -1))
+
+    with pytest.raises(ValueError,
+                       match=("The cube currently has 2 chunks along")):
+        cube.spectral_interpolate(spectral_grid=sg, force_rechunk=False)
+
+
 def test_spectral_interpolate_with_fillvalue(data_522_delta, use_dask):
 
     cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
