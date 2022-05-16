@@ -225,6 +225,30 @@ def test_spectral_interpolate(data_522_delta, use_dask):
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
 
 
+def test_spectral_interpolate_varying_chunksize(data_255_delta):
+
+    cube, data = cube_and_raw(data_255_delta, use_dask=True)
+
+    orig_wcs = cube.wcs.deepcopy()
+
+    # midpoint between each position
+    sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
+
+    # Force unequal chunks
+    cube = cube.rechunk((-1, 2, 2))
+
+    result = cube.spectral_interpolate(spectral_grid=sg, force_rechunk=False)
+
+    np.testing.assert_almost_equal(result[:,2,2].value,
+                                   [0.5])
+
+    assert cube.wcs.wcs.compare(orig_wcs.wcs)
+
+    # Ensure the spatial chunk sizes vary
+    assert cube._data.chunks[1] == (2, 2, 1)
+    assert result._data.chunks[1] == (2, 2, 1)
+
+
 def test_spectral_interpolate_with_fillvalue(data_522_delta, use_dask):
 
     cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
