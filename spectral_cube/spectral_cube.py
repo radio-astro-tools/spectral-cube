@@ -2064,7 +2064,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             If this is False, an exception will be raised if the region
             contains no overlap with the cube. Default is False.
         minimize : bool
-            Run `minimal_subcube`?  This is mostly redundant, since the
+            Run :meth:`~SpectralCube.minimal_subcube`.  This is mostly redundant, since the
             bounding box of the region is already used, but it will sometimes
             slice off a one-pixel rind depending on the details of the region
             shape.  If minimize is disabled, there will potentially be a ring
