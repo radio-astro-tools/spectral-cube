@@ -4,7 +4,7 @@ import os
 from numpy.core.shape_base import block
 import pytest
 import numpy as np
-from mock import patch
+from unittest.mock import patch
 
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
