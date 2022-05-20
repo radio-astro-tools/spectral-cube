@@ -2023,7 +2023,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         import regions
 
         if isinstance(ds9_region, six.string_types):
-            region_list = regions.DS9Parser(ds9_region).shapes.to_regions()
+            if hasattr(regions, 'DS9Parser'):
+                region_list = regions.DS9Parser(ds9_region).shapes.to_regions()
+            else:
+                region_list = regions.Regions.read(ds9_region)
         else:
             raise TypeError("{0} should be a DS9 string".format(ds9_region))
 
