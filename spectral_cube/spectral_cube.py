@@ -2728,7 +2728,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         kwargs : dict
             Passed to the convolve function
         """
-        return self.spatial_filter(ksize, filter,
+        return self.spatial_filter(ksize=ksize, filter=filter,
                 update_function=update_funciton,
                 raise_error_jybeam=raise_error_jybeam, **kwargs)
 
@@ -2803,10 +2803,37 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return newcube
 
     @parallel_docstring
+    def spectral_filter(self, ksize, filter, use_memmap=True, verbose=0,
+            num_cores=None, **kwargs):
+        """
+        Smooth the cube along the spectral dimension using a filter
+
+        Parameters
+        ----------
+        ksize : int
+            Size of the median filter (scipy.ndimage.filters.median_filter)
+        filter : function
+            A filter from scipy.ndimage.filters
+        """
+        # note: same body as spectral_smooth_median right now, but `filter`
+        # is a required kwarg
+
+        if not scipyOK:
+            raise ImportError("Scipy could not be imported: this function won't work.")
+
+        return self.apply_function_parallel_spectral(function=filter,
+                                                     size=ksize,
+                                                     verbose=verbose,
+                                                     num_cores=num_cores,
+                                                     use_memmap=use_memmap,
+                                                     **kwargs)
+
+    @parallel_docstring
     def spectral_smooth_median(self, ksize,
                                use_memmap=True,
                                verbose=0,
                                num_cores=None,
+                               filter=ndimage.filters.median_filter,
                                **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -2824,7 +2851,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        return self.apply_function_parallel_spectral(ndimage.filters.median_filter,
+        return self.apply_function_parallel_spectral(function=filter,
                                                      size=ksize,
                                                      verbose=verbose,
                                                      num_cores=num_cores,

@@ -901,9 +901,10 @@ class DaskSpectralCubeMixin:
                                                      accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
-    def spectral_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
+    def spectral_smooth_median(self, ksize, raise_error_jybm=True,
+            filter=ndimage.filters.median_filter, **kwargs):
         return self.spectral_filter(ksize,
-                filter=ndimage.filters.median_filter, raise_error_jybm=True,
+                filter=filter, raise_error_jybm=True,
                 **kwargs)
 
     @add_save_to_tmp_dir_option
@@ -976,7 +977,7 @@ class DaskSpectralCubeMixin:
         return self.apply_function_parallel_spatial(convolve_wrapper, kernel=kernel.array)
 
     @add_save_to_tmp_dir_option
-    def spatial_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
+    def spatial_filter(self, ksize, filter, raise_error_jybm=True, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
@@ -984,6 +985,8 @@ class DaskSpectralCubeMixin:
         ----------
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
+        filter : function
+            A filter from scipy.ndimage.filters
         raise_error_jybm : bool, optional
             Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
             since the brightness is dependent on the spatial resolution.
@@ -997,9 +1000,17 @@ class DaskSpectralCubeMixin:
         self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def median_filter_wrapper(data, ksize=None, **kwargs):
-            return ndimage.median_filter(data, ksize, **kwargs)
+            return filter(data, ksize, **kwargs)
 
         return self.apply_function_parallel_spatial(median_filter_wrapper, ksize=ksize)
+
+    def spatial_smooth_median(self, ksize, raise_error_jybm=True,
+            filter=ndimage.filters.median_filter, **kwargs):
+        """
+        Smooth the image in each spatial-spatial plane of the cube using a median filter.
+        """
+        return self.spatial_filter(ksize=ksize, filter=filter,
+                raise_error_jybm=raise_error_jybeam, **kwargs)
 
     def moment(self, order=0, axis=0, **kwargs):
         """
