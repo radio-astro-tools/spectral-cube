@@ -903,7 +903,7 @@ class DaskSpectralCubeMixin:
     @add_save_to_tmp_dir_option
     def spectral_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
         return self.spectral_filter(ksize,
-                function=ndimage.filters.median_filter, raise_error_jybm=True,
+                filter=ndimage.filters.median_filter, raise_error_jybm=True,
                 **kwargs)
 
     @add_save_to_tmp_dir_option
