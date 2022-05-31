@@ -1763,6 +1763,29 @@ def test_basic_unit_conversion_beams(data_vda_beams, use_dask):
                                    (cube.filled_data[:].value *
                                     1e3))
 
+def test_unit_conversion_brightness_temperature_without_beam(data_adv, use_dask):
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+    cube = SpectralCube(data, wcs=cube.wcs)
+    cube._unit = u.Jy / u.sr
+    cube._meta['BUNIT'] = 'sr-1 Jy'
+
+    # Make sure unit is correct and no beam is defined
+    assert cube.unit == u.Jy / u.sr
+    assert cube._beam is None
+    with pytest.raises(utils.NoBeamError):
+        cube.beam
+
+    brightness_t_cube = cube.to(u.K)
+    np.testing.assert_almost_equal(brightness_t_cube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    1.60980084e-05))
+
+    # And convert back
+    cube_jy_angle = brightness_t_cube.to(u.Jy / u.arcsec**2)
+    np.testing.assert_almost_equal(cube_jy_angle.filled_data[:].value,
+                                   (cube.filled_data[:].value /
+                                    4.25451703e+10))
+
 
 bunits_list = [u.Jy / u.beam, u.K, u.Jy / u.sr, u.Jy / u.pix, u.Jy / u.arcsec**2,
                u.mJy / u.beam, u.mK]

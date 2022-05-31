@@ -658,10 +658,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
             this_equivalencies = list(this_equivalencies) + bmequiv_angarea
 
         # Beam area equivalencies for Jy per beam and/or Jy per ang area
-        if has_perbeam or has_perangarea:
-            if not has_beam:
-                raise ValueError("To convert cubes with Jy/beam units, "
-                                "the cube needs to have a beam defined.")
+        if has_perbeam:
 
             # create a beam equivalency for brightness temperature
             bmequiv = beam.jtok_equiv(thisfreq)
