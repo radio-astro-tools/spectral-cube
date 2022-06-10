@@ -2210,7 +2210,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         cube's unit.  If it doesn't, raise an exception.
         """
         if isinstance(value, BaseSpectralCube):
-            if self.unit.is_equivalent(value.unit):
+            if self.unit.is_equivalent(value.unit) or self.unit.is_equivalent(u.dimensionless_unscaled):
                 return value
             else:
                 return value.to(self.unit)

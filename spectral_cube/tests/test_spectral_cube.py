@@ -2783,3 +2783,15 @@ def test_regression_719(data_adv, use_dask):
     mx_K = (mx*u.beam).to(u.K,
                           u.brightness_temperature(beam_area=beam,
                                                    frequency=cfrq))
+
+
+def test_unitless_comparison(data_adv, use_dask):
+    """
+    Issue 819: unitless cubes should be comparable to numbers
+    """
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+
+    # force unit for use below
+    cube._unit = u.dimensionless_unscaled
+
+    mask = cube > 1
