@@ -2210,7 +2210,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         cube's unit.  If it doesn't, raise an exception.
         """
         if isinstance(value, BaseSpectralCube):
-            if self.unit.is_equivalent(value.unit) or self.unit.is_equivalent(u.dimensionless_unscaled):
+            if self.unit.is_equivalent(value.unit):
                 return value
             else:
                 return value.to(self.unit)
@@ -2219,6 +2219,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 return value.to(self.unit)
             else:
                 return value.to(self.unit).value
+        elif self.unit.is_equivalent(u.dimensionless_unscaled):
+            # if the value is a numpy array or scalar, and the cube has no
+            # unit, no additional conversion is needed
+            return value
         else:
             raise ValueError("Can only {operation} cube objects {tofrom}"
                              " SpectralCubes or Quantities with "

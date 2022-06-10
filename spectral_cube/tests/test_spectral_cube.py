@@ -2794,4 +2794,5 @@ def test_unitless_comparison(data_adv, use_dask):
     # force unit for use below
     cube._unit = u.dimensionless_unscaled
 
+    # do a comparison to verify that no error occurs
     mask = cube > 1
