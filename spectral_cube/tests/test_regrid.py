@@ -139,8 +139,8 @@ def test_spectral_smooth(data_522_delta, use_dask):
 
     # check that all values come out right from the cube creation
     np.testing.assert_almost_equal(cube[2,:,:].value, 1.0)
-    np.testing.assert_almost_equal(cube[:2,:,:].value, 0.0)
-    np.testing.assert_almost_equal(cube[3:,:,:].value, 0.0)
+    np.testing.assert_almost_equal(cube.unitless_filled_data[:2,:,:], 0.0)
+    np.testing.assert_almost_equal(cube.unitless_filled_data[3:,:,:], 0.0)
 
     # make sure the kernel comes out right; the convolution test will fail if this is wrong
     assert kernel.array.size == 9
