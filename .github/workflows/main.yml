@@ -1,9 +1,9 @@
 name: Run tests
 
 on: 
-  - push
-  - pull-request
-  - schedule:
+  push:
+  pull-request:
+  schedule:
     # run every day at 5am UTC
     - cron: '0 5 * * *'
 
