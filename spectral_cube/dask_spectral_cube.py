@@ -902,10 +902,10 @@ class DaskSpectralCubeMixin:
 
     @add_save_to_tmp_dir_option
     def spectral_smooth_median(self, ksize, raise_error_jybm=True,
-            filter=ndimage.filters.median_filter, **kwargs):
-        return self.spectral_filter(ksize,
-                filter=filter, raise_error_jybm=True,
-                **kwargs)
+                               filter=ndimage.filters.median_filter, **kwargs):
+        return self.spectral_filter(ksize, filter=filter,
+                                    raise_error_jybm=raise_error_jybm,
+                                    **kwargs)
 
     @add_save_to_tmp_dir_option
     def spectral_filter(self, ksize, filter, raise_error_jybm=True,
@@ -1010,7 +1010,7 @@ class DaskSpectralCubeMixin:
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
         """
         return self.spatial_filter(ksize=ksize, filter=filter,
-                raise_error_jybm=raise_error_jybeam, **kwargs)
+                raise_error_jybm=raise_error_jybm, **kwargs)
 
     def moment(self, order=0, axis=0, **kwargs):
         """
