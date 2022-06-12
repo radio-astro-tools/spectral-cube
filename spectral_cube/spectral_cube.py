@@ -2729,7 +2729,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to the convolve function
         """
         return self.spatial_filter(ksize=ksize, filter=filter,
-                update_function=update_funciton,
+                update_function=update_function,
                 raise_error_jybeam=raise_error_jybeam, **kwargs)
 
 
