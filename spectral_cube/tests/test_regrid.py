@@ -133,18 +133,29 @@ def test_spectral_smooth(data_522_delta, use_dask):
 
     cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), use_memmap=False)
+    kernel = convolution.Gaussian1DKernel(1.0)
+
+    result = cube.spectral_smooth(kernel=kernel, use_memmap=False)
+
+    # check that all values come out right from the cube creation
+    np.testing.assert_almost_equal(cube[2,:,:].value, 1.0)
+    np.testing.assert_almost_equal(cube[:2,:,:].value, 0.0)
+    np.testing.assert_almost_equal(cube[3:,:,:].value, 0.0)
+
+    # make sure the kernel comes out right; the convolution test will fail if this is wrong
+    assert kernel.array.size == 9
+    np.testing.assert_almost_equal(kernel.array[2:-2],
+                                   np.array([0.05399097, 0.24197072, 0.39894228, 0.24197072, 0.05399097]))
 
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), use_memmap=True)
+    # second test with memmap=True
+    result = cube.spectral_smooth(kernel=kernel, use_memmap=True)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
 def test_catch_kernel_with_units(data_522_delta, use_dask):
