@@ -144,8 +144,15 @@ def test_spectral_smooth(data_522_delta, use_dask):
 
     # make sure the kernel comes out right; the convolution test will fail if this is wrong
     assert kernel.array.size == 9
-    np.testing.assert_almost_equal(kernel.array[2:-2],
-                                   np.array([0.05399097, 0.24197072, 0.39894228, 0.24197072, 0.05399097]))
+    # this was the old astropy normalization
+    # We don't actually need the kernel to match these values, but I'm leaving this here
+    # as a note for future us:
+    # https://github.com/astropy/astropy/pull/13299
+    # the error came about because we were using two different kernel sizes, which resulted in
+    # two different normalizations after the correction in 13299
+    # Before 13299, normalization was not guaranteed.
+    #np.testing.assert_almost_equal(kernel.array[2:-2],
+    #                               np.array([0.05399097, 0.24197072, 0.39894228, 0.24197072, 0.05399097]))
 
     np.testing.assert_almost_equal(result[:,0,0].value,
                                    kernel.array[2:-2],
