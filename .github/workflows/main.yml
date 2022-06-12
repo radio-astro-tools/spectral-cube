@@ -1,6 +1,9 @@
 name: Run tests
 
 on: [push, pull_request]
+  schedule:
+    # run every day at 5am UTC
+    - cron: '0 5 * * *'
 
 jobs:
   tests:
