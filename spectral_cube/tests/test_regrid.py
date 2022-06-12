@@ -183,19 +183,19 @@ def test_spectral_smooth_4cores(data_522_delta):
 
     cube, data = cube_and_raw(data_522_delta, use_dask=False)
 
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=True)
+    kernel = convolution.Gaussian1DKernel(1.0)
+    result = cube.spectral_smooth(kernel=kernel, num_cores=4, use_memmap=True)
 
+    assert kernel.array.size == 9
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
     # this is one way to test non-parallel mode
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=False)
+    result = cube.spectral_smooth(kernel=kernel, num_cores=4, use_memmap=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
     # num_cores = 4 is a contradiction with parallel=False, so we want to make
@@ -205,12 +205,11 @@ def test_spectral_smooth_4cores(data_522_delta):
                                  "multiple cores were: these are incompatible "
                                  "options.  Either specify num_cores=1 or "
                                  "parallel=True")):
-        result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0),
+        result = cube.spectral_smooth(kernel=kernel,
                                       num_cores=4, parallel=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
 
