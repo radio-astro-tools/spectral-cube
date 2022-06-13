@@ -2716,9 +2716,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.*_filter)
+            Size of the median filter in pixels (scipy.ndimage.filters.median_filter)
         filter : function
-            A filter from scipy.ndimage.filters
+            A filter from scipy.ndimage.filters. The default is the median filter.
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
@@ -2736,14 +2736,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     @parallel_docstring
     def spatial_filter(self, ksize, filter, update_function=None, raise_error_jybm=True, **kwargs):
         """
-        Smooth the image in each spatial-spatial plane of the cube using a filter.
+        Smooth the image in each spatial-spatial plane of the cube using a scipy.ndimage filter.
 
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.*_filter)
+            Size of the filter in pixels (scipy.ndimage.filters.*_filter).
         filter : function
-            A filter from scipy.ndimage.filters
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
@@ -2806,7 +2806,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def spectral_filter(self, ksize, filter, use_memmap=True, verbose=0,
             num_cores=None, **kwargs):
         """
-        Smooth the cube along the spectral dimension using a filter
+        Smooth the cube along the spectral dimension using a scipy.ndimage filter.
 
         Parameters
         ----------

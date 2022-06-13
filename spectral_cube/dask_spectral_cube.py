@@ -911,14 +911,14 @@ class DaskSpectralCubeMixin:
     def spectral_filter(self, ksize, filter, raise_error_jybm=True,
                         **kwargs):
         """
-        Smooth the cube along the spectral dimension using a filter
+        Smooth the cube along the spectral dimension using a scipy.ndimage filter.
 
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.median_filter)
+            Size of the median filter in spectral channels (scipy.ndimage.filters.median_filter).
         filter : function
-            A filter from scipy.ndimage.filters
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         save_to_tmp_dir : bool
             If `True`, the computation will be carried out straight away and
             saved to a temporary directory. This can improve performance,
@@ -984,9 +984,9 @@ class DaskSpectralCubeMixin:
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.median_filter)
+            Size of the filter in pixels.
         filter : function
-            A filter from scipy.ndimage.filters
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         raise_error_jybm : bool, optional
             Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
             since the brightness is dependent on the spatial resolution.
