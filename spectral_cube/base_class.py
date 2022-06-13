@@ -114,7 +114,7 @@ class HeaderMixinClass(object):
 
         Parameters
         ----------
-        raise_error_jybeam : bool, optional
+        raise_error_jybm : bool, optional
             Raises a `~spectral_cube.utils.BeamUnitsError` when True (default). When False, it triggers a
             `~spectral_cube.utils.BeamWarning`.
 
