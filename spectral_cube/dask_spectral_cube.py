@@ -320,6 +320,13 @@ class DaskSpectralCubeMixin:
         lines[0] = lines[0][:-1] + ' and chunk size {0}:'.format(self._data.chunksize)
         return '\n'.join(lines)
 
+    def display_dask_array(self):
+        try:
+            from IPython.display import display
+            return display(self._data)
+        except ImportError:
+            warnings.warn("Requires IPython to display.")
+
     @add_save_to_tmp_dir_option
     def rechunk(self, chunks='auto', threshold=None, block_size_limit=None,
                 **kwargs):
@@ -602,14 +609,13 @@ class DaskSpectralCubeMixin:
             # need to rechunk here to avoid issues when writing out the data
             # even if it results in a poorer performance.
             data = data.rechunk((-1, 'auto', 'auto'))
-            newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],))
+            newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],),
+                                          **kwargs)
 
             if return_new_cube:
-                return self._new_cube_with(data=newdata,
-                                        wcs=self.wcs,
-                                        mask=self.mask,
-                                        meta=self.meta,
-                                        fill_value=self.fill_value)
+                return self._new_cube_with(data=newdata, wcs=self.wcs,
+                                           mask=self.mask, meta=self.meta,
+                                           fill_value=self.fill_value)
             else:
                 return newdata
 
@@ -1208,7 +1214,8 @@ class DaskSpectralCubeMixin:
     @add_save_to_tmp_dir_option
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
-                             fill_value=None):
+                             fill_value=None,
+                             force_rechunk=True):
         """Resample the cube spectrally onto a specific grid
 
         Parameters
@@ -1230,6 +1237,11 @@ class DaskSpectralCubeMixin:
             especially if carrying out several operations sequentially. If
             `False`, the computation is only carried out when accessing
             specific parts of the data or writing to disk.
+        force_rechunk : bool
+            If `True`, forces rechunking of the dask array to have a single chunk
+            along the spectral axis. If `False`, the data will not be rechunked, but
+            a ValueError is raised if rechunking is required to have a single chunk
+            along the spectral axis.
 
         Returns
         -------
@@ -1277,8 +1289,19 @@ class DaskSpectralCubeMixin:
         if reverse_in:
             cubedata = cubedata[::-1, :, :]
 
-        cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
-        chunkshape = (len(spectral_grid),) + cubedata.chunksize[1:]
+        if force_rechunk:
+            cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
+        else:
+            # There should be one chunk size along the spectral
+            # axis if there is only 1 chunk already defined.
+            # Otherwise, the data needs to be rechunked.
+            if len(cubedata.chunks[0]) > 1:
+                raise ValueError(f"The cube currently has {len(cubedata.chunks[0])} chunks along"
+                                 " the spectral axis but DaskSpectralCube.spectral_interpolate"
+                                 " requires one. Rechunk the data first or enable"
+                                 " `force_rechunk=True`.")
+
+        chunkshape = (len(spectral_grid),) + cubedata.chunks[1:]
 
         def interp_wrapper(y, args):
             if y.size == 1:
@@ -1396,6 +1419,9 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         # See #631: kwargs get passed within self.apply_function_parallel_spatial
         def convfunc(img, **kwargs):
             return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape) * beam_ratio_factor
+
+        if convolve is convolution.convolve_fft and 'allow_huge' not in kwargs:
+            kwargs['allow_huge'] = self.allow_huge_operations
 
         return self.apply_function_parallel_spatial(convfunc,
                                                     accepts_chunks=True,
@@ -1542,7 +1568,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                         kernel = beam[index, 0, 0].as_kernel(pixscale)
                         out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
 
-                        if needs_beam_ratio:
+                        if needs_beam_ratio and beam_ratio_factors[index] is not None:
                             out[index] *= beam_ratio_factors[index]
 
                 return out

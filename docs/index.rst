@@ -76,6 +76,7 @@ Cube Analysis
    arithmetic.rst
    metadata.rst
    smoothing.rst
+   reprojection.rst
 
 Subsets
 ^^^^^^^
@@ -118,4 +119,5 @@ Advanced
    dask.rst
    yt_example.rst
    big_data.rst
+   developing_with_spectralcube.rst
    api.rst

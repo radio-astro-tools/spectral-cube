@@ -1,6 +1,11 @@
 name: Run tests
 
-on: [push, pull_request]
+on: 
+  push:
+  pull_request:
+  schedule:
+    # run every day at 5am UTC
+    - cron: '0 5 * * *'
 
 jobs:
   tests:
@@ -31,9 +36,9 @@ jobs:
             name: Python 3.9 with all non-visualization dependencies (except CASA)
             toxenv: py39-test-novis
           - os: ubuntu-18.04
-            python-version: 3.6
-            name: Python 3.6 with minimal dependencies and CASA
-            toxenv: py36-test-casa
+            python-version: 3.8
+            name: Python 3.8 with minimal dependencies and CASA
+            toxenv: py38-test-casa
           - os: ubuntu-latest
             python-version: 3.9
             name: Python 3.9, all non-visualization dependencies, and dev versions of key dependencies
@@ -49,7 +54,7 @@ jobs:
           - os: windows-latest
             python-version: 3.9
             name: Python 3.9, all dependencies, and dev versions of key dependencies on Windows
-            toxenv: py39-test-all-dev
+            toxenv: py39-test-all-dev-noopenfiles
           - os: ubuntu-latest
             python-version: 3.9
             name: Documentation

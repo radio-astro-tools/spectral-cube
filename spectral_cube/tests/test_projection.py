@@ -19,6 +19,15 @@ from ..lower_dimensional_structures import (Projection, Slice, OneDSpectrum,
 from ..utils import SliceWarning, WCSCelestialError, BeamUnitsError
 from . import path
 
+# needed for regression in numpy
+import sys
+try:
+    from astropy.utils.compat import NUMPY_LT_1_22
+except ImportError:
+    # if astropy is an old version, we'll just skip the test
+    # (this is only used in one place)
+    NUMPY_LT_1_22 = False
+
 # set up for parametrization
 LDOs = (Projection, Slice, OneDSpectrum)
 LDOs_2d = (Projection, Slice,)
@@ -697,6 +706,9 @@ def test_1d_slices(data_255_delta, use_dask):
     assert not isinstance(sp.max(), OneDSpectrum)
 
 
+# TODO: Unpin when Numpy bug is resolved.
+@pytest.mark.skipif(not NUMPY_LT_1_22 and sys.platform == 'win32',
+                    reason='https://github.com/numpy/numpy/issues/20699')
 @pytest.mark.parametrize('method',
                          ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
                           'nansum', 'ptp', 'var'),
@@ -708,9 +720,12 @@ def test_1d_slice_reductions(method, data_255_delta, use_dask):
     sp = cube[:,0,0]
 
     if hasattr(cube, method):
-        assert getattr(sp, method)() == getattr(cube, method)(axis=0)[0,0]
+        spmethod = getattr(sp, method)
+        cubemethod = getattr(cube, method)
+        assert spmethod() == cubemethod(axis=0)[0,0]
     else:
-        getattr(sp, method)()
+        method = getattr(sp, method)
+        result = method()
 
     assert hasattr(sp, '_fill_value')
 

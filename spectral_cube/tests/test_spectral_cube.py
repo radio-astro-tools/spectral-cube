@@ -19,6 +19,7 @@ from astropy.wcs import WCS
 from astropy.wcs import _wcs
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.convolution import Gaussian2DKernel, Tophat2DKernel
+from astropy.utils.exceptions import AstropyWarning
 import numpy as np
 
 from .. import (BooleanArrayMask,
@@ -327,22 +328,46 @@ class TestSpectralCube(object):
 
 
     @pytest.mark.parametrize(('operation', 'value'),
-                             ((operator.add, 0.5*u.K),
-                              (operator.sub, 0.5*u.K),
-                              (operator.mul, 0.5*u.K),
+                             ((operator.mul, 0.5*u.K),
                               (operator.truediv, 0.5*u.K),
-                              (operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),
                              ))
     def test_apply_everywhere(self, operation, value, data_advs, use_dask):
         c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
 
         # append 'o' to indicate that it has been operated on
-        c1o = c1._apply_everywhere(operation, value)
+        c1o = c1._apply_everywhere(operation, value, check_units=True)
         d1o = operation(u.Quantity(d1, u.K), value)
 
         assert np.all(d1o == c1o.filled_data[:])
         # allclose fails on identical data?
         #assert_allclose(d1o, c1o.filled_data[:])
+
+
+    @pytest.mark.parametrize(('operation', 'value'), ((operator.add, 0.5*u.K),
+                                                      (operator.sub, 0.5*u.K),))
+    def test_apply_everywhere_plusminus(self, operation, value, data_advs, use_dask):
+        c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
+
+        assert c1.unit == value.unit
+
+        # append 'o' to indicate that it has been operated on
+        # value.value: the __add__ function explicitly drops the units
+        c1o = c1._apply_everywhere(operation, value.value, check_units=False)
+        d1o = operation(u.Quantity(d1, u.K), value)
+        assert c1o.unit == c1.unit
+        assert c1o.unit == value.unit
+
+        assert np.all(d1o == c1o.filled_data[:])
+
+
+    @pytest.mark.parametrize(('operation', 'value'),
+                             ((operator.div if hasattr(operator,'div') else operator.floordiv, 0.5*u.K),))
+    def test_apply_everywhere_floordivide(self, operation, value, data_advs, use_dask):
+        c1, d1 = cube_and_raw(data_advs, use_dask=use_dask)
+        # floordiv doesn't work, which is why it's NotImplemented
+        with pytest.raises(u.UnitConversionError):
+            c1o = c1._apply_everywhere(operation, value)
+
 
     @pytest.mark.parametrize(('filename', 'trans'), translist, indirect=['filename'])
     def test_getitem(self, filename, trans, use_dask):
@@ -443,6 +468,18 @@ class TestArithmetic(object):
         c2 = self.c1 + value*u.K
         assert np.all(d2 == c2.filled_data[:].value)
         assert c2.unit == u.K
+
+        with pytest.raises(ValueError,
+                           match="Can only add cube objects from SpectralCubes or Quantities with a unit attribute."):
+            # c1 is something with Kelvin units, but you can't add a scalar
+            _ = self.c1 + value
+
+        with pytest.raises(u.UnitConversionError,
+                           match=re.escape("'Jy' (spectral flux density) and 'K' (temperature) are not convertible")):
+            # c1 is something with Kelvin units, but you can't add a scalar
+            _ = self.c1 + value*u.Jy
+
+        # cleanup
         self.c1 = self.d1 = None
 
     def test_add_cubes(self):
@@ -505,6 +542,29 @@ class TestArithmetic(object):
         assert np.all((d2 == c2.filled_data[:].value) | (np.isnan(c2.filled_data[:])))
         assert np.all((c2.filled_data[:] == 1) | (np.isnan(c2.filled_data[:])))
         assert c2.unit == u.one
+        self.c1 = self.d1 = None
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
+    def test_floordiv(self, value):
+        with pytest.raises(NotImplementedError,
+                           match=re.escape("Floor-division (division with truncation) "
+                                           "is not supported.")):
+            c2 = self.c1 // value
+        self.c1 = self.d1 = None
+
+    @pytest.mark.parametrize(('value'),(1,1.0,2,2.0)*u.K)
+    def test_floordiv_fails(self, value):
+        with pytest.raises(NotImplementedError,
+                           match=re.escape("Floor-division (division with truncation) "
+                                           "is not supported.")):
+            c2 = self.c1 // value
+        self.c1 = self.d1 = None
+
+    def test_floordiv_cubes(self):
+        with pytest.raises(NotImplementedError,
+                           match=re.escape("Floor-division (division with truncation) "
+                                           "is not supported.")):
+            c2 = self.c1 // self.c1
         self.c1 = self.d1 = None
 
     @pytest.mark.parametrize(('value'),
@@ -1269,17 +1329,17 @@ def test_twod_numpy(func, how, axis, filename, use_dask):
     # one axis
     # This is partly a regression test for #211
 
+    if use_dask and how != 'cube':
+        pytest.skip()
+
     cube, data = cube_and_raw(filename, use_dask=use_dask)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     if use_dask:
-        if how != 'cube':
-            pytest.skip()
-        else:
-            proj = getattr(cube,func)(axis=axis)
+        proj = getattr(cube, func)(axis=axis)
     else:
-        proj = getattr(cube,func)(axis=axis, how=how)
+        proj = getattr(cube, func)(axis=axis, how=how)
 
     # data has a redundant 1st axis
     dproj = getattr(data,func)(axis=(0,axis+1)).squeeze()
@@ -1298,18 +1358,18 @@ def test_twod_numpy_twoaxes(func, how, axis, filename, use_dask):
     # one axis
     # This is partly a regression test for #211
 
+    if use_dask and how != 'cube':
+        pytest.skip()
+
     cube, data = cube_and_raw(filename, use_dask=use_dask)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     with warnings.catch_warnings(record=True) as wrn:
         if use_dask:
-            if how != 'cube':
-                pytest.skip()
-            else:
-                spec = getattr(cube,func)(axis=axis)
+            spec = getattr(cube, func)(axis=axis)
         else:
-             spec = getattr(cube,func)(axis=axis, how=how)
+            spec = getattr(cube, func)(axis=axis, how=how)
 
     if func == 'mean' and axis != (1,2):
         assert 'Averaging over a spatial and a spectral' in str(wrn[-1].message)
@@ -1447,15 +1507,15 @@ def test_oned_collapse(how, data_advs, use_dask):
     # Check that an operation along the spatial dims returns an appropriate
     # spectrum
 
+    if use_dask and how != 'cube':
+        pytest.skip()
+
     cube, data = cube_and_raw(data_advs, use_dask=use_dask)
     cube._meta['BUNIT'] = 'K'
     cube._unit = u.K
 
     if use_dask:
-        if how != 'cube':
-            pytest.skip()
-        else:
-            spec = cube.mean(axis=(1,2))
+        spec = cube.mean(axis=(1,2))
     else:
         spec = cube.mean(axis=(1,2), how=how)
 
@@ -1464,7 +1524,6 @@ def test_oned_collapse(how, data_advs, use_dask):
     np.testing.assert_equal(spec.value, data.mean(axis=(0,2,3)))
     assert cube.unit == spec.unit
     assert spec.header['BUNIT'] == cube.header['BUNIT']
-
 
 def test_oned_collapse_beams(data_sdav_beams, use_dask):
     # Check that an operation along the spatial dims returns an appropriate
@@ -1703,6 +1762,29 @@ def test_basic_unit_conversion_beams(data_vda_beams, use_dask):
     np.testing.assert_almost_equal(mKcube.filled_data[:].value,
                                    (cube.filled_data[:].value *
                                     1e3))
+
+def test_unit_conversion_brightness_temperature_without_beam(data_adv, use_dask):
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+    cube = SpectralCube(data, wcs=cube.wcs)
+    cube._unit = u.Jy / u.sr
+    cube._meta['BUNIT'] = 'sr-1 Jy'
+
+    # Make sure unit is correct and no beam is defined
+    assert cube.unit == u.Jy / u.sr
+    assert cube._beam is None
+    with pytest.raises(utils.NoBeamError):
+        cube.beam
+
+    brightness_t_cube = cube.to(u.K)
+    np.testing.assert_almost_equal(brightness_t_cube.filled_data[:].value,
+                                   (cube.filled_data[:].value *
+                                    1.60980084e-05))
+
+    # And convert back
+    cube_jy_angle = brightness_t_cube.to(u.Jy / u.arcsec**2)
+    np.testing.assert_almost_equal(cube_jy_angle.filled_data[:].value,
+                                   (cube.filled_data[:].value /
+                                    4.25451703e+10))
 
 
 bunits_list = [u.Jy / u.beam, u.K, u.Jy / u.sr, u.Jy / u.pix, u.Jy / u.arcsec**2,
@@ -2491,10 +2573,14 @@ def test_parallel_bad_params(data_adv):
                               "multiple cores were: these are incompatible "
                               "options.  Either specify num_cores=1 or "
                               "parallel=True")):
-        cube.spectral_smooth_median(3, num_cores=2, parallel=False,
-                                    update_function=update_function)
+        with warnings.catch_warnings():
+            # FITSFixed warnings can pop up here and break the raises check
+            warnings.simplefilter('ignore', AstropyWarning)
+            cube.spectral_smooth_median(3, num_cores=2, parallel=False,
+                                        update_function=update_function)
 
     with warnings.catch_warnings(record=True) as wrn:
+        warnings.simplefilter('ignore', AstropyWarning)
         cube.spectral_smooth_median(3, num_cores=1, parallel=True,
                                     update_function=update_function)
 
@@ -2697,3 +2783,16 @@ def test_regression_719(data_adv, use_dask):
     mx_K = (mx*u.beam).to(u.K,
                           u.brightness_temperature(beam_area=beam,
                                                    frequency=cfrq))
+
+
+def test_unitless_comparison(data_adv, use_dask):
+    """
+    Issue 819: unitless cubes should be comparable to numbers
+    """
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+
+    # force unit for use below
+    cube._unit = u.dimensionless_unscaled
+
+    # do a comparison to verify that no error occurs
+    mask = cube > 1

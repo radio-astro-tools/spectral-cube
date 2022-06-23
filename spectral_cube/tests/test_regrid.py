@@ -2,6 +2,7 @@ import sys
 import pytest
 import tempfile
 import numpy as np
+import os
 
 from astropy import units as u
 from astropy import convolution
@@ -32,8 +33,11 @@ from . import path, utilities
 WINDOWS = sys.platform == "win32"
 
 
-def test_convolution(data_255_delta, use_dask):
+@pytest.mark.parametrize('allow_huge_operations', (True, False))
+def test_convolution(data_255_delta, allow_huge_operations, use_dask):
     cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
+
+    cube.allow_huge_operations = allow_huge_operations
 
     # 1" convolved with 1.5" -> 1.8027....
     target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
@@ -56,8 +60,11 @@ def test_convolution(data_255_delta, use_dask):
     assert np.all(conv_cube.filled_data[1,:,:] == 0.0)
 
 
-def test_beams_convolution(data_455_delta_beams, use_dask):
+@pytest.mark.parametrize('allow_huge_operations', (True, False))
+def test_beams_convolution(data_455_delta_beams, allow_huge_operations, use_dask):
     cube, data = cube_and_raw(data_455_delta_beams, use_dask=use_dask)
+
+    cube.allow_huge_operations = allow_huge_operations
 
     # 1" convolved with 1.5" -> 1.8027....
     target_beam = Beam(1.802775637731995*u.arcsec, 1.802775637731995*u.arcsec,
@@ -126,18 +133,36 @@ def test_spectral_smooth(data_522_delta, use_dask):
 
     cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
 
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), use_memmap=False)
+    kernel = convolution.Gaussian1DKernel(1.0)
+
+    result = cube.spectral_smooth(kernel=kernel, use_memmap=False)
+
+    # check that all values come out right from the cube creation
+    np.testing.assert_almost_equal(cube[2,:,:].value, 1.0)
+    np.testing.assert_almost_equal(cube.unitless_filled_data[:2,:,:], 0.0)
+    np.testing.assert_almost_equal(cube.unitless_filled_data[3:,:,:], 0.0)
+
+    # make sure the kernel comes out right; the convolution test will fail if this is wrong
+    assert kernel.array.size == 9
+    # this was the old astropy normalization
+    # We don't actually need the kernel to match these values, but I'm leaving this here
+    # as a note for future us:
+    # https://github.com/astropy/astropy/pull/13299
+    # the error came about because we were using two different kernel sizes, which resulted in
+    # two different normalizations after the correction in 13299
+    # Before 13299, normalization was not guaranteed.
+    #np.testing.assert_almost_equal(kernel.array[2:-2],
+    #                               np.array([0.05399097, 0.24197072, 0.39894228, 0.24197072, 0.05399097]))
 
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), use_memmap=True)
+    # second test with memmap=True
+    result = cube.spectral_smooth(kernel=kernel, use_memmap=True)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
 def test_catch_kernel_with_units(data_522_delta, use_dask):
@@ -158,19 +183,19 @@ def test_spectral_smooth_4cores(data_522_delta):
 
     cube, data = cube_and_raw(data_522_delta, use_dask=False)
 
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=True)
+    kernel = convolution.Gaussian1DKernel(1.0)
+    result = cube.spectral_smooth(kernel=kernel, num_cores=4, use_memmap=True)
 
+    assert kernel.array.size == 9
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
     # this is one way to test non-parallel mode
-    result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0), num_cores=4, use_memmap=False)
+    result = cube.spectral_smooth(kernel=kernel, num_cores=4, use_memmap=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
     # num_cores = 4 is a contradiction with parallel=False, so we want to make
@@ -180,12 +205,11 @@ def test_spectral_smooth_4cores(data_522_delta):
                                  "multiple cores were: these are incompatible "
                                  "options.  Either specify num_cores=1 or "
                                  "parallel=True")):
-        result = cube.spectral_smooth(kernel=convolution.Gaussian1DKernel(1.0),
+        result = cube.spectral_smooth(kernel=kernel,
                                       num_cores=4, parallel=False)
 
     np.testing.assert_almost_equal(result[:,0,0].value,
-                                   convolution.Gaussian1DKernel(1.0,
-                                                                x_size=5).array,
+                                   kernel.array[2:-2],
                                    4)
 
 
@@ -216,6 +240,47 @@ def test_spectral_interpolate(data_522_delta, use_dask):
                                    [0.0, 0.5, 0.5, 0.0])
 
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
+
+
+def test_spectral_interpolate_varying_chunksize(data_255_delta):
+
+    cube, data = cube_and_raw(data_255_delta, use_dask=True)
+
+    orig_wcs = cube.wcs.deepcopy()
+
+    # midpoint between each position
+    sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
+
+    # Force unequal chunks
+    cube = cube.rechunk((-1, 2, 2))
+
+    result = cube.spectral_interpolate(spectral_grid=sg, force_rechunk=False)
+
+    np.testing.assert_almost_equal(result[:,2,2].value,
+                                   [0.5])
+
+    assert cube.wcs.wcs.compare(orig_wcs.wcs)
+
+    # Ensure the spatial chunk sizes vary
+    assert cube._data.chunks[1] == (2, 2, 1)
+    assert result._data.chunks[1] == (2, 2, 1)
+
+
+def test_spectral_interpolate_rechunk_fail(data_255_delta):
+
+    cube, data = cube_and_raw(data_255_delta, use_dask=True)
+
+    orig_wcs = cube.wcs.deepcopy()
+
+    # midpoint between each position
+    sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1])/2.
+
+    # Force >1 chunk in spectral dimension
+    cube = cube.rechunk((1, -1, -1))
+
+    with pytest.raises(ValueError,
+                       match=("The cube currently has 2 chunks along")):
+        cube.spectral_interpolate(spectral_grid=sg, force_rechunk=False)
 
 
 def test_spectral_interpolate_with_fillvalue(data_522_delta, use_dask):

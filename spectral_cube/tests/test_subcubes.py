@@ -107,7 +107,7 @@ def test_ds9region_255(regfile, data_255, use_dask):
     # specific test for correctness
     cube, data = cube_and_raw(data_255, use_dask=use_dask)
 
-    shapelist = regions.read_ds9(path(regfile))
+    shapelist = regions.Regions.read(path(regfile))
 
     subcube = cube.subcube_from_regions(shapelist)
     assert_array_equal(subcube[0, :, :].value,
@@ -118,8 +118,8 @@ def test_ds9region_255(regfile, data_255, use_dask):
 @pytest.mark.skipif('not regionsOK', reason='Could not import regions')
 @pytest.mark.skipif('not REGIONS_GT_03', reason='regions version should be >= 0.3')
 @pytest.mark.parametrize(('regfile', 'result'),
-                             (('fk5.reg', (slice(None), 1, 1)),
-                              ('fk5_twoboxes.reg', (slice(None), 1, 1)),
+                             (('fk5.reg', (slice(None), 1, slice(None))),
+                              ('fk5_twoboxes.reg', (slice(None), 1, slice(None))),
                               ('image.reg', (slice(None), 1, slice(None))),
                               (
                               'partial_overlap_image.reg', (slice(None), 1, 1)),
@@ -130,13 +130,22 @@ def test_ds9region_255(regfile, data_255, use_dask):
 def test_ds9region_new(regfile, result, data_adv, use_dask):
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
-    regionlist = regions.read_ds9(path(regfile))
+    regionlist = regions.Regions.read(path(regfile))
 
     if isinstance(result, type) and issubclass(result, Exception):
         with pytest.raises(result):
             sc = cube.subcube_from_regions(regionlist)
     else:
         sc = cube.subcube_from_regions(regionlist)
+
+        # Shapes and size should be the same.
+        # squeeze on the cube is b/c is retains dimensions of size 1
+        assert sc.size == data[result].size
+        assert sc.filled_data[:].squeeze().shape == data[result].shape
+
+        # If sizes are the same, values should then be the same.
+        assert (sc.unitless_filled_data[:].squeeze() == data[result]).all()
+
         scsum = sc.sum()
         dsum = data[result].sum()
         assert_allclose(scsum, dsum)
