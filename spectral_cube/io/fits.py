@@ -232,8 +232,13 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
 
         data, wcs = cube_utils._split_stokes(data, wcs)
 
+        # Slice our beam table by the number of velocity channels.
+        # NOTE: we don't currently have a check for the total number of beams matching
+        # nchan * npol. This just assumes that (likely fine in most cases).
+        nchan = data['I'].shape[0]
+
         stokes_data = {}
-        for component in data:
+        for ii, component in enumerate(data):
             comp_data, comp_wcs = cube_utils._orient(data[component], wcs)
             comp_mask = LazyMask(np.isfinite, data=comp_data, wcs=comp_wcs)
             if beam_table is None:
@@ -244,7 +249,7 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
                 stokes_data[component] = VRSC(comp_data, wcs=comp_wcs,
                                               mask=comp_mask, meta=meta,
                                               header=header,
-                                              beam_table=beam_table,
+                                              beam_table=beam_table[nchan*ii:nchan*(ii+1)],
                                               major_unit=beam_units[0],
                                               minor_unit=beam_units[1]
                                              )
