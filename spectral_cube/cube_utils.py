@@ -133,7 +133,9 @@ def _split_stokes(array, wcs, beam_table=None):
     else:
         # 3D array with STOKES as a 4th header parameter
         stokes_arrays['I'] = array
-        beam_tables['I'] = beam_tables
+
+        if beam_table is not None:
+            beam_tables['I'] = beam_table
 
     if beam_table is not None:
         return stokes_arrays, wcs_slice, beam_tables
