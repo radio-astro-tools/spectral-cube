@@ -88,7 +88,7 @@ def load_casa_image(filename, skipdata=False, memmap=True,
         beam_ = {'beams': imageinfo['perplanebeams']}
         beam_['nStokes'] = beam_['beams'].pop('nStokes')
         beam_['nChannels'] = beam_['beams'].pop('nChannels')
-        beam_['beams'] = {key: {'*0': value} for key, value in list(beam_['beams'].items())}
+        # beam_['beams'] = {key: {'*0': value} for key, value in list(beam_['beams'].items())}
     elif 'restoringbeam' in imageinfo:
         beam_ = imageinfo['restoringbeam']
     else:
@@ -105,22 +105,30 @@ def load_casa_image(filename, skipdata=False, memmap=True,
                    )
     elif 'beams' in beam_:
         bdict = beam_['beams']
-        if beam_['nStokes'] > 1:
-            raise NotImplementedError()
+
+        stokes_params = desc['_keywords_']['coords']['stokes1']['stokes']
+
+        # if beam_['nStokes'] > 1:
+        #     raise NotImplementedError()
+
         nbeams = len(bdict)
-        assert nbeams == beam_['nChannels']
-        stokesidx = '*0'
+        nchan = beam_['nChannels']
+        assert nbeams == nchan * beam_['nStokes']
 
-        majors = [u.Quantity(bdict['*{0}'.format(ii)][stokesidx]['major']['value'],
-                             bdict['*{0}'.format(ii)][stokesidx]['major']['unit']) for ii in range(nbeams)]
-        minors = [u.Quantity(bdict['*{0}'.format(ii)][stokesidx]['minor']['value'],
-                             bdict['*{0}'.format(ii)][stokesidx]['minor']['unit']) for ii in range(nbeams)]
-        pas = [u.Quantity(bdict['*{0}'.format(ii)][stokesidx]['positionangle']['value'],
-                          bdict['*{0}'.format(ii)][stokesidx]['positionangle']['unit']) for ii in range(nbeams)]
+        beams = {}
 
-        beams = Beams(major=u.Quantity(majors),
-                      minor=u.Quantity(minors),
-                      pa=u.Quantity(pas))
+        for ii, stokes_name in enumerate(stokes_params):
+
+            majors = [u.Quantity(bdict[f"*{ii*nchan+chan}"]['major']['value'],
+                                bdict[f"*{ii*nchan+chan}"]['major']['unit']) for chan in range(nchan)]
+            minors = [u.Quantity(bdict[f"*{ii*nchan+chan}"]['minor']['value'],
+                                bdict[f"*{ii*nchan+chan}"]['minor']['unit']) for chan in range(nchan)]
+            pas = [u.Quantity(bdict[f"*{ii*nchan+chan}"]['positionangle']['value'],
+                            bdict[f"*{ii*nchan+chan}"]['positionangle']['unit']) for chan in range(nchan)]
+
+            beams[stokes_name] = Beams(major=u.Quantity(majors),
+                                        minor=u.Quantity(minors),
+                                        pa=u.Quantity(pas))
     else:
         warnings.warn("No beam information found in CASA image.",
                       BeamWarning)
@@ -166,7 +174,7 @@ def load_casa_image(filename, skipdata=False, memmap=True,
         if 'beam' in locals():
             cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta, beam=beam)
         elif 'beams' in locals():
-            cube = DaskVaryingResolutionSpectralCube(data, wcs_slice, mask, meta=meta, beams=beams)
+            cube = DaskVaryingResolutionSpectralCube(data, wcs_slice, mask, meta=meta, beams=beams['I'])
         else:
             cube = DaskSpectralCube(data, wcs_slice, mask, meta=meta)
         # with #592, this is no longer true
@@ -197,7 +205,7 @@ def load_casa_image(filename, skipdata=False, memmap=True,
                                                                     wcs_slice,
                                                                     mask[component],
                                                                     meta=meta,
-                                                                    beams=beams)
+                                                                    beams=beams[component])
             else:
                 data[component] = DaskSpectralCube(data_, wcs_slice, mask[component],
                                                    meta=meta)
