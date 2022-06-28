@@ -155,9 +155,9 @@ class TestStokesSpectralCube():
         stokes_data = {'BANANA': SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)}
         with pytest.raises(ValueError) as exc:
             cube = StokesSpectralCube(stokes_data)
-        assert exc.value.args[0] == "Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, \
+        assert exc.value.args[0] == "Invalid Stokes component: BANANA - should be one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, \
                                  RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, \
-                                 RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component)
+                                 RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle"
 
     def test_mask_invalid_shape(self, use_dask):
         stokes_data = dict(I=SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask),
