@@ -147,3 +147,15 @@ def test_aips_beams_units(tmpdir, data_455_degree_beams, use_dask):
     np.testing.assert_almost_equal(c.beams[0].minor.value, 0.1/3600)
     np.testing.assert_almost_equal(c.beams[0].major.to(u.arcsec).value, 0.4)
     np.testing.assert_almost_equal(c.beams[0].minor.to(u.arcsec).value, 0.1)
+
+
+
+def test_vrsc_fullstokes_read_fits(data_advs_beams_fullstokes):
+    '''
+    Test reading a spectral line data cube with full stokes and a beam table.
+    '''
+    c = StokesSpectralCube.read(data_advs_beams_fullstokes)
+
+    for component in ['I', 'Q', 'U', 'V']:
+        assert isinstance(c[component], VaryingResolutionSpectralCube)
+        assert hasattr(c[component], 'beams')

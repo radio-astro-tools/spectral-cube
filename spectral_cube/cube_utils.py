@@ -51,7 +51,7 @@ def _fix_spectral(wcs):
 
     return wcs
 
-def _split_stokes(array, wcs):
+def _split_stokes(array, wcs, beam_table=None):
     """
     Given a 4-d data cube with 4-d WCS (spectral cube + stokes) return a
     dictionary of data and WCS objects for each Stokes component
@@ -64,6 +64,10 @@ def _split_stokes(array, wcs):
     wcs : `~astropy.wcs.WCS`
         The input 3-d WCS with two position dimensions, one spectral
         dimension, and a Stokes dimension.
+    beam_table : `~astropy.io.fits.hdu.table.BinTableHDU`
+        When multiple beams are present, a FITS table with the beam information
+        can be given to be split into the polarization components, consistent with
+        `array`.
     """
 
     if array.ndim not in (3,4):
@@ -109,6 +113,9 @@ def _split_stokes(array, wcs):
 
     stokes_arrays = {}
 
+    if beam_table is not None:
+        beam_tables = {}
+
     wcs_slice = wcs_utils.drop_axis(wcs, wcs.naxis - 1 - stokes_index)
 
     if array.ndim == 4:
@@ -118,11 +125,22 @@ def _split_stokes(array, wcs):
                            for idim in range(array.ndim)]
 
             stokes_arrays[stokes_names[i_stokes]] = array[tuple(array_slice)]
+
+            if beam_table is not None:
+                beam_pol_idx = beam_table['POL'] == i_stokes
+                beam_tables[stokes_names[i_stokes]] = beam_table[beam_pol_idx]
+
     else:
         # 3D array with STOKES as a 4th header parameter
         stokes_arrays['I'] = array
 
-    return stokes_arrays, wcs_slice
+        if beam_table is not None:
+            beam_tables['I'] = beam_table
+
+    if beam_table is not None:
+        return stokes_arrays, wcs_slice, beam_tables
+    else:
+        return stokes_arrays, wcs_slice
 
 
 def _orient(array, wcs):

@@ -230,7 +230,10 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
 
     elif wcs.wcs.naxis == 4:
 
-        data, wcs = cube_utils._split_stokes(data, wcs)
+        if beam_table is None:
+            data, wcs = cube_utils._split_stokes(data, wcs)
+        else:
+            data, wcs, beam_tables = cube_utils._split_stokes(data, wcs, beam_table=beam_table)
 
         stokes_data = {}
         for component in data:
@@ -244,7 +247,7 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
                 stokes_data[component] = VRSC(comp_data, wcs=comp_wcs,
                                               mask=comp_mask, meta=meta,
                                               header=header,
-                                              beam_table=beam_table,
+                                              beam_table=beam_tables[component],
                                               major_unit=beam_units[0],
                                               minor_unit=beam_units[1]
                                              )
