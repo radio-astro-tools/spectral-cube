@@ -68,6 +68,43 @@ def make_casa_testimage(infile, outname):
         ia.close()
         ia.done()
 
+def make_casa_stokes_testimage(infile, outname):
+
+    infile = str(infile)
+    outname = str(outname)
+
+    if not CASA_INSTALLED:
+        raise Exception("Attempted to make a CASA test image in a non-CASA "
+                        "environment")
+
+    ia = image()
+
+    ia.fromfits(infile=infile, outfile=outname, overwrite=True)
+    ia.unlock()
+    ia.close()
+    ia.done()
+
+    cube = StokesSpectralCube.read(infile)
+    if isinstance(cube.I, VaryingResolutionSpectralCube):
+        ia.open(outname)
+
+        # populate restoring beam emptily
+        ia.setrestoringbeam(remove=True)
+
+        for polnum, comp in enumerate(cube.components):
+
+            for channum, beam in enumerate(cube[comp].beams):
+                casabdict = {'major': {'value':beam.major.to(u.deg).value, 'unit':'deg'},
+                            'minor': {'value':beam.minor.to(u.deg).value, 'unit':'deg'},
+                            'positionangle': {'value':beam.pa.to(u.deg).value, 'unit':'deg'}
+                            }
+
+                ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=polnum)
+
+        ia.unlock()
+        ia.close()
+        ia.done()
+
 
 @pytest.fixture
 def filename(request):
@@ -281,3 +318,37 @@ def test_casa_beams(data_adv, data_adv_beams, tmp_path):
 
     assert hasattr(cube_beams, 'beams')
     assert isinstance(cube_beams, VaryingResolutionSpectralCube)
+
+
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
+def test_casa_beams_stokes(data_advs_beams_fullstokes, tmp_path):
+    '''
+    Varying resolution spectral-cube with full Stokes.
+    '''
+
+    # Test both make_casa_testimage and the beam reading tools using casa's
+    # image reader
+
+    cube = StokesSpectralCube.read(data_advs_beams_fullstokes)
+
+    make_casa_stokes_testimage(data_advs_beams_fullstokes,
+                               tmp_path / 'casa_adv_beams_stokes.image')
+
+    casacube = StokesSpectralCube.read(tmp_path / 'casa_adv_beams_stokes.image', format='casa_image')
+
+    for component in 'IQUV':
+
+        cube_component = getattr(cube, component)
+        casacube_component = getattr(casacube, component)
+
+        assert casacube_component.shape == cube_component.shape
+        assert_allclose(casacube_component.unmasked_data[:].value,
+                        cube_component.unmasked_data[:].value)
+
+        assert casacube_component.shape == cube_component.shape
+        assert_allclose(casacube_component.unmasked_data[:].value,
+                        cube_component.unmasked_data[:].value)
+
+        assert casacube_component.beams == cube_component.beams
+
+        assert isinstance(casacube_component, VaryingResolutionSpectralCube)
