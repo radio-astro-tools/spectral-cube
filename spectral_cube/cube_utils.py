@@ -750,3 +750,80 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
     else:
         # Slice along first axis to return a 1D array.
         return factors[0]
+
+def reproject_together(cube1, cube2):
+    '''
+    Two spectral cubes to reproject to the same wcs. 
+
+    Parameters
+    ----------
+    cube1 : SpectralCube
+        A spectral cube.
+    cube2 : SpectralCube
+        A spectral cube.
+
+    Returns
+    -------
+    cube_repr1 : SpectralCube
+        A spectral cube reprojected to the optimal wcs.
+    cube_repr1 : SpectralCube
+        A spectral cube reprojected to the optimal wcs.
+    '''
+    
+    from reproject.mosaicking import find_optimal_celestial_wcs
+    # Get wcs and shape of both cubes
+    w1 = cube1.wcs.celestial
+    s1 = cube1.shape[1:]
+    w2 = cube1.wcs.celestial
+    s2 = cube1.shape[1:]
+    # Get the optimal wcs and shape for both fields together
+    wcs_opt, shape_opt = find_optimal_celestial_wcs([(w1, s1),(w2, s2)], auto_rotate=False)
+    # Make a new header using the optimal wcs and information from cubes
+    header = cube1.header.copy()
+    header['NAXIS'] = 3
+    header['NAXIS1'] = shape_opt[1]
+    header['NAXIS2'] = shape_opt[0]
+    header['NAXIS3'] = cube1.shape[0]
+    header.update(wcs_opt.to_header())
+    header['WCSAXES'] = 3
+    # Reproject both cubes with the same header. 
+    cube1.allow_huge_operations=True
+    cube_repr1 = cube1.reproject(header, block_size=[100,cube1.shape[1], cube1.shape[2]])
+    cube_repr2 = cube2.reproject(header, block_size=[100,cube2.shape[1], cube2.shape[2]])
+    return cube_repr1, cube_repr2
+
+def mosaic(cube1, cube2):
+    '''
+    Two spectral cubes to mosaic together. 
+
+    Parameters
+    ----------
+    cube1 : SpectralCube
+        A spectral cube.
+    cube2 : SpectralCube
+        A spectral cube.
+
+    Outputs
+    -------
+    cube : SpectralCube
+        A spectral cube with the two input cubes mosaicked together.
+    '''
+    
+    # Reproject cubes to the same WCS
+    cube_repr1, cube_repr2 = reproject_together(cube1, cube2)
+    # Prepare an array for the final cube
+    final_array = np.zeros(cube_repr1.shape)
+    # Create weighting mask
+    mask1 = cube_repr1[0:1].get_mask_array()[0]
+    mask2 = cube_repr2[0:1].get_mask_array()[0]
+    mask_opt = mask1.astype(float)+mask2.astype(float)
+    # Dividing by the mask throws errors where it is zero
+    with np.errstate(divide='ignore'): 
+        # Go through each slice and add it to the final array, dividing by the weighting mask.
+        for s in range(final_array.shape[0]):
+            slice1 = np.nan_to_num(cube_repr1[s])
+            slice2 = np.nan_to_num(cube_repr2[s])
+            final_array[s] = np.divide(np.add(slice1, slice2),mask_opt)
+    # Create cube 
+    cube = SpectralCube(data=final_array*cube_repr1.unit, wcs=wcs.WCS(header))  
+    return cube
