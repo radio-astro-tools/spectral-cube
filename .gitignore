@@ -60,3 +60,4 @@ docs/api
 */cython_version.py
 
 .tmp
+spectral_cube/.ipynb_checkpoints/cube_utils-checkpoint.py

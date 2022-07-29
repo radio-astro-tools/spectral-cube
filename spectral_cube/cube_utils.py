@@ -753,7 +753,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
 
 def reproject_together(cube1, cube2):
     '''
-    Two spectral cubes to reproject to the same wcs. 
+    Given two spectral cubes, this function returns a fits Header of the optimal wcs. 
 
     Parameters
     ----------
@@ -764,20 +764,22 @@ def reproject_together(cube1, cube2):
 
     Returns
     -------
-    cube_repr1 : SpectralCube
-        A spectral cube reprojected to the optimal wcs.
-    cube_repr1 : SpectralCube
-        A spectral cube reprojected to the optimal wcs.
+    header : astropy.io.fits.Header
+        A header object of a field containing both cubes. 
+        
     '''
     
     from reproject.mosaicking import find_optimal_celestial_wcs
+    
     # Get wcs and shape of both cubes
     w1 = cube1.wcs.celestial
     s1 = cube1.shape[1:]
     w2 = cube1.wcs.celestial
     s2 = cube1.shape[1:]
+    
     # Get the optimal wcs and shape for both fields together
-    wcs_opt, shape_opt = find_optimal_celestial_wcs([(w1, s1),(w2, s2)], auto_rotate=False)
+    wcs_opt, shape_opt = find_optimal_celestial_wcs([(w1, s1), (w2, s2)], auto_rotate=False)
+    
     # Make a new header using the optimal wcs and information from cubes
     header = cube1.header.copy()
     header['NAXIS'] = 3
@@ -786,15 +788,11 @@ def reproject_together(cube1, cube2):
     header['NAXIS3'] = cube1.shape[0]
     header.update(wcs_opt.to_header())
     header['WCSAXES'] = 3
-    # Reproject both cubes with the same header. 
-    cube1.allow_huge_operations=True
-    cube_repr1 = cube1.reproject(header, block_size=[100,cube1.shape[1], cube1.shape[2]])
-    cube_repr2 = cube2.reproject(header, block_size=[100,cube2.shape[1], cube2.shape[2]])
-    return cube_repr1, cube_repr2
+    return header 
 
-def mosaic(cube1, cube2):
+def mosaic_cubes(cube1, cube2, spectral_block_size=100):
     '''
-    Two spectral cubes to mosaic together. 
+    This function projects two cubes onto a common grid and combines them to a single field.  
 
     Parameters
     ----------
@@ -810,20 +808,29 @@ def mosaic(cube1, cube2):
     '''
     
     # Reproject cubes to the same WCS
-    cube_repr1, cube_repr2 = reproject_together(cube1, cube2)
+    header = reproject_together(cube1, cube2)
+    cube1.allow_huge_operations = True
+    cube2.allow_huge_operations = True
+    cube_repr1 = cube1.reproject(header, block_size=[spectral_block_size, cube1.shape[1], cube1.shape[2]])
+    cube_repr2 = cube2.reproject(header, block_size=[spectral_block_size, cube2.shape[1], cube2.shape[2]])
+    
     # Prepare an array for the final cube
     final_array = np.zeros(cube_repr1.shape)
+    
     # Create weighting mask
     mask1 = cube_repr1[0:1].get_mask_array()[0]
     mask2 = cube_repr2[0:1].get_mask_array()[0]
     mask_opt = mask1.astype(float)+mask2.astype(float)
+    
     # Dividing by the mask throws errors where it is zero
     with np.errstate(divide='ignore'): 
+        
         # Go through each slice and add it to the final array, dividing by the weighting mask.
-        for s in range(final_array.shape[0]):
-            slice1 = np.nan_to_num(cube_repr1[s])
-            slice2 = np.nan_to_num(cube_repr2[s])
-            final_array[s] = np.divide(np.add(slice1, slice2),mask_opt)
+        for ii in range(final_array.shape[0]):
+            slice1 = np.nan_to_num(cube_repr1[ii])
+            slice2 = np.nan_to_num(cube_repr2[ii])
+            final_array[ii] = np.divide(np.add(slice1, slice2), mask_opt)
+    
     # Create cube 
     cube = SpectralCube(data=final_array*cube_repr1.unit, wcs=wcs.WCS(header))  
     return cube
