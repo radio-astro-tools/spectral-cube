@@ -791,47 +791,59 @@ def combine_headers(header1, header2):
     header['WCSAXES'] = 3
     return header 
 
-def mosaic_cubes(cube1, cube2, spectral_block_size=100):
+def mosaic_cubes(cubes, spectral_block_size=100):
     '''
-    This function projects two cubes onto a common grid and combines them to a single field.  
+    This function reprojects cubes onto a common grid and combines them to a single field.  
 
     Parameters
     ----------
-    cube1 : SpectralCube
-        A spectral cube.
-    cube2 : SpectralCube
-        A spectral cube.
+    cubes : iterable
+        Iterable list of SpectralCube objects to reproject and add together. 
+    spectral_block_size : int
+        Block size so that reproject does not run out of memory. 
 
     Outputs
     -------
     cube : SpectralCube
-        A spectral cube with the two input cubes mosaicked together.
+        A spectral cube with the list of cubes mosaicked together.
     '''
     
-    # Reproject cubes to the same WCS
-    header = reproject_together(cube1.header, cube2.header)
+    cube1 = cubes[0]
     cube1.allow_huge_operations = True
-    cube2.allow_huge_operations = True
-    cube_repr1 = cube1.reproject(header, block_size=[spectral_block_size, cube1.shape[1], cube1.shape[2]])
-    cube_repr2 = cube2.reproject(header, block_size=[spectral_block_size, cube2.shape[1], cube2.shape[2]])
+    header = cube1.header
     
-    # Prepare an array for the final cube
-    final_array = np.zeros(cube_repr1.shape)
+    # Create a header for a field containing all cubes
+    for cu in cubes[1:]: 
+        header = reproject_together(header, cu.header)
     
-    # Create weighting mask
-    mask1 = cube_repr1[0:1].get_mask_array()[0]
-    mask2 = cube_repr2[0:1].get_mask_array()[0]
-    mask_opt = mask1.astype(float)+mask2.astype(float)
+    # Prepare an array and mask for the final cube
+    shape_opt = (header['NAXIS3'],header['NAXIS2'],header['NAXIS1'])
+    final_array = np.zeros(shape_opt)
+    mask_opt = np.zeros(shape_opt[1:])
     
-    # Dividing by the mask throws errors where it is zero
-    with np.errstate(divide='ignore'): 
+    for cube in cubes:
+        # Reproject cubes to the header
+        cube_repr = cube.reproject(header, block_size=[spectral_block_size, cube.shape[1], cube.shape[2]])
         
-        # Go through each slice and add it to the final array, dividing by the weighting mask.
-        for ii in range(final_array.shape[0]):
-            slice1 = np.nan_to_num(cube_repr1[ii])
-            slice2 = np.nan_to_num(cube_repr2[ii])
-            final_array[ii] = np.divide(np.add(slice1, slice2), mask_opt)
+        # Create weighting mask
+        mask = (cube_repr[0:1].get_mask_array()[0])
+        mask_opt += mask.astype(float)
+        
+        mask_comb = mask_opt>0 
+        
+        # Dividing by the mask throws errors where it is zero
+        with np.errstate(divide='ignore'):
+        
+            # Go through each slice of the cube, add it to the final array, and mask 0's
+            for ii in range(final_array.shape[0]):
+                slice1 = np.nan_to_num(cube_repr[ii])
+                slice2 = np.nan_to_num(final_array[ii])
+                final_array[ii] = np.divide(np.add(final_array[ii], slice1), mask_comb)
     
-    # Create cube 
-    cube = SpectralCube(data=final_array*cube_repr1.unit, wcs=wcs.WCS(header))  
+    # Use weighting mask to average where cubes overlap
+    for ss in range(final_array.shape[0]):
+        final_array[ss] = np.divide(final_array[ss], mask_opt)
+      
+    # Create Cube
+    cube = SpectralCube(data=final_array*cube1.unit, wcs=wcs.WCS(header))  
     return cube
