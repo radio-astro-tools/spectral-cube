@@ -421,7 +421,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                     self.FITSFigure.add_colorbar()
                 if filename is not None:
                     self.FITSFigure.save(filename)
-            except (wcs.InconsistentAxisTypesError, ImportError):
+            except Exception as e:
+                print("Encountered errors when creating image:", e)
                 self._quicklook_mpl(filename=filename)
         else:
             self._quicklook_mpl(filename=filename)
