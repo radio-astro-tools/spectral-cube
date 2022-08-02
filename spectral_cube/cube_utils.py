@@ -14,6 +14,7 @@ import dask.array as da
 import numpy as np
 from astropy.wcs.utils import proj_plane_pixel_area
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
+from astropy.wcs import WCS
 from . import wcs_utils
 from .utils import FITSWarning, AstropyUserWarning, WCSCelestialError
 from astropy import log
@@ -751,41 +752,41 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         # Slice along first axis to return a 1D array.
         return factors[0]
 
-def reproject_together(cube1, cube2):
+def combine_headers(header1, header2):
     '''
-    Given two spectral cubes, this function returns a fits Header of the optimal wcs. 
+    Given two Header objects, this function returns a fits Header of the optimal wcs. 
 
     Parameters
     ----------
-    cube1 : SpectralCube
-        A spectral cube.
-    cube2 : SpectralCube
-        A spectral cube.
+    header1 : astropy.io.fits.Header
+        A Header.
+    header2 : astropy.io.fits.Header
+        A Header.
 
     Returns
     -------
     header : astropy.io.fits.Header
-        A header object of a field containing both cubes. 
+        A header object of a field containing both initial headers. 
         
     '''
     
     from reproject.mosaicking import find_optimal_celestial_wcs
     
-    # Get wcs and shape of both cubes
-    w1 = cube1.wcs.celestial
-    s1 = cube1.shape[1:]
-    w2 = cube1.wcs.celestial
-    s2 = cube1.shape[1:]
+    # Get wcs and shape of both headers
+    w1 = WCS(header1)
+    s1 = (header1['NAXIS2'],header1['NAXIS1'])
+    w2 = WCS(header2)
+    s2 = (header2['NAXIS2'],header2['NAXIS1'])
     
     # Get the optimal wcs and shape for both fields together
     wcs_opt, shape_opt = find_optimal_celestial_wcs([(w1, s1), (w2, s2)], auto_rotate=False)
     
     # Make a new header using the optimal wcs and information from cubes
-    header = cube1.header.copy()
+    header = header1.copy()
     header['NAXIS'] = 3
     header['NAXIS1'] = shape_opt[1]
     header['NAXIS2'] = shape_opt[0]
-    header['NAXIS3'] = cube1.shape[0]
+    header['NAXIS3'] = header1['NAXIS3']
     header.update(wcs_opt.to_header())
     header['WCSAXES'] = 3
     return header 
@@ -808,7 +809,7 @@ def mosaic_cubes(cube1, cube2, spectral_block_size=100):
     '''
     
     # Reproject cubes to the same WCS
-    header = reproject_together(cube1, cube2)
+    header = reproject_together(cube1.header, cube2.header)
     cube1.allow_huge_operations = True
     cube2.allow_huge_operations = True
     cube_repr1 = cube1.reproject(header, block_size=[spectral_block_size, cube1.shape[1], cube1.shape[2]])
