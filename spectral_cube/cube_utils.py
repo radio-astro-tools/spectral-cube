@@ -835,21 +835,20 @@ def mosaic_cubes(cubes, spectral_block_size=100):
         # Create weighting mask
         mask = (cube_repr[0:1].get_mask_array()[0])
         mask_opt += mask.astype(float)
-        
-        mask_comb = mask_opt>0 
-        
-        # Dividing by the mask throws errors where it is zero
-        with np.errstate(divide='ignore'):
-        
-            # Go through each slice of the cube, add it to the final array, and mask 0's
-            for ii in range(final_array.shape[0]):
-                slice1 = np.nan_to_num(cube_repr[ii])
-                slice2 = np.nan_to_num(final_array[ii])
-                final_array[ii] = np.divide(np.add(final_array[ii], slice1), mask_comb)
+                
+        # Go through each slice of the cube, add it to the final array
+        for ii in range(final_array.shape[0]):
+            slice1 = np.nan_to_num(cube_repr[ii])
+            slice2 = final_array[ii]
+            final_array[ii] = np.add(final_array[ii], slice1)
     
-    # Use weighting mask to average where cubes overlap
-    for ss in range(final_array.shape[0]):
-        final_array[ss] = np.divide(final_array[ss], mask_opt)
+    
+    # Dividing by the mask throws errors where it is zero
+    with np.errstate(divide='ignore'):
+        
+        # Use weighting mask to average where cubes overlap
+        for ss in range(final_array.shape[0]):
+            final_array[ss] = np.divide(final_array[ss], mask_opt)
       
     # Create Cube
     cube = SpectralCube(data=final_array*cube1.unit, wcs=wcs.WCS(header))  
