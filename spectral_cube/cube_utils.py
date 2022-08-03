@@ -814,7 +814,7 @@ def mosaic_cubes(cubes, spectral_block_size=100):
     
     # Create a header for a field containing all cubes
     for cu in cubes[1:]: 
-        header = reproject_together(header, cu.header)
+        header = combine_headers(header, cu.header)
     
     # Prepare an array and mask for the final cube
     shape_opt = (header['NAXIS3'],header['NAXIS2'],header['NAXIS1'])
