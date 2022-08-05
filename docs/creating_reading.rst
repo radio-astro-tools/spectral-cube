@@ -35,6 +35,60 @@ accessing other Stokes parameters, see :doc:`stokes`.
           files. See the :doc:`big_data` page for more details about dealing
           with large data sets.
 
+
+Reading images from file
+------------------------
+
+While spectral-cube is designed for cube analysis, in the course of normal
+analysis procedures you are likely to need to load up one- and two-dimensional
+subsets or views of the data.
+
+You can load :class:`~spectral_cube.lower_dimensional_objects.Projection`
+objects from FITS HDU objects with
+:meth:`~spectral_cube.lower_dimensional_objects.Projection.from_hdu`.  Only
+FITS reading is supported::
+
+    >>> from astropy.io import fits  # doctest: +SKIP
+    >>> hdul = fits.open('file.fits')
+    >>> projection = Projection.from_hdu(hdul)
+
+Note that if you pass in a :class:`astropy.io.fits.HDUList` object, data will be loaded
+from the first HDU; this can be overridden with the ``ext`` keyword.
+
+The resulting :class:`~spectral_cube.lower_dimensional_objects.Projection`
+object will have ``.unit``, ``.wcs``, and (if available) ``.beam`` attributes.
+
+If you are working with two dimensional data that have "dummy" third dimensions,
+you may load them using the normal :meth:`~spectral_cube.SpectralCube.read` method.
+This case is common as such files are normally output from CASA using
+``exportfits`` with no additional keywords.  To get a 2D slice, you simply index the
+result::
+
+    >>> flat_cube = SpectralCube.read('casa_exported_file.fits')  # doctest: +SKIP
+    >>> image = flat_cube[0]
+
+
+Reading spectra from file
+-------------------------
+
+Similar to 2D objects (images), you may want to load 1D slices - spectra - from disk.
+
+
+You can load :class:`~spectral_cube.lower_dimensional_objects.OneDSpectrum`
+objects from FITS HDU objects with
+:meth:`~spectral_cube.lower_dimensional_objects.OneDSpectrum.from_hdu`.  As with
+projections, only
+FITS reading is supported::
+
+    >>> from astropy.io import fits  # doctest: +SKIP
+    >>> hdul = fits.open('file.fits')
+    >>> projection = OneDSpectrum.from_hdu(hdul)
+
+The spectrum loader only works for 1D spectra with valid FITS WCS in their
+headers.  For other types of spectra, you may want to use `specutils
+<https://specutils.readthedocs.io/en/stable/>`_ instead.
+
+
 Direct Initialization
 ---------------------
 
