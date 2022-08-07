@@ -44,7 +44,7 @@ analysis procedures you are likely to need to load up one- and two-dimensional
 subsets or views of the data.
 
 You can load :class:`~spectral_cube.lower_dimensional_objects.Projection`
-objects from FITS HDU objects with
+objects from 2D FITS HDU objects with
 :meth:`~spectral_cube.lower_dimensional_objects.Projection.from_hdu`.  Only
 FITS reading is supported::
 
