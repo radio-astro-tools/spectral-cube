@@ -628,6 +628,12 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
     def from_hdu(hdu, ext=0):
         '''
         Return a OneDSpectrum from a FITS HDU or HDU list.
+    Parameters
+    -----------
+    ext : int
+        The integer index to load when given an :class:`astropy.io.fits.HDUList`.
+        Default is 0 (the first HDU in the list.
+
         '''
 
         if isinstance(hdu, HDUList):
