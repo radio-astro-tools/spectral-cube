@@ -367,13 +367,20 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         return newproj
 
     @staticmethod
-    def from_hdu(hdu):
+    def from_hdu(hdu, ext=0):
         '''
         Return a projection from a FITS HDU.
+
+        Parameters
+        -----------
+        ext : int
+            The integer index to load when given an :class:`astropy.io.fits.HDUList`.
+            Default is 0 (the first HDU in the list.
+
         '''
         if isinstance(hdu, HDUList):
             hdul = hdu
-            hdu = hdul[0]
+            hdu = hdul[ext]
 
         if not len(hdu.data.shape) == 2:
             raise ValueError("HDU must contain two-dimensional data.")
@@ -625,14 +632,21 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         return '{0}{1}{2:s}>'.format(prefixstr, arrstr, self._unitstr)
 
     @staticmethod
-    def from_hdu(hdu):
+    def from_hdu(hdu, ext=0):
         '''
         Return a OneDSpectrum from a FITS HDU or HDU list.
+
+        Parameters
+        -----------
+        ext : int
+            The integer index to load when given an :class:`astropy.io.fits.HDUList`.
+            Default is 0 (the first HDU in the list.
+
         '''
 
         if isinstance(hdu, HDUList):
             hdul = hdu
-            hdu = hdul[0]
+            hdu = hdul[ext]
         else:
             hdul = HDUList([hdu])
 
