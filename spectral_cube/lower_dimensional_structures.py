@@ -370,11 +370,12 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
     def from_hdu(hdu, ext=0):
         '''
         Return a projection from a FITS HDU.
-    Parameters
-    -----------
-    ext : int
-        The integer index to load when given an :class:`astropy.io.fits.HDUList`.
-        Default is 0 (the first HDU in the list.
+
+        Parameters
+        -----------
+        ext : int
+            The integer index to load when given an :class:`astropy.io.fits.HDUList`.
+            Default is 0 (the first HDU in the list.
 
         '''
         if isinstance(hdu, HDUList):
