@@ -53,7 +53,7 @@ FITS reading is currently supported::
     >>> projection = Projection.from_hdu(hdul)
 
 Note that if you pass in a :class:`astropy.io.fits.HDUList` object, by default the data will be loaded
-from the first HDU; this can be overridden with the ``ext`` keyword.
+from the first HDU. To load a different HDU in the list, the index can be passed to the ``ext`` keyword (e.g., `ext=1` to load the second HDU in the list).
 
 The resulting :class:`~spectral_cube.lower_dimensional_objects.Projection`
 object will have ``.unit``, ``.wcs``, and (if available) ``.beam`` attributes.
