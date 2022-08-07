@@ -46,7 +46,7 @@ subsets or views of the data.
 You can load :class:`~spectral_cube.lower_dimensional_objects.Projection`
 objects from 2D FITS HDU objects with
 :meth:`~spectral_cube.lower_dimensional_objects.Projection.from_hdu`.  Only
-FITS reading is supported::
+FITS reading is currently supported::
 
     >>> from astropy.io import fits  # doctest: +SKIP
     >>> hdul = fits.open('file.fits')
