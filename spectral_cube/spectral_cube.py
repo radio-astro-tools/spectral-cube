@@ -2610,7 +2610,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     @warn_slow
     def reproject(self, header, order='bilinear', use_memmap=False,
-                  filled=True):
+                  filled=True, **kwargs):
         """
         Spatially reproject the cube into a new header.  Fills the data with
         the cube's ``fill_value`` to replace bad values before reprojection.
@@ -2647,6 +2647,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             reprojection?  Note that setting ``filled=False`` will use the raw
             data array, which can be a workaround that prevents loading large
             data into memory.
+        kwargs : dict
+            Passed to `reproject.reproject_interp`.
         """
 
         try:
@@ -2655,15 +2657,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             raise ImportError("Requires the reproject package to be"
                               " installed.")
 
+        reproj_kwargs = kwargs
         # Need version > 0.2 to work with cubes, >= 0.5 for memmap
         from distutils.version import LooseVersion
         if LooseVersion(version) < "0.5":
             raise Warning("Requires version >=0.5 of reproject. The current "
                           "version is: {}".format(version))
         elif LooseVersion(version) >= "0.6":
-            reproj_kwargs = {}
+            pass # no additional kwargs, no warning either
         else:
-            reproj_kwargs = {'independent_celestial_slices': True}
+            reproj_kwargs['independent_celestial_slices'] = True
 
         from reproject import reproject_interp
 
