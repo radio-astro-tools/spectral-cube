@@ -585,3 +585,22 @@ def test_reproject_3D_memory():
 
     assert result.wcs.wcs.crval[0] == 0.001
     assert result.wcs.wcs.crpix[0] == 2.
+
+    @pytest.mark.parametrize('use_memmap', (True, False))
+def test_mosaic_cubes(use_memmap, data_adv, use_dask):
+    # Read in data to use
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+    
+    # Make two overlapping cubes of the data
+    part1 = cube[:, :round(cube.shape[1]*2./3.),:]
+    part2 = cube[:, round(cube.shape[1]/3.):,:]
+    
+    result = mosaic_cubes([part1, part2])
+    
+    # Check that the shapes are the same
+    assert result.shape == cube.shape 
+    # Check WCS in reprojected matches wcs_out
+    assert (cube).wcs.compare(result.wcs.wcs)
+    # Check that values of original and result are comaprable
+    np.testing.assert_almost_equal(result.filled_data[:], cube.filled_data[:])
+    
