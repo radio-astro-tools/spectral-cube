@@ -824,7 +824,7 @@ def mosaic_cubes(cubes, spectral_block_size=100):
         header = combine_headers(header, cu.header)
     
     # Prepare an array and mask for the final cube
-    shape_opt = (header['NAXIS3'],header['NAXIS2'],header['NAXIS1'])
+    shape_opt = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
     final_array = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
     
