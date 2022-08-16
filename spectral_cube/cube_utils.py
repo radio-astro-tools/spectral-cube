@@ -847,7 +847,7 @@ def mosaic_cubes(cubes, spectral_block_size=100):
         
         # Use weighting mask to average where cubes overlap
         for ss in range(final_array.shape[0]):
-            final_array[ss] = np.divide(final_array[ss], mask_opt)
+            final_array[ss] /= mask_opt
       
     # Create Cube
     cube = SpectralCube(data=final_array*cube1.unit, wcs=wcs.WCS(header))  
