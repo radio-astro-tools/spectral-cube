@@ -603,4 +603,3 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask):
     assert cube.wcs.compare(result.wcs.wcs)
     # Check that values of original and result are comaprable
     np.testing.assert_almost_equal(result.filled_data[:], cube.filled_data[:])
-    
