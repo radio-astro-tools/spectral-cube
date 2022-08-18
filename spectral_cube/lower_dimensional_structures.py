@@ -417,12 +417,10 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                                                        **aplpy_kwargs)
 
                 self.FITSFigure.show_grayscale()
-                if not hasattr(self, 'colorbar'):
-                    self.FITSFigure.add_colorbar()
+                self.FITSFigure.add_colorbar()
                 if filename is not None:
                     self.FITSFigure.save(filename)
-            except Exception as e:
-                print("Encountered errors when creating image:", e)
+            except (wcs.InconsistentAxisTypesError, ImportError):
                 self._quicklook_mpl(filename=filename)
         else:
             self._quicklook_mpl(filename=filename)
