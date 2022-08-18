@@ -838,7 +838,7 @@ def mosaic_cubes(cubes, spectral_block_size=100):
         # Go through each slice of the cube, add it to the final array
         for ii in range(final_array.shape[0]):
             slice1 = np.nan_to_num(cube_repr[ii])
-            final_array[ii] += slice1
+            final_array[ii] = final_array[ii] + slice1
     
     
     # Dividing by the mask throws errors where it is zero
