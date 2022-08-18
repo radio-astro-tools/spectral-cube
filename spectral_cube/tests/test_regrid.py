@@ -586,7 +586,7 @@ def test_reproject_3D_memory():
     assert result.wcs.wcs.crval[0] == 0.001
     assert result.wcs.wcs.crpix[0] == 2.
 
-    @pytest.mark.parametrize('use_memmap', (True, False))
+@pytest.mark.parametrize('use_memmap', (True, False))
 def test_mosaic_cubes(use_memmap, data_adv, use_dask):
     # Read in data to use
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
