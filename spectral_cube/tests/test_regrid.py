@@ -26,10 +26,10 @@ from radio_beam import beam, Beam
 
 from .. import SpectralCube
 from ..utils import WCSCelestialError
+from ..cube_utils import mosaic_cubes
 from .test_spectral_cube import cube_and_raw
 from .test_projection import load_projection
 from . import path, utilities
-import mosaic_cubes
 
 WINDOWS = sys.platform == "win32"
 
