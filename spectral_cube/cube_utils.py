@@ -854,5 +854,6 @@ def mosaic_cubes(cubes, spectral_block_size=100):
             final_array[ss] /= mask_opt
       
     # Create Cube
-    cube = SpectralCube(data=final_array*cube1.unit, wcs=wcs.WCS(header))  
+    # TODO: this should use the same cube type as cube1
+    cube = cube1.__class__(data=final_array*cube1.unit, wcs=WCS(header))  
     return cube
