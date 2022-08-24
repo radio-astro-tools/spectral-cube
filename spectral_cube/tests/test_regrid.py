@@ -590,7 +590,7 @@ def test_reproject_3D_memory():
 @pytest.mark.parametrize('use_memmap', (True, False))
 def test_mosaic_cubes(use_memmap, data_adv, use_dask):
 
-   pytest.importorskip('reproject')
+    pytest.importorskip('reproject')
 
     # Read in data to use
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
