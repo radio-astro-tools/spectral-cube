@@ -604,6 +604,6 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask):
     # Check that the shapes are the same
     assert result.shape == cube.shape 
     # Check WCS in reprojected matches wcs_out
-    assert cube.wcs.compare(result.wcs.wcs)
+    assert cube.wcs.wcs.compare(result.wcs.wcs)
     # Check that values of original and result are comaprable
     np.testing.assert_almost_equal(result.filled_data[:], cube.filled_data[:])
