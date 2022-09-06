@@ -772,17 +772,10 @@ def combine_headers(header1, header2):
     
     from reproject.mosaicking import find_optimal_celestial_wcs
     
-    head1 = header1.copy()
-    head1['NAXIS'] = 2
-    del head1['NAXIS3']
-    head2 = header2.copy()
-    head2['NAXIS'] = 2
-    del head2['NAXIS3']
-    
     # Get wcs and shape of both headers
-    w1 = WCS(head1, naxis=2)
+    w1 = WCS(header1).celestial
     s1 = w1.array_shape
-    w2 = WCS(head2, naxis=2)
+    w2 = WCS(header2).celestial
     s2 = w2.array_shape
     
     # Get the optimal wcs and shape for both fields together
@@ -796,7 +789,7 @@ def combine_headers(header1, header2):
     header['NAXIS3'] = header1['NAXIS3']
     header.update(wcs_opt.to_header())
     header['WCSAXES'] = 3
-    return header 
+    return header
 
 def mosaic_cubes(cubes, spectral_block_size=100):
     '''
