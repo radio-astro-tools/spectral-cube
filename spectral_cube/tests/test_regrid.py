@@ -594,7 +594,7 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask):
 
     # Read in data to use
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
-    
+
     from reproject.mosaicking import find_optimal_celestial_wcs
 
     expected_wcs = WCS(combine_headers(cube.header, cube.header)).celestial
@@ -602,9 +602,9 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask):
     # Make two overlapping cubes of the data
     part1 = cube[:, :round(cube.shape[1]*2./3.),:]
     part2 = cube[:, round(cube.shape[1]/3.):,:]
-    
+
     result = mosaic_cubes([part1, part2])
-    
+
     # Check that the shapes are the same
     assert result.shape == cube.shape 
 

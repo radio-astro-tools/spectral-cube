@@ -767,20 +767,20 @@ def combine_headers(header1, header2):
     -------
     header : astropy.io.fits.Header
         A header object of a field containing both initial headers. 
-        
+
     '''
-    
+
     from reproject.mosaicking import find_optimal_celestial_wcs
-    
+
     # Get wcs and shape of both headers
     w1 = WCS(header1).celestial
     s1 = w1.array_shape
     w2 = WCS(header2).celestial
     s2 = w2.array_shape
-    
+
     # Get the optimal wcs and shape for both fields together
     wcs_opt, shape_opt = find_optimal_celestial_wcs([(s1, w1), (s2, w2)], auto_rotate=False)
-    
+
     # Make a new header using the optimal wcs and information from cubes
     header = header1.copy()
     header['NAXIS'] = 3
@@ -807,19 +807,19 @@ def mosaic_cubes(cubes, spectral_block_size=100):
     cube : SpectralCube
         A spectral cube with the list of cubes mosaicked together.
     '''
-    
+
     cube1 = cubes[0]
     header = cube1.header
-    
+
     # Create a header for a field containing all cubes
     for cu in cubes[1:]: 
         header = combine_headers(header, cu.header)
-    
+
     # Prepare an array and mask for the final cube
     shape_opt = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
     final_array = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
-    
+
     for cube in cubes:
         # Reproject cubes to the header
         try:
@@ -828,24 +828,22 @@ def mosaic_cubes(cubes, spectral_block_size=100):
             warnings.warn("The block_size argument is not accepted by `reproject`.  A more recent version may be needed.")
             cube_repr = cube.reproject(header)
 
-        
         # Create weighting mask
         mask = (cube_repr[0:1].get_mask_array()[0])
         mask_opt += mask.astype(float)
-                
+
         # Go through each slice of the cube, add it to the final array
         for ii in range(final_array.shape[0]):
             slice1 = np.nan_to_num(cube_repr[ii])
             final_array[ii] = final_array[ii] + slice1
-    
-    
+
     # Dividing by the mask throws errors where it is zero
     with np.errstate(divide='ignore'):
-        
+
         # Use weighting mask to average where cubes overlap
         for ss in range(final_array.shape[0]):
             final_array[ss] /= mask_opt
-      
+
     # Create Cube
     # TODO: this should use the same cube type as cube1
     cube = cube1.__class__(data=final_array*cube1.unit, wcs=WCS(header))  
