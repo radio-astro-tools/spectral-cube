@@ -789,7 +789,7 @@ def combine_headers(header1, header2):
     header['NAXIS3'] = header1['NAXIS3']
     header.update(wcs_opt.to_header())
     header['WCSAXES'] = 3
-    return header 
+    return header
 
 def mosaic_cubes(cubes, spectral_block_size=100):
     '''
