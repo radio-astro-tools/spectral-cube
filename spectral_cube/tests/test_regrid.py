@@ -598,24 +598,6 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask):
     from reproject.mosaicking import find_optimal_celestial_wcs
 
     expected_wcs = WCS(combine_headers(cube.header, cube.header)).celestial
-    # expected_wcs, expected_spatial_shape = find_optimal_celestial_wcs([(cube.shape[:2], cube.wcs.celestial)])
-    # # hack: dateobs is part of the wcs comparison
-    # expected_wcs.wcs.dateobs = cube.wcs.wcs.dateobs
-    # expected_wcs.wcs.mjdobs = cube.wcs.wcs.mjdobs
-    # expected_wcs.wcs.restfrq = cube.wcs.wcs.restfrq
-    # expected_wcs.wcs.specsys = cube.wcs.wcs.specsys
-
-    # # Follow the same approach as combine_headers to make the WCS so we don't
-    # # drop any relevant keywords
-    # header = cube.header
-    # header['NAXIS'] = 3
-    # header['NAXIS1'] = shape_opt[1]
-    # header['NAXIS2'] = shape_opt[0]
-    # header['NAXIS3'] = header1['NAXIS3']
-    # header.update(expected_wcs)
-    # header['WCSAXES'] = 3
-    # expected_wcs = wcs.WCS(header)
-
 
     # Make two overlapping cubes of the data
     part1 = cube[:, :round(cube.shape[1]*2./3.),:]
@@ -625,15 +607,6 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask):
     
     # Check that the shapes are the same
     assert result.shape == cube.shape 
-
-    for attr in dir(expected_wcs.wcs):
-        if attr[0] == '_':
-            continue
-        try:
-            print(attr, getattr(expected_wcs.wcs, attr), getattr(result.wcs.celestial.wcs, attr))
-            print(attr, getattr(expected_wcs.wcs, attr) == getattr(result.wcs.celestial.wcs, attr))
-        except Exception as ex:
-            print(ex)
 
     # Check WCS in reprojected matches wcs_out
     # (comparing WCS failed for no reason we could discern)
