@@ -791,7 +791,7 @@ def combine_headers(header1, header2):
     header['WCSAXES'] = 3
     return header
 
-def mosaic_cubes(cubes, spectral_block_size=100):
+def mosaic_cubes(cubes, spectral_block_size=100, **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.  
 
@@ -812,7 +812,7 @@ def mosaic_cubes(cubes, spectral_block_size=100):
     header = cube1.header
 
     # Create a header for a field containing all cubes
-    for cu in cubes[1:]: 
+    for cu in cubes[1:]:
         header = combine_headers(header, cu.header)
 
     # Prepare an array and mask for the final cube
@@ -823,10 +823,10 @@ def mosaic_cubes(cubes, spectral_block_size=100):
     for cube in cubes:
         # Reproject cubes to the header
         try:
-            cube_repr = cube.reproject(header, block_size=[spectral_block_size, cube.shape[1], cube.shape[2]], order='nearest-neighbor')
+            cube_repr = cube.reproject(header, block_size=[spectral_block_size, cube.shape[1], cube.shape[2]], **kwargs)
         except TypeError:
             warnings.warn("The block_size argument is not accepted by `reproject`.  A more recent version may be needed.")
-            cube_repr = cube.reproject(header, order='nearest-neighbor')
+            cube_repr = cube.reproject(header, **kwargs)
 
         # Create weighting mask
         mask = (cube_repr[0:1].get_mask_array()[0])
@@ -846,5 +846,5 @@ def mosaic_cubes(cubes, spectral_block_size=100):
 
     # Create Cube
     # TODO: this should use the same cube type as cube1
-    cube = cube1.__class__(data=final_array*cube1.unit, wcs=WCS(header))  
+    cube = cube1.__class__(data=final_array*cube1.unit, wcs=WCS(header))
     return cube

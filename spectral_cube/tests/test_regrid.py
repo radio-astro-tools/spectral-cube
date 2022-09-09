@@ -603,7 +603,7 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask):
     part1 = cube[:, :round(cube.shape[1]*2./3.),:]
     part2 = cube[:, round(cube.shape[1]/3.):,:]
 
-    result = mosaic_cubes([part1, part2])
+    result = mosaic_cubes([part1, part2], order='nearest-neighbor')
 
     # Check that the shapes are the same
     assert result.shape == cube.shape 
