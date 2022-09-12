@@ -826,7 +826,7 @@ def mosaic_cubes(cubes, spectral_block_size=100):
             cube_repr = cube.reproject(header, block_size=[spectral_block_size, cube.shape[1], cube.shape[2]], order='nearest-neighbor')
         except TypeError:
             warnings.warn("The block_size argument is not accepted by `reproject`.  A more recent version may be needed.")
-            cube_repr = cube.reproject(header)
+            cube_repr = cube.reproject(header, order='nearest-neighbor')
 
         # Create weighting mask
         mask = (cube_repr[0:1].get_mask_array()[0])
