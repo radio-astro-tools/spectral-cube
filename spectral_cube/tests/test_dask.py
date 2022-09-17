@@ -12,7 +12,7 @@ from astropy import units as u
 from astropy.utils import data
 
 try:
-    from distributed.utils_test import client, loop, cluster_fixture, cleanup  # noqa
+    from distributed.utils_test import client, loop, cluster_fixture, cleanup, loop_in_thread  # noqa
     DISTRIBUTED_INSTALLED = True
 except ImportError:
     DISTRIBUTED_INSTALLED = False
