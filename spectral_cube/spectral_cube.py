@@ -2811,7 +2811,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.median_filter)
+            Size of the filter in spectral channels.
         filter : function
             A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         """
