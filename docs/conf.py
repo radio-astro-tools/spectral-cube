@@ -111,7 +111,11 @@ html_theme_options = {
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = ''
+# html_logo = 'radiosnakes_nostruts2.svg'
+
+# Static files to copy after template files
+html_static_path = ['_static']
+html_style = 'spectralcube.css'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32

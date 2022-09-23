@@ -27,7 +27,7 @@ from ..dask_spectral_cube import DaskSpectralCube, DaskVaryingResolutionSpectral
 from ..lower_dimensional_structures import LowerDimensionalObject
 from ..spectral_cube import BaseSpectralCube
 from .. import cube_utils
-from ..utils import BeamUnitsError, FITSWarning, FITSReadError, StokesWarning
+from ..utils import FITSWarning, FITSReadError, StokesWarning, BeamWarning
 
 
 def first(iterable):
@@ -102,17 +102,23 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
                     # Check that the table has the expected form for beam units:
                     # 1: BMAJ 2: BMIN 3: BPA
                     for i in range(1, 4):
-                        if not f"TUNIT{i}" in hdu_item.header:
-                            raise BeamUnitsError(f"Missing beam units keyword {key}{i}"
-                                                    " in the header.")
+                        key = f"TUNIT{i}"
+                        if key not in hdu_item.header:
+                            warnings.warn(BeamWarning(f"Missing beam units keyword {key}"
+                                                      " in the header."))
 
                     # Read the bmaj/bmin units from the header
                     # (we still assume BPA is degrees because we've never seen an exceptional case)
                     # this will crash if there is no appropriate header info
                     maj_kw = [kw for kw, val in hdu_item.header.items() if val == 'BMAJ'][0]
                     min_kw = [kw for kw, val in hdu_item.header.items() if val == 'BMIN'][0]
-                    maj_unit = hdu_item.header[maj_kw.replace('TTYPE', 'TUNIT')]
-                    min_unit = hdu_item.header[min_kw.replace('TTYPE', 'TUNIT')]
+                    try:
+                        maj_unit = hdu_item.header[maj_kw.replace('TTYPE', 'TUNIT')]
+                        min_unit = hdu_item.header[min_kw.replace('TTYPE', 'TUNIT')]
+                    except KeyError:
+                        # the default units, if unspecified (as from CASA <= 4.7.2, we think), are arcseconds
+                        maj_unit = u.arcsec
+                        min_unit = u.arcsec
 
                     # AIPS uses non-FITS-standard unit names; this catches the
                     # only case we've seen so far
@@ -224,7 +230,10 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
 
     elif wcs.wcs.naxis == 4:
 
-        data, wcs = cube_utils._split_stokes(data, wcs)
+        if beam_table is None:
+            data, wcs = cube_utils._split_stokes(data, wcs)
+        else:
+            data, wcs, beam_tables = cube_utils._split_stokes(data, wcs, beam_table=beam_table)
 
         stokes_data = {}
         for component in data:
@@ -238,7 +247,7 @@ def load_fits_cube(input, hdu=0, meta=None, target_cls=None, use_dask=False, **k
                 stokes_data[component] = VRSC(comp_data, wcs=comp_wcs,
                                               mask=comp_mask, meta=meta,
                                               header=header,
-                                              beam_table=beam_table,
+                                              beam_table=beam_tables[component],
                                               major_unit=beam_units[0],
                                               minor_unit=beam_units[1]
                                              )

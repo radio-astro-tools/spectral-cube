@@ -1,5 +1,6 @@
+=========
 Smoothing
----------
+=========
 
 There are two types of smoothing routine available in ``spectral_cube``:
 spatial and spectral.
@@ -90,6 +91,8 @@ of how you can do this::
 ``x_stddev`` specifies the width of the `Gaussian kernel <http://docs.astropy.org/en/stable/api/astropy.convolution.Gaussian2DKernel.html>`_.
 Any `astropy convolution <kernel http://docs.astropy.org/en/stable/convolution/kernels.html>`_
 is acceptable.
+
+.. _Spectral-Smoothing:
 
 Spectral Smoothing
 ==================

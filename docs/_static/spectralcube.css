@@ -1,0 +1,9 @@
+@import url("bootstrap-astropy.css");
+
+
+div.topbar a.brand {
+  background: transparent url("radiosnakes_nostruts2.svg") no-repeat 10px 4px;
+  background-image: url("radiosnakes_nostruts2.svg"), none;
+  background-size: 32px 32px;
+
+}

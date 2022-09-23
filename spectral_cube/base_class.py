@@ -114,7 +114,7 @@ class HeaderMixinClass(object):
 
         Parameters
         ----------
-        raise_error_jybeam : bool, optional
+        raise_error_jybm : bool, optional
             Raises a `~spectral_cube.utils.BeamUnitsError` when True (default). When False, it triggers a
             `~spectral_cube.utils.BeamWarning`.
 
@@ -635,6 +635,10 @@ class MultiBeamMixinClass(object):
                 beam_mask = np.logical_and(mask, self.goodbeams_mask[:, None, None])
             else:
                 beam_mask = np.logical_and(mask, self.goodbeams_mask)
+
+        if not any(beam_mask):
+            raise ValueError("All beams were excluded using threshold {threshold}"
+                             .format(threshold=threshold))
 
         # use private _beams here because the public one excludes the bad beams
         # by default

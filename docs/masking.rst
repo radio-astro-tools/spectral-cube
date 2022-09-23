@@ -1,3 +1,5 @@
+.. _doc_masking:
+
 Masking
 =======
 
@@ -64,7 +66,7 @@ shape can be used as a boolean array mask.
 Accessing masked data
 ---------------------
 
-As mention in :doc:`accessing`, the raw and unmasked data can be accessed with
+As mentioned in :doc:`accessing`, the raw and unmasked data can be accessed with
 the `spectral_cube.spectral_cube.BaseSpectralCube.unmasked_data`
 attribute.  You can access the masked data using ``filled_data``. This array is
 a copy of the original data with any masked value replaced by a fill value

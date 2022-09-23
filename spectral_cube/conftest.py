@@ -81,6 +81,39 @@ def prepare_4_beams():
     return beams
 
 
+def prepare_4_beams_withfullpol():
+
+    nchan = 4
+    npol = 4
+
+    beams = np.recarray(nchan*npol, dtype=[('BMAJ', '>f4'), ('BMIN', '>f4'),
+                                           ('BPA', '>f4'), ('CHAN', '>i4'),
+                                           ('POL', '>i4')])
+    beams['BMAJ'] = [0.4,0.3,0.3,0.4] * npol # arcseconds
+    beams['BMIN'] = [0.1,0.2,0.2,0.1] * npol
+    beams['BPA'] = [0,45,60,30] * npol # degrees
+    beams['CHAN'] = [0,1,2,3] * npol
+
+    pol_codes = []
+    for i in range(npol):
+        pol_codes.extend([i] * nchan)
+
+    beams['POL'] = pol_codes
+
+    beams = fits.BinTableHDU(beams)
+
+    beams.header['TTYPE1'] = 'BMAJ'
+    beams.header['TUNIT1'] = 'arcsec'
+    beams.header['TTYPE2'] = 'BMIN'
+    beams.header['TUNIT2'] = 'arcsec'
+    beams.header['TTYPE3'] = 'BPA'
+    beams.header['TUNIT3'] = 'deg'
+    beams.header['TTYPE4'] = 'CHAN'
+    beams.header['TTYPE5'] = 'POL'
+
+    return beams
+
+
 def prepare_advs_data():
     # Single Stokes
     h = fits.header.Header.fromtextfile(HEADER_FILENAME)
@@ -91,6 +124,27 @@ def prepare_advs_data():
     h['NAXIS4'] = 1
     np.random.seed(42)
     d = np.random.random((1, 2, 3, 4))
+    return d, h
+
+
+def prepare_advs_fullstokes_data():
+    # Full Stokes
+    h = fits.header.Header.fromtextfile(HEADER_FILENAME)
+    h['BUNIT'] = 'K' # Kelvins are a valid unit, JY/BEAM are not: they should be tested separately
+    h['NAXIS1'] = 2
+    h['NAXIS2'] = 3
+    h['NAXIS3'] = 4
+    h['NAXIS4'] = 4
+
+    # Add the most basic stokes information to the header
+    h['CTYPE4'] = 'STOKES'
+    h['CRVAL4'] = 1.0
+    h['CDELT4'] = 1.0
+    h['CRPIX4'] = 1.0
+    h['CUNIT4'] = ''
+
+    np.random.seed(42)
+    d = np.random.random((4, 4, 3, 2))
     return d, h
 
 
@@ -138,6 +192,30 @@ def data_sdav(tmp_path):
 
 
 @pytest.fixture
+def data_sdav_beams_nounits(tmp_path):
+    """
+    For testing io when units are not specified
+    (they should be arcsec by default
+    """
+    d, h = prepare_advs_data()
+    d, h = transpose(d, h, [1, 2, 3, 0])
+    d, h = transpose(d, h, [1, 2, 3, 0])
+    d, h = transpose(d, h, [1, 2, 3, 0])
+    d, h = transpose(d, h, [0, 2, 1, 3])
+    del h['BMAJ'], h['BMIN'], h['BPA']
+    # want 4 spectral channels
+    np.random.seed(42)
+    d = np.random.random((4, 3, 2, 1))
+    beams = prepare_4_beams()
+    for ii in (1,2,3):
+        del beams.header[f'TUNIT{ii}']
+    hdul = fits.HDUList([fits.PrimaryHDU(data=d, header=h),
+                         beams])
+    hdul.writeto(tmp_path / 'sdav_beams_nounits.fits')
+    return tmp_path / 'sdav_beams_nounits.fits'
+
+
+@pytest.fixture
 def data_sdav_beams(tmp_path):
     d, h = prepare_advs_data()
     d, h = transpose(d, h, [1, 2, 3, 0])
@@ -163,6 +241,21 @@ def data_advs_nobeam(tmp_path):
     del h['BPA']
     fits.writeto(tmp_path / 'advs_nobeam.fits', d, h)
     return tmp_path / 'advs_nobeam.fits'
+
+
+@pytest.fixture
+def data_advs_beams_fullstokes(tmp_path):
+    d, h = prepare_advs_fullstokes_data()
+
+    beams = prepare_4_beams_withfullpol()
+
+    hdu = fits.HDUList()
+    hdu.append(fits.PrimaryHDU(d, h))
+    hdu.append(beams)
+
+    hdu.writeto(tmp_path / 'advs_beams_fullstokes.fits')
+
+    return tmp_path / 'advs_beams_fullstokes.fits'
 
 
 def prepare_adv_data():

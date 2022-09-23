@@ -1,3 +1,5 @@
+.. _doc_dask:
+
 Integration with dask
 =====================
 
@@ -25,6 +27,10 @@ To read in a FITS cube using the dask-enabled classes, you can do::
 Most of the properties and methods that normally work with :class:`~spectral_cube.SpectralCube`
 should continue to work with :class:`~spectral_cube.DaskSpectralCube`.
 
+For an interactive demonstration, see the `Guide to Dask Optimization <https://github.com/radio-astro-tools/tutorials/pull/21>`_.
+
+..
+    TODO: UPDATE THE LINK TO THE TUTORIAL once merged
 
 Schedulers and parallel computations
 ------------------------------------

@@ -258,8 +258,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     raise u.UnitsError("The specified new cube unit '{0}' "
                                        "does not match the input unit '{1}'."
                                        .format(unit, data.unit))
-            else:
-                data = u.Quantity(data, unit=unit, copy=False)
         elif self._unit is not None:
             unit = self.unit
 
@@ -903,11 +901,23 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return nx, ny
 
     @warn_slow
-    def _apply_everywhere(self, function, *args):
+    def _apply_everywhere(self, function, *args, check_units=True):
         """
         Return a new cube with ``function`` applied to all pixels
 
         Private because this doesn't have an obvious and easy-to-use API
+
+        Parameters
+        ----------
+        function : function
+            An operator that takes the data (self) and any number of additional
+            arguments
+        check_units : bool
+            When doing the initial test before running the full operation,
+            should units be included on the 'fake' test quantity?  This is
+            specifically added as an option to enable using the subtraction and
+            addition operators without checking unit compatibility here because
+            they _already_ enforce unit compatibility.
 
         Examples
         --------
@@ -915,18 +925,28 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
 
         try:
-            test_result = function(np.ones([1,1,1])*self.unit, *args)
+            if check_units:
+                test_result = function(np.ones([1,1,1])*self.unit, *args)
+                new_unit = test_result.unit
+            else:
+                test_result = function(np.ones([1,1,1]), *args)
+                new_unit = self.unit
             # First, check that function returns same # of dims?
             assert test_result.ndim == 3,"Output is not 3-dimensional"
         except Exception as ex:
             raise AssertionError("Function could not be applied to a simple "
                                  "cube.  The error was: {0}".format(ex))
 
-        data = function(u.Quantity(self._get_filled_data(fill=self._fill_value),
-                                   self.unit, copy=False),
-                        *args)
+        # We don't need to convert to a quantity here because the shape check
+        data_in = self._get_filled_data(fill=self._fill_value)
+        data = function(data_in, *args)
 
-        return self._new_cube_with(data=data, unit=data.unit)
+        # strip the unit because data_in does not have a unit
+        # (we calculate the appropriate unit above and pass it on below)
+        if hasattr(data, 'unit'):
+            data = data.value
+
+        return self._new_cube_with(data=data, unit=new_unit)
 
     @warn_slow
     def _cube_on_cube_operation(self, function, cube, equivalencies=[], **kwargs):
@@ -1020,6 +1040,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if axis is None:
             out = function(self.flattened(), **kwargs)
             if unit is not None:
+                # return is scalar
                 return u.Quantity(out, unit=unit)
             else:
                 return out
@@ -1792,6 +1813,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         ilo = self.closest_spectral_channel(lo)
         ihi = self.closest_spectral_channel(hi)
 
+        if ilo == ihi:
+            warnings.warn("The maxmimum and minimum spectral channel in the spectral"
+                          "slab are identical; this indicates that one or both are "
+                          "likely incorrect and/or out of range.",
+                          SliceWarning)
+
         if ilo > ihi:
             ilo, ihi = ihi, ilo
         ihi += 1
@@ -1996,7 +2023,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         import regions
 
         if isinstance(ds9_region, six.string_types):
-            region_list = regions.DS9Parser(ds9_region).shapes.to_regions()
+            if hasattr(regions, 'DS9Parser'):
+                region_list = regions.DS9Parser(ds9_region).shapes.to_regions()
+            else:
+                region_list = regions.Regions.read(ds9_region)
         else:
             raise TypeError("{0} should be a DS9 string".format(ds9_region))
 
@@ -2023,7 +2053,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self.subcube_from_regions(region_list, allow_empty)
 
-    def subcube_from_regions(self, region_list, allow_empty=False):
+    def subcube_from_regions(self, region_list, allow_empty=False,
+                             minimize=True):
         """
         Extract a masked subcube from a list of ``regions.Region`` object
         (only functions on celestial dimensions)
@@ -2035,6 +2066,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         allow_empty: bool, optional
             If this is False, an exception will be raised if the region
             contains no overlap with the cube. Default is False.
+        minimize : bool
+            Run :meth:`~SpectralCube.minimal_subcube`.  This is mostly redundant, since the
+            bounding box of the region is already used, but it will sometimes
+            slice off a one-pixel rind depending on the details of the region
+            shape.  If minimize is disabled, there will potentially be a ring
+            of NaN values around the outside.
         """
         import regions
 
@@ -2090,13 +2127,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 raise ValueError("The derived subset is empty: the region does not"
                                  " overlap with the cube.")
 
-        # cropping the mask from top left corner so that it fits the subcube.
-        maskarray = mask.data[:subcube.shape[1], :subcube.shape[2]].astype('bool')
+        shp = self.shape[1:]
+        _, slices_small = mask.get_overlap_slices(shp)
 
-        masked_subcube = subcube.with_mask(BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape))
+        maskarray = np.zeros(subcube.shape[1:], dtype='bool')
+        maskarray[:] = mask.data[slices_small]
+
+        BAM = BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape)
+        masked_subcube = subcube.with_mask(BAM)
         # by using ceil / floor above, we potentially introduced a NaN buffer
         # that we can now crop out
-        return masked_subcube.minimal_subcube(spatial_only=True)
+        if minimize:
+            return masked_subcube.minimal_subcube(spatial_only=True)
+        else:
+            return masked_subcube
 
     def _velocity_freq_conversion_regions(self, ranges, veltypes, restfreqs):
         """
@@ -2165,7 +2209,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         Given a value, check if it has a unit.  If it does, convert to the
         cube's unit.  If it doesn't, raise an exception.
         """
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             if self.unit.is_equivalent(value.unit):
                 return value
             else:
@@ -2175,6 +2219,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 return value.to(self.unit)
             else:
                 return value.to(self.unit).value
+        elif self.unit.is_equivalent(u.dimensionless_unscaled):
+            # if the value is a numpy array or scalar, and the cube has no
+            # unit, no additional conversion is needed
+            return value
         else:
             raise ValueError("Can only {operation} cube objects {tofrom}"
                              " SpectralCubes or Quantities with "
@@ -2217,23 +2265,23 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return LazyComparisonMask(operator.ne, value, data=self._data, wcs=self._wcs)
 
     def __add__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.add, value)
         else:
             value = self._val_to_own_unit(value, operation='add', tofrom='from',
-                                          keepunit=True)
-            return self._apply_everywhere(operator.add, value)
+                                          keepunit=False)
+            return self._apply_everywhere(operator.add, value, check_units=False)
 
     def __sub__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.sub, value)
         else:
             value = self._val_to_own_unit(value, operation='subtract',
-                                          tofrom='from', keepunit=True)
-            return self._apply_everywhere(operator.sub, value)
+                                          tofrom='from', keepunit=False)
+            return self._apply_everywhere(operator.sub, value, check_units=False)
 
     def __mul__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.mul, value)
         else:
             return self._apply_everywhere(operator.mul, value)
@@ -2242,13 +2290,34 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.__div__(value)
 
     def __div__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.truediv, value)
         else:
             return self._apply_everywhere(operator.truediv, value)
 
+    def __floordiv__(self, value):
+        raise NotImplementedError("Floor-division (division with truncation) "
+                                  "is not supported.")
+        #if isinstance(value, BaseSpectralCube):
+        #    # (Pdb) operator.floordiv(u.K, u.K)
+        #    # *** TypeError: unsupported operand type(s) for //: 'IrreducibleUnit' and 'IrreducibleUnit'
+        #    return self._cube_on_cube_operation(operator.floordiv, value)
+        #else:
+        #    # only cube-on-cube division allowed
+        #    #
+        #    # we don't support this:
+        #    # (Pdb) np.array([5,5,5])*u.K // (2*u.K)
+        #    # <Quantity [2., 2., 2.]>
+        #    # astropy doesn't support this:
+        #    # >>> np.array([5,5,5])*u.K // (2*u.Jy)
+        #    # astropy.units.core.UnitConversionError: Can only apply 'floor_divide' function to quantities with compatible dimensions
+        #    # >>> np.array([5,5,5])*u.K // (np.array([2])*u.Jy)
+        #    # astropy.units.core.UnitConversionError: Can only apply 'floor_divide' function to quantities with compatible dimensions
+        #    raise NotImplementedError("Floor-division (division with truncation) "
+        #                              "is not supported.")
+
     def __pow__(self, value):
-        if isinstance(value, SpectralCube):
+        if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.pow, value)
         else:
             return self._apply_everywhere(operator.pow, value)
@@ -2267,7 +2336,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         If using yt 3.0 or later, additional keyword arguments will be passed
         onto yt's ``FITSDataset`` constructor. See the yt documentation
-        (http://yt-project.org/docs/3.0/examining/loading_data.html?#fits-data)
+        (http://yt-project.org/doc/examining/loading_data.html?#fits-data)
         for details on options for reading FITS data.
         """
 
@@ -2312,7 +2381,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         else:
 
-            from yt.mods import load_uniform_grid
+            from yt import load_uniform_grid
 
             data = {'flux': self._get_filled_data(fill=0.).transpose()}
 
@@ -2459,7 +2528,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         HDU version of self
         """
         log.debug("Creating HDU")
-        hdu = PrimaryHDU(self.filled_data[:].value, header=self.header)
+        hdu = PrimaryHDU(self.unitless_filled_data[:], header=self.header)
         return hdu
 
     @property
@@ -2541,7 +2610,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     @warn_slow
     def reproject(self, header, order='bilinear', use_memmap=False,
-                  filled=True):
+                  filled=True, **kwargs):
         """
         Spatially reproject the cube into a new header.  Fills the data with
         the cube's ``fill_value`` to replace bad values before reprojection.
@@ -2578,6 +2647,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             reprojection?  Note that setting ``filled=False`` will use the raw
             data array, which can be a workaround that prevents loading large
             data into memory.
+        kwargs : dict
+            Passed to `reproject.reproject_interp`.
         """
 
         try:
@@ -2586,15 +2657,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             raise ImportError("Requires the reproject package to be"
                               " installed.")
 
+        reproj_kwargs = kwargs
         # Need version > 0.2 to work with cubes, >= 0.5 for memmap
         from distutils.version import LooseVersion
         if LooseVersion(version) < "0.5":
             raise Warning("Requires version >=0.5 of reproject. The current "
                           "version is: {}".format(version))
         elif LooseVersion(version) >= "0.6":
-            reproj_kwargs = {}
+            pass # no additional kwargs, no warning either
         else:
-            reproj_kwargs = {'independent_celestial_slices': True}
+            reproj_kwargs['independent_celestial_slices'] = True
 
         from reproject import reproject_interp
 
@@ -2639,14 +2711,42 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
 
     @parallel_docstring
-    def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True, **kwargs):
+    def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True,
+                              filter=ndimage.filters.median_filter, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.median_filter)
+            Size of the median filter in pixels (scipy.ndimage.filters.median_filter)
+        filter : function
+            A filter from scipy.ndimage.filters. The default is the median filter.
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
+        kwargs : dict
+            Passed to the convolve function
+        """
+        return self.spatial_filter(ksize=ksize, filter=filter,
+                                   update_function=update_function,
+                                   raise_error_jybm=raise_error_jybm, **kwargs)
+
+
+    @parallel_docstring
+    def spatial_filter(self, ksize, filter, update_function=None, raise_error_jybm=True, **kwargs):
+        """
+        Smooth the image in each spatial-spatial plane of the cube using a scipy.ndimage filter.
+
+        Parameters
+        ----------
+        ksize : int
+            Size of the filter in pixels (scipy.ndimage.filters.*_filter).
+        filter : function
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
@@ -2662,7 +2762,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def _msmooth_image(im, **kwargs):
-            return ndimage.filters.median_filter(im, size=ksize, **kwargs)
+            return filter(im, size=ksize, **kwargs)
 
         newcube = self.apply_function_parallel_spatial(_msmooth_image,
                                                        **kwargs)
@@ -2706,10 +2806,37 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return newcube
 
     @parallel_docstring
+    def spectral_filter(self, ksize, filter, use_memmap=True, verbose=0,
+            num_cores=None, **kwargs):
+        """
+        Smooth the cube along the spectral dimension using a scipy.ndimage filter.
+
+        Parameters
+        ----------
+        ksize : int
+            Size of the filter in spectral channels.
+        filter : function
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
+        """
+        # note: same body as spectral_smooth_median right now, but `filter`
+        # is a required kwarg
+
+        if not scipyOK:
+            raise ImportError("Scipy could not be imported: this function won't work.")
+
+        return self.apply_function_parallel_spectral(function=filter,
+                                                     size=ksize,
+                                                     verbose=verbose,
+                                                     num_cores=num_cores,
+                                                     use_memmap=use_memmap,
+                                                     **kwargs)
+
+    @parallel_docstring
     def spectral_smooth_median(self, ksize,
                                use_memmap=True,
                                verbose=0,
                                num_cores=None,
+                               filter=ndimage.filters.median_filter,
                                **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -2727,7 +2854,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        return self.apply_function_parallel_spectral(ndimage.filters.median_filter,
+        return self.apply_function_parallel_spectral(function=filter,
                                                      size=ksize,
                                                      verbose=verbose,
                                                      num_cores=num_cores,
@@ -3212,6 +3339,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         def convfunc(img, **kwargs):
             return convolve(img, convolution_kernel, normalize_kernel=True,
                             **kwargs) * beam_ratio_factor
+
+        if convolve is convolution.convolve_fft and 'allow_huge' not in kwargs:
+            kwargs['allow_huge'] = self.allow_huge_operations
 
         newcube = self.apply_function_parallel_spatial(convfunc,
                                                        **kwargs).with_beam(beam, raise_error_jybm=False)

@@ -4,18 +4,20 @@ import os
 from numpy.core.shape_base import block
 import pytest
 import numpy as np
+from unittest.mock import patch
 
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
 from astropy import units as u
+from astropy.utils import data
 
 try:
-    from distributed.utils_test import client, loop, cluster_fixture  # noqa
+    from distributed.utils_test import client, loop, cluster_fixture, cleanup, loop_in_thread  # noqa
     DISTRIBUTED_INSTALLED = True
 except ImportError:
     DISTRIBUTED_INSTALLED = False
 
-from spectral_cube import DaskSpectralCube
+from spectral_cube import DaskSpectralCube, SpectralCube, DaskVaryingResolutionSpectralCube
 from .test_casafuncs import make_casa_testimage
 
 try:
@@ -204,6 +206,69 @@ def test_apply_function_parallel_spectral_noncube_withblockinfo(data_adv):
 
     # Test all True
     assert np.all(test.compute())
+
+
+@pytest.mark.parametrize(('accepts_chunks'),
+                         ((True, False)))
+def test_apply_function_parallel_shape(accepts_chunks):
+    # regression test for #772
+
+    def func(x, add=None):
+        if add is not None:
+            y = x + add
+        else:
+            raise ValueError("This test is supposed to have add=1")
+        return y
+
+
+    fn = data.get_pkg_data_filename('tests/data/example_cube.fits', 'spectral_cube')
+    cube = SpectralCube.read(fn, use_dask=True)
+    cube2 = SpectralCube.read(fn, use_dask=False)
+
+    # Check dask w/both threaded and unthreaded
+    rslt3 = cube.apply_function_parallel_spectral(func, add=1,
+                                                  accepts_chunks=accepts_chunks)
+    with cube.use_dask_scheduler('threads', num_workers=4):
+        rslt = cube.apply_function_parallel_spectral(func, add=1,
+                                                     accepts_chunks=accepts_chunks)
+    rslt2 = cube2.apply_function_parallel_spectral(func, add=1)
+
+    np.testing.assert_almost_equal(cube.filled_data[:].value,
+                                   cube2.filled_data[:].value)
+    np.testing.assert_almost_equal(rslt.filled_data[:].value,
+                                   rslt2.filled_data[:].value)
+    np.testing.assert_almost_equal(rslt.filled_data[:].value,
+                                   rslt3.filled_data[:].value)
+
+
+@pytest.mark.parametrize('filename', ('data_adv', 'data_adv_beams',
+    'data_vda_beams', 'data_vda_beams_image'))
+def test_cube_on_cube(filename, request):
+    if 'image' in filename and not CASA_INSTALLED:
+        pytest.skip('Requires CASA to be installed')
+    dataname = request.getfixturevalue(filename)
+
+    # regression test for #782
+    # the regression applies only to VaryingResolutionSpectralCubes
+    # since they are not SpectralCube subclasses
+    cube = DaskSpectralCube.read(dataname)
+    assert isinstance(cube, (DaskSpectralCube, DaskVaryingResolutionSpectralCube))
+    cube2 = SpectralCube.read(dataname, use_dask=False)
+    if 'image' not in filename:
+        # 'image' would be CASA and must be dask
+        assert not isinstance(cube2, (DaskSpectralCube, DaskVaryingResolutionSpectralCube))
+
+    with patch.object(cube, '_cube_on_cube_operation') as mock:
+        cube * cube
+    mock.assert_called_once()
+
+    with patch.object(cube, '_cube_on_cube_operation') as mock:
+        cube * cube2
+    mock.assert_called_once()
+
+    with patch.object(cube2, '_cube_on_cube_operation') as mock:
+        cube2 * cube
+    mock.assert_called_once()
 
 
 if DISTRIBUTED_INSTALLED:

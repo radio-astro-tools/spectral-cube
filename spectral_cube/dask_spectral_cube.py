@@ -320,6 +320,13 @@ class DaskSpectralCubeMixin:
         lines[0] = lines[0][:-1] + ' and chunk size {0}:'.format(self._data.chunksize)
         return '\n'.join(lines)
 
+    def display_dask_array(self):
+        try:
+            from IPython.display import display
+            return display(self._data)
+        except ImportError:
+            warnings.warn("Requires IPython to display.")
+
     @add_save_to_tmp_dir_option
     def rechunk(self, chunks='auto', threshold=None, block_size_limit=None,
                 **kwargs):
@@ -602,14 +609,13 @@ class DaskSpectralCubeMixin:
             # need to rechunk here to avoid issues when writing out the data
             # even if it results in a poorer performance.
             data = data.rechunk((-1, 'auto', 'auto'))
-            newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],))
+            newdata = da.apply_along_axis(wrapper, 0, data, shape=(self.shape[0],),
+                                          **kwargs)
 
             if return_new_cube:
-                return self._new_cube_with(data=newdata,
-                                        wcs=self.wcs,
-                                        mask=self.mask,
-                                        meta=self.meta,
-                                        fill_value=self.fill_value)
+                return self._new_cube_with(data=newdata, wcs=self.wcs,
+                                           mask=self.mask, meta=self.meta,
+                                           fill_value=self.fill_value)
             else:
                 return newdata
 
@@ -895,14 +901,24 @@ class DaskSpectralCubeMixin:
                                                      accepts_chunks=True)
 
     @add_save_to_tmp_dir_option
-    def spectral_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
+    def spectral_smooth_median(self, ksize, raise_error_jybm=True,
+                               filter=ndimage.filters.median_filter, **kwargs):
+        return self.spectral_filter(ksize, filter=filter,
+                                    raise_error_jybm=raise_error_jybm,
+                                    **kwargs)
+
+    @add_save_to_tmp_dir_option
+    def spectral_filter(self, ksize, filter, raise_error_jybm=True,
+                        **kwargs):
         """
-        Smooth the cube along the spectral dimension
+        Smooth the cube along the spectral dimension using a scipy.ndimage filter.
 
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.median_filter)
+            Size of the median filter in spectral channels (scipy.ndimage.filters.median_filter).
+        filter : function
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         save_to_tmp_dir : bool
             If `True`, the computation will be carried out straight away and
             saved to a temporary directory. This can improve performance,
@@ -922,7 +938,7 @@ class DaskSpectralCubeMixin:
             raise TypeError('ksize should be an integer (got {0})'.format(ksize))
 
         def median_filter_wrapper(img, **kwargs):
-            return ndimage.median_filter(img, (ksize, 1, 1), **kwargs)
+            return filter(img, (ksize, 1, 1), **kwargs)
 
         return self.apply_function_parallel_spectral(median_filter_wrapper,
                                                      accepts_chunks=True)
@@ -961,14 +977,16 @@ class DaskSpectralCubeMixin:
         return self.apply_function_parallel_spatial(convolve_wrapper, kernel=kernel.array)
 
     @add_save_to_tmp_dir_option
-    def spatial_smooth_median(self, ksize, raise_error_jybm=True, **kwargs):
+    def spatial_filter(self, ksize, filter, raise_error_jybm=True, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.median_filter)
+            Size of the filter in pixels.
+        filter : function
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         raise_error_jybm : bool, optional
             Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
             since the brightness is dependent on the spatial resolution.
@@ -982,9 +1000,17 @@ class DaskSpectralCubeMixin:
         self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def median_filter_wrapper(data, ksize=None, **kwargs):
-            return ndimage.median_filter(data, ksize, **kwargs)
+            return filter(data, ksize, **kwargs)
 
         return self.apply_function_parallel_spatial(median_filter_wrapper, ksize=ksize)
+
+    def spatial_smooth_median(self, ksize, raise_error_jybm=True,
+            filter=ndimage.filters.median_filter, **kwargs):
+        """
+        Smooth the image in each spatial-spatial plane of the cube using a median filter.
+        """
+        return self.spatial_filter(ksize=ksize, filter=filter,
+                raise_error_jybm=raise_error_jybm, **kwargs)
 
     def moment(self, order=0, axis=0, **kwargs):
         """
@@ -1208,7 +1234,8 @@ class DaskSpectralCubeMixin:
     @add_save_to_tmp_dir_option
     def spectral_interpolate(self, spectral_grid,
                              suppress_smooth_warning=False,
-                             fill_value=None):
+                             fill_value=None,
+                             force_rechunk=True):
         """Resample the cube spectrally onto a specific grid
 
         Parameters
@@ -1230,6 +1257,11 @@ class DaskSpectralCubeMixin:
             especially if carrying out several operations sequentially. If
             `False`, the computation is only carried out when accessing
             specific parts of the data or writing to disk.
+        force_rechunk : bool
+            If `True`, forces rechunking of the dask array to have a single chunk
+            along the spectral axis. If `False`, the data will not be rechunked, but
+            a ValueError is raised if rechunking is required to have a single chunk
+            along the spectral axis.
 
         Returns
         -------
@@ -1277,8 +1309,19 @@ class DaskSpectralCubeMixin:
         if reverse_in:
             cubedata = cubedata[::-1, :, :]
 
-        cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
-        chunkshape = (len(spectral_grid),) + cubedata.chunksize[1:]
+        if force_rechunk:
+            cubedata = cubedata.rechunk((-1, 'auto', 'auto'))
+        else:
+            # There should be one chunk size along the spectral
+            # axis if there is only 1 chunk already defined.
+            # Otherwise, the data needs to be rechunked.
+            if len(cubedata.chunks[0]) > 1:
+                raise ValueError(f"The cube currently has {len(cubedata.chunks[0])} chunks along"
+                                 " the spectral axis but DaskSpectralCube.spectral_interpolate"
+                                 " requires one. Rechunk the data first or enable"
+                                 " `force_rechunk=True`.")
+
+        chunkshape = (len(spectral_grid),) + cubedata.chunks[1:]
 
         def interp_wrapper(y, args):
             if y.size == 1:
@@ -1396,6 +1439,9 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         # See #631: kwargs get passed within self.apply_function_parallel_spatial
         def convfunc(img, **kwargs):
             return convolve(img, kernel, normalize_kernel=True, **kwargs).reshape(img.shape) * beam_ratio_factor
+
+        if convolve is convolution.convolve_fft and 'allow_huge' not in kwargs:
+            kwargs['allow_huge'] = self.allow_huge_operations
 
         return self.apply_function_parallel_spatial(convfunc,
                                                     accepts_chunks=True,
@@ -1542,7 +1588,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                         kernel = beam[index, 0, 0].as_kernel(pixscale)
                         out[index] = convolve(img[index], kernel, normalize_kernel=True, **kwargs)
 
-                        if needs_beam_ratio:
+                        if needs_beam_ratio and beam_ratio_factors[index] is not None:
                             out[index] *= beam_ratio_factors[index]
 
                 return out

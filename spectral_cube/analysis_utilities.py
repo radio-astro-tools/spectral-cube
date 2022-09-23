@@ -4,12 +4,13 @@ from astropy import units as u
 from six.moves import zip, range
 from astropy.wcs import WCS
 from astropy.utils.console import ProgressBar
+from astropy import log
 import warnings
 
 from .utils import BadVelocitiesWarning
 from .cube_utils import _map_context
 from .lower_dimensional_structures import VaryingResolutionOneDSpectrum, OneDSpectrum
-from .spectral_cube import VaryingResolutionSpectralCube
+from .spectral_cube import VaryingResolutionSpectralCube, SpectralCube
 
 
 def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
@@ -204,7 +205,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
         spec_unit = cube.spectral_axis.unit
         if not v0.unit.is_equivalent(spec_unit):
             raise u.UnitsError("v0 must have units equivalent to the cube's"
-                               " spectral unit ().".format(spec_unit))
+                               f" spectral unit {spec_unit}.")
 
         v0 = v0.to(spec_unit)
 
@@ -244,7 +245,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
     pix_shifts = vdiff_sign * ((velocity_surface.to(vel_unit) -
                                 v0.to(vel_unit)) / vdiff).value[xy_posns]
 
-    # May a header copy so we can start altering
+    # Make a header copy so we can start altering
     new_header = cube[:, 0, 0].header.copy()
 
     if pad_edges:
@@ -319,14 +320,19 @@ def stack_spectra(cube, velocity_surface, v0=None,
     return stack_spec
 
 
-def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean, convolve_beam=None):
+def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean,
+               convolve_beam=None, return_hdu=False,
+               return_cutouts=False):
     """
     Create a stacked cube by averaging on a common velocity grid.
+
+    If the input cubes have varying resolution, this will trigger potentially
+    expensive convolutions.
 
     Parameters
     ----------
     cube : SpectralCube
-        The cube
+        The cube (or a list of cubes)
     linelist : list of Quantities
         An iterable of Quantities representing line rest frequencies
     vmin / vmax : Quantity
@@ -341,39 +347,88 @@ def stack_cube(cube, linelist, vmin, vmax, average=np.nanmean, convolve_beam=Non
         If the cube is a VaryingResolutionSpectralCube, a convolution beam is
         required to put the cube onto a common grid prior to spectral
         interpolation.
+    return_hdu : bool
+        Return an HDU instead of a spectral-cube
+    return_cutouts : bool
+        Also return the individual cube cutouts?
+
+    Returns
+    =======
+    cube : SpectralCube
+        The SpectralCube object containing the reprojected cube.  Its header
+        will be based on the first cube but will have no reference frequency.
+        Its spectral axis will be in velocity units.
+    cutout_cubes : list
+        A list of cube cutouts projected into the same space (optional; see
+        ``return_cutouts``)
     """
 
-    line_cube = cube.with_spectral_unit(u.km/u.s,
-                                        velocity_convention='radio',
-                                        rest_value=linelist[0])
-    if isinstance(line_cube, VaryingResolutionSpectralCube):
-        if convolve_beam is None:
-            raise ValueError("When stacking VaryingResolutionSpectralCubes, "
-                             "you must specify a target beam size with the "
-                             "keyword `convolve_beam`")
-        reference_cube = line_cube.spectral_slab(vmin, vmax).convolve_to(convolve_beam)
+    if isinstance(cube, list):
+        cubes = cube
+        cube = cubes[0]
+        for cb in cubes[1:]:
+            if cb.shape[1:] != cube.shape[1:]:
+                raise ValueError("If you pass multiple cubes, they must have the "
+                                 "same spatial shape.")
+        if convolve_beam is None and (any(hasattr(cb, 'beams') for cb in cubes) or
+                                      not all([cb.beam == cube.beam for cb in cubes[1:]])):
+            raise ValueError("If the cubes have different resolution, `convolve_beam` must be specified.")
     else:
-        reference_cube = line_cube.spectral_slab(vmin, vmax)
+        cubes = [cube]
 
+    slabs = []
+    included_lines = []
+
+    # loop over linelist first to keep the cutouts in the same order as the
+    # input line frequencies
+    for restval in linelist:
+        for cube in cubes:
+            line_cube = cube.with_spectral_unit(u.km/u.s,
+                                                velocity_convention='radio',
+                                                rest_value=restval)
+            line_cutout = line_cube.spectral_slab(vmin, vmax)
+            if line_cutout.shape[0] <= 1:
+                log.debug(f"Skipped line {restval} for cube {cube} because it resulted"
+                          "in a size-1 spectral axis")
+                continue
+            else:
+                included_lines.append(restval)
+
+            assert line_cutout.shape[0] > 1
+
+            if isinstance(line_cutout, VaryingResolutionSpectralCube):
+                if convolve_beam is None:
+                    raise ValueError("If any of the input cubes have varyin resolution, "
+                                     "a target `common_beam` must be specified.")
+                line_cutout = line_cutout.convolve_to(convolve_beam)
+
+            assert not isinstance(line_cutout, VaryingResolutionSpectralCube)
+            slabs.append(line_cutout)
+
+    reference_cube = slabs[0]
     cutout_cubes = [reference_cube.filled_data[:].value]
-
-    for restval in linelist[1:]:
-        line_cube = cube.with_spectral_unit(u.km/u.s,
-                                            velocity_convention='radio',
-                                            rest_value=restval)
-        line_cutout = line_cube.spectral_slab(vmin, vmax)
-
-        if isinstance(line_cube, VaryingResolutionSpectralCube):
-            line_cutout = line_cutout.convolve_to(convolve_beam)
-
-        regridded = line_cutout.spectral_interpolate(reference_cube.spectral_axis)
-
+    for slab in slabs[1:]:
+        regridded = slab.spectral_interpolate(reference_cube.spectral_axis)
         cutout_cubes.append(regridded.filled_data[:].value)
 
     stacked_cube = average(cutout_cubes, axis=0)
 
-    hdu = reference_cube.hdu
+    ww = reference_cube.wcs.copy()
+    # set restfreq to zero: it is not defined any more.
+    ww.wcs.restfrq = 0.0
+    meta = reference_cube.meta
+    meta.update({'stacked_lines': included_lines})
+    result_cube = SpectralCube(data=stacked_cube,
+                               wcs=ww,
+                               meta=meta,
+                               header=reference_cube.header)
 
-    hdu.data = stacked_cube
+    if return_hdu:
+        retval = result_cube.hdu
+    else:
+        retval = result_cube
 
-    return hdu
+    if return_cutouts:
+        return retval, cutout_cubes
+    else:
+        return retval
