@@ -2813,7 +2813,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         ksize : int
             Size of the median filter (scipy.ndimage.filters.median_filter)
         filter : function
-            A filter from scipy.ndimage.filters
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         """
         # note: same body as spectral_smooth_median right now, but `filter`
         # is a required kwarg
