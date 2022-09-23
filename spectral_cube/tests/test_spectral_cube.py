@@ -2498,14 +2498,15 @@ def test_spatial_smooth_maxfilter(num_cores, data_adv, use_dask):
 
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
-    cube_spectral_max = cube.spatial_filter([2, 2],
+    cube_spatial_max = cube.spatial_filter([3, 3],
             filter=ndimage.filters.maximum_filter, num_cores=num_cores)
 
-    # TODO: find out what is correct here
     # Check first slice
-    # result = np.array([0.90388047, 0.90388047, 0.96629004, 0.96629004])
+    result = np.array([[0.90950237, 0.90950237],
+                       [0.90950237, 0.90950237],
+                       [0.90388047, 0.90388047]])
 
-    # np.testing.assert_almost_equal(cube_spectral_max[:,1,1].value, result)
+    np.testing.assert_almost_equal(cube_spatial_max[0, :, :].value, result)
 
 
 @pytest.mark.parametrize('num_cores', (None, 1))
