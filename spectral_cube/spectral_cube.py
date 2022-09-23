@@ -2711,14 +2711,42 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
 
     @parallel_docstring
-    def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True, **kwargs):
+    def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True,
+                              filter=ndimage.filters.median_filter, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
         Parameters
         ----------
         ksize : int
-            Size of the median filter (scipy.ndimage.filters.median_filter)
+            Size of the median filter in pixels (scipy.ndimage.filters.median_filter)
+        filter : function
+            A filter from scipy.ndimage.filters. The default is the median filter.
+        update_function : method
+            Method that is called to update an external progressbar
+            If provided, it disables the default `astropy.utils.console.ProgressBar`
+        raise_error_jybm : bool, optional
+            Raises a `~spectral_cube.utils.BeamUnitsError` when smoothing a cube in Jy/beam units,
+            since the brightness is dependent on the spatial resolution.
+        kwargs : dict
+            Passed to the convolve function
+        """
+        return self.spatial_filter(ksize=ksize, filter=filter,
+                                   update_function=update_function,
+                                   raise_error_jybm=raise_error_jybm, **kwargs)
+
+
+    @parallel_docstring
+    def spatial_filter(self, ksize, filter, update_function=None, raise_error_jybm=True, **kwargs):
+        """
+        Smooth the image in each spatial-spatial plane of the cube using a scipy.ndimage filter.
+
+        Parameters
+        ----------
+        ksize : int
+            Size of the filter in pixels (scipy.ndimage.filters.*_filter).
+        filter : function
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
         update_function : method
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
@@ -2734,7 +2762,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         self.check_jybeam_smoothing(raise_error_jybm=raise_error_jybm)
 
         def _msmooth_image(im, **kwargs):
-            return ndimage.filters.median_filter(im, size=ksize, **kwargs)
+            return filter(im, size=ksize, **kwargs)
 
         newcube = self.apply_function_parallel_spatial(_msmooth_image,
                                                        **kwargs)
@@ -2778,10 +2806,37 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return newcube
 
     @parallel_docstring
+    def spectral_filter(self, ksize, filter, use_memmap=True, verbose=0,
+            num_cores=None, **kwargs):
+        """
+        Smooth the cube along the spectral dimension using a scipy.ndimage filter.
+
+        Parameters
+        ----------
+        ksize : int
+            Size of the filter in spectral channels.
+        filter : function
+            A filter from `scipy.ndimage.filters <https://docs.scipy.org/doc/scipy/reference/ndimage.html#filters>`_.
+        """
+        # note: same body as spectral_smooth_median right now, but `filter`
+        # is a required kwarg
+
+        if not scipyOK:
+            raise ImportError("Scipy could not be imported: this function won't work.")
+
+        return self.apply_function_parallel_spectral(function=filter,
+                                                     size=ksize,
+                                                     verbose=verbose,
+                                                     num_cores=num_cores,
+                                                     use_memmap=use_memmap,
+                                                     **kwargs)
+
+    @parallel_docstring
     def spectral_smooth_median(self, ksize,
                                use_memmap=True,
                                verbose=0,
                                num_cores=None,
+                               filter=ndimage.filters.median_filter,
                                **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -2799,7 +2854,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if not scipyOK:
             raise ImportError("Scipy could not be imported: this function won't work.")
 
-        return self.apply_function_parallel_spectral(ndimage.filters.median_filter,
+        return self.apply_function_parallel_spectral(function=filter,
                                                      size=ksize,
                                                      verbose=verbose,
                                                      num_cores=num_cores,
