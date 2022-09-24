@@ -49,14 +49,9 @@ class StokesSpectralCube(object):
                                  "should have the same WCS")
 
             if component not in VALID_STOKES:
-<<<<<<< HEAD
-                raise ValueError("Invalid Stokes component: {0} - should be "
-                                 "one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component))
-=======
                 raise ValueError("Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, \
                                  RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, \
                                  RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component))
->>>>>>> master
 
             if stokes_data[component].shape != stokes_data[reference].shape:
                 raise ValueError("All spectral cubes should have the same shape")
