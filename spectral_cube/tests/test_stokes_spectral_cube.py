@@ -10,7 +10,7 @@ from astropy.utils import NumpyRNGContext
 from ..spectral_cube import SpectralCube
 from ..stokes_spectral_cube import StokesSpectralCube
 from ..masks import BooleanArrayMask
-
+from ..stokes_spectral_cube import VALID_STOKES
 
 class TestStokesSpectralCube():
 
@@ -45,10 +45,7 @@ class TestStokesSpectralCube():
             cube = StokesSpectralCube(stokes_data)
         assert exc.value.args[0] == "All spectral cubes should have the same shape"
 
-    @pytest.mark.parametrize('component', ('I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR', 'XX', 'XY', 'YX', 'YY',
-                                           'RX', 'RY', 'LX', 'LY', 'XR', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ',
-                                           'RCircular', 'LCircular', 'Linear', 'Ptotal', 'Plinear', 'PFtotal',
-                                           'PFlinear', 'Pangle'))
+    @pytest.mark.parametrize('component', VALID_STOKES)
 
     def test_valid_component_name(self, component, use_dask):
         stokes_data = {component: SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)}

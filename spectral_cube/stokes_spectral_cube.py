@@ -203,7 +203,18 @@ class StokesSpectralCube(object):
         the one specified if possible. In principle one needs at least two related
         stokes of a given basis for the transformation to be possible. At this moment
         we are limiting it to the cases where all four stokes parameters in a given
-        basis be available within the cube. 
+        basis be available within the cube. The transformations are as follows
+        Linear to Sky
+        I = (XX + YY) / 2
+        Q = (XX - YY) / 2
+        U = (XY + YX) / 2
+        V = 1j(XY - YX) / 2
+
+        Circular to Sky
+        I = (RR + LL) / 2
+        Q = (RL + LR) / 2
+        U = 1j*(RL - LR) / 2
+        V = (RR - LL) / 2
         """
         if self.shape[0] < 4:
             errmsg = "Transformation of a subset of Stokes axes is not yet supported."
@@ -216,24 +227,24 @@ class StokesSpectralCube(object):
             if stokes_basis == "Circular":
                 errmsg = errmsg_template.format("Linear", "Circular")
                 raise NotImplementedError(errmsg)
-            if stokes_basis == "Sky":
+            elif stokes_basis == "Sky":
                 data = dict(I = self.__class__(self._stokes_data['XX'] + self._stokes_data['YY'], wcs = self.wcs, mask=self._mask['XX']&self._mask['YY']),
                             Q = self.__class__(self._stokes_data['XX'] - self._stokes_data['YY'], wcs = self.wcs, mask=self._mask['XX']&self._mask['YY']),
                             U = self.__class__(self._stokes_data['XY'] + self._stokes_data['YX'], wcs = self.wcs, mask=self._mask['XY']&self._mask['YX']),
                             V = self.__class__(1j*(self._stokes_data['XY'] - self._stokes_data['YX']), wcs = self.wcs, mask=self._mask['XY']&self._mask['YX']))
-            if stokes_basis == "Linear":
+            elif stokes_basis == "Linear":
                 data = self._stokes_data
 
         elif self.stokes_type == "Circular":
             if stokes_basis == "Linear":
                 errmsg = errmsg_template.format("Circular", "Linear")
                 raise NotImplementedError(errmsg)
-            if stokes_basis == "Sky":
+            elif stokes_basis == "Sky":
                 data = dict(I = self.__class__(self._stokes_data['RR'] + self._stokes_data['LL'], wcs = self.wcs, mask=self._mask['RR']&self._mask['LL']),
                             Q = self.__class__(self._stokes_data['RL'] + self._stokes_data['RL'], wcs = self.wcs, mask=self._mask['RL']&self._mask['LR']),
                             U = self.__class__(1j*(self._stokes_data['RL'] - self._stokes_data['LR']), wcs = self.wcs, mask=self._mask['RL']&self._mask['LR']),
                             V = self.__class__(self._stokes_data['RR'] - self._stokes_data['LL'], wcs = self.wcs, mask=self._mask['RR']&self._mask['LL']))
-            if stokes_basis == "Circular":
+            elif stokes_basis == "Circular":
                 data = self._stokes_data
 
         elif self.stokes_type == "Sky":
@@ -242,12 +253,12 @@ class StokesSpectralCube(object):
                             XY = self.__class__(0.5*(self._stokes_data['U'] + 1j*self._stokes_data['V']), wcs = self.wcs, mask=self._mask['U']&self._mask['V']),
                             YX = self.__class__(0.5*(self._stokes_data['U'] - 1j*self._stokes_data['V']), wcs = self.wcs, mask=self._mask['U']&self._mask['V']),
                             YY = self.__class__(0.5*(self._stokes_data['I'] - self._stokes_data['Q']), wcs = self.wcs, mask=self._mask['I']&self._mask['Q']))
-            if stokes_basis == "Sky":
+            elif stokes_basis == "Circular":
                 data = dict(RR = self.__class__(0.5*(self._stokes_data['I'] + self._stokes_data['V']), wcs = self.wcs, mask=self._mask['I']&self._mask['V']),
                             RL = self.__class__(0.5*(self._stokes_data['Q'] + 1j*self._stokes_data['U']), wcs = self.wcs, mask=self._mask['Q']&self._mask['U']),
                             LR = self.__class__(0.5*(self._stokes_data['Q'] - 1j*self._stokes_data['U']), wcs = self.wcs, mask=self._mask['Q']&self._mask['U']),
                             LL = self.__class__(0.5*(self._stokes_data['I'] - self._stokes_data['V']), wcs = self.wcs, mask=self._mask['I']&self._mask['V']))
-            if stokes_basis == "Sky":
+            elif stokes_basis == "Sky":
                 data = self._stokes_data        
         return self._new_cube_with(stokes_data=data)
         
