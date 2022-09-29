@@ -2491,6 +2491,42 @@ def test_spatial_smooth_median(data_adv, use_dask):
 
 
 @pytest.mark.parametrize('num_cores', (None, 1))
+def test_spatial_smooth_maxfilter(num_cores, data_adv, use_dask):
+
+    pytest.importorskip('scipy.ndimage')
+    from scipy import ndimage
+
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+
+    cube_spatial_max = cube.spatial_filter([3, 3],
+            filter=ndimage.filters.maximum_filter, num_cores=num_cores)
+
+    # Check first slice
+    result = np.array([[0.90950237, 0.90950237],
+                       [0.90950237, 0.90950237],
+                       [0.90388047, 0.90388047]])
+
+    np.testing.assert_almost_equal(cube_spatial_max[0, :, :].value, result)
+
+
+@pytest.mark.parametrize('num_cores', (None, 1))
+def test_spectral_smooth_maxfilter(num_cores, data_adv, use_dask):
+
+    pytest.importorskip('scipy.ndimage')
+    from scipy import ndimage
+
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+
+    cube_spectral_max = cube.spectral_filter(3,
+            filter=ndimage.filters.maximum_filter, num_cores=num_cores)
+
+    # Check first slice
+    result = np.array([0.90388047, 0.90388047, 0.96629004, 0.96629004])
+
+    np.testing.assert_almost_equal(cube_spectral_max[:,1,1].value, result)
+
+
+@pytest.mark.parametrize('num_cores', (None, 1))
 def test_spectral_smooth_median(num_cores, data_adv, use_dask):
 
     pytest.importorskip('scipy.ndimage')
