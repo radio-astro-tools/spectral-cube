@@ -823,18 +823,21 @@ def mosaic_cubes(cubes, spectral_block_size=100, **kwargs):
     for cube in cubes:
         # Reproject cubes to the header
         try:
-            cube_repr = cube.reproject(header, block_size=[spectral_block_size, cube.shape[1], cube.shape[2]], **kwargs)
+            if spectral_block_size is not None:
+                cube_repr = cube.reproject(header, block_size=[spectral_block_size, cube.shape[1], cube.shape[2]], **kwargs)
+            else:
+                cube_repr = cube.reproject(header, **kwargs)
         except TypeError:
             warnings.warn("The block_size argument is not accepted by `reproject`.  A more recent version may be needed.")
             cube_repr = cube.reproject(header, **kwargs)
 
-        # Create weighting mask
+        # Create weighting mask (2D)
         mask = (cube_repr[0:1].get_mask_array()[0])
         mask_opt += mask.astype(float)
 
         # Go through each slice of the cube, add it to the final array
         for ii in range(final_array.shape[0]):
-            slice1 = np.nan_to_num(cube_repr[ii])
+            slice1 = np.nan_to_num(cube_repr[ii].value)
             final_array[ii] = final_array[ii] + slice1
 
     # Dividing by the mask throws errors where it is zero
