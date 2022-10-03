@@ -115,6 +115,11 @@ def test_reproject(use_memmap, data_adv, use_dask):
     wcs_out.wcs.crval = [134.37608, -31.939241, wcs_in.wcs.crval[2]]
     wcs_out.wcs.crpix = [2., 2., wcs_in.wcs.crpix[2]]
 
+    # cube is doppler-optical by default, which uses the rest wavelength,
+    # which isn't auto-computed, resulting in nan pixels in the WCS transform
+    wcs_out.wcs.restwav = 0.21106114549833
+    cube._wcs.wcs.restwav = 0.21106114549833
+
     header_out = cube.header
     header_out['NAXIS1'] = 4
     header_out['NAXIS2'] = 5
