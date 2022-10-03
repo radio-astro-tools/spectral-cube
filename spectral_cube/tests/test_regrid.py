@@ -611,13 +611,11 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
     # which isn't auto-computed, resulting in nan pixels in the WCS transform
     cube._wcs.wcs.restwav = constants.c.to(u.m/u.s).value / cube.wcs.wcs.restfrq
 
-    from reproject.mosaicking import find_optimal_celestial_wcs
-
     expected_wcs = WCS(combine_headers(cube.header, cube.header)).celestial
 
     # Make two overlapping cubes of the data
-    part1 = cube[:, :round(cube.shape[1]*2./3.),:]
-    part2 = cube[:, round(cube.shape[1]/3.):,:]
+    part1 = cube[:, :round(cube.shape[1]*2./3.), :]
+    part2 = cube[:, round(cube.shape[1]/3.):, :]
 
     assert part1.wcs.wcs.restwav != 0
     assert part2.wcs.wcs.restwav != 0
@@ -627,7 +625,7 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
                           spectral_block_size=spectral_block_size)
 
     # Check that the shapes are the same
-    assert result.shape == cube.shape 
+    assert result.shape == cube.shape
 
     # Check WCS in reprojected matches wcs_out
     # (comparing WCS failed for no reason we could discern)
