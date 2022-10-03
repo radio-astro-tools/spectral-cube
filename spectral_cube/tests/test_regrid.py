@@ -632,6 +632,6 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
     # Check WCS in reprojected matches wcs_out
     # (comparing WCS failed for no reason we could discern)
     assert repr(expected_wcs) == repr(result.wcs.celestial)
-    # Check that values of original and result are comaprable
+    # Check that values of original and result are comparable
     np.testing.assert_almost_equal(result.filled_data[:].value, cube.filled_data[:].value, decimal=3)
     # only good to 3 decimal places is not amazing...
