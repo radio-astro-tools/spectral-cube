@@ -14,6 +14,7 @@ import dask.array as da
 import numpy as np
 from astropy.wcs.utils import proj_plane_pixel_area
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
+from astropy.wcs import WCS
 from . import wcs_utils
 from .utils import FITSWarning, AstropyUserWarning, WCSCelestialError
 from astropy import log
@@ -750,3 +751,102 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
     else:
         # Slice along first axis to return a 1D array.
         return factors[0]
+
+def combine_headers(header1, header2):
+    '''
+    Given two Header objects, this function returns a fits Header of the optimal wcs. 
+
+    Parameters
+    ----------
+    header1 : astropy.io.fits.Header
+        A Header.
+    header2 : astropy.io.fits.Header
+        A Header.
+
+    Returns
+    -------
+    header : astropy.io.fits.Header
+        A header object of a field containing both initial headers. 
+
+    '''
+
+    from reproject.mosaicking import find_optimal_celestial_wcs
+
+    # Get wcs and shape of both headers
+    w1 = WCS(header1).celestial
+    s1 = w1.array_shape
+    w2 = WCS(header2).celestial
+    s2 = w2.array_shape
+
+    # Get the optimal wcs and shape for both fields together
+    wcs_opt, shape_opt = find_optimal_celestial_wcs([(s1, w1), (s2, w2)], auto_rotate=False)
+
+    # Make a new header using the optimal wcs and information from cubes
+    header = header1.copy()
+    header['NAXIS'] = 3
+    header['NAXIS1'] = shape_opt[1]
+    header['NAXIS2'] = shape_opt[0]
+    header['NAXIS3'] = header1['NAXIS3']
+    header.update(wcs_opt.to_header())
+    header['WCSAXES'] = 3
+    return header
+
+def mosaic_cubes(cubes, spectral_block_size=100, **kwargs):
+    '''
+    This function reprojects cubes onto a common grid and combines them to a single field.  
+
+    Parameters
+    ----------
+    cubes : iterable
+        Iterable list of SpectralCube objects to reproject and add together. 
+    spectral_block_size : int
+        Block size so that reproject does not run out of memory. 
+
+    Outputs
+    -------
+    cube : SpectralCube
+        A spectral cube with the list of cubes mosaicked together.
+    '''
+
+    cube1 = cubes[0]
+    header = cube1.header
+
+    # Create a header for a field containing all cubes
+    for cu in cubes[1:]:
+        header = combine_headers(header, cu.header)
+
+    # Prepare an array and mask for the final cube
+    shape_opt = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
+    final_array = np.zeros(shape_opt)
+    mask_opt = np.zeros(shape_opt[1:])
+
+    for cube in cubes:
+        # Reproject cubes to the header
+        try:
+            if spectral_block_size is not None:
+                cube_repr = cube.reproject(header, block_size=[spectral_block_size, cube.shape[1], cube.shape[2]], **kwargs)
+            else:
+                cube_repr = cube.reproject(header, **kwargs)
+        except TypeError:
+            warnings.warn("The block_size argument is not accepted by `reproject`.  A more recent version may be needed.")
+            cube_repr = cube.reproject(header, **kwargs)
+
+        # Create weighting mask (2D)
+        mask = (cube_repr[0:1].get_mask_array()[0])
+        mask_opt += mask.astype(float)
+
+        # Go through each slice of the cube, add it to the final array
+        for ii in range(final_array.shape[0]):
+            slice1 = np.nan_to_num(cube_repr.unitless_filled_data[ii])
+            final_array[ii] = final_array[ii] + slice1
+
+    # Dividing by the mask throws errors where it is zero
+    with np.errstate(divide='ignore'):
+
+        # Use weighting mask to average where cubes overlap
+        for ss in range(final_array.shape[0]):
+            final_array[ss] /= mask_opt
+
+    # Create Cube
+    cube = cube1.__class__(data=final_array * cube1.unit, wcs=WCS(header))
+    return cube

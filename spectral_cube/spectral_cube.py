@@ -2701,6 +2701,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   shape_out=shape_out,
                                                   order=order,
                                                   **reproj_kwargs)
+        if np.all(np.isnan(newcube)):
+            raise ValueError("All values in reprojected cube are nan.  This can be caused"
+                             " by an error in which coordinates do not 'round-trip'.  Try "
+                             "setting ``roundtrip_coords=False``.  You might also check "
+                             "whether the WCS transformation produces valid pixel->world "
+                             "and world->pixel coordinates in each axis."
+                             )
 
         return self._new_cube_with(data=newcube,
                                    wcs=newwcs,

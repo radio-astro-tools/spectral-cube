@@ -60,3 +60,4 @@ docs/api
 */cython_version.py
 
 .tmp
+.ipynb_checkpoints

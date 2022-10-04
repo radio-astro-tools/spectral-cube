@@ -4,7 +4,7 @@ import tempfile
 import numpy as np
 import os
 
-from astropy import units as u
+from astropy import constants, units as u
 from astropy import convolution
 from astropy.wcs import WCS
 from astropy import wcs
@@ -25,7 +25,9 @@ NPY_VERSION_CHECK = LooseVersion(np.version.version) >= "1.13"
 from radio_beam import beam, Beam
 
 from .. import SpectralCube
+from ..masks import BooleanArrayMask
 from ..utils import WCSCelestialError
+from ..cube_utils import mosaic_cubes, combine_headers
 from .test_spectral_cube import cube_and_raw
 from .test_projection import load_projection
 from . import path, utilities
@@ -112,6 +114,11 @@ def test_reproject(use_memmap, data_adv, use_dask):
     wcs_out.wcs.ctype = ['GLON-SIN', 'GLAT-SIN', wcs_in.wcs.ctype[2]]
     wcs_out.wcs.crval = [134.37608, -31.939241, wcs_in.wcs.crval[2]]
     wcs_out.wcs.crpix = [2., 2., wcs_in.wcs.crpix[2]]
+
+    # cube is doppler-optical by default, which uses the rest wavelength,
+    # which isn't auto-computed, resulting in nan pixels in the WCS transform
+    wcs_out.wcs.restwav = 0.21106114549833
+    cube._wcs.wcs.restwav = 0.21106114549833
 
     header_out = cube.header
     header_out['NAXIS1'] = 4
@@ -585,3 +592,44 @@ def test_reproject_3D_memory():
 
     assert result.wcs.wcs.crval[0] == 0.001
     assert result.wcs.wcs.crpix[0] == 2.
+
+@pytest.mark.parametrize('spectral_block_size,use_memmap', ((None, False),
+                                                            (100, False),
+                                                            (None, True),
+                                                            (100, False),
+                                                            (1, True),
+                                                            (1, False),
+                                                            ))
+def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
+
+    pytest.importorskip('reproject')
+
+    # Read in data to use
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+
+    # cube is doppler-optical by default, which uses the rest wavelength,
+    # which isn't auto-computed, resulting in nan pixels in the WCS transform
+    cube._wcs.wcs.restwav = constants.c.to(u.m/u.s).value / cube.wcs.wcs.restfrq
+
+    expected_wcs = WCS(combine_headers(cube.header, cube.header)).celestial
+
+    # Make two overlapping cubes of the data
+    part1 = cube[:, :round(cube.shape[1]*2./3.), :]
+    part2 = cube[:, round(cube.shape[1]/3.):, :]
+
+    assert part1.wcs.wcs.restwav != 0
+    assert part2.wcs.wcs.restwav != 0
+
+    result = mosaic_cubes([part1, part2], order='nearest-neighbor',
+                          roundtrip_coords=False,
+                          spectral_block_size=spectral_block_size)
+
+    # Check that the shapes are the same
+    assert result.shape == cube.shape
+
+    # Check WCS in reprojected matches wcs_out
+    # (comparing WCS failed for no reason we could discern)
+    assert repr(expected_wcs) == repr(result.wcs.celestial)
+    # Check that values of original and result are comparable
+    np.testing.assert_almost_equal(result.filled_data[:].value, cube.filled_data[:].value, decimal=3)
+    # only good to 3 decimal places is not amazing...
