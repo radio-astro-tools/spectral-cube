@@ -792,7 +792,7 @@ def combine_headers(header1, header2, **kwargs):
     header['WCSAXES'] = 3
     return header
 
-def mosaic_cubes(cubes, spectral_block_size=100, header_kwargs={}, **kwargs):
+def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.  
 
@@ -814,7 +814,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, header_kwargs={}, **kwargs):
 
     # Create a header for a field containing all cubes
     for cu in cubes[1:]:
-        header = combine_headers(header, cu.header, **header_kwargs)
+        header = combine_headers(header, cu.header, **combine_header_kwargs)
 
     # Prepare an array and mask for the final cube
     shape_opt = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
