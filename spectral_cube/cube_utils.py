@@ -752,7 +752,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         # Slice along first axis to return a 1D array.
         return factors[0]
 
-def combine_headers(header1, header2):
+def combine_headers(header1, header2, **kwargs):
     '''
     Given two Header objects, this function returns a fits Header of the optimal wcs. 
 
@@ -779,7 +779,8 @@ def combine_headers(header1, header2):
     s2 = w2.array_shape
 
     # Get the optimal wcs and shape for both fields together
-    wcs_opt, shape_opt = find_optimal_celestial_wcs([(s1, w1), (s2, w2)], auto_rotate=False)
+    wcs_opt, shape_opt = find_optimal_celestial_wcs([(s1, w1), (s2, w2)], auto_rotate=False,
+                                                    **kwargs)
 
     # Make a new header using the optimal wcs and information from cubes
     header = header1.copy()
@@ -791,7 +792,7 @@ def combine_headers(header1, header2):
     header['WCSAXES'] = 3
     return header
 
-def mosaic_cubes(cubes, spectral_block_size=100, **kwargs):
+def mosaic_cubes(cubes, spectral_block_size=100, header_kwargs={}, **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.  
 
@@ -813,7 +814,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, **kwargs):
 
     # Create a header for a field containing all cubes
     for cu in cubes[1:]:
-        header = combine_headers(header, cu.header)
+        header = combine_headers(header, cu.header, **header_kwargs)
 
     # Prepare an array and mask for the final cube
     shape_opt = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
@@ -824,11 +825,16 @@ def mosaic_cubes(cubes, spectral_block_size=100, **kwargs):
         # Reproject cubes to the header
         try:
             if spectral_block_size is not None:
-                cube_repr = cube.reproject(header, block_size=[spectral_block_size, cube.shape[1], cube.shape[2]], **kwargs)
+                cube_repr = cube.reproject(header,
+                                           block_size=[spectral_block_size,
+                                                       cube.shape[1],
+                                                       cube.shape[2]],
+                                           **kwargs)
             else:
                 cube_repr = cube.reproject(header, **kwargs)
         except TypeError:
-            warnings.warn("The block_size argument is not accepted by `reproject`.  A more recent version may be needed.")
+            warnings.warn("The block_size argument is not accepted by `reproject`.  "
+                          "A more recent version may be needed.")
             cube_repr = cube.reproject(header, **kwargs)
 
         # Create weighting mask (2D)
