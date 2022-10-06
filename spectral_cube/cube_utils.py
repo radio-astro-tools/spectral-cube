@@ -802,7 +802,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwa
         Iterable list of SpectralCube objects to reproject and add together.
     spectral_block_size : int
         Block size so that reproject does not run out of memory.
-
+combine_header_kwargs : dict
+     Keywords passed to `~reproject.mosaicking.find_optimal_celestial_wcs`.
     Outputs
     -------
     cube : SpectralCube
