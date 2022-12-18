@@ -13,6 +13,8 @@ from astropy.utils import data
 
 try:
     from distributed.utils_test import client, loop, cluster_fixture, cleanup, loop_in_thread  # noqa
+    # zarr & fsspec required for writing to disk w/dask
+    import zarr, fsspec  # noqa
     DISTRIBUTED_INSTALLED = True
 except ImportError:
     DISTRIBUTED_INSTALLED = False

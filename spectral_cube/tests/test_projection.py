@@ -138,6 +138,9 @@ def test_self_arith(LDO, data):
 
     image = data
     p = LDO(image, copy=False)
+    p.wcs = WCS()
+    assert hasattr(p, '_wcs')
+    assert p.wcs is not None
 
     p2 = p + p
 
@@ -161,12 +164,17 @@ def test_self_arith_with_beam(LDO, data):
     image = data
     p = LDO(image, copy=False)
     p = p.with_beam(exp_beam)
+    p.wcs = WCS()
+    assert hasattr(p, 'beam')
+    assert hasattr(p, '_wcs')
+    assert p.wcs is not None
 
     p2 = p + p
 
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
     assert np.all(p2.value==2)
+    assert hasattr(p2, 'beam')
     assert p2.beam == exp_beam
 
     p2 = p - p
@@ -174,6 +182,7 @@ def test_self_arith_with_beam(LDO, data):
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
     assert np.all(p2.value==0)
+    assert hasattr(p2, 'beam')
     assert p2.beam == exp_beam
 
 

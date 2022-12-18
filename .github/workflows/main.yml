@@ -17,43 +17,51 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9 with minimal dependencies
+            name: Py3.9 mindeps
             toxenv: py39-test
           - os: ubuntu-latest
+            python-version: '3.10'
+            name: Py3.10 mindeps
+            toxenv: py310-test
+          - os: ubuntu-latest
+            python-version: 3.11
+            name: Py3.11 mindeps
+            toxenv: py311-test
+          - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9 with no visualization + coverage
+            name: Py3.9 no visualization + coverage
             toxenv: py39-test-novis-cov
           - os: ubuntu-latest
             python-version: 3.8
-            name: Python 3.8 with minimal dependencies
+            name: Py3.8 mindeps
             toxenv: py38-test
           - os: ubuntu-latest
             python-version: 3.7
-            name: Python 3.7 with minimal dependencies
+            name: Py3.7 mindeps
             toxenv: py37-test
           - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9 with all non-visualization dependencies (except CASA)
+            name: Py3.9 all noviz (except CASA)
             toxenv: py39-test-novis
           - os: ubuntu-18.04
             python-version: 3.8
-            name: Python 3.8 with minimal dependencies and CASA
+            name: Py3.8 mindeps and CASA
             toxenv: py38-test-casa
           - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9, all non-visualization dependencies, and dev versions of key dependencies
+            name: Py3.9, novis, dev
             toxenv: py39-test-novis-dev
           - os: ubuntu-latest
             python-version: 3.8
-            name: Python 3.8 with all non-visualization dependencies (except CASA)
+            name: Py3.8 all novis (except CASA)
             toxenv: py38-test-novis
           - os: macos-latest
             python-version: 3.9
-            name: Python 3.9 with all non-visualization dependencies (except CASA) on MacOS X
+            name: Py3.9 all noviz (except CASA) MacOS X
             toxenv: py39-test-novis
           - os: windows-latest
             python-version: 3.9
-            name: Python 3.9, all dependencies, and dev versions of key dependencies on Windows
+            name: Py3.9, alldeps, dev; Windows
             toxenv: py39-test-all-dev-noopenfiles
           - os: ubuntu-latest
             python-version: 3.9
