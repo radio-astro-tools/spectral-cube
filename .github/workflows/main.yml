@@ -1,11 +1,11 @@
 name: Run tests
 
-on: 
+on:
   push:
   pull_request:
   schedule:
-    # run every day at 5am UTC
-    - cron: '0 5 * * *'
+    # run every Tuesday at 5am UTC
+    - cron: '0 5 * * 2'
 
 jobs:
   tests:
@@ -61,9 +61,9 @@ jobs:
             toxenv: build_docs
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install testing dependencies
@@ -72,6 +72,6 @@ jobs:
       run: tox -v -e ${{ matrix.toxenv }}
     - name: Upload coverage to codecov
       if: ${{ contains(matrix.toxenv,'-cov') }}
-      uses: codecov/codecov-action@v1.0.13
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml

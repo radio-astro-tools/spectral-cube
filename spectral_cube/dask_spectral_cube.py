@@ -1572,7 +1572,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
 
         # We need to pass in the beams to dask, so we hide them inside an object array
         # that can then be chunked like the data.
-        beams = da.from_array(np.array(beams, dtype=np.object)
+        beams = da.from_array(np.array(beams, dtype=object)
                               .reshape((len(beams), 1, 1)), chunks=(-1, -1, -1))
 
         needs_beam_ratio = self.unit.is_equivalent(u.Jy / u.beam)

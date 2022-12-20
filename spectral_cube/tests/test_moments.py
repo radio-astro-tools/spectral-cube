@@ -58,7 +58,7 @@ MOMENTSu = MOMENTS
 
 
 def moment_cube():
-    cube = np.arange(27).reshape([3, 3, 3]).astype(np.float)
+    cube = np.arange(27).reshape([3, 3, 3]).astype(float)
     wcs = WCS(naxis=3)
     wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VELO']
     # choose values to minimize spherical distortions
