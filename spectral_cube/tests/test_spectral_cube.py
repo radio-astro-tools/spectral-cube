@@ -77,8 +77,6 @@ except ImportError:
     scipyOK = False
 
 import os
-# if ON_TRAVIS is set, we're on travis.
-on_travis = bool(os.environ.get('ON_TRAVIS'))
 
 from radio_beam import Beam, Beams
 from radio_beam.utils import BeamError
@@ -697,14 +695,7 @@ class TestNumpyMethods(BaseTest):
         # regular median.
 
         scmed = self.c.apply_numpy_function(np.median, axis=0)
-        # this checks whether numpy <=1.9.3 has a bug?
-        # as far as I can tell, np==1.9.3 no longer has this bug/feature
-        #if LooseVersion(np.__version__) <= LooseVersion('1.9.3'):
-        #    # print statements added so we get more info in the travis builds
-        #    print("Numpy version is: {0}".format(LooseVersion(np.__version__)))
-        #    assert np.count_nonzero(np.isnan(scmed)) == 5
-        #else:
-        #    print("Numpy version is: {0}".format(LooseVersion(np.__version__)))
+
         assert np.count_nonzero(np.isnan(scmed)) == 6
 
         scmed = self.c.apply_numpy_function(np.nanmedian, axis=0)

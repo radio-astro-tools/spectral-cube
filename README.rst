@@ -34,8 +34,6 @@ Build and coverage status
 
 .. |Join the chat at https://gitter.im/radio-astro-tools/spectral-cube| image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/radio-astro-tools/spectral-cube?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
-.. |Build Status| image:: https://travis-ci.org/radio-astro-tools/spectral-cube.png?branch=master
-   :target: https://travis-ci.org/radio-astro-tools/spectral-cube
 .. |Coverage Status| image:: https://coveralls.io/repos/radio-astro-tools/spectral-cube/badge.svg?branch=master
    :target: https://coveralls.io/r/radio-astro-tools/spectral-cube?branch=master
 .. |DOI| image:: https://zenodo.org/badge/doi/10.5281/zenodo.11485.svg
