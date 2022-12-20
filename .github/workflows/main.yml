@@ -4,8 +4,8 @@ on:
   push:
   pull_request:
   schedule:
-    # run every day at 5am UTC
-    - cron: '0 5 * * *'
+    # run every Tuesday at 5am UTC
+    - cron: '0 5 * * 2'
 
 jobs:
   tests:
