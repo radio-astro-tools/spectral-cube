@@ -1051,7 +1051,7 @@ def test_with_mask_with_boolean_array(use_dask):
 
 def test_with_mask_with_good_array_shape(use_dask):
     cube = _dummy_cube(use_dask)
-    mask = np.zeros((1, 5), dtype=np.bool)
+    mask = np.zeros((1, 5), dtype=bool)
     cube2 = cube.with_mask(mask, inherit_mask=False)
     assert isinstance(cube2._mask, BooleanArrayMask)
     np.testing.assert_equal(cube2._mask._mask, mask.reshape((1, 1, 5)))
@@ -1059,7 +1059,7 @@ def test_with_mask_with_good_array_shape(use_dask):
 
 def test_with_mask_with_bad_array_shape(use_dask):
     cube = _dummy_cube(use_dask)
-    mask = np.zeros((5, 5), dtype=np.bool)
+    mask = np.zeros((5, 5), dtype=bool)
     with pytest.raises(ValueError) as exc:
         cube.with_mask(mask)
     assert exc.value.args[0] == ("Mask shape is not broadcastable to data shape: "

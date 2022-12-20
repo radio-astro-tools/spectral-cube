@@ -2921,7 +2921,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         if use_memmap:
             ntf = tempfile.NamedTemporaryFile(dir=memmap_dir)
-            outcube = np.memmap(ntf, mode='w+', shape=self.shape, dtype=np.float)
+            outcube = np.memmap(ntf, mode='w+', shape=self.shape, dtype=float)
         else:
             if self._is_huge and not self.allow_huge_operations:
                 raise ValueError("Applying a function without ``use_memmap`` "
@@ -2931,7 +2931,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                  "set ``use_memmap=True`` or set "
                                  "``cube.allow_huge_operations=True`` to "
                                  "override this restriction.")
-            outcube = np.empty(shape=self.shape, dtype=np.float)
+            outcube = np.empty(shape=self.shape, dtype=float)
 
         if num_cores == 1 and parallel:
             warnings.warn("parallel=True was specified but num_cores=1. "
@@ -3489,9 +3489,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             view_newaxis = tuple(view_newaxis)
 
             ntf = tempfile.NamedTemporaryFile()
-            dsarr = np.memmap(ntf, mode='w+', shape=newshape, dtype=np.float)
+            dsarr = np.memmap(ntf, mode='w+', shape=newshape, dtype=float)
             ntf2 = tempfile.NamedTemporaryFile()
-            mask = np.memmap(ntf2, mode='w+', shape=newshape, dtype=np.bool)
+            mask = np.memmap(ntf2, mode='w+', shape=newshape, dtype=bool)
             for ii in progressbar(range(newshape[axis])):
                 view_fulldata = makeslice_local(ii*factor)
                 view_newdata = makeslice_local(ii, nsteps=1)
