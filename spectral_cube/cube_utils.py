@@ -504,7 +504,9 @@ def convert_bunit(bunit):
         try:
             unit = u.Unit(bunit)
         except ValueError:
-            warnings.warn("Could not parse unit {0}".format(bunit),
+            warnings.warn("Could not parse unit {0}. "
+                    "If you know the correct unit, try "
+                    "u.add_enabled_units(u.def_unit(['{0}'], represents=u.correct_unit))".format(bunit),
                           AstropyUserWarning)
             unit = None
 
