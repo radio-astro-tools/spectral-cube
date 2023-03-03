@@ -663,7 +663,7 @@ def read_lmv_type2(lf):
 
     lf.seek(1024)
     real_dims = dims[:ndim]
-    data = np.fromfile(lf, count=np.product(real_dims),
+    data = np.fromfile(lf, count=np.prod(real_dims),
                        dtype='float32').reshape(real_dims[::-1])
     data[data==bval] = np.nan
 
