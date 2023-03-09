@@ -667,8 +667,8 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             warnings.filterwarnings('ignore', category=FITSWarning)
             beam = cube_utils.try_load_beams(hdul)
             try:
-                _ = len(beams)
                 beams = beam
+                _ = len(beams)
             except TypeError:
                 # beam is scalar and has no len()
                 beams = None
