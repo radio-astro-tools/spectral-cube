@@ -778,12 +778,34 @@ def combine_headers(header1, header2, **kwargs):
     wcs_opt, shape_opt = find_optimal_celestial_wcs([(s1, w1), (s2, w2)], auto_rotate=False,
                                                     **kwargs)
 
+    # find spectral coverage
+    specw1 = WCS(header1).spectral
+    specw2 = WCS(header2).spectral
+    specaxis1 = [x[0] for x in WCS(header1).world_axis_object_components].index('spectral')
+    specaxis2 = [x[0] for x in WCS(header1).world_axis_object_components].index('spectral')
+    range1 = specw1.pixel_to_world([0,header1[f'NAXIS{specaxis1+1}']-1])
+    range2 = specw2.pixel_to_world([0,header2[f'NAXIS{specaxis1+1}']-1])
+
+    # check for overlap
+    # this will raise an exception if the headers are an different units, which we want
+    if max(range1) < min(range2) or max(range2) < min(range1):
+        warnings.warn(f"There is no spectral overlap between {range1} and {range2}")
+
+    # check cdelt
+    dx1 = specw1.proj_plane_pixel_scales()[0]
+    dx2 = specw2.proj_plane_pixel_scales()[0]
+    if dx1 != dx2:
+        raise ValueError(f"Different spectral pixel scale {dx1} vs {dx2}")
+
+    ranges = np.hstack([range1, range2])
+    new_naxis = int(np.ceil((ranges.max() - ranges.min()) / np.abs(dx1)))
+
     # Make a new header using the optimal wcs and information from cubes
     header = header1.copy()
     header['NAXIS'] = 3
     header['NAXIS1'] = shape_opt[1]
     header['NAXIS2'] = shape_opt[0]
-    header['NAXIS3'] = header1['NAXIS3']
+    header['NAXIS3'] = new_naxis
     header.update(wcs_opt.to_header())
     header['WCSAXES'] = 3
     return header
