@@ -666,9 +666,11 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', category=FITSWarning)
             beam = cube_utils.try_load_beams(hdul)
-            if hasattr(beam, '__len__'):
+            try:
                 beams = beam
-            else:
+                _ = len(beams)
+            except TypeError:
+                # beam is scalar and has no len()
                 beams = None
 
         if beams is not None:
