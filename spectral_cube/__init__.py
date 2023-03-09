@@ -2,8 +2,6 @@
 
 from ._astropy_init import __version__, test
 
-from pkg_resources import get_distribution, DistributionNotFound
-
 from .spectral_cube import (SpectralCube, VaryingResolutionSpectralCube)
 from .dask_spectral_cube import (DaskSpectralCube, DaskVaryingResolutionSpectralCube)
 from .stokes_spectral_cube import StokesSpectralCube
