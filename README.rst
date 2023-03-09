@@ -30,7 +30,7 @@ Original development included substantial contributions from:
 Build and coverage status
 =========================
 
-|Build Status| |Coverage Status| |DOI|
+|Coverage Status| |DOI|
 
 .. |Join the chat at https://gitter.im/radio-astro-tools/spectral-cube| image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/radio-astro-tools/spectral-cube?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
