@@ -56,6 +56,7 @@ class BaseNDClass(object):
     def mask(self, value):
         self._mask = value
 
+
 class HeaderMixinClass(object):
     """
     A mixin class to provide header updating from WCS objects.

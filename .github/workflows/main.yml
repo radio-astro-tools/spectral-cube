@@ -30,39 +30,59 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.9
             name: Py3.9 no visualization + coverage
-            toxenv: py39-test-novis-cov
+            toxenv: py39-test-noviz-cov
           - os: ubuntu-latest
             python-version: 3.8
             name: Py3.8 mindeps
             toxenv: py38-test
           - os: ubuntu-latest
-            python-version: 3.7
-            name: Py3.7 mindeps
-            toxenv: py37-test
+            python-version: 3.9
+            name: Py3.9 noviz
+            toxenv: py39-test-noviz
           - os: ubuntu-latest
             python-version: 3.9
-            name: Py3.9 all noviz (except CASA)
-            toxenv: py39-test-novis
+            name: Py3.9 all
+            toxenv: py39-test-viz-noviz-docs
+          - os: ubuntu-latest
+            python-version: 3.9
+            name: Py3.9 dev
+            toxenv: py39-test-dev
+          - os: ubuntu-latest
+            python-version: 3.9
+            name: Py3.9 viz
+            toxenv: py39-test-viz
+              #- os: ubuntu-latest
+              #  python-version: 3.9
+              #  name: Py3.9 viz w/yt & glue
+              #  toxenv: py39-test-viz-viz_extra
+          - os: ubuntu-latest
+            python-version: 3.9
+            name: Py3.9 all dev
+            toxenv: py39-test-viz-noviz-docs-dev
           - os: ubuntu-18.04
             python-version: 3.8
             name: Py3.8 mindeps and CASA
             toxenv: py38-test-casa
           - os: ubuntu-latest
             python-version: 3.9
-            name: Py3.9, novis, dev
-            toxenv: py39-test-novis-dev
+            name: Py3.9, noviz, dev
+            toxenv: py39-test-noviz-dev
           - os: ubuntu-latest
             python-version: 3.8
-            name: Py3.8 all novis (except CASA)
-            toxenv: py38-test-novis
+            name: Py3.8 noviz (except CASA)
+            toxenv: py38-test-noviz
           - os: macos-latest
             python-version: 3.9
-            name: Py3.9 all noviz (except CASA) MacOS X
-            toxenv: py39-test-novis
+            name: Py3.9 noviz (except CASA) MacOS X
+            toxenv: py39-test-noviz
           - os: windows-latest
             python-version: 3.9
-            name: Py3.9, alldeps, dev; Windows
-            toxenv: py39-test-all-dev-noopenfiles
+            name: Py3.9, noviz Windows
+            toxenv: py39-test-noviz-dev
+          - os: windows-latest
+            python-version: 3.9
+            name: Py3.9, noviz, dev; Windows
+            toxenv: py39-test-noviz-dev
           - os: ubuntu-latest
             python-version: 3.9
             name: Documentation

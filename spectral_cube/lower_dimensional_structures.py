@@ -33,6 +33,13 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
     Generic class for 1D and 2D objects.
     """
 
+    def _new_view(self, obj=None, unit=None, finalize=True):
+        # FORCE finalization to hack around https://github.com/astropy/astropy/issues/14514#issuecomment-1463935711
+        try:
+            return super(LowerDimensionalObject, self)._new_view(obj=obj, unit=unit, finalize=True)
+        except TypeError:
+            return super(LowerDimensionalObject, self)._new_view(obj=obj, unit=unit)
+
     @property
     def hdu(self):
         if self.wcs is None:
@@ -246,7 +253,7 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
             raise ValueError("value should be a 2-d array")
 
         if wcs is not None and wcs.wcs.naxis != 2:
-            raise ValueError("wcs should have two dimension")
+            raise ValueError("wcs should have two dimensions")
 
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
@@ -599,7 +606,7 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
             raise ValueError("value should be a 1-d array")
 
         if wcs is not None and wcs.wcs.naxis != 1:
-            raise ValueError("wcs should have two dimension")
+            raise ValueError("wcs should have one dimension")
 
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
