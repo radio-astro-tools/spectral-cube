@@ -865,7 +865,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     mask_opt = np.zeros(shape_opt[1:])
 
     # check that the beams are deconvolvable
-    if commonbeam:
+    if commonbeam is not None:
         for cube in cubes:
             try:
                 commonbeam.deconvolve(cube.beam)
@@ -875,7 +875,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                                            f"{ex}")
 
     for cube in cubes:
-        if commonbeam:
+        if commonbeam is not None:
             cube = cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
         # Reproject cubes to the target_header
         try:
