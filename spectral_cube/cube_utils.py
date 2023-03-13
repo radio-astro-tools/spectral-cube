@@ -879,7 +879,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                       (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
             fobj.write(b'\0')
 
-        hdu = fits.open(output_file, mode='rb+', overwrite=True)
+        hdu = fits.open(output_file, mode='update', overwrite=True)
         final_array = hdu.data
 
         # use memmap - not a FITS file - for the footprint
