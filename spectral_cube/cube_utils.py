@@ -873,7 +873,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                              )
         for kwd in ('NAXIS1', 'NAXIS2', 'NAXIS3'):
             hdu.header[kwd] = target_header[kwd]
-        target_header.tofile(output_file)
+        target_header.tofile(output_file, overwrite=True)
         with open(output_file, 'rb+') as fobj:
             fobj.seek(len(target_header.tostring()) +
                       (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
