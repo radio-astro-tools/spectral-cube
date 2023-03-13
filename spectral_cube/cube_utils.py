@@ -880,7 +880,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             fobj.write(b'\0')
 
         hdu = fits.open(output_file, mode='update', overwrite=True)
-        final_array = hdu.data
+        final_array = hdu[0].data
 
         # use memmap - not a FITS file - for the footprint
         ntf2 = tempfile.NamedTemporaryFile()
