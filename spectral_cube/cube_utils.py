@@ -19,7 +19,7 @@ from astropy.io.fits import BinTableHDU, Column
 from astropy import units as u
 import itertools
 import re
-from radio_beam import Beam
+from radio_beam import Beam, BeamError
 
 
 def _fix_spectral(wcs):
@@ -869,10 +869,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         for cube in cubes:
             try:
                 commonbeam.deconvolve(cube.beam)
-            except radio_beam.BeamError as ex:
-                raise radio_beam.BeamError("One or more beams could not be "
-                                           "deconvolved from the common beam: "
-                                           f"{ex}")
+            except BeamError as ex:
+                raise BeamError("One or more beams could not be "
+                                "deconvolved from the common beam: "
+                                f"{ex}")
 
     for cube in cubes:
         if commonbeam is not None:
