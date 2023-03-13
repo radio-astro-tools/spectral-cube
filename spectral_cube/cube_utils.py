@@ -810,7 +810,10 @@ def combine_headers(header1, header2, **kwargs):
     header['WCSAXES'] = 3
     return header
 
-def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwargs):
+def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
+                 target_header=None,
+                 common_beam=None,
+                 **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
 
@@ -830,32 +833,34 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwa
     '''
 
     cube1 = cubes[0]
-    header = cube1.header
 
-    # Create a header for a field containing all cubes
-    for cu in cubes[1:]:
-        header = combine_headers(header, cu.header, **combine_header_kwargs)
+    if target_header is None:
+        target_header = cube1.header
+
+        # Create a header for a field containing all cubes
+        for cu in cubes[1:]:
+            target_header = combine_headers(target_header, cu.header, **combine_header_kwargs)
 
     # Prepare an array and mask for the final cube
-    shape_opt = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
+    shape_opt = (target_header['NAXIS3'], target_header['NAXIS2'], target_header['NAXIS1'])
     final_array = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
 
     for cube in cubes:
-        # Reproject cubes to the header
+        # Reproject cubes to the target_header
         try:
             if spectral_block_size is not None:
-                cube_repr = cube.reproject(header,
+                cube_repr = cube.reproject(target_header,
                                            block_size=[spectral_block_size,
                                                        cube.shape[1],
                                                        cube.shape[2]],
                                            **kwargs)
             else:
-                cube_repr = cube.reproject(header, **kwargs)
+                cube_repr = cube.reproject(target_header, **kwargs)
         except TypeError:
             warnings.warn("The block_size argument is not accepted by `reproject`.  "
                           "A more recent version may be needed.")
-            cube_repr = cube.reproject(header, **kwargs)
+            cube_repr = cube.reproject(target_header, **kwargs)
 
         # Create weighting mask (2D)
         mask = (cube_repr[0:1].get_mask_array()[0])
@@ -874,5 +879,5 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwa
             final_array[ss] /= mask_opt
 
     # Create Cube
-    cube = cube1.__class__(data=final_array * cube1.unit, wcs=WCS(header))
+    cube = cube1.__class__(data=final_array * cube1.unit, wcs=WCS(target_header))
     return cube
