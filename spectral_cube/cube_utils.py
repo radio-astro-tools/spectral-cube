@@ -868,12 +868,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     # check that the beams are deconvolvable
     if commonbeam is not None:
         for cube in cubes:
-            try:
-                commonbeam.deconvolve(cube.beam)
-            except BeamError as ex:
-                raise BeamError("One or more beams could not be "
-                                "deconvolved from the common beam: "
-                                f"{ex}")
+            # this will raise an exception if any of the cubes have bad beams
+            commonbeam.deconvolve(cube.beam)
 
     for cube in cubes:
         if commonbeam is not None:
