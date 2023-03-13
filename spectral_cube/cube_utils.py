@@ -2,6 +2,7 @@ from __future__ import print_function, absolute_import, division
 
 import contextlib
 import warnings
+import tempfile
 from copy import deepcopy
 
 try:
