@@ -880,19 +880,19 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             fobj.write(b'\0')
 
         hdu = fits.open(output_file, mode='update', overwrite=True)
-        final_array = hdu[0].data
+        output_array = hdu[0].data
 
         # use memmap - not a FITS file - for the footprint
         ntf2 = tempfile.NamedTemporaryFile()
-        final_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
+        output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
     elif use_memmap:
         ntf = tempfile.NamedTemporaryFile()
-        final_array = np.memmap(ntf, mode='w+', shape=shape_opt, dtype=dtype)
+        output_array = np.memmap(ntf, mode='w+', shape=shape_opt, dtype=dtype)
         ntf2 = tempfile.NamedTemporaryFile()
-        final_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
+        output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
     else:
-        final_array = np.zeros(shape_opt)
-        final_footprint = np.zeros(shape_opt)
+        output_array = np.zeros(shape_opt)
+        output_footprint = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
 
     # check that the beams are deconvolvable
@@ -905,11 +905,11 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  for cube in cubes]
 
     try:
-        final_array, final_footprint = reproject_and_coadd(
+        output_array, output_footprint = reproject_and_coadd(
             [cube.hdu for cube in cubes],
             target_header,
-            final_array=final_array,
-            final_footprint=final_footprint,
+            output_array=output_array,
+            output_footprint=output_footprint,
             reproject_function=reproject_interp,
             block_size=[(spectral_block_size, cube.shape[1], cube.shape[2])
                         for cube in cubes],
@@ -918,14 +918,14 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         # print the exception in case we caught a different TypeError than expected
         warnings.warn("The block_size argument is not accepted by `reproject`.  "
                       f"A more recent version may be needed.  Exception was: {ex}")
-        final_array, final_footprint = reproject_and_coadd(
+        output_array, output_footprint = reproject_and_coadd(
             [cube.hdu for cube in cubes],
             target_header,
-            final_array=final_array,
-            final_footprint=final_footprint,
+            output_array=output_array,
+            output_footprint=output_footprint,
             reproject_function=reproject_interp,
         )
 
     # Create Cube
-    cube = cube1.__class__(data=final_array * cube1.unit, wcs=WCS(target_header))
+    cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
     return cube
