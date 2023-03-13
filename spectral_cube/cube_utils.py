@@ -879,7 +879,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                       (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
             fobj.write(b'\0')
 
-        final_array = fits.getdata(output_file, mode='rb+')
+        hdu = fits.open(output_file, mode='rb+')
+        final_array = hdu.data
 
         # use memmap - not a FITS file - for the footprint
         ntf2 = tempfile.NamedTemporaryFile()
