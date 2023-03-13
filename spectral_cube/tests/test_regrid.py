@@ -129,11 +129,16 @@ def test_reproject(use_memmap, data_adv, use_dask):
     result = cube.reproject(header_out, use_memmap=use_memmap)
 
     assert result.shape == (cube.shape[0], 5, 4)
+    
+    # empirically, this is how close we can get after https://github.com/astropy/astropy/pull/14508
+    tolerance = 1e-12
+
+    assert wcs_out.wcs.compare(WCS(header_out).wcs, tolerance=tolerance)
     # Check WCS in reprojected matches wcs_out
-    assert wcs_out.wcs.compare(result.wcs.wcs)
+    assert wcs_out.wcs.compare(result.wcs.wcs, tolerance=tolerance)
     # And that the headers have equivalent WCS info.
     result_wcs_from_header = WCS(result.header)
-    assert result_wcs_from_header.wcs.compare(wcs_out.wcs)
+    assert result_wcs_from_header.wcs.compare(wcs_out.wcs, tolerance=tolerance)
 
 
 def test_spectral_smooth(data_522_delta, use_dask):

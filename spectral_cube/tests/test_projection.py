@@ -137,7 +137,9 @@ def test_isnan(LDO, data):
 def test_self_arith(LDO, data):
 
     image = data
-    p = LDO(image, copy=False)
+    p = LDO(image, copy=False, wcs=WCS(naxis=image.ndim))
+    assert hasattr(p, '_wcs')
+    assert p.wcs is not None
 
     p2 = p + p
 
@@ -159,14 +161,18 @@ def test_self_arith_with_beam(LDO, data):
     exp_beam = Beam(1.0 * u.arcsec)
 
     image = data
-    p = LDO(image, copy=False)
+    p = LDO(image, copy=False, wcs=WCS(naxis=image.ndim))
     p = p.with_beam(exp_beam)
+    assert hasattr(p, 'beam')
+    assert hasattr(p, '_wcs')
+    assert p.wcs is not None
 
     p2 = p + p
 
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
     assert np.all(p2.value==2)
+    assert hasattr(p2, 'beam')
     assert p2.beam == exp_beam
 
     p2 = p - p
@@ -174,6 +180,7 @@ def test_self_arith_with_beam(LDO, data):
     assert hasattr(p2, '_wcs')
     assert p2.wcs == p.wcs
     assert np.all(p2.value==0)
+    assert hasattr(p2, 'beam')
     assert p2.beam == exp_beam
 
 
@@ -743,8 +750,11 @@ def test_1d_slice_round(data_255_delta, use_dask):
     assert hasattr(sp, '_fill_value')
     assert hasattr(sp.round(), '_fill_value')
 
-    assert 'OneDSpectrum' in sp.round().__repr__()
-    assert 'OneDSpectrum' in sp[1:-1].round().__repr__()
+    rnd = sp.round()
+    assert 'OneDSpectrum' in rnd.__repr__()
+
+    rndslc = sp[1:-1].round()
+    assert 'OneDSpectrum' in rndslc.__repr__()
 
 
 def test_LDO_arithmetic(data_vda, use_dask):

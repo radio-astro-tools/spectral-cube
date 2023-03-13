@@ -17,44 +17,72 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9 with minimal dependencies
+            name: Py3.9 mindeps
             toxenv: py39-test
           - os: ubuntu-latest
+            python-version: '3.10'
+            name: Py3.10 mindeps
+            toxenv: py310-test
+          - os: ubuntu-latest
+            python-version: 3.11
+            name: Py3.11 mindeps
+            toxenv: py311-test
+          - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9 with no visualization + coverage
-            toxenv: py39-test-novis-cov
+            name: Py3.9 no visualization + coverage
+            toxenv: py39-test-noviz-cov
           - os: ubuntu-latest
             python-version: 3.8
-            name: Python 3.8 with minimal dependencies
+            name: Py3.8 mindeps
             toxenv: py38-test
           - os: ubuntu-latest
-            python-version: 3.7
-            name: Python 3.7 with minimal dependencies
-            toxenv: py37-test
+            python-version: 3.9
+            name: Py3.9 noviz
+            toxenv: py39-test-noviz
           - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9 with all non-visualization dependencies (except CASA)
-            toxenv: py39-test-novis
+            name: Py3.9 all
+            toxenv: py39-test-viz-noviz-docs
+          - os: ubuntu-latest
+            python-version: 3.9
+            name: Py3.9 dev
+            toxenv: py39-test-dev
+          - os: ubuntu-latest
+            python-version: 3.9
+            name: Py3.9 viz
+            toxenv: py39-test-viz
+              #- os: ubuntu-latest
+              #  python-version: 3.9
+              #  name: Py3.9 viz w/yt & glue
+              #  toxenv: py39-test-viz-viz_extra
+          - os: ubuntu-latest
+            python-version: 3.9
+            name: Py3.9 all dev
+            toxenv: py39-test-viz-noviz-docs-dev
           - os: ubuntu-18.04
             python-version: 3.8
-            name: Python 3.8 with minimal dependencies and CASA
+            name: Py3.8 mindeps and CASA
             toxenv: py38-test-casa
           - os: ubuntu-latest
             python-version: 3.9
-            name: Python 3.9, all non-visualization dependencies, and dev versions of key dependencies
-            toxenv: py39-test-novis-dev
+            name: Py3.9, noviz, dev
+            toxenv: py39-test-noviz-dev
           - os: ubuntu-latest
             python-version: 3.8
-            name: Python 3.8 with all non-visualization dependencies (except CASA)
-            toxenv: py38-test-novis
+            name: Py3.8 noviz (except CASA)
+            toxenv: py38-test-noviz
           - os: macos-latest
             python-version: 3.9
-            name: Python 3.9 with all non-visualization dependencies (except CASA) on MacOS X
-            toxenv: py39-test-novis
+            name: Py3.9 noviz (except CASA) MacOS X
+            toxenv: py39-test-noviz
           - os: windows-latest
             python-version: 3.9
-            name: Python 3.9, all dependencies, and dev versions of key dependencies on Windows
-            toxenv: py39-test-all-dev-noopenfiles
+            name: Py3.9, noviz Windows
+            toxenv: py39-test-noviz-dev
+          - os: windows-latest
+            python-version: 3.9
+            name: Py3.9, noviz, dev; Windows
+            toxenv: py39-test-noviz-dev
           - os: ubuntu-latest
             python-version: 3.9
             name: Documentation
