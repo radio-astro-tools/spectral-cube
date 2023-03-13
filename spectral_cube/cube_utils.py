@@ -862,7 +862,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
     # Prepare an array and mask for the final cube
     shape_opt = (target_header['NAXIS3'], target_header['NAXIS2'], target_header['NAXIS1'])
-    dtype = f"float{target_header['BITPIX']}"
+    dtype = f"float{int(abs(target_header['BITPIX']))}"
 
     if output_file is not None:
         if not output_file.endswith('.fits'):
