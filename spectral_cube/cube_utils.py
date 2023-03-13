@@ -20,6 +20,7 @@ from astropy import units as u
 import itertools
 import re
 from radio_beam import Beam
+from radio_beam.utils import BeamError
 
 
 def _fix_spectral(wcs):
@@ -865,17 +866,17 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     mask_opt = np.zeros(shape_opt[1:])
 
     # check that the beams are deconvolvable
-    if commonbeam:
+    if commonbeam is not None:
         for cube in cubes:
             try:
                 commonbeam.deconvolve(cube.beam)
-            except radio_beam.BeamError as ex:
-                raise radio_beam.BeamError("One or more beams could not be "
-                                           "deconvolved from the common beam: "
-                                           f"{ex}")
+            except BeamError as ex:
+                raise BeamError("One or more beams could not be "
+                                "deconvolved from the common beam: "
+                                f"{ex}")
 
     for cube in cubes:
-        if commonbeam:
+        if commonbeam is not None:
             cube = cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
         # Reproject cubes to the target_header
         try:
