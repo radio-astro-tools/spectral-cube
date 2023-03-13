@@ -19,7 +19,8 @@ from astropy.io.fits import BinTableHDU, Column
 from astropy import units as u
 import itertools
 import re
-from radio_beam import Beam, BeamError
+from radio_beam import Beam
+from radio_beam.utils import BeamError
 
 
 def _fix_spectral(wcs):
