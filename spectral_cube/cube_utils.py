@@ -911,8 +911,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             output_array=output_array,
             output_footprint=output_footprint,
             reproject_function=reproject_interp,
-            block_size=[(spectral_block_size, cube.shape[1], cube.shape[2])
-                        for cube in cubes],
+            block_size=(None if spectral_block_size is None else
+                        [(spectral_block_size, cube.shape[1], cube.shape[2])
+                         for cube in cubes]),
         )
     except TypeError as ex:
         # print the exception in case we caught a different TypeError than expected
