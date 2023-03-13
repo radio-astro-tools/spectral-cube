@@ -929,4 +929,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
     # Create Cube
     cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
+
+    if output_file is not None:
+        hdu.flush()
+        hdu.close()
+
     return cube
