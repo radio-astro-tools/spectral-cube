@@ -817,6 +817,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  commonbeam=None,
                  save_to_tmp_dir=True,
                  use_memmap=True,
+                 output_file=None,
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -838,6 +839,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         big.
     use_memmap : bool
         Use a memory-mapped array to save the mosaicked cube product?
+    output_file : str or None
+        If specified, this should be a FITS filename that the output *array*
+        will be stored into (the footprint will not be saved)
 
     Outputs
     -------
@@ -858,12 +862,33 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
     # Prepare an array and mask for the final cube
     shape_opt = (target_header['NAXIS3'], target_header['NAXIS2'], target_header['NAXIS1'])
+    dtype = f"float{target_header['BITPIX']}"
 
-    if use_memmap:
-        ntf = tempfile.NamedTemporaryFile()
-        final_array = np.memmap(ntf, mode='w+', shape=shape_opt, dtype=float)
+    if output_file is not None:
+        if not output_file.endswith('.fits'):
+            raise IOError("Only FITS output is supported")
+        # https://docs.astropy.org/en/stable/generated/examples/io/skip_create-large-fits.html#sphx-glr-generated-examples-io-skip-create-large-fits-py
+        hdu = fits.PrimaryHDU(data=np.ones([5,5,5], dtype=dtype),
+                              header=target_header
+                             )
+        for kwd in ('NAXIS1', 'NAXIS2', 'NAXIS3'):
+            hdu.header[kwd] = target_header[kwd]
+        target_header.tofile(output_file)
+        with open(output_file, 'rb+') as fobj:
+            fobj.seek(len(target_header.tostring()) +
+                      (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
+            fobj.write(b'\0')
+
+        final_array = fits.getdata(output_file, mode='rb+')
+
+        # use memmap - not a FITS file - for the footprint
         ntf2 = tempfile.NamedTemporaryFile()
-        final_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=float)
+        final_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
+    elif use_memmap:
+        ntf = tempfile.NamedTemporaryFile()
+        final_array = np.memmap(ntf, mode='w+', shape=shape_opt, dtype=dtype)
+        ntf2 = tempfile.NamedTemporaryFile()
+        final_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
     else:
         final_array = np.zeros(shape_opt)
         final_footprint = np.zeros(shape_opt)
