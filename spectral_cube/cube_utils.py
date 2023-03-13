@@ -812,7 +812,9 @@ def combine_headers(header1, header2, **kwargs):
 
 def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  target_header=None,
-                 common_beam=None,
+                 commonbeam=None,
+                 save_to_tmp_dir=True,
+                 use_memmap=True,
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -826,6 +828,15 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     combine_header_kwargs : dict
         Keywords passed to `~reproject.mosaicking.find_optimal_celestial_wcs`
         via `combine_headers`.
+    commonbeam : Beam
+        If specified, will smooth the data to this common beam before
+        reprojecting.
+    save_to_tmp_dir : bool
+        Default is to set `save_to_tmp_dir=True` because we expect cubes to be
+        big.
+    use_memmap : bool
+        Use a memory-mapped array to save the mosaicked cube product?
+
     Outputs
     -------
     cube : SpectralCube
@@ -843,10 +854,28 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
     # Prepare an array and mask for the final cube
     shape_opt = (target_header['NAXIS3'], target_header['NAXIS2'], target_header['NAXIS1'])
-    final_array = np.zeros(shape_opt)
+
+
+    if use_memmap:
+        ntf = tempfile.NamedTemporaryFile()
+        final_array = np.memmap(ntf, mode='w+', shape=shape_opt, dtype=float)
+    else:
+        final_array = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
 
+    # check that the beams are deconvolvable
+    if commonbeam:
+        for cube in cubes:
+            try:
+                commonbeam.deconvolve(cube.beam)
+            except radio_beam.BeamError as ex:
+                raise radio_beam.BeamError("One or more beams could not be "
+                                           "deconvolved from the common beam: "
+                                           f"{ex}")
+
     for cube in cubes:
+        if commonbeam:
+            cube = cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
         # Reproject cubes to the target_header
         try:
             if spectral_block_size is not None:
@@ -854,12 +883,16 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                                            block_size=[spectral_block_size,
                                                        cube.shape[1],
                                                        cube.shape[2]],
+                                           save_to_tmp_dir=save_to_tmp_dir,
                                            **kwargs)
             else:
-                cube_repr = cube.reproject(target_header, **kwargs)
-        except TypeError:
+                cube_repr = cube.reproject(target_header,
+                                           save_to_tmp_dir=save_to_tmp_dir,
+                                           **kwargs)
+        except TypeError as ex:
+            # print the exception in case we caught a different TypeError than expected
             warnings.warn("The block_size argument is not accepted by `reproject`.  "
-                          "A more recent version may be needed.")
+                          f"A more recent version may be needed.  Exception was: {ex}")
             cube_repr = cube.reproject(target_header, **kwargs)
 
         # Create weighting mask (2D)
