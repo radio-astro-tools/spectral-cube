@@ -844,6 +844,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     cube : SpectralCube
         A spectral cube with the list of cubes mosaicked together.
     '''
+    from reproject.mosaicking import reproject_and_coadd
+    from reproject import reproject_interp
 
     cube1 = cubes[0]
 
@@ -857,12 +859,14 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     # Prepare an array and mask for the final cube
     shape_opt = (target_header['NAXIS3'], target_header['NAXIS2'], target_header['NAXIS1'])
 
-
     if use_memmap:
         ntf = tempfile.NamedTemporaryFile()
         final_array = np.memmap(ntf, mode='w+', shape=shape_opt, dtype=float)
+        ntf2 = tempfile.NamedTemporaryFile()
+        final_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=float)
     else:
         final_array = np.zeros(shape_opt)
+        final_footprint = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
 
     # check that the beams are deconvolvable
@@ -871,43 +875,30 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # this will raise an exception if any of the cubes have bad beams
             commonbeam.deconvolve(cube.beam)
 
-    for cube in cubes:
-        if commonbeam is not None:
-            cube = cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
-        # Reproject cubes to the target_header
-        try:
-            if spectral_block_size is not None:
-                cube_repr = cube.reproject(target_header,
-                                           block_size=[spectral_block_size,
-                                                       cube.shape[1],
-                                                       cube.shape[2]],
-                                           save_to_tmp_dir=save_to_tmp_dir,
-                                           **kwargs)
-            else:
-                cube_repr = cube.reproject(target_header,
-                                           save_to_tmp_dir=save_to_tmp_dir,
-                                           **kwargs)
-        except TypeError as ex:
-            # print the exception in case we caught a different TypeError than expected
-            warnings.warn("The block_size argument is not accepted by `reproject`.  "
-                          f"A more recent version may be needed.  Exception was: {ex}")
-            cube_repr = cube.reproject(target_header, **kwargs)
+        cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
+                 for cube in cubes]
 
-        # Create weighting mask (2D)
-        mask = (cube_repr[0:1].get_mask_array()[0])
-        mask_opt += mask.astype(float)
-
-        # Go through each slice of the cube, add it to the final array
-        for ii in range(final_array.shape[0]):
-            slice1 = np.nan_to_num(cube_repr.unitless_filled_data[ii])
-            final_array[ii] = final_array[ii] + slice1
-
-    # Dividing by the mask throws errors where it is zero
-    with np.errstate(divide='ignore'):
-
-        # Use weighting mask to average where cubes overlap
-        for ss in range(final_array.shape[0]):
-            final_array[ss] /= mask_opt
+    try:
+        final_array, final_footprint = reproject_and_coadd(
+            [cube.hdu for cube in cubes],
+            target_header,
+            final_array=final_array,
+            final_footprint=final_footprint,
+            reproject_function=reproject_interp,
+            block_size=[(spectral_block_size, cube.shape[1], cube.shape[2])
+                        for cube in cubes],
+        )
+    except TypeError as ex:
+        # print the exception in case we caught a different TypeError than expected
+        warnings.warn("The block_size argument is not accepted by `reproject`.  "
+                      f"A more recent version may be needed.  Exception was: {ex}")
+        final_array, final_footprint = reproject_and_coadd(
+            [cube.hdu for cube in cubes],
+            target_header,
+            final_array=final_array,
+            final_footprint=final_footprint,
+            reproject_function=reproject_interp,
+        )
 
     # Create Cube
     cube = cube1.__class__(data=final_array * cube1.unit, wcs=WCS(target_header))
