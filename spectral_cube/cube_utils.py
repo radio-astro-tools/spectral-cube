@@ -818,6 +818,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  save_to_tmp_dir=True,
                  use_memmap=True,
                  output_file=None,
+                 method='cube',
+                 verbose=True,
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -842,6 +844,11 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     output_file : str or None
         If specified, this should be a FITS filename that the output *array*
         will be stored into (the footprint will not be saved)
+    method : 'cube' or 'channel'
+        Over what dimension should we iterate?  Options are 'cube' and
+        'channel'.
+    verbose : bool
+        Progressbars?
 
     Outputs
     -------
@@ -850,6 +857,11 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     '''
     from reproject.mosaicking import reproject_and_coadd
     from reproject import reproject_interp
+
+    if verbose:
+        from tqdm import tqdm
+    else:
+        tqdm = lambda x: x
 
     cube1 = cubes[0]
 
@@ -902,31 +914,52 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # this will raise an exception if any of the cubes have bad beams
             commonbeam.deconvolve(cube.beam)
 
-        cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
-                 for cube in cubes]
+        cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir and method == 'cube')
+                 for cube in tqdm(cubes)]
 
-    try:
-        output_array, output_footprint = reproject_and_coadd(
-            [cube.hdu for cube in cubes],
-            target_header,
-            output_array=output_array,
-            output_footprint=output_footprint,
-            reproject_function=reproject_interp,
-            block_size=(None if spectral_block_size is None else
-                        [(spectral_block_size, cube.shape[1], cube.shape[2])
-                         for cube in cubes]),
-        )
-    except TypeError as ex:
-        # print the exception in case we caught a different TypeError than expected
-        warnings.warn("The block_size argument is not accepted by `reproject`.  "
-                      f"A more recent version may be needed.  Exception was: {ex}")
-        output_array, output_footprint = reproject_and_coadd(
-            [cube.hdu for cube in cubes],
-            target_header,
-            output_array=output_array,
-            output_footprint=output_footprint,
-            reproject_function=reproject_interp,
-        )
+    if method == 'cube':
+        try:
+            output_array, output_footprint = reproject_and_coadd(
+                [cube.hdu for cube in cubes],
+                target_header,
+                output_array=output_array,
+                output_footprint=output_footprint,
+                reproject_function=reproject_interp,
+                block_size=(None if spectral_block_size is None else
+                            [(spectral_block_size, cube.shape[1], cube.shape[2])
+                             for cube in cubes]),
+            )
+        except TypeError as ex:
+            # print the exception in case we caught a different TypeError than expected
+            warnings.warn("The block_size argument is not accepted by `reproject`.  "
+                          f"A more recent version may be needed.  Exception was: {ex}")
+            output_array, output_footprint = reproject_and_coadd(
+                [cube.hdu for cube in cubes],
+                target_header,
+                output_array=output_array,
+                output_footprint=output_footprint,
+                reproject_function=reproject_interp,
+            )
+    elif method == 'channel':
+        outwcs = WCS(target_header)
+        channels = outwcs.spectral.pixel_to_world(np.arange(target_header['NAXIS3']))
+        dx = channels[1] - channels[0]
+
+        for ii, channel in tqdm(enumerate(channels)):
+
+            # grab +/- 0.5 channel to enable interpolation
+            # ideally this should produce 2-channel cubes, but there are corner cases
+            # where it will get 3+ channels, which is inefficient but kinda harmless
+            scubes = [cube.spectral_slab(channel - dx, channel + dx)
+                      for cube in cubes]
+
+            output_array, output_footprint = reproject_and_coadd(
+                [cube.hdu for cube in cubes],
+                target_header,
+                output_array=output_array[ii,:,:],
+                output_footprint=output_footprint[ii,:,:],
+                reproject_function=reproject_interp,
+            )
 
     # Create Cube
     cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
