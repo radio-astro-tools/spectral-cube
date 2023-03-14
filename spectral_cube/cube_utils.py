@@ -8,6 +8,7 @@ from copy import deepcopy
 import builtins
 
 import dask.array as da
+from dask.distributed import Client
 import numpy as np
 from astropy.wcs.utils import proj_plane_pixel_area
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
@@ -23,6 +24,7 @@ import itertools
 import re
 from radio_beam import Beam
 from radio_beam.utils import BeamError
+from multiprocessing import Process, Pool
 
 from functools import partial
 
@@ -815,6 +817,12 @@ def combine_headers(header1, header2, **kwargs):
     header['WCSAXES'] = 3
     return header
 
+def _getdata(cube):
+    """
+    Must be defined out-of-scope to enable pickling
+    """
+    return (cube.unitless_filled_data[:], cube.wcs)
+
 def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  target_header=None,
                  commonbeam=None,
@@ -981,7 +989,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         log_("Using Channel method")
         outwcs = WCS(target_header)
         channels = outwcs.spectral.pixel_to_world(np.arange(target_header['NAXIS3']))
-        dx = channels[1] - channels[0]
+        dx = outwcs.spectral.proj_plane_pixel_scales()[0]
         log_(f"Channel mode: dx={dx}.  Looping over {len(channels)} channels and {len(cubes)} cubes")
 
         mincube_slices = [cube[cube.shape[0]//2:cube.shape[0]//2+1]
@@ -989,7 +997,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                                                     spatial_only=True)
                           for cube in std_tqdm(cubes, desc='MinSubSlices:')]
 
-        for ii, channel in tqdm(enumerate(channels), desc="Channels:"):
+        pbar = tqdm(enumerate(channels), desc="Channels")
+        for ii, channel in pbar:
+            pbar.set_description(f"Channel {ii}={channel}")
+            print()
 
             # grab a 2-channel slab
             # this is very verbose but quite simple & cheap
@@ -1008,11 +1019,18 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                            .convolve_to(commonbeam)
                            .rechunk())
                           for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes),
-                                                                   delay=5, desc='Subcubes:')]
+                                                                   delay=5, desc='Subcubes')]
+                print()
 
                 # reproject_and_coadd requires the actual arrays, so this is the convolution step
-                hdus = [(cube.unitless_filled_data[:], cube.wcs)
-                        for cube in std_tqdm(scubes, delay=5, desc='Data:')]
+                #hdus = [(cube._get_filled_data(), cube.wcs)
+                #        for cube in std_tqdm(scubes, delay=5, desc='Data/conv')]
+
+                datas = [cube._get_filled_data() for cube in scubes]
+                wcses = [cube.wcs for cube in scubes]
+                with Client() as client:
+                    datas = client.gather(datas)
+                hdus = list(zip(datas, wcses))
 
                 # project into array w/"dummy" third dimension
                 output_array_, output_footprint_ = reproject_and_coadd(
@@ -1022,8 +1040,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     output_array=output_array[ii:ii+1,:,:],
                     output_footprint=output_footprint[ii:ii+1,:,:],
                     reproject_function=reproject_interp,
-                    progressbar=tqdm if verbose else False,
+                    progressbar=partial(tqdm, desc='coadd') if verbose else False,
                 )
+
+            pbar.set_description(f"Channel {ii}={channel} done")
 
     # Create Cube
     cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
