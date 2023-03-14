@@ -1,6 +1,7 @@
 import contextlib
 import warnings
 import tempfile
+import os
 from copy import deepcopy
 
 import builtins
@@ -858,6 +859,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     '''
     from reproject.mosaicking import reproject_and_coadd
     from reproject import reproject_interp
+    import warnings
+    from astropy.utils.exceptions import AstropyUserWarning
+    warnings.filterwarnings('ignore', category=AstropyUserWarning)
 
     if verbose:
         from tqdm import tqdm as std_tqdm
@@ -880,23 +884,26 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     if output_file is not None:
         if not output_file.endswith('.fits'):
             raise IOError("Only FITS output is supported")
-        # https://docs.astropy.org/en/stable/generated/examples/io/skip_create-large-fits.html#sphx-glr-generated-examples-io-skip-create-large-fits-py
-        hdu = fits.PrimaryHDU(data=np.ones([5,5,5], dtype=dtype),
-                              header=target_header
-                             )
-        for kwd in ('NAXIS1', 'NAXIS2', 'NAXIS3'):
-            hdu.header[kwd] = target_header[kwd]
-        target_header.tofile(output_file, overwrite=True)
-        with open(output_file, 'rb+') as fobj:
-            fobj.seek(len(target_header.tostring()) +
-                      (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
-            fobj.write(b'\0')
+        if not os.path.exists(output_file):
+            # https://docs.astropy.org/en/stable/generated/examples/io/skip_create-large-fits.html#sphx-glr-generated-examples-io-skip-create-large-fits-py
+            hdu = fits.PrimaryHDU(data=np.ones([5,5,5], dtype=dtype),
+                                  header=target_header
+                                 )
+            for kwd in ('NAXIS1', 'NAXIS2', 'NAXIS3'):
+                hdu.header[kwd] = target_header[kwd]
+
+            target_header.tofile(output_file, overwrite=True)
+            with open(output_file, 'rb+') as fobj:
+                fobj.seek(len(target_header.tostring()) +
+                          (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
+                fobj.write(b'\0')
 
         hdu = fits.open(output_file, mode='update', overwrite=True)
         output_array = hdu[0].data
         hdu.flush() # make sure the header gets written right
 
         # use memmap - not a FITS file - for the footprint
+        # if we want to do partial writing, though, it's best to make footprint an extension
         ntf2 = tempfile.NamedTemporaryFile()
         output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
     elif use_memmap:
@@ -915,15 +922,16 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # this will raise an exception if any of the cubes have bad beams
             commonbeam.deconvolve(cube.beam)
 
-        cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir and method == 'cube')
-                 for cube in std_tqdm(cubes)]
-
     class tqdm(std_tqdm):
         def update(self, n=1):
             hdu.flush()
             super().update(n)
 
     if method == 'cube':
+
+        cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
+                 for cube in std_tqdm(cubes)]
+
         try:
             output_array, output_footprint = reproject_and_coadd(
                 [cube.hdu for cube in cubes],
@@ -952,6 +960,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         outwcs = WCS(target_header)
         channels = outwcs.spectral.pixel_to_world(np.arange(target_header['NAXIS3']))
         dx = channels[1] - channels[0]
+        if verbose:
+            print(f"Channel mode: dx={dx}.  Looping over {len(channels)} channels and {len(cubes)} cubes")
 
 
         for ii, channel in tqdm(enumerate(channels)):
@@ -959,12 +969,14 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # grab +/- 0.5 channel to enable interpolation
             # ideally this should produce 2-channel cubes, but there are corner cases
             # where it will get 3+ channels, which is inefficient but kinda harmless
-            scubes = [cube.spectral_slab(channel - dx, channel + dx)
+            scubes = [(cube.spectral_slab(channel - dx, channel + dx)
+                       .minimal_subcube()
+                       .convolve_to(commonbeam))
                       for cube in cubes]
 
             # project into array w/"dummy" third dimension
             output_array_, output_footprint_ = reproject_and_coadd(
-                [cube.hdu for cube in cubes],
+                [cube.hdu for cube in scubes],
                 outwcs[ii:ii+1, :, :],
                 shape_out=(1,) + output_array.shape[1:],
                 output_array=output_array[ii:ii+1,:,:],
