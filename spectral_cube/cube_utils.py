@@ -2,6 +2,7 @@ import contextlib
 import warnings
 import tempfile
 import os
+import time
 from copy import deepcopy
 
 import builtins
@@ -868,6 +869,12 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     else:
         std_tqdm = lambda x: x
 
+    def log_(x):
+        if verbose:
+            log.info(x)
+        else:
+            log.debug(x)
+
     cube1 = cubes[0]
 
     if target_header is None:
@@ -882,6 +889,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     dtype = f"float{int(abs(target_header['BITPIX']))}"
 
     if output_file is not None:
+        log_(f"Using output file {output_file}")
+        t0 = time.time()
         if not output_file.endswith('.fits'):
             raise IOError("Only FITS output is supported")
         if not os.path.exists(output_file):
@@ -892,26 +901,37 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             for kwd in ('NAXIS1', 'NAXIS2', 'NAXIS3'):
                 hdu.header[kwd] = target_header[kwd]
 
+            log_(f"Dumping header to file {output_file} (dt={time.time()-t0})")
             target_header.tofile(output_file, overwrite=True)
             with open(output_file, 'rb+') as fobj:
                 fobj.seek(len(target_header.tostring()) +
                           (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
                 fobj.write(b'\0')
 
+        log_(f"Loading header from file {output_file} (dt={time.time()-t0})")
         hdu = fits.open(output_file, mode='update', overwrite=True)
         output_array = hdu[0].data
         hdu.flush() # make sure the header gets written right
 
+        log_(f"Creating footprint file dt={time.time()-t0}")
         # use memmap - not a FITS file - for the footprint
         # if we want to do partial writing, though, it's best to make footprint an extension
         ntf2 = tempfile.NamedTemporaryFile()
         output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
+
+        # default footprint to 1 assuming there is some stuff already in the image
+        # this is a hack and maybe just shouldn't be attempted
+        #log_("Initializing footprint to 1s")
+        #output_footprint[:] = 1 # takes an hour?!
+        log_(f"Done initializing memory dt={time.time()-t0}")
     elif use_memmap:
+        log_("Using memmap")
         ntf = tempfile.NamedTemporaryFile()
         output_array = np.memmap(ntf, mode='w+', shape=shape_opt, dtype=dtype)
         ntf2 = tempfile.NamedTemporaryFile()
         output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
     else:
+        log_("Using memory")
         output_array = np.zeros(shape_opt)
         output_footprint = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
@@ -928,9 +948,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             super().update(n)
 
     if method == 'cube':
+        log_("Using Cube method")
 
         cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
-                 for cube in std_tqdm(cubes)]
+                 for cube in std_tqdm(cubes, desc="Convolve:")]
 
         try:
             output_array, output_footprint = reproject_and_coadd(
@@ -957,33 +978,52 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 progressbar=tqdm if verbose else False,
             )
     elif method == 'channel':
+        log_("Using Channel method")
         outwcs = WCS(target_header)
         channels = outwcs.spectral.pixel_to_world(np.arange(target_header['NAXIS3']))
         dx = channels[1] - channels[0]
-        if verbose:
-            print(f"Channel mode: dx={dx}.  Looping over {len(channels)} channels and {len(cubes)} cubes")
+        log_(f"Channel mode: dx={dx}.  Looping over {len(channels)} channels and {len(cubes)} cubes")
 
+        mincube_slices = [cube[cube.shape[0]//2:cube.shape[0]//2+1]
+                          .subcube_slices_from_mask(cube[cube.shape[0]//2:cube.shape[0]//2+1].mask,
+                                                    spatial_only=True)
+                          for cube in std_tqdm(cubes, desc='MinSubSlices:')]
 
-        for ii, channel in tqdm(enumerate(channels)):
+        for ii, channel in tqdm(enumerate(channels), desc="Channels:"):
 
-            # grab +/- 0.5 channel to enable interpolation
-            # ideally this should produce 2-channel cubes, but there are corner cases
-            # where it will get 3+ channels, which is inefficient but kinda harmless
-            scubes = [(cube.spectral_slab(channel - dx, channel + dx)
-                       .minimal_subcube()
-                       .convolve_to(commonbeam))
-                      for cube in cubes]
+            # grab a 2-channel slab
+            # this is very verbose but quite simple & cheap
+            # going to spectral_slab(channel-dx, channel+dx) gives 3-pixel cubes most often,
+            # which results in a 50% overhead in smoothing, etc.
+            chans = [(cube.closest_spectral_channel(channel) if cube.spectral_axis[cube.closest_spectral_channel(channel)] < channel else cube.closest_spectral_channel(channel)+1,
+                      cube.closest_spectral_channel(channel) if cube.spectral_axis[cube.closest_spectral_channel(channel)] > channel else cube.closest_spectral_channel(channel)-1)
+                     for cube in std_tqdm(cubes, delay=5, desc='ChanSel:')]
+            # reversed spectral axes still break things
+            # and we want two channels width, not one
+            chans = [(ch1, ch2+1) if ch1 < ch2 else (ch2, ch1+1) for ch1, ch2 in chans]
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore') # seriously NO WARNINGS.
 
-            # project into array w/"dummy" third dimension
-            output_array_, output_footprint_ = reproject_and_coadd(
-                [cube.hdu for cube in scubes],
-                outwcs[ii:ii+1, :, :],
-                shape_out=(1,) + output_array.shape[1:],
-                output_array=output_array[ii:ii+1,:,:],
-                output_footprint=output_footprint[ii:ii+1,:,:],
-                reproject_function=reproject_interp,
-                progressbar=tqdm if verbose else False,
-            )
+                scubes = [(cube[ch1:ch2, slices[1], slices[2]]
+                           .convolve_to(commonbeam)
+                           .rechunk())
+                          for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes),
+                                                                   delay=5, desc='Subcubes:')]
+
+                # reproject_and_coadd requires the actual arrays, so this is the convolution step
+                hdus = [(cube.unitless_filled_data[:], cube.wcs)
+                        for cube in std_tqdm(scubes, delay=5, desc='Data:')]
+
+                # project into array w/"dummy" third dimension
+                output_array_, output_footprint_ = reproject_and_coadd(
+                    hdus,
+                    outwcs[ii:ii+1, :, :],
+                    shape_out=(1,) + output_array.shape[1:],
+                    output_array=output_array[ii:ii+1,:,:],
+                    output_footprint=output_footprint[ii:ii+1,:,:],
+                    reproject_function=reproject_interp,
+                    progressbar=tqdm if verbose else False,
+                )
 
     # Create Cube
     cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
