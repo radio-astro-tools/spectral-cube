@@ -22,6 +22,7 @@ import re
 from radio_beam import Beam
 from radio_beam.utils import BeamError
 
+from functools import partial
 
 def _fix_spectral(wcs):
     """
@@ -859,9 +860,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     from reproject import reproject_interp
 
     if verbose:
-        from tqdm import tqdm
+        from tqdm import tqdm as std_tqdm
     else:
-        tqdm = lambda x: x
+        std_tqdm = lambda x: x
 
     cube1 = cubes[0]
 
@@ -915,7 +916,12 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             commonbeam.deconvolve(cube.beam)
 
         cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir and method == 'cube')
-                 for cube in tqdm(cubes)]
+                 for cube in std_tqdm(cubes)]
+
+    class tqdm(std_tqdm):
+        def update(self, n=1):
+            hdu.flush()
+            super().update(n)
 
     if method == 'cube':
         try:
@@ -925,6 +931,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 output_array=output_array,
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
+                progressbar=tqdm if verbose else False,
                 block_size=(None if spectral_block_size is None else
                             [(spectral_block_size, cube.shape[1], cube.shape[2])
                              for cube in cubes]),
@@ -939,11 +946,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 output_array=output_array,
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
+                progressbar=tqdm if verbose else False,
             )
     elif method == 'channel':
         outwcs = WCS(target_header)
         channels = outwcs.spectral.pixel_to_world(np.arange(target_header['NAXIS3']))
         dx = channels[1] - channels[0]
+
 
         for ii, channel in tqdm(enumerate(channels)):
 
@@ -953,12 +962,15 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             scubes = [cube.spectral_slab(channel - dx, channel + dx)
                       for cube in cubes]
 
-            output_array, output_footprint = reproject_and_coadd(
+            # project into array w/"dummy" third dimension
+            output_array_, output_footprint_ = reproject_and_coadd(
                 [cube.hdu for cube in cubes],
-                target_header,
-                output_array=output_array[ii,:,:],
-                output_footprint=output_footprint[ii,:,:],
+                outwcs[ii:ii+1, :, :],
+                shape_out=(1,) + output_array.shape[1:],
+                output_array=output_array[ii:ii+1,:,:],
+                output_footprint=output_footprint[ii:ii+1,:,:],
                 reproject_function=reproject_interp,
+                progressbar=tqdm if verbose else False,
             )
 
     # Create Cube
