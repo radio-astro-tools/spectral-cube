@@ -932,7 +932,7 @@ def test_spatial_world(view, data_adv, use_dask):
 @pytest.mark.parametrize(('LDO', 'data'),
                          zip(LDOs, data_twelve))
 def test_unit_division(LDO, data):
-    # regression: ...
+    # regression: 871
 
     image = data
     p = LDO(image, copy=False)
