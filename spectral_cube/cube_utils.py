@@ -875,7 +875,16 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     if verbose:
         from tqdm import tqdm as std_tqdm
     else:
-        std_tqdm = lambda x: x
+        class tqdm:
+            def __init__(self, x):
+                return x
+            def __call__(self, x)
+                return x
+            def set_description(self, **kwargs):
+                pass
+            def update(self, **kwargs):
+                pass
+        std_tqdm = tqdm
 
     def log_(x):
         if verbose:
@@ -950,10 +959,11 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # this will raise an exception if any of the cubes have bad beams
             commonbeam.deconvolve(cube.beam)
 
-    class tqdm(std_tqdm):
-        def update(self, n=1):
-            hdu.flush()
-            super().update(n)
+    if verbose:
+        class tqdm(std_tqdm):
+            def update(self, n=1):
+                hdu.flush() # write to disk on each iteration
+                super().update(n)
 
     if method == 'cube':
         log_("Using Cube method")
@@ -1000,7 +1010,6 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         pbar = tqdm(enumerate(channels), desc="Channels")
         for ii, channel in pbar:
             pbar.set_description(f"Channel {ii}={channel}")
-            print()
 
             # grab a 2-channel slab
             # this is very verbose but quite simple & cheap
@@ -1020,7 +1029,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                            .rechunk())
                           for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes),
                                                                    delay=5, desc='Subcubes')]
-                print()
+
 
                 # reproject_and_coadd requires the actual arrays, so this is the convolution step
                 #hdus = [(cube._get_filled_data(), cube.wcs)
