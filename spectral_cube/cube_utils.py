@@ -881,7 +881,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         class tqdm:
             def __init__(self, x):
                 return x
-            def __call__(self, x)
+            def __call__(self, x):
                 return x
             def set_description(self, **kwargs):
                 pass
