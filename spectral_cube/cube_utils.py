@@ -826,6 +826,7 @@ def _getdata(cube):
 def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  target_header=None,
                  commonbeam=None,
+                 weightcubes=None,
                  save_to_tmp_dir=True,
                  use_memmap=True,
                  output_file=None,
@@ -847,6 +848,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     commonbeam : Beam
         If specified, will smooth the data to this common beam before
         reprojecting.
+    weightcubes : None
+        Cubes with same shape as input cubes containing the weights
     save_to_tmp_dir : bool
         Default is to set `save_to_tmp_dir=True` because we expect cubes to be
         big.
@@ -975,6 +978,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             output_array, output_footprint = reproject_and_coadd(
                 [cube.hdu for cube in cubes],
                 target_header,
+                weights_in=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
                 output_array=output_array,
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
@@ -990,6 +994,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             output_array, output_footprint = reproject_and_coadd(
                 [cube.hdu for cube in cubes],
                 target_header,
+                weights_in=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
                 output_array=output_array,
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
@@ -1049,6 +1054,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     output_array=output_array[ii:ii+1,:,:],
                     output_footprint=output_footprint[ii:ii+1,:,:],
                     reproject_function=reproject_interp,
+                    weights_in=weightcubes[ii:ii+1].hdu if weightcubes is not None else None,
                     progressbar=partial(tqdm, desc='coadd') if verbose else False,
                 )
 
