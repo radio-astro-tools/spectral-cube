@@ -41,7 +41,7 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
             hdu = PrimaryHDU(self.value, header=self.header)
         hdu.header['BUNIT'] = self.unit.to_string(format='fits')
 
-        if self.meta is not None 'beam' in self.meta:
+        if self.meta is not None and 'beam' in self.meta:
             hdu.header.update(self.meta['beam'].to_header_keywords())
 
         return hdu
