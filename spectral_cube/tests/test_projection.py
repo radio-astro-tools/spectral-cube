@@ -938,3 +938,16 @@ def test_spatial_world(view, data_adv, use_dask):
     for result, expected in zip(w2_flat, world):
         print(result.shape, expected.flatten().shape)
         assert_allclose(result, expected.flatten())
+
+@pytest.mark.parametrize(('LDO', 'data'),
+                         zip(LDOs, data_twelve))
+def test_unit_division(LDO, data):
+    # regression: 871
+
+    image = data
+    p = LDO(image, copy=False)
+
+    p._meta = None
+
+    # check that this does not raise an Exception
+    p.hdu
