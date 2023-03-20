@@ -956,11 +956,16 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         output_footprint = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
 
+
     # check that the beams are deconvolvable
     if commonbeam is not None:
-        for cube in cubes:
+        # assemble beams
+        beams = [cube.beam if hasattr(cube, 'beam') else cube.beams.common_beam()
+                 for cube in cubes]
+
+        for beam in beams:
             # this will raise an exception if any of the cubes have bad beams
-            commonbeam.deconvolve(cube.beam)
+            commonbeam.deconvolve(beam)
 
     if verbose:
         class tqdm(std_tqdm):
@@ -970,15 +975,18 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
     if method == 'cube':
         log_("Using Cube method")
+        # Cube method: Regrid the whole cube in one operation.
+        # Let reproject_and_coadd handle any iterations
 
-        cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
-                 for cube in std_tqdm(cubes, desc="Convolve:")]
+        if commonbeam is not None:
+            cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
+                     for cube in std_tqdm(cubes, desc="Convolve:")]
 
         try:
             output_array, output_footprint = reproject_and_coadd(
                 [cube.hdu for cube in cubes],
                 target_header,
-                weights_in=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
+                input_weights=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
                 output_array=output_array,
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
@@ -994,7 +1002,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             output_array, output_footprint = reproject_and_coadd(
                 [cube.hdu for cube in cubes],
                 target_header,
-                weights_in=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
+                input_weights=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
                 output_array=output_array,
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
@@ -1002,6 +1010,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             )
     elif method == 'channel':
         log_("Using Channel method")
+        # Channel method: manually downselect to go channel-by-channel in the
+        # input cubes before handing off material to reproject_and_coadd This
+        # approach allows us more direct & granular control over memory and is
+        # likely better for large-area cubes
+        # (ideally we'd let Dask handle all the memory allocation choices under
+        # the hood, but as of early 2023, we do not yet have that capability)
+
         outwcs = WCS(target_header)
         channels = outwcs.spectral.pixel_to_world(np.arange(target_header['NAXIS3']))
         dx = outwcs.spectral.proj_plane_pixel_scales()[0]
@@ -1010,7 +1025,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         mincube_slices = [cube[cube.shape[0]//2:cube.shape[0]//2+1]
                           .subcube_slices_from_mask(cube[cube.shape[0]//2:cube.shape[0]//2+1].mask,
                                                     spatial_only=True)
-                          for cube in std_tqdm(cubes, desc='MinSubSlices:')]
+                          for cube in std_tqdm(cubes, desc='MinSubSlices:', delay=5)]
 
         pbar = tqdm(enumerate(channels), desc="Channels")
         for ii, channel in pbar:
@@ -1035,11 +1050,23 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                           for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes),
                                                                    delay=5, desc='Subcubes')]
 
+                if weightcubes is not None:
+                    sweightcubes = [cube[ch1:ch2, slices[1], slices[2]]
+                                    for (ch1, ch2), slices, cube
+                                    in std_tqdm(zip(chans, mincube_slices, weightcubes),
+                                                delay=5, desc='Subweight')]
+
 
                 # reproject_and_coadd requires the actual arrays, so this is the convolution step
+
+                # commented out approach here: just let spectral-cube handle the convolution etc.
                 #hdus = [(cube._get_filled_data(), cube.wcs)
                 #        for cube in std_tqdm(scubes, delay=5, desc='Data/conv')]
 
+                # somewhat faster (?) version - ask the dask client to handle
+                # gathering the data
+                # (this version is capable of parallelizing over many cubes, in
+                # theory; the previous would treat each cube in serial)
                 datas = [cube._get_filled_data() for cube in scubes]
                 wcses = [cube.wcs for cube in scubes]
                 with Client() as client:
@@ -1047,6 +1074,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 hdus = list(zip(datas, wcses))
 
                 # project into array w/"dummy" third dimension
+                # (outputs are not used; data is written directly into the output array chunks)
                 output_array_, output_footprint_ = reproject_and_coadd(
                     hdus,
                     outwcs[ii:ii+1, :, :],
@@ -1054,7 +1082,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     output_array=output_array[ii:ii+1,:,:],
                     output_footprint=output_footprint[ii:ii+1,:,:],
                     reproject_function=reproject_interp,
-                    weights_in=weightcubes[ii:ii+1].hdu if weightcubes is not None else None,
+                    input_weights=sweightcubes[ii:ii+1].hdu if weightcubes is not None else None,
                     progressbar=partial(tqdm, desc='coadd') if verbose else False,
                 )
 
