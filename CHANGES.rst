@@ -1,4 +1,4 @@
-0.6.1.dev (unreleased)
+0.6.1.dev (2023-06-22)
 ----------------------
 - Fix memory issue when calling statistics() on FITS cubes. #752
 - Cube mosaicing implemented #829, #844
