@@ -33,12 +33,15 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
     Generic class for 1D and 2D objects.
     """
 
-    def _new_view(self, obj=None, unit=None, finalize=True):
+    def _new_view(self, obj=None, unit=None, finalize=True, **kwargs):
+        """
+        kwargs are passed to _new_view of other object; only known keyword as of June 2023 is ``propagate_info``
+        """
         # FORCE finalization to hack around https://github.com/astropy/astropy/issues/14514#issuecomment-1463935711
         try:
-            return super(LowerDimensionalObject, self)._new_view(obj=obj, unit=unit, finalize=True)
+            return super(LowerDimensionalObject, self)._new_view(obj=obj, unit=unit, finalize=True, **kwargs)
         except TypeError:
-            return super(LowerDimensionalObject, self)._new_view(obj=obj, unit=unit)
+            return super(LowerDimensionalObject, self)._new_view(obj=obj, unit=unit, **kwargs)
 
     @property
     def hdu(self):
