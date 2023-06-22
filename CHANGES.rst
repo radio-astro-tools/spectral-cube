@@ -1,6 +1,9 @@
 0.6.1.dev (unreleased)
 ----------------------
 - Fix memory issue when calling statistics() on FITS cubes. #752
+- Cube mosaicing implemented #829, #844
+- Varied bugfixes for numpy compatibility #858, #865, #883
+- Many other small fixes & improvements that didn't get changelog entries
 
 0.6 (2021-09-30)
 ----------------
