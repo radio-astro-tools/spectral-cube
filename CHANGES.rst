@@ -1,5 +1,10 @@
-0.6.1.dev (2023-06-22)
-----------------------
+0.6.2 (2023-06-23)
+------------------
+- bugfix in #885,#886 correcting an error introduced in #883
+- CI fixes
+
+0.6.1 (2023-06-22)
+------------------
 - Fix memory issue when calling statistics() on FITS cubes. #752
 - Cube mosaicing implemented #829, #844
 - Varied bugfixes for numpy compatibility #858, #865, #883
