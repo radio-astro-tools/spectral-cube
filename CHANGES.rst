@@ -1,3 +1,7 @@
+0.6.3.dev (unreleased)
+----------------------
+- none yet
+
 0.6.2 (2023-06-23)
 ------------------
 - bugfix in #885,#886 correcting an error introduced in #883
