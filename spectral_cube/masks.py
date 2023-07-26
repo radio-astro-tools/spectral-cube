@@ -225,7 +225,7 @@ class MaskBase(object):
         """
         # Must convert to floating point, but should not change from inherited
         # type otherwise
-        dt = np.find_common_type([data.dtype], [float])
+        dt = np.result_type(data.dtype, 0.0)
 
         if use_memmap and data.size > 0:
             ntf = tempfile.NamedTemporaryFile()
