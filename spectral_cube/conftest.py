@@ -69,7 +69,7 @@ def prepare_4_beams():
     beams['BPA'] = [0,45,60,30] # degrees
     beams['CHAN'] = [0,1,2,3]
     beams['POL'] = [0,0,0,0]
-    beams = fits.BinTableHDU(beams)
+    beams = fits.BinTableHDU(beams, name='BEAMS')
 
     beams.header['TTYPE1'] = 'BMAJ'
     beams.header['TUNIT1'] = 'arcsec'
@@ -100,7 +100,7 @@ def prepare_4_beams_withfullpol():
 
     beams['POL'] = pol_codes
 
-    beams = fits.BinTableHDU(beams)
+    beams = fits.BinTableHDU(beams, name='BEAMS')
 
     beams.header['TTYPE1'] = 'BMAJ'
     beams.header['TUNIT1'] = 'arcsec'
@@ -490,7 +490,7 @@ def prepare_5_beams():
     beams['BPA'] = [0,45,60,30,0] # degrees
     beams['CHAN'] = [0,1,2,3,4]
     beams['POL'] = [0,0,0,0,0]
-    beams = fits.BinTableHDU(beams)
+    beams = fits.BinTableHDU(beams, name='BEAMS')
     beams.header['TTYPE1'] = 'BMAJ'
     beams.header['TUNIT1'] = 'arcsec'
     beams.header['TTYPE2'] = 'BMIN'
@@ -576,7 +576,7 @@ def prepare_5_beams_with_pixscale(pixel_scale):
     beams['BPA'] = [0,45,60,30,0] # degrees
     beams['CHAN'] = [0,1,2,3,4]
     beams['POL'] = [0,0,0,0,0]
-    beams = fits.BinTableHDU(beams)
+    beams = fits.BinTableHDU(beams, name='BEAMS')
 
     beams.header['TTYPE1'] = 'BMAJ'
     beams.header['TUNIT1'] = 'arcsec'
