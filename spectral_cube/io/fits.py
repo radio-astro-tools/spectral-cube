@@ -96,7 +96,8 @@ def read_data_fits(input, hdu=None, mode='denywrite', **kwargs):
             if isinstance(hdu_item, (fits.PrimaryHDU, fits.ImageHDU)):
                 arrays[ihdu] = hdu_item
             elif isinstance(hdu_item, fits.BinTableHDU):
-                if 'BPA' in hdu_item.data.names:
+                # Check for CASA-standard beam table
+                if hdu_item.header.get('EXTNAME') == 'BEAMS':
                     beam_table = hdu_item.data
 
                     # Check that the table has the expected form for beam units:

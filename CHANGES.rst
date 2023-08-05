@@ -1,6 +1,6 @@
 0.6.3.dev (unreleased)
 ----------------------
-- none yet
+- Find beam table from EXT name and CI fix #879
 
 0.6.2 (2023-06-23)
 ------------------
