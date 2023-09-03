@@ -1055,6 +1055,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                                     for (ch1, ch2), slices, cube
                                     in std_tqdm(zip(chans, mincube_slices, weightcubes),
                                                 delay=5, desc='Subweight')]
+                    wthdus = [(cube._get_filled_data(), cube.wcs)
+                              for cube in std_tqdm(sweightcubes, delay=5, desc='WeightData')]
 
 
                 # reproject_and_coadd requires the actual arrays, so this is the convolution step
@@ -1082,7 +1084,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     output_array=output_array[ii:ii+1,:,:],
                     output_footprint=output_footprint[ii:ii+1,:,:],
                     reproject_function=reproject_interp,
-                    input_weights=sweightcubes[ii:ii+1].hdu if weightcubes is not None else None,
+                    input_weights=wthdus,
                     progressbar=partial(tqdm, desc='coadd') if verbose else False,
                 )
 
