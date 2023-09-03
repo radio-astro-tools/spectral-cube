@@ -1055,7 +1055,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                                     for (ch1, ch2), slices, cube
                                     in std_tqdm(zip(chans, mincube_slices, weightcubes),
                                                 delay=5, desc='Subweight')]
-                    wthdus = [(cube._get_filled_data(), cube.wcs)
+                    wthdus = [cube.hdu
                               for cube in std_tqdm(sweightcubes, delay=5, desc='WeightData')]
 
 
