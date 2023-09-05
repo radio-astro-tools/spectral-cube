@@ -15,6 +15,7 @@ from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from astropy.wcs import WCS
 from . import wcs_utils
 from .utils import FITSWarning, AstropyUserWarning, WCSCelestialError
+from .masks import BooleanArrayMask
 from astropy import log
 from astropy.io import fits
 from astropy.wcs.utils import is_proj_plane_distorted
@@ -1044,21 +1045,32 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore') # seriously NO WARNINGS.
 
+                # exclude any cubes with invalid spatial slices (could happen if whole slices are masked out)
+                keep1 = [all(x > 1 for x in cube[ch1:ch2, slices[1], slices[2]].shape)
+                        for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes))]
+                if sum(keep1) < len(keep1):
+                    log.warn(f"Dropping {len(keep1)-sum(keep1)} cubes out of {len(keep1)} because they have invalid (empty) slices")
+
                 scubes = [(cube[ch1:ch2, slices[1], slices[2]]
                            .convolve_to(commonbeam)
                            .rechunk())
-                          for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes),
-                                                                   delay=5, desc='Subcubes')]
-                # only keep cubes that are in range; the rest get excluded
-                keep = [(cube.shape[0] > 1) and
+                          for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
+                                                                   delay=5, desc='Subcubes')
+                          if kp
+                          ]
+
+                # only keep2 cubes that are in range; the rest get excluded
+                keep2 = [all(sh > 1 for sh in cube.shape) and
                         (cube.spectral_axis.min() < channel) and
                         (cube.spectral_axis.max() > channel)
                         for cube in scubes]
-                if sum(keep) < len(keep):
-                    log.warn(f"Dropping {len(keep)-sum(keep)} cubes out of {len(keep)} because they're out of range")
-                    scubes = [cube for cube, kp in zip(scubes, keep) if kp]
+                if sum(keep2) < len(keep2):
+                    log.warn(f"Dropping {len(keep2)-sum(keep2)} cubes out of {len(keep2)} because they're out of range")
+                    scubes = [cube for cube, kp in zip(scubes, keep2) if kp]
 
                 if weightcubes is not None:
+                    # merge the two 'keep' arrays
+                    keep = np.array(keep1) & np.array(keep2)
                     sweightcubes = [cube[ch1:ch2, slices[1], slices[2]]
                                     for (ch1, ch2), slices, cube, kp
                                     in std_tqdm(zip(chans, mincube_slices, weightcubes, keep),
