@@ -1050,7 +1050,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                           for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes),
                                                                    delay=5, desc='Subcubes')]
                 # only keep cubes that are in range; the rest get excluded
-                keep = [cube.shape[0] > 1 for cube in scubes]
+                keep = [(cube.shape[0] > 1) and
+                        (cube.spectral_axis.min() < channel) and
+                        (cube.spectral_axis.max() > channel)
+                        for cube in scubes]
                 if sum(keep) < len(keep):
                     log.warn(f"Dropping {len(keep)-sum(keep)} cubes out of {len(keep)} because they're out of range")
                     scubes = [cube for cube, kp in zip(scubes, keep) if kp]
@@ -1058,7 +1061,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 if weightcubes is not None:
                     sweightcubes = [cube[ch1:ch2, slices[1], slices[2]]
                                     for (ch1, ch2), slices, cube, kp
-                                    in std_tqdm(zip(chans, mincube_slices, weightcubes, kp),
+                                    in std_tqdm(zip(chans, mincube_slices, weightcubes, keep),
                                                 delay=5, desc='Subweight')
                                     if kp
                                     ]
