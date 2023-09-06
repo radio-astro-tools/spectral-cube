@@ -1054,23 +1054,25 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 scubes = [(cube[ch1:ch2, slices[1], slices[2]]
                            .convolve_to(commonbeam)
                            .rechunk())
+                           if kp
+                           else None # placeholder, will drop this below but need to retain list shape
                           for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
                                                                    delay=5, desc='Subcubes')
-                          if kp
                           ]
 
                 # only keep2 cubes that are in range; the rest get excluded
-                keep2 = [all(sh > 1 for sh in cube.shape) and
-                        (cube.spectral_axis.min() < channel) and
-                        (cube.spectral_axis.max() > channel)
-                        for cube in scubes]
-                if sum(keep2) < len(keep2):
-                    log.warn(f"Dropping {len(keep2)-sum(keep2)} cubes out of {len(keep2)} because they're out of range")
-                    scubes = [cube for cube, kp in zip(scubes, keep2) if kp]
+                keep2 = [(cube is not None) and
+                         all(sh > 1 for sh in cube.shape) and
+                         (cube.spectral_axis.min() < channel) and
+                         (cube.spectral_axis.max() > channel)
+                         for cube in scubes]
+                # merge the two 'keep' arrays
+                keep = np.array(keep1) & np.array(keep2)
+                if sum(keep) < len(keep):
+                    log.warn(f"Dropping {len(keep2)-sum(keep2)} cubes out of {len(keep)} because they're out of range")
+                    scubes = [cube for cube, kp in zip(scubes, keep) if kp]
 
                 if weightcubes is not None:
-                    # merge the two 'keep' arrays
-                    keep = np.array(keep1) & np.array(keep2)
                     sweightcubes = [cube[ch1:ch2, slices[1], slices[2]]
                                     for (ch1, ch2), slices, cube, kp
                                     in std_tqdm(zip(chans, mincube_slices, weightcubes, keep),
