@@ -833,6 +833,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  output_file=None,
                  method='cube',
                  verbose=True,
+                 fail_if_cube_dropped=False,
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -1036,8 +1037,16 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # this is very verbose but quite simple & cheap
             # going to spectral_slab(channel-dx, channel+dx) gives 3-pixel cubes most often,
             # which results in a 50% overhead in smoothing, etc.
-            chans = [(cube.closest_spectral_channel(channel) if cube.spectral_axis[cube.closest_spectral_channel(channel)] < channel else cube.closest_spectral_channel(channel)+1,
-                      cube.closest_spectral_channel(channel) if cube.spectral_axis[cube.closest_spectral_channel(channel)] > channel else cube.closest_spectral_channel(channel)-1)
+            def two_closest_channels(cube, channel):
+                dist = np.abs(cube.spectral_axis.to(channel.unit) - channel)
+                closest = np.argmin(dist)
+                dist[closest] = np.inf
+                next_closest = np.argmin(dist)
+                if closest < next_closest:
+                    return (closest, next_closest)
+                else:
+                    return (next_closest, closest)
+            chans = [two_closest_channels(cube, channel)
                      for cube in std_tqdm(cubes, delay=5, desc='ChanSel:')]
             # reversed spectral axes still break things
             # and we want two channels width, not one
@@ -1070,6 +1079,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 keep = np.array(keep1) & np.array(keep2)
                 if sum(keep) < len(keep):
                     log.warn(f"Dropping {len(keep2)-sum(keep2)} cubes out of {len(keep)} because they're out of range")
+                    if fail_if_cube_dropped:
+                        raise ValueError(f"There were {len(keep)-sum(keep)} dropped cubes and fail_if_cube_dropped was set")
                     scubes = [cube for cube, kp in zip(scubes, keep) if kp]
 
                 if weightcubes is not None:
