@@ -1505,7 +1505,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
                            range(header['NAXIS'])][::-1])
 
-        def reproject_interp_wrapper(img_slice):
+        def reproject_interp_wrapper(img_slice, **kwargs):
             # What exactly is the wrapper getting here?
             # I think it is given a _cube_ that is a cutout?
             if filled:
