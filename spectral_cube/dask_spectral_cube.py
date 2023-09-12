@@ -1485,16 +1485,11 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
             raise ImportError("Requires the reproject package to be"
                               " installed.")
 
-        reproj_kwargs = kwargs
-        # Need version > 0.2 to work with cubes, >= 0.5 for memmap
+        # Need version > 0.12 to work with dask
         from distutils.version import LooseVersion
-        if LooseVersion(version) < "0.5":
-            raise Warning("Requires version >=0.5 of reproject. The current "
+        if LooseVersion(version) < "0.12":
+            raise Warning("Requires version >=0.12 of reproject. The current "
                           "version is: {}".format(version))
-        elif LooseVersion(version) >= "0.6":
-            pass # no additional kwargs, no warning either
-        else:
-            reproj_kwargs['independent_celestial_slices'] = True
 
         from reproject import reproject_interp
 
@@ -1505,25 +1500,8 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
                            range(header['NAXIS'])][::-1])
 
-        # def reproject_interp_wrapper(img_slice, **kwargs):
-        #     # What exactly is the wrapper getting here?
-        #     # I think it is given a _cube_ that is a cutout?
-        #     # No, it is getting dask arrays (at least sometimes)
-        #     if filled:
-        #         data = img_slice.filled_data[:]
-        #     else:
-        #         data = img_slice._data
-        #     return reproject_interp((data, img_slice.header),
-        #                             newwcs, shape_out=shape_out, **kwargs)
-
-        # newcube, newcube_valid = self.apply_function_parallel_spatial(
-        #     reproject_interp_wrapper,
-        #     accepts_chunks=True,
-        #     order=order,
-        #     **reproj_kwargs)
-
-        newcube, newcube_valid = reproject_interp((self.filled_data[:] if filled else self._data, self.header),
-                                                  newwcs, shape_out=shape_out, **kwargs
+        newcube, newcube_valid = reproject_interp((self._get_filled_data() if filled else self._data, self.header),
+                                                  newwcs, shape_out=shape_out, block_size=(256, 256, 256), return_type='dask',
                                                   )
 
         return self._new_cube_with(data=newcube,
@@ -1532,7 +1510,6 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
                                                          newwcs),
                                    meta=self.meta,
                                   )
-
 
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
