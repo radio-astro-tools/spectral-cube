@@ -1505,21 +1505,26 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
         shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
                            range(header['NAXIS'])][::-1])
 
-        def reproject_interp_wrapper(img_slice, **kwargs):
-            # What exactly is the wrapper getting here?
-            # I think it is given a _cube_ that is a cutout?
-            if filled:
-                data = img_slice.filled_data[:]
-            else:
-                data = img_slice._data
-            return reproject_interp((data, img_slice.header),
-                                    newwcs, shape_out=shape_out, **kwargs)
+        # def reproject_interp_wrapper(img_slice, **kwargs):
+        #     # What exactly is the wrapper getting here?
+        #     # I think it is given a _cube_ that is a cutout?
+        #     # No, it is getting dask arrays (at least sometimes)
+        #     if filled:
+        #         data = img_slice.filled_data[:]
+        #     else:
+        #         data = img_slice._data
+        #     return reproject_interp((data, img_slice.header),
+        #                             newwcs, shape_out=shape_out, **kwargs)
 
-        newcube, newcube_valid = self.apply_function_parallel_spatial(
-            reproject_interp_wrapper,
-            accepts_chunks=True,
-            order=order,
-            **reproj_kwargs)
+        # newcube, newcube_valid = self.apply_function_parallel_spatial(
+        #     reproject_interp_wrapper,
+        #     accepts_chunks=True,
+        #     order=order,
+        #     **reproj_kwargs)
+
+        newcube, newcube_valid = reproject_interp((self.filled_data[:] if filled else self._data, self.header),
+                                                  newwcs, shape_out=shape_out, **kwargs
+                                                  )
 
         return self._new_cube_with(data=newcube,
                                    wcs=newwcs,
