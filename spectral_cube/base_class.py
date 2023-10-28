@@ -9,6 +9,8 @@ from astropy.io.fits import Card
 from radio_beam import Beam, Beams
 import dask.array as da
 
+from ndcube import NDCube
+
 from . import wcs_utils
 from . import cube_utils
 from .utils import BeamWarning, cached, WCSCelestialError, BeamAverageWarning, NoBeamError, BeamUnitsError
@@ -28,7 +30,7 @@ DOPPLER_CONVENTIONS['optical'] = u.doppler_optical
 DOPPLER_CONVENTIONS['relativistic'] = u.doppler_relativistic
 
 
-class BaseNDClass(object):
+class BaseNDClass(NDCube):
 
     _cache = {}
 
@@ -39,22 +41,6 @@ class BaseNDClass(object):
         """
         log.debug("Stripping WCS from header")
         return wcs_utils.strip_wcs_from_header(self._header)
-
-    @property
-    def wcs(self):
-        return self._wcs
-
-    @property
-    def meta(self):
-        return self._meta
-
-    @property
-    def mask(self):
-        return self._mask
-
-    @mask.setter
-    def mask(self, value):
-        self._mask = value
 
 
 class HeaderMixinClass(object):
