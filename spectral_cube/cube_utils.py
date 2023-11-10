@@ -1080,7 +1080,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 if sum(keep) < len(keep):
                     log.warn(f"Dropping {len(keep2)-sum(keep2)} cubes out of {len(keep)} because they're out of range")
                     if fail_if_cube_dropped:
-                        raise ValueError(f"There were {len(keep)-sum(keep)} dropped cubes and fail_if_cube_dropped was set")
+                        raise ValueError(f"There were {len(keep)-sum(keep)} dropped cubes and fail_if_cube_dropped was set.  Indices: {np.where(~keep)}")
                     scubes = [cube for cube, kp in zip(scubes, keep) if kp]
 
                 if weightcubes is not None:
@@ -1120,6 +1120,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     output_footprint=output_footprint[ii:ii+1,:,:],
                     reproject_function=reproject_interp,
                     input_weights=wthdus,
+                    #block_size=[2,-1,-1],
                     progressbar=partial(tqdm, desc='coadd') if verbose else False,
                 )
 
