@@ -756,7 +756,7 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         # Slice along first axis to return a 1D array.
         return factors[0]
 
-def combine_headers(header1, header2, **kwargs):
+def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
     '''
     Given two Header objects, this function returns a fits Header of the optimal wcs.
 
@@ -766,6 +766,9 @@ def combine_headers(header1, header2, **kwargs):
         A Header.
     header2 : astropy.io.fits.Header
         A Header.
+    spectral_dx_threshold : number
+        The maximum fractional difference in spectral pixel size.
+        If the difference exceeds this value, an exception will be raised.
 
     Returns
     -------
@@ -802,7 +805,7 @@ def combine_headers(header1, header2, **kwargs):
     # check cdelt
     dx1 = specw1.proj_plane_pixel_scales()[0]
     dx2 = specw2.proj_plane_pixel_scales()[0]
-    if dx1 != dx2:
+    if np.abs((dx1 - dx2)/dx1) > spectral_dx_threshold:
         raise ValueError(f"Different spectral pixel scale {dx1} vs {dx2}")
 
     ranges = np.hstack([range1, range2])
