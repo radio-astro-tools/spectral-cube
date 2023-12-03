@@ -793,7 +793,7 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
     specw1 = WCS(header1).spectral
     specw2 = WCS(header2).spectral
     specaxis1 = [x[0] for x in WCS(header1).world_axis_object_components].index('spectral')
-    specaxis2 = [x[0] for x in WCS(header1).world_axis_object_components].index('spectral')
+    specaxis2 = [x[0] for x in WCS(header2).world_axis_object_components].index('spectral')
     range1 = specw1.pixel_to_world([0,header1[f'NAXIS{specaxis1+1}']-1])
     range2 = specw2.pixel_to_world([0,header2[f'NAXIS{specaxis1+1}']-1])
 
@@ -975,7 +975,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     if verbose:
         class tqdm(std_tqdm):
             def update(self, n=1):
-                hdu.flush() # write to disk on each iteration
+                if output_file is not None:
+                    hdu.flush() # write to disk on each iteration
                 super().update(n)
 
     if method == 'cube':
