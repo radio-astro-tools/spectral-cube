@@ -810,6 +810,14 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
 
     ranges = np.hstack([range1, range2])
     new_naxis = int(np.ceil((ranges.max() - ranges.min()) / np.abs(dx1)))
+    if specw1.wcs.cdelt == 1.0:
+        raise NotImplementedError("Spectral WCS doesn't have a CDELT parameter; we don't know how to deal with this generally.")
+    if np.sign(specw1.wcs.cdelt) == 1:
+        new_crval3 = ranges.min().to(u.Hz).value
+    elif np.sign(specw1.wcs.cdelt) == -1:
+        new_crval3 = ranges.max().to(u.Hz).value
+    else:
+        raise "WTF?"
 
     # Make a new header using the optimal wcs and information from cubes
     header = header1.copy()
@@ -818,6 +826,7 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
     header['NAXIS2'] = shape_opt[0]
     header['NAXIS3'] = new_naxis
     header.update(wcs_opt.to_header())
+    header['CRVAL3'] = new_crval3
     header['WCSAXES'] = 3
     return header
 
