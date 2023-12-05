@@ -1,5 +1,10 @@
-0.6.3.dev (unreleased)
+0.6.4 (2023-12-05)
 ----------------------
+- Fix astropy.coordinates import #893
+
+0.6.3 (2023-10-17)
+----------------------
+- MNT: Clean up _astropy_init.py #892
 - Find beam table from EXT name and CI fix #879
 
 0.6.2 (2023-06-23)
