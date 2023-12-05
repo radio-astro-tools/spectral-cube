@@ -1,6 +1,10 @@
-0.6.5.dev (unreleased)
+0.6.6.dev (unreleased)
 ----------------------
 -
+
+0.6.5 (2023-12-05)
+----------------------
+- Fixed issue with fix from #893 not getting included in the 0.6.4 tag
 
 0.6.4 (2023-12-05)
 ----------------------
