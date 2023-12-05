@@ -42,7 +42,7 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.9
             name: Py3.9 all
-            toxenv: py39-test-viz-noviz-docs
+            toxenv: py39-test-viz-noviz
           - os: ubuntu-latest
             python-version: 3.9
             name: Py3.9 dev
@@ -58,7 +58,7 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.9
             name: Py3.9 all dev
-            toxenv: py39-test-viz-noviz-docs-dev
+            toxenv: py39-test-viz-noviz-dev
           - os: ubuntu-latest
             python-version: 3.8
             name: Py3.8 mindeps and CASA
