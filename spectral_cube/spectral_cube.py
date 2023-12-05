@@ -2296,8 +2296,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._apply_everywhere(operator.truediv, value)
 
     def __floordiv__(self, value):
-        raise NotImplementedError("Floor-division (division with truncation) "
-                                  "is not supported.")
+        return NotImplemented
         #if isinstance(value, BaseSpectralCube):
         #    # (Pdb) operator.floordiv(u.K, u.K)
         #    # *** TypeError: unsupported operand type(s) for //: 'IrreducibleUnit' and 'IrreducibleUnit'
