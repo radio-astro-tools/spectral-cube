@@ -545,24 +545,17 @@ class TestArithmetic(object):
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_floordiv(self, value):
-        with pytest.raises(NotImplementedError,
-                           match=re.escape("Floor-division (division with truncation) "
-                                           "is not supported.")):
+        with pytest.raises(TypeError):
             c2 = self.c1 // value
         self.c1 = self.d1 = None
 
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0)*u.K)
     def test_floordiv_fails(self, value):
-        with pytest.raises(NotImplementedError,
-                           match=re.escape("Floor-division (division with truncation) "
-                                           "is not supported.")):
-            c2 = self.c1 // value
+        c2 = self.c1 // value
         self.c1 = self.d1 = None
 
     def test_floordiv_cubes(self):
-        with pytest.raises(NotImplementedError,
-                           match=re.escape("Floor-division (division with truncation) "
-                                           "is not supported.")):
+        with pytest.raises(TypeError):
             c2 = self.c1 // self.c1
         self.c1 = self.d1 = None
 
