@@ -966,8 +966,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
     else:
         log_("Using memory")
-        output_array = np.zeros(shape_opt)
-        output_footprint = np.zeros(shape_opt)
+        output_array = np.zeros(shape_opt, dtype=dtype)
+        output_footprint = np.zeros(shape_opt, dtype=dtype)
     mask_opt = np.zeros(shape_opt[1:])
 
 
