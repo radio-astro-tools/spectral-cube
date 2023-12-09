@@ -955,12 +955,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # instant sanity check
             hdul = fits.open(output_file)
             output_array = hdul[0].data
-            assert output_array.dtype == dtype
+            if not output_array.dtype.name == dtype:
+                raise TypeError(f"Output array dtype is {output_array.dtype.name}, not {dtype} as requested")
 
         log_(f"Loading header from file {output_file} (dt={time.time()-t0})")
         hdul = fits.open(output_file, mode='update', overwrite=True)
         output_array = hdul[0].data
-        assert output_array.dtype == dtype
+        assert output_array.dtype.name == dtype
         hdul.flush() # make sure the header gets written right
 
         log_(f"Creating footprint file dt={time.time()-t0}")
