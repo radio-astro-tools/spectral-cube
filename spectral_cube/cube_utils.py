@@ -846,6 +846,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  method='cube',
                  verbose=True,
                  fail_if_cube_dropped=False,
+                 fail_if_channel_empty=True,
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -920,7 +921,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
     # Prepare an array and mask for the final cube
     shape_opt = (target_header['NAXIS3'], target_header['NAXIS2'], target_header['NAXIS1'])
-    dtype = f"float{int(abs(target_header['BITPIX']))}"
+    nbits = int(abs(target_header['BITPIX']))
+    if nbits not in (16, 32, 64):
+        raise ValueError(f"Invalid BITPIX specified: {nbits} (must be 16, 32, or 64)")
+    dtype = f"float{nbits}"
+    # header.tofile decides on the dtype; we force it to be float here because int doesn't make sense
+    if target_header['BITPIX'] > 0:
+        target_header['BITPIX'] = -nbits
 
     if output_file is not None:
         log_(f"Using output file {output_file}")
@@ -941,13 +948,19 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             target_header.tofile(output_file, overwrite=True)
             with open(output_file, 'rb+') as fobj:
                 fobj.seek(len(target_header.tostring()) +
-                          (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
+                          (np.prod(shape_opt) * np.abs(nbits//8)) - 1)
                 fobj.write(b'\0')
 
+            # instant sanity check
+            hdul = fits.open(output_file)
+            output_array = hdul[0].data
+            assert output_array.dtype == dtype
+
         log_(f"Loading header from file {output_file} (dt={time.time()-t0})")
-        hdu = fits.open(output_file, mode='update', overwrite=True)
-        output_array = hdu[0].data.astype(dtype)
-        hdu.flush() # make sure the header gets written right
+        hdul = fits.open(output_file, mode='update', overwrite=True)
+        output_array = hdul[0].data
+        assert output_array.dtype == dtype
+        hdul.flush() # make sure the header gets written right
 
         log_(f"Creating footprint file dt={time.time()-t0}")
         # use memmap - not a FITS file - for the footprint
@@ -989,7 +1002,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         class tqdm(std_tqdm):
             def update(self, n=1):
                 if output_file is not None:
-                    hdu.flush() # write to disk on each iteration
+                    hdul.flush() # write to disk on each iteration
                 super().update(n)
 
     if method == 'cube':
@@ -1141,13 +1154,19 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     progressbar=partial(tqdm, desc='coadd') if verbose else False,
                 )
 
+                if np.all(output_array_ == 0) or np.all(output_array[ii:ii+1,:,:] == 0):
+                    if fail_if_channel_empty:
+                        raise ValueError(f"Channel {ii}={channel} ended up totally empty")
+                    else:
+                        log.warn(f"Channel {ii}={channel} ended up totally empty")
+
             pbar.set_description(f"Channel {ii}={channel} done")
 
     # Create Cube
     cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
 
     if output_file is not None:
-        hdu.flush()
-        hdu.close()
+        hdul.flush()
+        hdul.close()
 
     return cube
