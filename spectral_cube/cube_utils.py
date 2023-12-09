@@ -932,6 +932,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             hdu = fits.PrimaryHDU(data=np.ones([5,5,5], dtype=dtype),
                                   header=target_header
                                  )
+            # sanity check: was repeatedly encountering dtype=i8 when set to float64
+            assert hdu.data.dtype == dtype
             for kwd in ('NAXIS1', 'NAXIS2', 'NAXIS3'):
                 hdu.header[kwd] = target_header[kwd]
 
@@ -944,7 +946,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
         log_(f"Loading header from file {output_file} (dt={time.time()-t0})")
         hdu = fits.open(output_file, mode='update', overwrite=True)
-        output_array = hdu[0].data
+        output_array = hdu[0].data.astype(dtype)
         hdu.flush() # make sure the header gets written right
 
         log_(f"Creating footprint file dt={time.time()-t0}")
@@ -970,6 +972,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         output_footprint = np.zeros(shape_opt, dtype=dtype)
     mask_opt = np.zeros(shape_opt[1:])
 
+    if output_array.dtype.kind != 'f':
+        raise TypeError(f"Output array is not a float, it is {output_array.dtype.kind}, while {dtype} was requested.")
 
     # check that the beams are deconvolvable
     if commonbeam is not None:
