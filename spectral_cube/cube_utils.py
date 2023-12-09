@@ -927,6 +927,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     dtype = f"float{nbits}"
     # header.tofile decides on the dtype; we force it to be float here because int doesn't make sense
     if target_header['BITPIX'] > 0:
+        log.warn("Positive values of BITPIX, indicating integers, are not supported.  Forcing float.")
         target_header['BITPIX'] = -nbits
 
     if output_file is not None:
