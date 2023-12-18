@@ -107,7 +107,7 @@ Other Examples
    examples.rst
 
 There is also an `astropy tutorial
-<http://learn.astropy.org/rst-tutorials/FITS-cubes.html>`__ on accessing and
+<https://learn.astropy.org/tutorials/FITS-cubes.html>`__ on accessing and
 manipulating FITS cubes with spectral-cube.
 
 Advanced
