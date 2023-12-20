@@ -1070,10 +1070,21 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     if output_array.dtype.kind != 'f':
         raise TypeError(f"Output array is not a float, it is {output_array.dtype.kind}, while {dtype} was requested.")
 
+    def get_common_beam(beams):
+        """ HACK """
+        for epsilon in (5e-4, 1e-3, 1e-4, 5e-3, 1e-2):
+            for beam_threshold in np.logspace(-6, -2, 4):
+                try:
+                    commonbeam = beams.common_beam(tolerance=beam_threshold, epsilon=epsilon)
+                    return commonbeam
+                except (BeamError, ValueError) as ex:
+                    print(f"Encountered beam error '{ex}' with threshold {beam_threshold} and epsilon {epsilon}.  Trying again.")
+        raise BeamError("Failed to find common beam.")``
+
     # check that the beams are deconvolvable
     if commonbeam is not None:
         # assemble beams
-        beams = [cube.beam if hasattr(cube, 'beam') else cube.beams.common_beam()
+        beams = [cube.beam if hasattr(cube, 'beam') else get_common_beam(cube.beams)
                  for cube in cubes]
 
         for beam in beams:
