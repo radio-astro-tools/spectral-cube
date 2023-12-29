@@ -853,8 +853,13 @@ def combine_headers(header1, header2, spectral_dx_threshold=0,
         new_cdelt3 = specw1.wcs.cdelt[0]
 
     else:
-        range1 = specw1.pixel_to_world([0, specw1.array_shape[0]-1])
-        range2 = specw2.pixel_to_world([0, specw2.array_shape[0]-1])
+        # NOTE: EWK -- this failed combining different planes for
+        # test_regrid.py::test_mosaic_cubes_spectral. See below for proposed fix:
+        # range1 = specw1.pixel_to_world([0, specw1.array_shape[0]-1])
+        # range2 = specw2.pixel_to_world([0, specw2.array_shape[0]-1])
+
+        range1 = specw1.pixel_to_world([0, specw1.array_shape[0]])
+        range2 = specw2.pixel_to_world([0, specw2.array_shape[0]])
 
         # check for overlap
         # this will raise an exception if the headers are an different units, which we want
