@@ -756,7 +756,9 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         # Slice along first axis to return a 1D array.
         return factors[0]
 
-def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
+def combine_headers(header1, header2, spectral_dx_threshold=0,
+                    projection=None,
+                    **kwargs):
     '''
     Given two Header objects, this function returns a fits Header of the optimal wcs.
 
@@ -769,6 +771,9 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
     spectral_dx_threshold : number
         The maximum fractional difference in spectral pixel size.
         If the difference exceeds this value, an exception will be raised.
+    projection : str or None
+        The projection code to use. If None, the projection code will be the same as
+        `header1`.
 
     Returns
     -------
@@ -776,6 +781,9 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
         A header object of a field containing both initial headers.
 
     '''
+
+    # No repeated projection kwarg.
+    kwargs.pop('projection', None)
 
     from reproject.mosaicking import find_optimal_celestial_wcs
 
@@ -785,8 +793,50 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
     w2 = WCS(header2).celestial
     s2 = w2.array_shape
 
+    if projection is None:
+        projection = w1.wcs.ctype[0].split("-")[-1]
+        assert len(projection) == 3, "Projection code must be 3 characters long."
+
+    proj_codes = [
+        "AZP",
+        "SZP",
+        "TAN",
+        "STG",
+        "SIN",
+        "ARC",
+        "ZEA",
+        "AIR",
+        "CYP",
+        "CEA",
+        "CAR",
+        "MER",
+        "SFL",
+        "PAR",
+        "MOL",
+        "AIT",
+        "COP",
+        "COE",
+        "COD",
+        "COO",
+        "BON",
+        "PCO",
+        "TSC",
+        "CSC",
+        "QSC",
+        "HPX",
+        "XPH",
+    ]
+    if type(projection) == str:
+        if projection not in proj_codes:
+            raise ValueError(
+                "Must specify valid projection code from list of supported types: ",
+                ", ".join(proj_codes),
+            )
+
     # Get the optimal wcs and shape for both fields together
-    wcs_opt, shape_opt = find_optimal_celestial_wcs([(s1, w1), (s2, w2)], auto_rotate=False,
+    wcs_opt, shape_opt = find_optimal_celestial_wcs([(s1, w1), (s2, w2)],
+                                                    projection=projection,
+                                                    auto_rotate=False,
                                                     **kwargs)
 
     # find spectral coverage
