@@ -1089,7 +1089,12 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
         for beam in beams:
             # this will raise an exception if any of the cubes have bad beams
-            commonbeam.deconvolve(beam)
+            try:
+                commonbeam.deconvolve(beam)
+            except Exception as ex:
+                print(f'commonbeam: {commonbeam}')
+                print(f'beam: {beam}')
+                raise ex
 
     if verbose:
         class tqdm(std_tqdm):
@@ -1216,8 +1221,12 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 keep = np.array(keep1) & np.array(keep2)
                 if sum(keep) < len(keep):
                     log.warn(f"Dropping {len(keep2)-sum(keep2)} cubes out of {len(keep)} because they're out of range")
+                    dropped1 = list(np.where(~np.array(keep1))[0])
+                    dropped2 = list(np.where(~np.array(keep2))[0])
+                    dropped_indices = list(np.where(~keep)[0])
+                    log.warn(f"Dropped cube indices are {dropped_indices}.  For keep1={dropped1}, for keep2={dropped2}")
                     if fail_if_cube_dropped:
-                        raise ValueError(f"There were {len(keep)-sum(keep)} dropped cubes and fail_if_cube_dropped was set.  Indices: {np.where(~keep)}")
+                        raise ValueError(f"There were {len(keep)-sum(keep)} dropped cubes and fail_if_cube_dropped was set.  Indices: {dropped_indices}")
                     scubes = [cube for cube, kp in zip(scubes, keep) if kp]
 
                 if weightcubes is not None:
