@@ -1698,9 +1698,15 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                                         rechunk=('auto', -1, -1),
                                         **kwargs)
 
+        # Remove header keyword for presence of a CASA beam table post-convolution.
+        new_header = cube.header.copy()
+        if "CASAMBM" in new_header:
+            del new_header['CASAMBM']
+
         # Result above is a DaskVaryingResolutionSpectralCube, convert to DaskSpectralCube
         newcube = DaskSpectralCube(data=cube._data,
                                    beam=beam,
+                                   header=new_header,
                                    wcs=cube.wcs,
                                    mask=cube.mask,
                                    meta=cube.meta,
