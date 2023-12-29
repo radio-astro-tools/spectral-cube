@@ -842,30 +842,45 @@ def combine_headers(header1, header2, spectral_dx_threshold=0,
     # find spectral coverage
     specw1 = WCS(header1).spectral
     specw2 = WCS(header2).spectral
-    range1 = specw1.pixel_to_world([0, specw1.array_shape[0]-1])
-    range2 = specw2.pixel_to_world([0, specw2.array_shape[0]-1])
 
-    # check for overlap
-    # this will raise an exception if the headers are an different units, which we want
-    if max(range1) < min(range2) or max(range2) < min(range1):
-        warnings.warn(f"There is no spectral overlap between {range1} and {range2}")
+    # if the spectral axes are the same, no need to do anything else:
+    if specw1.wcs.compare(specw2.wcs):
+        new_naxis = specw1.array_shape[0]
+        new_crpix3 = specw1.wcs.crpix[0]
 
-    # check cdelt
-    dx1 = specw1.proj_plane_pixel_scales()[0]
-    dx2 = specw2.proj_plane_pixel_scales()[0]
-    if np.abs((dx1 - dx2)/dx1) > spectral_dx_threshold:
-        raise ValueError(f"Different spectral pixel scale {dx1} vs {dx2}")
+        new_crval3 = specw1.wcs.crval[0]
+        new_cunit3 = specw1.wcs.cunit[0]
+        new_cdelt3 = specw1.wcs.cdelt[0]
 
-    ranges = np.hstack([range1, range2])
-    new_naxis = int(np.ceil((ranges.max() - ranges.min()) / np.abs(dx1)))
-    if specw1.wcs.cdelt == 1.0:
-        raise NotImplementedError("Spectral WCS doesn't have a CDELT parameter; we don't know how to deal with this generally.")
-    if np.sign(specw1.wcs.cdelt) == 1:
-        new_crval3 = ranges.min().to(range1.unit).value
-    elif np.sign(specw1.wcs.cdelt) == -1:
-        new_crval3 = ranges.max().to(range1.unit).value
     else:
-        raise "WTF?"
+        range1 = specw1.pixel_to_world([0, specw1.array_shape[0]-1])
+        range2 = specw2.pixel_to_world([0, specw2.array_shape[0]-1])
+
+        # check for overlap
+        # this will raise an exception if the headers are an different units, which we want
+        if max(range1) < min(range2) or max(range2) < min(range1):
+            warnings.warn(f"There is no spectral overlap between {range1} and {range2}")
+
+        # check cdelt
+        dx1 = specw1.proj_plane_pixel_scales()[0]
+        dx2 = specw2.proj_plane_pixel_scales()[0]
+        if np.abs((dx1 - dx2)/dx1) > spectral_dx_threshold:
+            raise ValueError(f"Different spectral pixel scale {dx1} vs {dx2}")
+
+        ranges = np.hstack([range1, range2])
+        new_naxis = int(np.ceil((ranges.max() - ranges.min()) / np.abs(dx1)))
+        if specw1.wcs.cdelt == 1.0:
+            raise NotImplementedError("Spectral WCS doesn't have a CDELT parameter; we don't know how to deal with this generally.")
+        if np.sign(specw1.wcs.cdelt) == 1:
+            new_crval3 = ranges.min().to(range1.unit).value
+        elif np.sign(specw1.wcs.cdelt) == -1:
+            new_crval3 = ranges.max().to(range1.unit).value
+        else:
+            raise "WTF?"
+
+        new_crpix3 = 1
+        new_cunit3 = specw1.wcs.cunit[0]
+        new_cdelt3 = dx1.value
 
     # Make a new header using the optimal wcs and information from cubes
     header = header1.copy()
@@ -875,7 +890,9 @@ def combine_headers(header1, header2, spectral_dx_threshold=0,
     header['NAXIS3'] = new_naxis
     header.update(wcs_opt.to_header())
     header['CRVAL3'] = new_crval3
-    header['CRPIX3'] = 1
+    header['CRPIX3'] = new_crpix3
+    header['CUNIT3'] = new_cunit3.to_string()
+    header['CDELT3'] = new_cdelt3
     header['WCSAXES'] = 3
     header['BITPIX'] = header1['BITPIX']
 
@@ -1075,8 +1092,6 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                      for cube in std_tqdm(cubes, desc="Convolve:")]
             # Redefine cube1 so the output has the appropriate class
             cube1 = cubes[0]
-
-        print(f"Output shape: {output_array.shape}")
 
         try:
             output_array, output_footprint = reproject_and_coadd(
