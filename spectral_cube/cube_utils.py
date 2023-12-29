@@ -792,10 +792,8 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
     # find spectral coverage
     specw1 = WCS(header1).spectral
     specw2 = WCS(header2).spectral
-    specaxis1 = [x[0] for x in WCS(header1).world_axis_object_components].index('spectral')
-    specaxis2 = [x[0] for x in WCS(header2).world_axis_object_components].index('spectral')
-    range1 = specw1.pixel_to_world([0,header1[f'NAXIS{specaxis1+1}']-1])
-    range2 = specw2.pixel_to_world([0,header2[f'NAXIS{specaxis1+1}']-1])
+    range1 = specw1.pixel_to_world([0, specw1.array_shape[0]-1])
+    range2 = specw2.pixel_to_world([0, specw2.array_shape[0]-1])
 
     # check for overlap
     # this will raise an exception if the headers are an different units, which we want
@@ -813,9 +811,9 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
     if specw1.wcs.cdelt == 1.0:
         raise NotImplementedError("Spectral WCS doesn't have a CDELT parameter; we don't know how to deal with this generally.")
     if np.sign(specw1.wcs.cdelt) == 1:
-        new_crval3 = ranges.min().to(u.Hz).value
+        new_crval3 = ranges.min().to(range1.unit).value
     elif np.sign(specw1.wcs.cdelt) == -1:
-        new_crval3 = ranges.max().to(u.Hz).value
+        new_crval3 = ranges.max().to(range1.unit).value
     else:
         raise "WTF?"
 
@@ -827,7 +825,10 @@ def combine_headers(header1, header2, spectral_dx_threshold=0, **kwargs):
     header['NAXIS3'] = new_naxis
     header.update(wcs_opt.to_header())
     header['CRVAL3'] = new_crval3
+    header['CRPIX3'] = 1
     header['WCSAXES'] = 3
+    header['BITPIX'] = header1['BITPIX']
+
     return header
 
 def _getdata(cube):
@@ -847,6 +848,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  verbose=True,
                  fail_if_cube_dropped=False,
                  fail_if_channel_empty=True,
+                 return_footprint=False,
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -877,7 +879,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         Over what dimension should we iterate?  Options are 'cube' and
         'channel'.
     verbose : bool
-        Progressbars?
+        Show a progress bar.
+    fail_if_cube_dropped : bool
+        If True, will raise an exception if any cubes are dropped from the mosaic.
+    fail_if_channel_empty : bool
+        If True, will raise an exception if any channels in the mosaic are empty.
+    return_footprint : bool
+        If True, will return the footprint of the mosaic. Default is False.
 
     Outputs
     -------
@@ -1015,6 +1023,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         if commonbeam is not None:
             cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
                      for cube in std_tqdm(cubes, desc="Convolve:")]
+            # Redefine cube1 so the output has the appropriate class
+            cube1 = cubes[0]
+
+        print(f"Output shape: {output_array.shape}")
 
         try:
             output_array, output_footprint = reproject_and_coadd(
@@ -1092,14 +1104,26 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 if sum(keep1) < len(keep1):
                     log.warn(f"Dropping {len(keep1)-sum(keep1)} cubes out of {len(keep1)} because they have invalid (empty) slices")
 
-                scubes = [(cube[ch1:ch2, slices[1], slices[2]]
-                           .convolve_to(commonbeam)
-                           .rechunk())
-                           if kp
-                           else None # placeholder, will drop this below but need to retain list shape
-                          for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
-                                                                   delay=5, desc='Subcubes')
-                          ]
+                if commonbeam is not None:
+                    scubes = [(cube[ch1:ch2, slices[1], slices[2]]
+                            .convolve_to(commonbeam)
+                            .rechunk())
+                            if kp
+                            else None # placeholder, will drop this below but need to retain list shape
+                            for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
+                                                                    delay=5, desc='Subcubes')
+                            ]
+                    if ii == 0:
+                        cube1 = scubes[0]
+                else:
+                    scubes = [(cube[ch1:ch2, slices[1], slices[2]]
+                            .rechunk())
+                            if kp
+                            else None # placeholder, will drop this below but need to retain list shape
+                            for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
+                                                                    delay=5, desc='Subcubes')
+                            ]
+
 
                 # only keep2 cubes that are in range; the rest get excluded
                 keep2 = [(cube is not None) and
@@ -1124,6 +1148,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                                     ]
                     wthdus = [cube.hdu
                               for cube in std_tqdm(sweightcubes, delay=5, desc='WeightData')]
+                else:
+                    wthdus = None
 
 
                 # reproject_and_coadd requires the actual arrays, so this is the convolution step
@@ -1168,7 +1194,17 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
 
     if output_file is not None:
+        if commonbeam is not None:
+            # Append the beam info to the header
+            hdul[0].header.update(commonbeam.to_header_keywords())
+
         hdul.flush()
         hdul.close()
 
-    return cube
+    if commonbeam is not None:
+        cube = cube.with_beam(commonbeam, raise_error_jybm=False)
+
+    if return_footprint:
+        return cube, output_footprint
+    else:
+        return cube
