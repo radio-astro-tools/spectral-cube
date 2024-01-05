@@ -927,7 +927,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  fail_if_cube_dropped=False,
                  fail_if_channel_empty=True,
                  return_footprint=False,
-                 client=Client(),
+                 client=None,
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -1269,6 +1269,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 # theory; the previous would treat each cube in serial)
                 datas = [cube._get_filled_data() for cube in scubes]
                 wcses = [cube.wcs for cube in scubes]
+
+                if client is None:
+                    client = Client()
+
                 with client:
                     datas = client.gather(datas)
                 hdus = list(zip(datas, wcses))
