@@ -921,6 +921,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  fail_if_cube_dropped=False,
                  fail_if_channel_empty=True,
                  return_footprint=False,
+                 client=Client(),
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -958,6 +959,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         If True, will raise an exception if any channels in the mosaic are empty.
     return_footprint : bool
         If True, will return the footprint of the mosaic. Default is False.
+    client : Client, optional
+        Pass a `dask.distributed.Client <https://distributed.dask.org/en/latest/client.html>`_ to use
+        Dask to parallelize operations. Default is to create the local client.
 
     Outputs
     -------
@@ -1102,6 +1106,11 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 if output_file is not None:
                     hdul.flush() # write to disk on each iteration
                 super().update(n)
+
+    # Apply a small edge taper to the weights to ensure a smooth
+    # transition between cubes with adjacent spatial coverage.
+    if taper_weight_edge and weightcubes is not None:
+        pass
 
     if method == 'cube':
         log_("Using Cube method")
@@ -1254,7 +1263,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 # theory; the previous would treat each cube in serial)
                 datas = [cube._get_filled_data() for cube in scubes]
                 wcses = [cube.wcs for cube in scubes]
-                with Client() as client:
+                with client:
                     datas = client.gather(datas)
                 hdus = list(zip(datas, wcses))
 
