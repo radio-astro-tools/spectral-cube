@@ -1107,11 +1107,6 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     hdul.flush() # write to disk on each iteration
                 super().update(n)
 
-    # Apply a small edge taper to the weights to ensure a smooth
-    # transition between cubes with adjacent spatial coverage.
-    if taper_weight_edge and weightcubes is not None:
-        pass
-
     if method == 'cube':
         log_("Using Cube method")
         # Cube method: Regrid the whole cube in one operation.
