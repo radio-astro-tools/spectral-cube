@@ -95,7 +95,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install testing dependencies
-      run: python -m pip install tox codecov
+      run: python -m pip install tox
     - name: Run tests with ${{ matrix.name }}
       run: tox -v -e ${{ matrix.toxenv }}
     - name: Upload coverage to codecov
