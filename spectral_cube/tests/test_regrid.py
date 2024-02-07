@@ -18,9 +18,9 @@ except ImportError:
 
 # The comparison of Quantities in test_memory_usage
 # fail with older versions of numpy
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 
-NPY_VERSION_CHECK = LooseVersion(np.version.version) >= "1.13"
+NPY_VERSION_CHECK = parse(np.version.version) >= Version("1.13")
 
 from radio_beam import beam, Beam
 

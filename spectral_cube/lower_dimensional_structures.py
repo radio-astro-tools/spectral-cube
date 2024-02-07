@@ -526,8 +526,8 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
                               " installed.")
 
         # Need version > 0.2 to work with cubes
-        from distutils.version import LooseVersion
-        if LooseVersion(version) < "0.3":
+        from packaging.version import Version, parse
+        if parse(version) < Version("0.3"):
             raise Warning("Requires version >=0.3 of reproject. The current "
                           "version is: {}".format(version))
 

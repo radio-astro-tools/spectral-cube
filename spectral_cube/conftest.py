@@ -4,7 +4,6 @@
 from __future__ import print_function, absolute_import, division
 
 import os
-from distutils.version import LooseVersion
 from astropy.units.equivalencies import pixel_scale
 
 # Import casatools and casatasks here if available as they can otherwise

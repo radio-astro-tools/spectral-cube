@@ -1,7 +1,6 @@
 from __future__ import print_function, absolute_import, division
 
 import numpy as np
-from distutils.version import LooseVersion
 
 def allbadtonan(function):
     """
@@ -14,7 +13,7 @@ def allbadtonan(function):
             result = function(data, axis=axis)
         else:
             result = function(data, axis=axis, keepdims=keepdims)
-        if LooseVersion(np.__version__) >= LooseVersion('1.9.0') and hasattr(result, '__len__'):
+        if hasattr(result, '__len__'):
             if axis is None:
                 if np.all(np.isnan(data)):
                     return np.nan

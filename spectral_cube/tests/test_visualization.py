@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import pytest
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 
 from .test_spectral_cube import cube_and_raw
 
@@ -18,7 +18,7 @@ def test_proj_imshow(data_vda_jybeam_lower, use_dask):
     plt = pytest.importorskip('matplotlib.pyplot')
     cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
     mom0 = cube.moment0()
-    if LooseVersion(plt.matplotlib.__version__) < LooseVersion('2.1'):
+    if parse(plt.matplotlib.__version__) < Version('2.1'):
         # imshow is now only compatible with more recent versions of matplotlib
         # (apparently 2.0.2 was still incompatible)
         plt.imshow(mom0.value)
