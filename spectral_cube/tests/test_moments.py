@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import warnings
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 
 import pytest
 import numpy as np
@@ -78,7 +78,7 @@ axis_order = pytest.mark.parametrize(('axis', 'order'),
                                      (1, 0), (1, 1), (1, 2),
                                      (2, 0), (2, 1), (2, 2)))
 
-if LooseVersion(astropy.__version__[:3]) >= LooseVersion('1.0'):
+if parse(astropy.__version__[:3]) >= Version('1.0'):
     # The relative error is slightly larger on astropy-dev
     # There is no obvious reason for this.
     rtol = 2e-7

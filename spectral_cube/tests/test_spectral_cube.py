@@ -6,8 +6,8 @@ import operator
 import itertools
 import warnings
 import mmap
-from distutils.version import LooseVersion
 import sys
+from packaging.version import Version, parse
 
 import pytest
 
@@ -65,7 +65,7 @@ warnings.filterwarnings(action='ignore', category=FutureWarning,
 try:
     import yt
     YT_INSTALLED = True
-    YT_LT_301 = LooseVersion(yt.__version__) < LooseVersion('3.0.1')
+    YT_LT_301 = parse(yt.__version__) < Version('3.0.1')
 except ImportError:
     YT_INSTALLED = False
     YT_LT_301 = False
@@ -81,7 +81,7 @@ import os
 from radio_beam import Beam, Beams
 from radio_beam.utils import BeamError
 
-NUMPY_LT_19 = LooseVersion(np.__version__) < LooseVersion('1.9.0')
+NUMPY_LT_19 = parse(np.__version__) < Version('1.9.0')
 
 
 def cube_and_raw(filename, use_dask=None):
@@ -978,7 +978,7 @@ def test_read_write_rountrip(tmpdir, data_adv, use_dask):
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
     if (((hasattr(_wcs, '__version__')
-          and LooseVersion(_wcs.__version__) < LooseVersion('5.9'))
+          and parse(_wcs.__version__) < Version('5.9'))
          or not hasattr(_wcs, '__version__'))):
         # see https://github.com/astropy/astropy/pull/3992 for reasons:
         # we should upgrade this for 5.10 when the absolute accuracy is

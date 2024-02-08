@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import, division
 
 import pytest
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 
 from astropy import units as u
 from astropy import wcs
@@ -15,7 +15,7 @@ from ..spectral_axis import doppler_gamma, doppler_beta, doppler_z, get_rest_val
 try:
     import regions
     regionsOK = True
-    REGIONS_GT_03 = LooseVersion(regions.__version__) >= LooseVersion('0.3')
+    REGIONS_GT_03 = parse(regions.__version__) >= Version('0.3')
 except ImportError:
     regionsOK = REGIONS_GT_03 = False
 

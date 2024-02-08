@@ -57,7 +57,7 @@ from .spectral_axis import (determine_vconv_from_ctype, get_rest_value_from_wcs,
                             doppler_beta, doppler_gamma, doppler_z)
 from .io.core import SpectralCubeRead, SpectralCubeWrite
 
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 
 
 __all__ = ['BaseSpectralCube', 'SpectralCube', 'VaryingResolutionSpectralCube']
@@ -2343,7 +2343,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         import yt
 
         if (('dev' in yt.__version__) or
-            (LooseVersion(yt.__version__) >= LooseVersion('3.0'))):
+            (parse(yt.__version__) >= Version('3.0'))):
 
             # yt has updated their FITS data set so that only the SpectralCube
             # variant takes spectral_factor
@@ -2659,11 +2659,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         reproj_kwargs = kwargs
         # Need version > 0.2 to work with cubes, >= 0.5 for memmap
-        from distutils.version import LooseVersion
-        if LooseVersion(version) < "0.5":
+        if parse(version) < Version("0.5"):
             raise Warning("Requires version >=0.5 of reproject. The current "
                           "version is: {}".format(version))
-        elif LooseVersion(version) >= "0.6":
+        elif parse(version) >= Version("0.6"):
             pass # no additional kwargs, no warning either
         else:
             reproj_kwargs['independent_celestial_slices'] = True
