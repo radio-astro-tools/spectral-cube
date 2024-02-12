@@ -129,7 +129,7 @@ def test_reproject(use_memmap, data_adv, use_dask):
     result = cube.reproject(header_out, use_memmap=use_memmap)
 
     assert result.shape == (cube.shape[0], 5, 4)
-    
+
     # empirically, this is how close we can get after https://github.com/astropy/astropy/pull/14508
     tolerance = 1e-12
 
@@ -616,7 +616,8 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
     # which isn't auto-computed, resulting in nan pixels in the WCS transform
     cube._wcs.wcs.restwav = constants.c.to(u.m/u.s).value / cube.wcs.wcs.restfrq
 
-    expected_wcs = WCS(combine_headers(cube.header, cube.header)).celestial
+    expected_header = combine_headers(cube.header, cube.header)
+    expected_wcs = WCS(expected_header).celestial
 
     # Make two overlapping cubes of the data
     part1 = cube[:, :round(cube.shape[1]*2./3.), :]
@@ -625,16 +626,127 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
     assert part1.wcs.wcs.restwav != 0
     assert part2.wcs.wcs.restwav != 0
 
+    # Mosaic give the expected header.
     result = mosaic_cubes([part1, part2], order='nearest-neighbor',
+                          target_header=cube.header,
                           roundtrip_coords=False,
-                          spectral_block_size=spectral_block_size)
+                          spectral_block_size=spectral_block_size,
+                          save_to_tmp_dir=False,
+                          verbose=False,
+                          use_memmap=use_memmap,
+                          method='cube')
 
     # Check that the shapes are the same
     assert result.shape == cube.shape
 
+    assert repr(cube.wcs.celestial) == repr(result.wcs.celestial)
+
     # Check WCS in reprojected matches wcs_out
     # (comparing WCS failed for no reason we could discern)
     assert repr(expected_wcs) == repr(result.wcs.celestial)
+
     # Check that values of original and result are comparable
-    np.testing.assert_almost_equal(result.filled_data[:].value, cube.filled_data[:].value, decimal=3)
-    # only good to 3 decimal places is not amazing...
+    np.testing.assert_almost_equal(result.filled_data[:].value,
+                                   cube.filled_data[:].value, decimal=9)
+
+
+    # Mosaic auto-solving for the mosaic header.
+    result2 = mosaic_cubes([part1, part2],order='nearest-neighbor',
+                          target_header=None,
+                          roundtrip_coords=False,
+                          spectral_block_size=spectral_block_size,
+                          save_to_tmp_dir=False,
+                          verbose=False,
+                          use_memmap=use_memmap,
+                          method='cube')
+
+    # Check that the shapes are the same
+    assert result2.shape == cube.shape
+
+    assert repr(cube.wcs.celestial) == repr(result2.wcs.celestial)
+
+    # Check WCS in reprojected matches wcs_out
+    # (comparing WCS failed for no reason we could discern)
+    assert repr(expected_wcs) == repr(result2.wcs.celestial)
+
+    # Check that values of original and result2 are comparable
+    np.testing.assert_almost_equal(result2.filled_data[:].value,
+                                   cube.filled_data[:].value, decimal=9)
+
+
+@pytest.mark.parametrize('spectral_block_size,use_memmap', ((None, False),
+                                                            (100, False),
+                                                            (None, True),
+                                                            (100, False),
+                                                            (1, True),
+                                                            (1, False),
+                                                            ))
+def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_size):
+
+    pytest.importorskip('reproject')
+
+    # Read in data to use
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+
+    # cube is doppler-optical by default, which uses the rest wavelength,
+    # which isn't auto-computed, resulting in nan pixels in the WCS transform
+    cube._wcs.wcs.restwav = constants.c.to(u.m/u.s).value / cube.wcs.wcs.restfrq
+
+    expected_header = combine_headers(cube.header, cube.header)
+    expected_wcs = WCS(expected_header).celestial
+
+    # Make three cubes to spectrally mosaic.
+    part1 = cube[:2]
+    part2 = cube[2:3]
+    part3 = cube[3:]
+
+    assert part1.wcs.wcs.restwav != 0
+    assert part2.wcs.wcs.restwav != 0
+    assert part3.wcs.wcs.restwav != 0
+
+    # Mosaic give the expected header.
+    result = mosaic_cubes([part1, part2, part3], order='nearest-neighbor',
+                          target_header=cube.header,
+                          roundtrip_coords=False,
+                          spectral_block_size=spectral_block_size,
+                          save_to_tmp_dir=False,
+                          verbose=False,
+                          use_memmap=use_memmap,
+                          method='cube')
+
+    # Check that the shapes are the same
+    assert result.shape == cube.shape
+
+    assert repr(cube.wcs.celestial) == repr(result.wcs.celestial)
+
+    # Check WCS in reprojected matches wcs_out
+    # (comparing WCS failed for no reason we could discern)
+    assert repr(expected_wcs) == repr(result.wcs.celestial)
+
+    # Check that values of original and result are comparable
+    np.testing.assert_almost_equal(result.filled_data[:].value,
+                                   cube.filled_data[:].value, decimal=9)
+
+
+    # Mosaic auto-solving for the mosaic header.
+    result2 = mosaic_cubes([part1, part2, part3],order='nearest-neighbor',
+                          target_header=None,
+                          roundtrip_coords=False,
+                          spectral_block_size=spectral_block_size,
+                          save_to_tmp_dir=False,
+                          verbose=False,
+                          use_memmap=use_memmap,
+                          method='cube')
+
+    # Check that the shapes are the same
+    assert result2.shape == cube.shape
+
+    assert repr(cube.wcs.celestial) == repr(result2.wcs.celestial)
+
+    # Check WCS in reprojected matches wcs_out
+    # (comparing WCS failed for no reason we could discern)
+    assert repr(expected_wcs) == repr(result2.wcs.celestial)
+
+    # Check that values of original and result2 are comparable
+    np.testing.assert_almost_equal(result2.filled_data[:].value,
+                                   cube.filled_data[:].value, decimal=9)
