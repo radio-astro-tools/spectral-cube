@@ -1053,6 +1053,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         # if we want to do partial writing, though, it's best to make footprint an extension
         ntf2 = tempfile.NamedTemporaryFile()
         output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
+        log_(f"Temporary footprint file is {ntf2.name}")
 
         # default footprint to 1 assuming there is some stuff already in the image
         # this is a hack and maybe just shouldn't be attempted
@@ -1069,6 +1070,14 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         log_("Using memory")
         output_array = np.zeros(shape_opt, dtype=dtype)
         output_footprint = np.zeros(shape_opt, dtype=dtype)
+
+    # initialize output array to be all NaNs
+    # this shouldn't be necessary, but seems to have become so for reasons I don't understand.
+    # I'm seeing all zeros instead of nans in the weight=0 regions in early 2024.
+    # output_array[:] = np.nan
+    # apparently setting this turns all the _data_ into nan, and the _nondata_ stays zero... that's nonsense
+    # so I'm still at a total loss why I have nans in my data
+
     mask_opt = np.zeros(shape_opt[1:])
 
     if output_array.dtype.kind != 'f':
@@ -1087,6 +1096,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
     # check that the beams are deconvolvable
     if commonbeam is not None:
+        log_(f"Assembling beams to convolve to get to the common beam {commonbeam}")
         # assemble beams
         beams = [cube.beam if hasattr(cube, 'beam') else get_common_beam(cube.beams)
                  for cube in cubes]
@@ -1163,9 +1173,15 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                                                     spatial_only=True)
                           for cube in std_tqdm(cubes, desc='MinSubSlices:', delay=5)]
 
-        pbar = tqdm(enumerate(channels), desc="Channels")
+        if hasattr(channels, "__len__") and len(channels) > 1:
+            pbar = tqdm(enumerate(channels), desc="Channels")
+            using_pbar = True
+        else:
+            pbar = enumerate(channels)
+            using_pbar = False
         for ii, channel in pbar:
-            pbar.set_description(f"Channel {ii}={channel}")
+            if using_pbar:
+                pbar.set_description(f"Channel {ii}={channel}")
 
             # grab a 2-channel slab
             # this is very verbose but quite simple & cheap
@@ -1185,6 +1201,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # reversed spectral axes still break things
             # and we want two channels width, not one
             chans = [(ch1, ch2+1) if ch1 < ch2 else (ch2, ch1+1) for ch1, ch2 in chans]
+
+            if not using_pbar:
+                log_(f"Using neighboring channels {chans}")
+
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore') # seriously NO WARNINGS.
 
@@ -1267,10 +1287,10 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 hdus = list(zip(datas, wcses))
 
                 # project into array w/"dummy" third dimension
-                # (outputs are not used; data is written directly into the output array chunks)
+                # (outputs with trailing underscores are not used; data is written directly into the output array chunks)
                 output_array_, output_footprint_ = reproject_and_coadd(
-                    hdus,
-                    outwcs[ii:ii+1, :, :],
+                    input_data=hdus,
+                    output_projection=outwcs[ii:ii+1, :, :],
                     shape_out=(1,) + output_array.shape[1:],
                     output_array=output_array[ii:ii+1,:,:],
                     output_footprint=output_footprint[ii:ii+1,:,:],
@@ -1278,15 +1298,17 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     input_weights=wthdus,
                     #block_size=[2,-1,-1],
                     progressbar=partial(tqdm, desc='coadd') if verbose else False,
+                    match_background=False,
                 )
 
-                if np.all(output_array_ == 0) or np.all(output_array[ii:ii+1,:,:] == 0):
+                if np.all(output_array_[np.isfinite(output_array_)] == 0) or np.all(output_array[ii:ii+1,:,:][np.isfinite(output_array[ii:ii+1,:,:])] == 0):
                     if fail_if_channel_empty:
                         raise ValueError(f"Channel {ii}={channel} ended up totally empty")
                     else:
                         log.warn(f"Channel {ii}={channel} ended up totally empty")
 
-            pbar.set_description(f"Channel {ii}={channel} done")
+            if using_pbar:
+                pbar.set_description(f"Channel {ii}={channel} done")
 
     # Create Cube
     cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
