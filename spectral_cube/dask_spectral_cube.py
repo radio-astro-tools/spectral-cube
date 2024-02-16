@@ -4,6 +4,7 @@ A class to represent a 3-d position-position-velocity spectral cube.
 
 from __future__ import print_function, absolute_import, division
 
+import os
 import uuid
 import inspect
 import warnings
@@ -80,7 +81,8 @@ def add_save_to_tmp_dir_option(function):
                 raise ImportError("saving the cube to a temporary directory "
                                   "requires the zarr and fsspec packages to "
                                   "be installed.")
-            filename = tempfile.mktemp()
+            fd, filename = tempfile.mkstemp()
+            os.close(fd)
             with dask.config.set(**cube._scheduler_kwargs):
                 cube._data.to_zarr(filename)
             cube._data = da.from_zarr(filename)
