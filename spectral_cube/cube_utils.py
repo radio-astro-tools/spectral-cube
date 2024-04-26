@@ -1,14 +1,8 @@
-from __future__ import print_function, absolute_import, division
-
 import contextlib
 import warnings
 from copy import deepcopy
 
-try:
-    import builtins
-except ImportError:
-    # python2
-    import __builtin__ as builtins
+import builtins
 
 import dask.array as da
 import numpy as np
