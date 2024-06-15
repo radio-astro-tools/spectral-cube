@@ -1104,7 +1104,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         for beam in beams:
             # this will raise an exception if any of the cubes have bad beams
             try:
-                commonbeam.deconvolve(beam)
+                commonbeam.deconvolve(beam, failure_returns_pointlike=True)
             except Exception as ex:
                 print(f'commonbeam: {commonbeam}')
                 print(f'beam: {beam}')
