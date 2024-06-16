@@ -835,7 +835,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         # Compute whether the mask has any valid data along `axis`
         collapsed_mask = self.mask.include().any(axis=axis)
-        out[~collapsed_mask] = np.NaN
+        out[~collapsed_mask] = np.nan
 
         # Return a Projection.
         new_wcs = wcs_utils.drop_axis(self._wcs, np2wcs[axis])
@@ -3274,7 +3274,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     newmask[outslice,iy,ix] = interped
             else:
                 newmask[:, iy, ix] = False
-                newcube[:, iy, ix] = np.NaN
+                newcube[:, iy, ix] = np.nan
 
             update_function()
 

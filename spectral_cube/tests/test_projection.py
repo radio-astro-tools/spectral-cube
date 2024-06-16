@@ -635,7 +635,7 @@ def test_spectral_interpolate_with_mask(data_522_delta, use_dask):
     # The output makes CDELT3 > 0 (reversed spectral axis) so the masked
     # portion are the final 2 channels.
     np.testing.assert_almost_equal(result.filled_data[:].value,
-                                   [0.0, 0.5, np.NaN, np.NaN])
+                                   [0.0, 0.5, np.nan, np.nan])
 
 
 def test_spectral_interpolate_reversed(data_522_delta, use_dask):
