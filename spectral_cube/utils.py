@@ -8,7 +8,7 @@ bigdataurl = "https://spectral-cube.readthedocs.io/en/latest/big_data.html"
 
 try:
     from tqdm.auto import tqdm as ProgressBar
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     from astropy.utils.console import ProgressBar as pb
     from astropy.utils.console import get_terminal_size
     class ProgressBar(pb):
