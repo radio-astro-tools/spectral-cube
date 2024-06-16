@@ -20,7 +20,6 @@ import dask.array as da
 import astropy.wcs
 from astropy import units as u
 from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
-from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
 from astropy import convolution
@@ -35,6 +34,7 @@ from radio_beam import Beam, Beams
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
+from .utils import ProgressBar
 from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
                     is_broadcastable_and_smaller)
 from .ytcube import ytCube
@@ -515,7 +515,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         result = next(planes)
 
         if progressbar:
-            progressbar = ProgressBar(self.shape[iterax])
+            progressbar = ProgressBar(self.shape[iterax], desc='Slicewise: ')
             pbu = progressbar.update
         else:
             pbu = lambda: True
@@ -1057,7 +1057,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         out = np.empty([nz, nx, ny]) * np.nan
 
         if progressbar:
-            progressbar = ProgressBar(nx*ny)
+            progressbar = ProgressBar(nx*ny, desc='Apply: ')
             pbu = progressbar.update
         elif update_function is not None:
             pbu = update_function
@@ -2993,7 +2993,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if update_function is not None:
                 pbu = update_function
             elif verbose > 0:
-                progressbar = ProgressBar(self.shape[1]*self.shape[2])
+                progressbar = ProgressBar(self.shape[1]*self.shape[2], desc='Apply parallel: ')
                 pbu = progressbar.update
             else:
                 pbu = object
@@ -3256,7 +3256,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         yy,xx = np.indices(self.shape[1:])
         if update_function is None:
-            pb = ProgressBar(xx.size)
+            pb = ProgressBar(xx.size, desc='Spectral Interpolate: ')
             update_function = pb.update
 
         for ix, iy in (zip(xx.flat, yy.flat)):
@@ -3480,7 +3480,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if progressbar:
                 progressbar = ProgressBar
             else:
-                progressbar = lambda x: x
+                progressbar = lambda x, desc: x
 
             # Create a view that will add a blank newaxis at the right spot
             view_newaxis = [slice(None) for ii in range(self.ndim)]
@@ -3491,7 +3491,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             dsarr = np.memmap(ntf, mode='w+', shape=newshape, dtype=float)
             ntf2 = tempfile.NamedTemporaryFile()
             mask = np.memmap(ntf2, mode='w+', shape=newshape, dtype=bool)
-            for ii in progressbar(range(newshape[axis])):
+            for ii in progressbar(range(newshape[axis]), desc='Downsample: '):
                 view_fulldata = makeslice_local(ii*factor)
                 view_newdata = makeslice_local(ii, nsteps=1)
 
@@ -4171,7 +4171,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             beam_ratio_factors = [1.] * len(convolution_kernels)
 
         if update_function is None:
-            pb = ProgressBar(self.shape[0])
+            pb = ProgressBar(self.shape[0], desc='Convolve: ')
             update_function = pb.update
 
         newdata = np.empty(self.shape)
