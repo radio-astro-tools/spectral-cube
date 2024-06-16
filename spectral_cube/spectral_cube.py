@@ -966,7 +966,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Passed to np.testing.assert_almost_equal
         """
         assert cube.shape == self.shape
-        if not self.unit.is_equivalent(cube.unit, equivalencies=equivalencies):
+        if not self.unit.is_equivalent(cube.unit, equivalencies=equivalencies) and cube.unit != u.dimensionless_unscaled:
             raise u.UnitsError("{0} is not equivalent to {1}"
                                .format(self.unit, cube.unit))
         if not wcs_utils.check_equality(self.wcs, cube.wcs, warn_missing=True,
@@ -984,7 +984,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                  "cube.  The error was: {0}".format(ex,
                                                                     function))
 
-        cube = cube.to(self.unit)
+        # Don't convert another cube that is dimensionless.
+        # e.g. applying the pb correction to a interferometric image.
+        if cube.unit != u.dimensionless_unscaled:
+            cube = cube.to(self.unit)
+
         data = function(self._data, cube._data)
         try:
             # multiplication, division, etc. are valid inter-unit operations
