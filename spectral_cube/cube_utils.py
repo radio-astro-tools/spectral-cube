@@ -1136,7 +1136,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 output_array=output_array,
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
-                progressbar=tqdm if verbose else False,
+                progressbar=tqdm(desc='reproject_and_coadd') if verbose else False,
                 intermediate_memmap=True,
                 block_sizes=(None if spectral_block_size is None else
                              [(spectral_block_size, cube.shape[1], cube.shape[2])
@@ -1153,7 +1153,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 output_array=output_array,
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
-                progressbar=tqdm if verbose else False,
+                progressbar=tqdm(desc='reproject_and_coadd') if verbose else False,
             )
     elif method == 'channel':
         log_("Using Channel method")
@@ -1211,7 +1211,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
                 # exclude any cubes with invalid spatial slices (could happen if whole slices are masked out)
                 keep1 = [all(x > 1 for x in cube[ch1:ch2, slices[1], slices[2]].shape)
-                        for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes))]
+                        for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes), desc='keepcheck')]
                 if sum(keep1) < len(keep1):
                     log.warn(f"Dropping {len(keep1)-sum(keep1)} cubes out of {len(keep1)} because they have invalid (empty) slices")
 
@@ -1222,7 +1222,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                             if kp
                             else None # placeholder, will drop this below but need to retain list shape
                             for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
-                                                                    delay=5, desc='Subcubes')
+                                                                    delay=5, desc='Subcubes (conv)')
                             ]
                     if ii == 0:
                         cube1 = scubes[0]
@@ -1298,7 +1298,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     reproject_function=reproject_interp,
                     input_weights=wthdus,
                     #block_size=[2,-1,-1],
-                    progressbar=partial(tqdm, desc='coadd') if verbose else False,
+                    progressbar=partial(tqdm, desc=f'coadd ch{ii}') if verbose else False,
                     match_background=False,
                 )
 
