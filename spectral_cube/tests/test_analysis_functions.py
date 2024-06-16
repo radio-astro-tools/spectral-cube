@@ -31,11 +31,11 @@ def test_shift():
     # With part masked
     masked_spectrum = true_spectrum.copy()
     mask = np.abs(spectral_axis.value) <= 30
-    masked_spectrum[~mask] = np.NaN
+    masked_spectrum[~mask] = np.nan
 
     rolled_mask = np.roll(mask, 10)
     rolled_masked_spectrum = rolled_spectrum.copy()
-    rolled_masked_spectrum[~rolled_mask] = np.NaN
+    rolled_masked_spectrum[~rolled_mask] = np.nan
 
     shift_spectrum = fourier_shift(masked_spectrum, 10)
 
@@ -413,7 +413,7 @@ def test_stacking_noisy(use_dask):
 
 #     cov = fit_g.fit_info['param_cov']
 #     if cov is None:
-#         cov = np.zeros((3, 3)) * np.NaN
+#         cov = np.zeros((3, 3)) * np.nan
 #     parvals = g_fit.parameters
 
 #     parerrs = np.sqrt(np.diag(cov))
