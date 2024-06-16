@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from astropy.utils.console import ProgressBar
+from .utils import ProgressBar
 
 def check_ffmpeg(ffmpeg_cmd):
     returncode = os.system(f'{ffmpeg_cmd} > /dev/null 2&> /dev/null')
@@ -46,7 +46,7 @@ def make_rgb_movie(cube, prefix, v1, v2, vmin, vmax, ffmpeg_cmd='ffmpeg'):
     p1 = cube.closest_spectral_channel(v1)
     p2 = cube.closest_spectral_channel(v2)
 
-    for jj, ii in enumerate(ProgressBar(range(p1, p2-1))):
+    for jj, ii in enumerate(ProgressBar(range(p1, p2-1), desc='RGB: ')):
         rgb = np.array([cube[ii+2], cube[ii+1], cube[ii]]).T.swapaxes(0, 1)
 
         # in case you manually set min/max
@@ -114,7 +114,7 @@ def make_multispecies_rgb(cube_r, cube_g, cube_b, prefix, v1, v2, vmin, vmax,
     p1 = cube_r.closest_spectral_channel(v1)
     p2 = cube_r.closest_spectral_channel(v2)
 
-    for jj, ii in enumerate(ProgressBar(range(p1, p2+1))):
+    for jj, ii in enumerate(ProgressBar(range(p1, p2+1), desc='RGB multi: ')):
         rgb = np.array([cube_r[ii].value,
                         cube_g[ii].value,
                         cube_b[ii].value

@@ -6,6 +6,25 @@ from astropy.utils.exceptions import AstropyUserWarning
 
 bigdataurl = "https://spectral-cube.readthedocs.io/en/latest/big_data.html"
 
+try:
+    from tqdm.auto import tqdm as ProgressBar
+except ImportError:
+    from astropy.utils.console import ProgressBar as pb
+    class ProgressBar(pb):
+        def __init__(self, *args, desc=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.desc = desc
+
+        def _handle_resize(self, signum=None, frame=None):
+            terminal_width = get_terminal_size().columns
+            self._bar_length = terminal_width - 37 - (len(self.desc) if self.desc else 0)
+
+        def __enter__(self):
+            if self.desc:
+                print(self.desc, end='')
+            return self
+
+
 def cached(func):
     """
     Decorator to cache function calls
