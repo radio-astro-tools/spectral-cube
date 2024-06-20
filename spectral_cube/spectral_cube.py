@@ -1181,6 +1181,17 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         except ImportError:
             bnok = False
 
+        how = kwargs.pop('how', None)
+        if how == 'slice' and (not isinstance(axis, (list, tuple)) or len(axis) != 2):
+            raise ValueError("Cannot compute median slicewise unless you're compressing over two axes.")
+        elif how == 'ray':
+            if axis not in (0, 1, 2):
+                raise ValueError("Cannot compute median raywise unless you're compressing over one axis.")
+            else:
+                if not iterate_rays:
+                    iterate_rays = True
+                    warnings.warn("how='ray' was specified in call to median; this is setting iterate_rays=True")
+
         # slicewise median is nonsense, must force how = 'cube'
         # bottleneck.nanmedian does not allow axis to be a list or tuple
         if bnok and not iterate_rays and not isinstance(axis, (list, tuple)):
@@ -1194,6 +1205,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             result = self.apply_numpy_function(np.nanmedian, axis=axis,
                                                projection=True, unit=self.unit,
                                                how='cube',**kwargs)
+        elif iterate_rays:
+            result = self.apply_numpy_function(
+                nanmedian if bnok else np.nanmedian if hasattr(np, 'nanmedian') else np.median,
+                axis=axis, projection=True, unit=self.unit, how='ray',
+                check_endian=True, **kwargs)
         else:
             log.debug("Using numpy median iterating over rays")
             result = self.apply_function(np.median, projection=True, axis=axis,
