@@ -163,15 +163,15 @@ def reindex_wcs(wcs, inds):
     pv_cards = []
     for i, j in enumerate(inds):
         for k, m, v in wcs.wcs.get_pv():
-            if k == j:
-                pv_cards.append((i, m, v))
+            if k == (j + 1):
+                pv_cards.append((i + 1, m, v))
     outwcs.wcs.set_pv(pv_cards)
 
     ps_cards = []
     for i, j in enumerate(inds):
         for k, m, v in wcs.wcs.get_ps():
-            if k == j:
-                ps_cards.append((i, m, v))
+            if k == (j + 1):
+                ps_cards.append((i + 1, m, v))
     outwcs.wcs.set_ps(ps_cards)
 
 
