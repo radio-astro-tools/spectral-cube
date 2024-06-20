@@ -192,4 +192,4 @@ github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_pr
 #         continue
 #     dtype, target = line.split(None, 1)
 #     target = target.strip()
-#     nitpick_ignore.append((dtype, six.u(target)))
+#     nitpick_ignore.append((dtype, str(target)))

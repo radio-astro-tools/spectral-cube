@@ -1,6 +1,3 @@
-from __future__ import print_function, absolute_import, division
-
-import six
 import os
 import subprocess
 import numpy as np
@@ -214,7 +211,7 @@ class ytCube(object):
         -------
         The result of the `yt.surface.export_sketchfab` function
         """
-        if isinstance(level, six.string_types):
+        if isinstance(level, str):
             sigma = self.cube.std().value
             level = float(level.split()[0]) * sigma
 

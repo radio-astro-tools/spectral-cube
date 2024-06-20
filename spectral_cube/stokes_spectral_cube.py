@@ -1,6 +1,3 @@
-from __future__ import print_function, absolute_import, division
-
-import six
 import numpy as np
 
 from astropy.io.registry import UnifiedReadWriteMethod
@@ -113,10 +110,7 @@ class StokesSpectralCube(object):
         return self._wcs
 
     def __dir__(self):
-        if six.PY2:
-            return self.components + dir(type(self)) + list(self.__dict__)
-        else:
-            return self.components + super(StokesSpectralCube, self).__dir__()
+        return self.components + super(StokesSpectralCube, self).__dir__()
 
     @property
     def components(self):

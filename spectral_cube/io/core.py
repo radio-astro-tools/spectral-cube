@@ -5,8 +5,6 @@
 # the unified I/O framework from Astropy which is used to implement this, see
 # http://docs.astropy.org/en/stable/io/unified.html
 
-from __future__ import print_function, absolute_import, division
-
 from pathlib import PosixPath
 import warnings
 

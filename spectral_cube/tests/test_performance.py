@@ -4,8 +4,6 @@ Performance-related tests to make sure we don't use more memory than we should.
 For now this is just for SpectralCube, not DaskSpectralCube.
 """
 
-from __future__ import print_function, absolute_import, division
-
 import numpy as np
 
 import pytest
