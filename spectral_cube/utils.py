@@ -1,4 +1,5 @@
 import warnings
+import inspect
 
 from functools import wraps
 
