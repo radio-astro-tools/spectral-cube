@@ -1204,7 +1204,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             log.debug("Using numpy nanmedian")
             result = self.apply_numpy_function(np.nanmedian, axis=axis,
                                                projection=True, unit=self.unit,
-                                               how='cube',**kwargs)
+                                               how='cube', **kwargs)
         elif iterate_rays:
             result = self.apply_numpy_function(
                 nanmedian if bnok else np.nanmedian if hasattr(np, 'nanmedian') else np.median,

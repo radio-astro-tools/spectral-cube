@@ -287,15 +287,6 @@ class DaskSpectralCubeMixin:
     def _compute(self, array):
         return array.compute(**self._scheduler_kwargs)
 
-    def _warn_slow(self, funcname):
-        if self._is_huge and not self.allow_huge_operations:
-            raise ValueError("This function ({0}) requires loading the entire "
-                             "cube into memory, and the cube is large ({1} "
-                             "pixels), so by default we disable this operation. "
-                             "To enable the operation, set "
-                             "`cube.allow_huge_operations=True` and try again."
-                             .format(funcname, self.size))
-
     def _get_filled_data(self, view=(), fill=np.nan, check_endian=None, use_memmap=None):
 
         if check_endian:
