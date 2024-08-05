@@ -111,8 +111,11 @@ jobs:
           mkdir ${GITHUB_WORKSPACE}/.casa
           mkdir ${GITHUB_WORKSPACE}/.casa/data
           chmod 777 -R ${GITHUB_WORKSPACE}/.casa
-          echo "datapath=['${GITHUB_WORKSPACE}/.casa/']; measurespath=datapath[0]; measures_auto_update=True; data_auto_update=True" > $GITHUB_WORKSPACE/config.py
+          echo "datapath=['${GITHUB_WORKSPACE}/.casa/data']; measurespath=datapath[0]; measures_auto_update=True; data_auto_update=True" > $GITHUB_WORKSPACE/config.py
           pip install casadata
+          # https://casadocs.readthedocs.io/en/stable/notebooks/external-data.html#Populating-the-Data-Directory-Manually
+          python -m casaconfig --update-all
+          python -m casaconfig --current-data
           CASASITECONFIG=$GITHUB_WORKSPACE/config.py tox -v -e ${{ matrix.toxenv }}
     - name: Upload coverage to codecov
       if: ${{ contains(matrix.toxenv,'-cov') }}
