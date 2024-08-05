@@ -815,7 +815,7 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         # `Quantity`, but for now this approach works.... we just have
         # to add more functions to this list.
         if attrname in ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
-                        'nansum', 'ptp', 'var'):
+                        'nansum', 'var'):
             return getattr(self.quantity, attrname)
         else:
             return super(BaseOneDSpectrum, self).__getattribute__(attrname)

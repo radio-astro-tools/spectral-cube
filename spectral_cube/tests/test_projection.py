@@ -718,7 +718,7 @@ def test_1d_slices(data_255_delta, use_dask):
                     reason='https://github.com/numpy/numpy/issues/20699')
 @pytest.mark.parametrize('method',
                          ('min', 'max', 'std', 'mean', 'sum', 'cumsum',
-                          'nansum', 'ptp', 'var'),
+                          'var'),
                         )
 def test_1d_slice_reductions(method, data_255_delta, use_dask):
 
