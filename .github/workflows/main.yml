@@ -104,8 +104,8 @@ jobs:
 
     - name: Run tests with ${{ matrix.name }} (optionally with CASA)
       if: ${{ contains(matrix.toxenv,'-casa') }}
-      run: CASASITECONFIG=$GITHUB_WORKSPACE/config.py tox -v -e ${{ matrix.toxenv }}
-      - name: Run tests with ${{ matrix.name }} (no CASA)
+      run: tox -v -e ${{ matrix.toxenv }}
+    - name: Run tests with ${{ matrix.name }} (no CASA)
       if: ${{ !contains(matrix.toxenv,'-casa') }}
       run: |
           mkdir ${GITHUB_WORKSPACE}/.casa
