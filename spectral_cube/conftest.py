@@ -399,10 +399,12 @@ def data_vda_beams_image(tmp_path):
     ia.fromfits(infile=str(tmp_path / 'vda_beams.fits'),
                 outfile=str(tmp_path / 'vda_beams.image'),
                 overwrite=True)
+    ia.close()
+    ia.open(str(tmp_path / 'vda_beams.image'))
     for (bmaj, bmin, bpa, chan, pol) in beams.data:
-        ia.setrestoringbeam(beam={'major':{'unit': 'arcsec', 'value': bmaj},
-                                  'minor':{'unit': 'arcsec', 'value': bmin},
-                                  'positionangle':{'unit': 'deg', 'value': bpa}},
+        ia.setrestoringbeam(beam={'major': {'unit': 'arcsec', 'value': bmaj},
+                                  'minor': {'unit': 'arcsec', 'value': bmin},
+                                  'positionangle': {'unit': 'deg', 'value': bpa}},
                             channel=chan,
                             polarization=pol)
     ia.close()
