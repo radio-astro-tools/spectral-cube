@@ -16,10 +16,6 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            python-version: 3.9
-            name: Py3.9 mindeps
-            toxenv: py39-test
-          - os: ubuntu-latest
             python-version: '3.10'
             name: Py3.10 mindeps
             toxenv: py310-test
@@ -28,9 +24,9 @@ jobs:
             name: Py3.11 mindeps
             toxenv: py311-test
           - os: ubuntu-latest
-            python-version: 3.9
-            name: Py3.9 no visualization + coverage
-            toxenv: py39-test-noviz-cov
+            python-version: 3.11
+            name: Py3.11 no visualization + coverage
+            toxenv: py311-test-noviz-cov
           - os: ubuntu-latest
             python-version: 3.8
             name: Py3.8 mindeps
@@ -44,47 +40,47 @@ jobs:
             name: Py3.9 all
             toxenv: py39-test-viz-noviz
           - os: ubuntu-latest
-            python-version: 3.9
-            name: Py3.9 dev
-            toxenv: py39-test-dev
+            python-version: 3.11
+            name: Py3.11 dev
+            toxenv: py311-test-dev
           - os: ubuntu-latest
-            python-version: 3.9
-            name: Py3.9 viz
-            toxenv: py39-test-viz
+            python-version: 3.11
+            name: Py3.11 viz
+            toxenv: py311-test-viz
               #- os: ubuntu-latest
               #  python-version: 3.9
               #  name: Py3.9 viz w/yt & glue
               #  toxenv: py39-test-viz-viz_extra
           - os: ubuntu-latest
-            python-version: 3.9
-            name: Py3.9 all dev
-            toxenv: py39-test-viz-noviz-dev
+            python-version: 3.11
+            name: Py3.11 all dev
+            toxenv: py311-test-viz-noviz-dev
           - os: ubuntu-latest
             python-version: 3.8
             name: Py3.8 mindeps and CASA
             toxenv: py38-test-casa
           - os: ubuntu-latest
-            python-version: 3.9
-            name: Py3.9, noviz, dev
-            toxenv: py39-test-noviz-dev
+            python-version: 3.11
+            name: Py3.11, noviz, dev
+            toxenv: py311-test-noviz-dev
           - os: ubuntu-latest
             python-version: 3.8
             name: Py3.8 noviz (except CASA)
             toxenv: py38-test-noviz
           - os: macos-latest
-            python-version: 3.9
-            name: Py3.9 noviz (except CASA) MacOS X
+            python-version: 3.11
+            name: Py3.11 noviz (except CASA) MacOS X
             toxenv: py39-test-noviz
           - os: windows-latest
-            python-version: 3.9
-            name: Py3.9, noviz Windows
-            toxenv: py39-test-noviz-dev
+            python-version: 3.11
+            name: Py3.11, noviz Windows
+            toxenv: py311-test-noviz-dev
           - os: windows-latest
-            python-version: 3.9
-            name: Py3.9, noviz, dev; Windows
-            toxenv: py39-test-noviz-dev
+            python-version: 3.11
+            name: Py3.11, noviz, dev; Windows
+            toxenv: py311-test-noviz-dev
           - os: ubuntu-latest
-            python-version: 3.9
+            python-version: 3.11
             name: Documentation
             toxenv: build_docs
 
