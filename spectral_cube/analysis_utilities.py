@@ -70,12 +70,12 @@ def fourier_shift(x, shift, axis=0, add_pad=False, pad_size=None):
 
     # Check if there are all NaNs before shifting
     if nanmask.all():
-        return np.array([np.NaN] * pad_mask.size)
+        return np.array([np.nan] * pad_mask.size)
 
     nonan_shift = _fourier_shifter(pad_nonan, shift, axis)
     if shift_mask:
         mask_shift = _fourier_shifter(pad_mask, shift, axis) > 0.5
-        nonan_shift[mask_shift] = np.NaN
+        nonan_shift[mask_shift] = np.nan
 
     return nonan_shift
 
