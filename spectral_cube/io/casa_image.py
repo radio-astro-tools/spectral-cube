@@ -105,6 +105,9 @@ def load_casa_image(filename, skipdata=False, memmap=True,
     elif 'beams' in beam_:
         bdict = beam_['beams']
 
+        # NOTE: temp to check failing test
+        print(desc['_keywords_']['coords'])
+
         stokes_params = desc['_keywords_']['coords']['stokes1']['stokes']
 
         nbeams = len(bdict)
