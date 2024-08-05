@@ -98,8 +98,8 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        - name: Install testing dependencies
-        run: |
+    - name: Install testing dependencies
+      run: |
           python -m pip install tox codecov
           mkdir ${GITHUB_WORKSPACE}/.casa
           echo "datapath=['${GITHUB_WORKSPACE}/.casa/']; measurespath=datapath[0]; measures_auto_update=True; data_auto_update=True" > $GITHUB_WORKSPACE/config.py
