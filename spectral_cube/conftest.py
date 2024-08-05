@@ -404,11 +404,11 @@ def data_vda_beams_image(tmp_path):
     for (bmaj, bmin, bpa, chan, pol) in beams.data:
         # NOTE: temp to check failing test. Unable to reproduce locally
         print(bmaj, bmin, bpa, chan, pol)
-        ia.setrestoringbeam(beam={'major': {'unit': 'arcsec', 'value': bmaj},
-                                  'minor': {'unit': 'arcsec', 'value': bmin},
-                                  'positionangle': {'unit': 'deg', 'value': bpa}},
-                            channel=chan,
-                            polarization=pol)
+        ia.setrestoringbeam(beam={'major': {'unit': 'arcsec', 'value': float(bmaj)},
+                                  'minor': {'unit': 'arcsec', 'value': float(bmin)},
+                                  'positionangle': {'unit': 'deg', 'value': float(bpa)}},
+                            channel=int(chan),
+                            polarization=int(pol))
     ia.close()
     return tmp_path / 'vda_beams.image'
 
