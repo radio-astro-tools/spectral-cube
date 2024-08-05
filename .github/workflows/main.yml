@@ -94,10 +94,16 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install testing dependencies
-      run: python -m pip install tox
+        - name: Install testing dependencies
+        run: |
+          python -m pip install tox codecov
+          mkdir ${GITHUB_WORKSPACE}/.casa
+          echo "datapath=['${GITHUB_WORKSPACE}/.casa/']; measurespath=datapath[0]; measures_auto_update=True; data_auto_update=True" > $GITHUB_WORKSPACE/config.py
+          pip install casadata
+          export CASASITECONFIG=$GITHUB_WORKSPACE/config.py
+
     - name: Run tests with ${{ matrix.name }}
-      run: tox -v -e ${{ matrix.toxenv }}
+      run: CASASITECONFIG=$GITHUB_WORKSPACE/config.py tox -v -e ${{ matrix.toxenv }}
     - name: Upload coverage to codecov
       if: ${{ contains(matrix.toxenv,'-cov') }}
       uses: codecov/codecov-action@v4
