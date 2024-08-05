@@ -103,10 +103,10 @@ jobs:
 
 
     - name: Run tests with ${{ matrix.name }} (optionally with CASA)
-      if: ${{ contains(matrix.toxenv,'-casa') }}
+      if: ${{ !contains(matrix.toxenv,'-casa') }}
       run: tox -v -e ${{ matrix.toxenv }}
     - name: Run tests with ${{ matrix.name }} (no CASA)
-      if: ${{ !contains(matrix.toxenv,'-casa') }}
+      if: ${{ contains(matrix.toxenv,'-casa') }}
       run: |
           mkdir ${GITHUB_WORKSPACE}/.casa
           mkdir ${GITHUB_WORKSPACE}/.casa/data
