@@ -107,6 +107,8 @@ def load_casa_image(filename, skipdata=False, memmap=True,
 
         # NOTE: temp to check failing test
         print(desc['_keywords_']['coords'])
+        print(list(desc['_keywords_']['coords'].keys()))
+
 
         stokes_params = desc['_keywords_']['coords']['stokes1']['stokes']
 
