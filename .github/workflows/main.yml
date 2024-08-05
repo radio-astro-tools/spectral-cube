@@ -104,7 +104,6 @@ jobs:
           mkdir ${GITHUB_WORKSPACE}/.casa
           echo "datapath=['${GITHUB_WORKSPACE}/.casa/']; measurespath=datapath[0]; measures_auto_update=True; data_auto_update=True" > $GITHUB_WORKSPACE/config.py
           pip install casadata
-          export CASASITECONFIG=$GITHUB_WORKSPACE/config.py
 
     - name: Run tests with ${{ matrix.name }}
       run: CASASITECONFIG=$GITHUB_WORKSPACE/config.py tox -v -e ${{ matrix.toxenv }}
