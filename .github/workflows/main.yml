@@ -64,7 +64,7 @@ jobs:
             name: Py3.8 mindeps and CASA
             toxenv: py38-test-casa
           - os: ubuntu-latest
-            python-version: 3.10
+            python-version: '3.10'
             name: Py3.10 mindeps and CASA
             toxenv: py310-test-casa
           - os: ubuntu-latest
