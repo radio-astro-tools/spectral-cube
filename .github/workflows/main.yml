@@ -24,6 +24,10 @@ jobs:
             name: Py3.11 mindeps
             toxenv: py311-test
           - os: ubuntu-latest
+            python-version: 3.12
+            name: Py3.12 mindeps
+            toxenv: py312-test
+          - os: ubuntu-latest
             python-version: 3.11
             name: Py3.11 no visualization + coverage
             toxenv: py311-test-noviz-cov
