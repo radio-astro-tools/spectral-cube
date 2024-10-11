@@ -1585,7 +1585,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return dspectral, dy, dx
 
-    def moment(self, order=0, axis=0, how='auto'):
+    def moment(self, order=0, axis=0, how='auto', **kwargs):
         """
         Compute moments along the spectral axis.
 
@@ -1662,7 +1662,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return ValueError("Invalid how. Must be in %s" %
                               sorted(list(dispatch.keys())))
 
-        out = dispatch[how](self, order, axis)
+        out = dispatch[how](self, order, axis, **kwargs)
 
         # apply units
         if order == 0:
@@ -1693,31 +1693,31 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           header=self._nowcs_header)
 
-    def moment0(self, axis=0, how='auto'):
+    def moment0(self, axis=0, how='auto', **kwargs):
         """
         Compute the zeroth moment along an axis.
 
         See :meth:`moment`.
         """
-        return self.moment(axis=axis, order=0, how=how)
+        return self.moment(axis=axis, order=0, how=how, **kwargs)
 
-    def moment1(self, axis=0, how='auto'):
+    def moment1(self, axis=0, how='auto', **kwargs):
         """
         Compute the 1st moment along an axis.
 
         For an explanation of the ``axis`` and ``how`` parameters, see :meth:`moment`.
         """
-        return self.moment(axis=axis, order=1, how=how)
+        return self.moment(axis=axis, order=1, how=how, **kwargs)
 
-    def moment2(self, axis=0, how='auto'):
+    def moment2(self, axis=0, how='auto', **kwargs):
         """
         Compute the 2nd moment along an axis.
 
         For an explanation of the ``axis`` and ``how`` parameters, see :meth:`moment`.
         """
-        return self.moment(axis=axis, order=2, how=how)
+        return self.moment(axis=axis, order=2, how=how, **kwargs)
 
-    def linewidth_sigma(self, how='auto'):
+    def linewidth_sigma(self, how='auto', **kwargs):
         """
         Compute a (sigma) linewidth map along the spectral axis.
 
@@ -1726,15 +1726,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         with np.errstate(invalid='ignore'):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", VarianceWarning)
-                return np.sqrt(self.moment2(how=how))
+                return np.sqrt(self.moment2(how=how, **kwargs))
 
-    def linewidth_fwhm(self, how='auto'):
+    def linewidth_fwhm(self, how='auto', **kwargs):
         """
         Compute a (FWHM) linewidth map along the spectral axis.
 
         For an explanation of the ``how`` parameter, see :meth:`moment`.
         """
-        return self.linewidth_sigma() * SIGMA2FWHM
+        return self.linewidth_sigma(**kwargs) * SIGMA2FWHM
 
     @property
     def spectral_axis(self):
