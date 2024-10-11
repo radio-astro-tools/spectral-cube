@@ -6,16 +6,7 @@ from astropy.utils.exceptions import AstropyUserWarning
 
 bigdataurl = "https://spectral-cube.readthedocs.io/en/latest/big_data.html"
 
-try:
-    from tqdm.auto import tqdm as ProgressBar
-except (ImportError, ModuleNotFoundError):
-    from astropy.utils.console import ProgressBar as pb
-    from astropy.utils.console import get_terminal_size
-    class ProgressBar(pb):
-        def __init__(self, *args, desc=None, **kwargs):
-            # astropy progressbar won't show this
-            self.desc = desc
-            super().__init__(*args, **kwargs)
+from tqdm.auto import tqdm as ProgressBar
 
 
 def cached(func):
