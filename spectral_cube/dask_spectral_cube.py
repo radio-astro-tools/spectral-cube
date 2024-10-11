@@ -781,11 +781,12 @@ class DaskSpectralCubeMixin:
 
         count_values, min_values, max_values, sum_values, ssum_values = results.reshape((-1, 5)).T
 
+        # all-NAN chunks are possible, so we need to use nan<stat> here
         stats = {'npts': count_values.sum(),
-                 'min': min_values.min() * self._unit,
-                 'max': max_values.max() * self._unit,
-                 'sum': sum_values.sum() * self._unit,
-                 'sumsq': ssum_values.sum() * self._unit ** 2}
+                 'min': np.nanmin(min_values) * self._unit,
+                 'max': np.nanmax(max_values) * self._unit,
+                 'sum': np.nansum(sum_values) * self._unit,
+                 'sumsq': np.nansum(ssum_values) * self._unit ** 2}
 
         stats['mean'] = stats['sum'] / stats['npts']
 
