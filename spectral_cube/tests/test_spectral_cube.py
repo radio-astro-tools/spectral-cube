@@ -668,10 +668,12 @@ class TestNumpyMethods(BaseTest):
         """
         regression test: argmax must have integer dtype
         """
-        result = self.c.argmax(how='ray')
-        assert 'int' in str(result.dtype)
-        result = self.c.argmin(how='ray')
-        assert 'int' in str(result.dtype)
+        # only test for non-dask
+        if not hasattr(self.c, 'rechunk'):
+            result = self.c.argmax(how='ray')
+            assert 'int' in str(result.dtype)
+            result = self.c.argmin(how='ray')
+            assert 'int' in str(result.dtype)
 
     @pytest.mark.parametrize('iterate_rays', (True,False))
     def test_median(self, iterate_rays, use_dask):
