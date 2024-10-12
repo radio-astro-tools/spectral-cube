@@ -430,7 +430,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          includemask=includemask,
                                          progressbar=progressbar, **kwargs)
         elif how == 'ray':
-            out = self.apply_function(function, **kwargs)
+            out = self.apply_function(function, progressbar=progressbar,
+                                      **kwargs)
         elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how,
                           UnsupportedIterationStrategyWarning)
