@@ -796,7 +796,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.apply_numpy_function(np.nanargmax, fill=-np.inf,
                                          reduce=False, projection=False,
                                          how=how, axis=axis,
-                                         dtype='int',
                                          **kwargs)
 
     @aggregation_docstring
@@ -811,7 +810,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.apply_numpy_function(np.nanargmin, fill=np.inf,
                                          reduce=False, projection=False,
                                          how=how, axis=axis,
-                                         dtype='int',
                                          **kwargs)
 
     def _argmaxmin_world(self, axis, method, **kwargs):
@@ -1001,7 +999,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False, progressbar=False,
-                       update_function=None, keep_shape=False, dtype=None,
+                       update_function=None, keep_shape=False,
                        **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
@@ -1059,7 +1057,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         nz = self.shape[axis] if keep_shape else 1
 
         # allocate memory for output array
-        if 'int' in str(dtype):
+        # check dtype first (for argmax/argmin)
+        result = function(np.arange(3, dtype=self._data.dtype))
+        if 'int' in str(result.dtype):
             out = np.zeros([nz, nx, ny], dtype=dtype)
         else:
             out = np.empty([nz, nx, ny]) * np.nan
