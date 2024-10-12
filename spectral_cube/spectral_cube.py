@@ -795,7 +795,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         return self.apply_numpy_function(np.nanargmax, fill=-np.inf,
                                          reduce=False, projection=False,
-                                         how=how, axis=axis, **kwargs)
+                                         how=how, axis=axis,
+                                         dtype='int',
+                                         **kwargs)
 
     @aggregation_docstring
     @warn_slow
@@ -808,7 +810,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         return self.apply_numpy_function(np.nanargmin, fill=np.inf,
                                          reduce=False, projection=False,
-                                         how=how, axis=axis, **kwargs)
+                                         how=how, axis=axis,
+                                         dtype='int',
+                                         **kwargs)
 
     def _argmaxmin_world(self, axis, method, **kwargs):
         '''
@@ -997,7 +1001,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     def apply_function(self, function, axis=None, weights=None, unit=None,
                        projection=False, progressbar=False,
-                       update_function=None, keep_shape=False, **kwargs):
+                       update_function=None, keep_shape=False, dtype=None,
+                       **kwargs):
         """
         Apply a function to valid data along the specified axis or to the whole
         cube, optionally using a weight array that is the same shape (or at
@@ -1054,7 +1059,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         nz = self.shape[axis] if keep_shape else 1
 
         # allocate memory for output array
-        out = np.empty([nz, nx, ny]) * np.nan
+        if 'int' in str(dtype):
+            out = np.zeros([nz, nx, ny], dtype=dtype)
+        else:
+            out = np.empty([nz, nx, ny]) * np.nan
 
         if progressbar:
             progressbar = ProgressBar(nx*ny)

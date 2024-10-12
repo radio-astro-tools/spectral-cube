@@ -659,6 +659,14 @@ class TestNumpyMethods(BaseTest):
         self._check_numpy(self.c.argmax, d, np.nanargmax)
         self.c = self.d = None
 
+    def test_argmax_rays(self):
+        """
+        regression test: argmax must have integer dtype
+        """
+        d = np.where(self.d > 0.5, self.d, -10)
+        result = self.c.argmax(how='ray')
+        assert 'int' in str(result.dtype)
+
     def test_argmin(self):
         d = np.where(self.d > 0.5, self.d, 10)
         self._check_numpy(self.c.argmin, d, np.nanargmin)
