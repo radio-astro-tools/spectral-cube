@@ -1058,7 +1058,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         # allocate memory for output array
         # check dtype first (for argmax/argmin)
-        result = function(np.arange(3, dtype=self._data.dtype, **kwargs))
+        result = function(np.arange(3, dtype=self._data.dtype), **kwargs)
         if 'int' in str(result.dtype):
             out = np.zeros([nz, nx, ny], dtype=dtype)
         else:
