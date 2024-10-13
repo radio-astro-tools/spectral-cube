@@ -396,15 +396,15 @@ def data_vda_beams_image(tmp_path):
     hdul.writeto(tmp_path / 'vda_beams.fits')
     from casatools import image
     ia = image()
-    ia.fromfits(infile=tmp_path / 'vda_beams.fits',
-                outfile=tmp_path / 'vda_beams.image',
+    ia.fromfits(infile=str(tmp_path / 'vda_beams.fits'),
+                outfile=str(tmp_path / 'vda_beams.image'),
                 overwrite=True)
     for (bmaj, bmin, bpa, chan, pol) in beams.data:
-        ia.setrestoringbeam(major={'unit': 'arcsec', 'value': bmaj},
-                            minor={'unit': 'arcsec', 'value': bmin},
-                            pa={'unit': 'deg', 'value': bpa},
-                            channel=chan,
-                            polarization=pol)
+        ia.setrestoringbeam(beam={'major': {'unit': 'arcsec', 'value': float(bmaj)},
+                                  'minor': {'unit': 'arcsec', 'value': float(bmin)},
+                                  'positionangle': {'unit': 'deg', 'value': float(bpa)}},
+                            channel=int(chan),
+                            polarization=int(pol))
     ia.close()
     return tmp_path / 'vda_beams.image'
 
