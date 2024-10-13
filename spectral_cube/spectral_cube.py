@@ -736,6 +736,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                              unit=self.unit,
                                              projection=projection,
                                              ignore_nan=True,
+                                             **kwargs
                                             )
         elif how == 'slice' and hasattr(axis, '__len__') and len(axis) == 2:
             return self.apply_numpy_function(stats.mad_std,
