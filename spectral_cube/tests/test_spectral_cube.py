@@ -109,10 +109,12 @@ def test_arithmetic_warning(data_vda_jybeam_lower, recwarn, use_dask):
 
     assert not cube._is_huge
 
-    if not use_dask:
-        # make sure the small cube raises a warning about loading into memory
-        with pytest.warns(UserWarning, match='requires loading the entire'):
-            cube + 5*cube.unit
+    # make sure the small cube raises a warning about loading into memory
+    with pytest.warns(UserWarning, match='requires loading the entire'):
+        cube + 5*cube.unit
+
+    with pytest.warns(UserWarning, match='requires loading the entire'):
+        cube + cube
 
 
 def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
