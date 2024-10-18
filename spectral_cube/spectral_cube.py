@@ -2069,7 +2069,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         import regions
 
         if isinstance(crtf_region, str):
-            region_list = regions.CRTFParser(crtf_region).shapes.to_regions()
+            if hasattr(regions, 'CRTFParser'):
+                region_list = regions.CRTFParser(crtf_region).shapes.to_regions()
+            else:
+                region_list = regions.Regions.read(crtf_region)
         else:
             raise TypeError("{0} should be a CRTF string".format(crtf_region))
 
