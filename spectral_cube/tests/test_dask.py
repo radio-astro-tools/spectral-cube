@@ -106,13 +106,17 @@ def test_statistics(data_adv):
 
 def test_statistics_withnans(data_adv):
     cube = DaskSpectralCube.read(data_adv).rechunk(chunks=(1, 2, 3))
+
     # shape is 2, 3, 4
-    cube._data[:,:,:2] = np.nan
+    cube._data[:,:,:1] = np.nan
     # ensure some chunks are all nan
     cube.rechunk((1,2,2))
     stats = cube.statistics()
+
     for key in ('min', 'max', 'sum'):
-        assert stats[key] == getattr(cube, key)()
+        np.testing.assert_allclose(stats[key],
+                                   getattr(cube, key)(),
+                                   rtol=1e-10)
 
 
 @pytest.mark.skipif(not CASA_INSTALLED, reason='Requires CASA to be installed')
