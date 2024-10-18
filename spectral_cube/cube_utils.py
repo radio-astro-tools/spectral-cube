@@ -1,16 +1,21 @@
 import contextlib
 import warnings
+import tempfile
+import os
+import time
 from copy import deepcopy
 
 import builtins
 
 import dask.array as da
+from dask.distributed import Client
 import numpy as np
 from astropy.wcs.utils import proj_plane_pixel_area
 from astropy.wcs import (WCSSUB_SPECTRAL, WCSSUB_LONGITUDE, WCSSUB_LATITUDE)
 from astropy.wcs import WCS
 from . import wcs_utils
 from .utils import FITSWarning, AstropyUserWarning, WCSCelestialError
+from .masks import BooleanArrayMask
 from astropy import log
 from astropy.io import fits
 from astropy.wcs.utils import is_proj_plane_distorted
@@ -19,7 +24,10 @@ from astropy import units as u
 import itertools
 import re
 from radio_beam import Beam
+from radio_beam.utils import BeamError
+from multiprocessing import Process, Pool
 
+from functools import partial
 
 def _fix_spectral(wcs):
     """
@@ -778,17 +786,55 @@ def combine_headers(header1, header2, **kwargs):
     wcs_opt, shape_opt = find_optimal_celestial_wcs([(s1, w1), (s2, w2)], auto_rotate=False,
                                                     **kwargs)
 
+    # find spectral coverage
+    specw1 = WCS(header1).spectral
+    specw2 = WCS(header2).spectral
+    specaxis1 = [x[0] for x in WCS(header1).world_axis_object_components].index('spectral')
+    specaxis2 = [x[0] for x in WCS(header1).world_axis_object_components].index('spectral')
+    range1 = specw1.pixel_to_world([0,header1[f'NAXIS{specaxis1+1}']-1])
+    range2 = specw2.pixel_to_world([0,header2[f'NAXIS{specaxis1+1}']-1])
+
+    # check for overlap
+    # this will raise an exception if the headers are an different units, which we want
+    if max(range1) < min(range2) or max(range2) < min(range1):
+        warnings.warn(f"There is no spectral overlap between {range1} and {range2}")
+
+    # check cdelt
+    dx1 = specw1.proj_plane_pixel_scales()[0]
+    dx2 = specw2.proj_plane_pixel_scales()[0]
+    if dx1 != dx2:
+        raise ValueError(f"Different spectral pixel scale {dx1} vs {dx2}")
+
+    ranges = np.hstack([range1, range2])
+    new_naxis = int(np.ceil((ranges.max() - ranges.min()) / np.abs(dx1)))
+
     # Make a new header using the optimal wcs and information from cubes
     header = header1.copy()
     header['NAXIS'] = 3
     header['NAXIS1'] = shape_opt[1]
     header['NAXIS2'] = shape_opt[0]
-    header['NAXIS3'] = header1['NAXIS3']
+    header['NAXIS3'] = new_naxis
     header.update(wcs_opt.to_header())
     header['WCSAXES'] = 3
     return header
 
-def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwargs):
+def _getdata(cube):
+    """
+    Must be defined out-of-scope to enable pickling
+    """
+    return (cube.unitless_filled_data[:], cube.wcs)
+
+def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
+                 target_header=None,
+                 commonbeam=None,
+                 weightcubes=None,
+                 save_to_tmp_dir=True,
+                 use_memmap=True,
+                 output_file=None,
+                 method='cube',
+                 verbose=True,
+                 fail_if_cube_dropped=False,
+                 **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
 
@@ -801,56 +847,289 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwa
     combine_header_kwargs : dict
         Keywords passed to `~reproject.mosaicking.find_optimal_celestial_wcs`
         via `combine_headers`.
+    commonbeam : Beam
+        If specified, will smooth the data to this common beam before
+        reprojecting.
+    weightcubes : None
+        Cubes with same shape as input cubes containing the weights
+    save_to_tmp_dir : bool
+        Default is to set `save_to_tmp_dir=True` because we expect cubes to be
+        big.
+    use_memmap : bool
+        Use a memory-mapped array to save the mosaicked cube product?
+    output_file : str or None
+        If specified, this should be a FITS filename that the output *array*
+        will be stored into (the footprint will not be saved)
+    method : 'cube' or 'channel'
+        Over what dimension should we iterate?  Options are 'cube' and
+        'channel'.
+    verbose : bool
+        Progressbars?
+
     Outputs
     -------
     cube : SpectralCube
         A spectral cube with the list of cubes mosaicked together.
     '''
+    from reproject.mosaicking import reproject_and_coadd
+    from reproject import reproject_interp
+    import warnings
+    from astropy.utils.exceptions import AstropyUserWarning
+    warnings.filterwarnings('ignore', category=AstropyUserWarning)
+
+    if verbose:
+        from tqdm import tqdm as std_tqdm
+    else:
+        class tqdm:
+            def __init__(self, x):
+                return x
+            def __call__(self, x):
+                return x
+            def set_description(self, **kwargs):
+                pass
+            def update(self, **kwargs):
+                pass
+        std_tqdm = tqdm
+
+    def log_(x):
+        if verbose:
+            log.info(x)
+        else:
+            log.debug(x)
 
     cube1 = cubes[0]
-    header = cube1.header
 
-    # Create a header for a field containing all cubes
-    for cu in cubes[1:]:
-        header = combine_headers(header, cu.header, **combine_header_kwargs)
+    if target_header is None:
+        target_header = cube1.header
+
+        # Create a header for a field containing all cubes
+        for cu in cubes[1:]:
+            target_header = combine_headers(target_header, cu.header, **combine_header_kwargs)
 
     # Prepare an array and mask for the final cube
-    shape_opt = (header['NAXIS3'], header['NAXIS2'], header['NAXIS1'])
-    final_array = np.zeros(shape_opt)
+    shape_opt = (target_header['NAXIS3'], target_header['NAXIS2'], target_header['NAXIS1'])
+    dtype = f"float{int(abs(target_header['BITPIX']))}"
+
+    if output_file is not None:
+        log_(f"Using output file {output_file}")
+        t0 = time.time()
+        if not output_file.endswith('.fits'):
+            raise IOError("Only FITS output is supported")
+        if not os.path.exists(output_file):
+            # https://docs.astropy.org/en/stable/generated/examples/io/skip_create-large-fits.html#sphx-glr-generated-examples-io-skip-create-large-fits-py
+            hdu = fits.PrimaryHDU(data=np.ones([5,5,5], dtype=dtype),
+                                  header=target_header
+                                 )
+            for kwd in ('NAXIS1', 'NAXIS2', 'NAXIS3'):
+                hdu.header[kwd] = target_header[kwd]
+
+            log_(f"Dumping header to file {output_file} (dt={time.time()-t0})")
+            target_header.tofile(output_file, overwrite=True)
+            with open(output_file, 'rb+') as fobj:
+                fobj.seek(len(target_header.tostring()) +
+                          (np.prod(shape_opt) * np.abs(target_header['BITPIX']//8)) - 1)
+                fobj.write(b'\0')
+
+        log_(f"Loading header from file {output_file} (dt={time.time()-t0})")
+        hdu = fits.open(output_file, mode='update', overwrite=True)
+        output_array = hdu[0].data
+        hdu.flush() # make sure the header gets written right
+
+        log_(f"Creating footprint file dt={time.time()-t0}")
+        # use memmap - not a FITS file - for the footprint
+        # if we want to do partial writing, though, it's best to make footprint an extension
+        ntf2 = tempfile.NamedTemporaryFile()
+        output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
+
+        # default footprint to 1 assuming there is some stuff already in the image
+        # this is a hack and maybe just shouldn't be attempted
+        #log_("Initializing footprint to 1s")
+        #output_footprint[:] = 1 # takes an hour?!
+        log_(f"Done initializing memory dt={time.time()-t0}")
+    elif use_memmap:
+        log_("Using memmap")
+        ntf = tempfile.NamedTemporaryFile()
+        output_array = np.memmap(ntf, mode='w+', shape=shape_opt, dtype=dtype)
+        ntf2 = tempfile.NamedTemporaryFile()
+        output_footprint = np.memmap(ntf2, mode='w+', shape=shape_opt, dtype=dtype)
+    else:
+        log_("Using memory")
+        output_array = np.zeros(shape_opt)
+        output_footprint = np.zeros(shape_opt)
     mask_opt = np.zeros(shape_opt[1:])
 
-    for cube in cubes:
-        # Reproject cubes to the header
+
+    # check that the beams are deconvolvable
+    if commonbeam is not None:
+        # assemble beams
+        beams = [cube.beam if hasattr(cube, 'beam') else cube.beams.common_beam()
+                 for cube in cubes]
+
+        for beam in beams:
+            # this will raise an exception if any of the cubes have bad beams
+            commonbeam.deconvolve(beam)
+
+    if verbose:
+        class tqdm(std_tqdm):
+            def update(self, n=1):
+                hdu.flush() # write to disk on each iteration
+                super().update(n)
+
+    if method == 'cube':
+        log_("Using Cube method")
+        # Cube method: Regrid the whole cube in one operation.
+        # Let reproject_and_coadd handle any iterations
+
+        if commonbeam is not None:
+            cubes = [cube.convolve_to(commonbeam, save_to_tmp_dir=save_to_tmp_dir)
+                     for cube in std_tqdm(cubes, desc="Convolve:")]
+
         try:
-            if spectral_block_size is not None:
-                cube_repr = cube.reproject(header,
-                                           block_size=[spectral_block_size,
-                                                       cube.shape[1],
-                                                       cube.shape[2]],
-                                           **kwargs)
-            else:
-                cube_repr = cube.reproject(header, **kwargs)
-        except TypeError:
+            output_array, output_footprint = reproject_and_coadd(
+                [cube.hdu for cube in cubes],
+                target_header,
+                input_weights=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
+                output_array=output_array,
+                output_footprint=output_footprint,
+                reproject_function=reproject_interp,
+                progressbar=tqdm if verbose else False,
+                block_size=(None if spectral_block_size is None else
+                            [(spectral_block_size, cube.shape[1], cube.shape[2])
+                             for cube in cubes]),
+            )
+        except TypeError as ex:
+            # print the exception in case we caught a different TypeError than expected
             warnings.warn("The block_size argument is not accepted by `reproject`.  "
-                          "A more recent version may be needed.")
-            cube_repr = cube.reproject(header, **kwargs)
+                          f"A more recent version may be needed.  Exception was: {ex}")
+            output_array, output_footprint = reproject_and_coadd(
+                [cube.hdu for cube in cubes],
+                target_header,
+                input_weights=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
+                output_array=output_array,
+                output_footprint=output_footprint,
+                reproject_function=reproject_interp,
+                progressbar=tqdm if verbose else False,
+            )
+    elif method == 'channel':
+        log_("Using Channel method")
+        # Channel method: manually downselect to go channel-by-channel in the
+        # input cubes before handing off material to reproject_and_coadd This
+        # approach allows us more direct & granular control over memory and is
+        # likely better for large-area cubes
+        # (ideally we'd let Dask handle all the memory allocation choices under
+        # the hood, but as of early 2023, we do not yet have that capability)
 
-        # Create weighting mask (2D)
-        mask = (cube_repr[0:1].get_mask_array()[0])
-        mask_opt += mask.astype(float)
+        outwcs = WCS(target_header)
+        channels = outwcs.spectral.pixel_to_world(np.arange(target_header['NAXIS3']))
+        dx = outwcs.spectral.proj_plane_pixel_scales()[0]
+        log_(f"Channel mode: dx={dx}.  Looping over {len(channels)} channels and {len(cubes)} cubes")
 
-        # Go through each slice of the cube, add it to the final array
-        for ii in range(final_array.shape[0]):
-            slice1 = np.nan_to_num(cube_repr.unitless_filled_data[ii])
-            final_array[ii] = final_array[ii] + slice1
+        mincube_slices = [cube[cube.shape[0]//2:cube.shape[0]//2+1]
+                          .subcube_slices_from_mask(cube[cube.shape[0]//2:cube.shape[0]//2+1].mask,
+                                                    spatial_only=True)
+                          for cube in std_tqdm(cubes, desc='MinSubSlices:', delay=5)]
 
-    # Dividing by the mask throws errors where it is zero
-    with np.errstate(divide='ignore'):
+        pbar = tqdm(enumerate(channels), desc="Channels")
+        for ii, channel in pbar:
+            pbar.set_description(f"Channel {ii}={channel}")
 
-        # Use weighting mask to average where cubes overlap
-        for ss in range(final_array.shape[0]):
-            final_array[ss] /= mask_opt
+            # grab a 2-channel slab
+            # this is very verbose but quite simple & cheap
+            # going to spectral_slab(channel-dx, channel+dx) gives 3-pixel cubes most often,
+            # which results in a 50% overhead in smoothing, etc.
+            def two_closest_channels(cube, channel):
+                dist = np.abs(cube.spectral_axis.to(channel.unit) - channel)
+                closest = np.argmin(dist)
+                dist[closest] = np.inf
+                next_closest = np.argmin(dist)
+                if closest < next_closest:
+                    return (closest, next_closest)
+                else:
+                    return (next_closest, closest)
+            chans = [two_closest_channels(cube, channel)
+                     for cube in std_tqdm(cubes, delay=5, desc='ChanSel:')]
+            # reversed spectral axes still break things
+            # and we want two channels width, not one
+            chans = [(ch1, ch2+1) if ch1 < ch2 else (ch2, ch1+1) for ch1, ch2 in chans]
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore') # seriously NO WARNINGS.
+
+                # exclude any cubes with invalid spatial slices (could happen if whole slices are masked out)
+                keep1 = [all(x > 1 for x in cube[ch1:ch2, slices[1], slices[2]].shape)
+                        for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes))]
+                if sum(keep1) < len(keep1):
+                    log.warn(f"Dropping {len(keep1)-sum(keep1)} cubes out of {len(keep1)} because they have invalid (empty) slices")
+
+                scubes = [(cube[ch1:ch2, slices[1], slices[2]]
+                           .convolve_to(commonbeam)
+                           .rechunk())
+                           if kp
+                           else None # placeholder, will drop this below but need to retain list shape
+                          for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
+                                                                   delay=5, desc='Subcubes')
+                          ]
+
+                # only keep2 cubes that are in range; the rest get excluded
+                keep2 = [(cube is not None) and
+                         all(sh > 1 for sh in cube.shape) and
+                         (cube.spectral_axis.min() < channel) and
+                         (cube.spectral_axis.max() > channel)
+                         for cube in scubes]
+                # merge the two 'keep' arrays
+                keep = np.array(keep1) & np.array(keep2)
+                if sum(keep) < len(keep):
+                    log.warn(f"Dropping {len(keep2)-sum(keep2)} cubes out of {len(keep)} because they're out of range")
+                    if fail_if_cube_dropped:
+                        raise ValueError(f"There were {len(keep)-sum(keep)} dropped cubes and fail_if_cube_dropped was set")
+                    scubes = [cube for cube, kp in zip(scubes, keep) if kp]
+
+                if weightcubes is not None:
+                    sweightcubes = [cube[ch1:ch2, slices[1], slices[2]]
+                                    for (ch1, ch2), slices, cube, kp
+                                    in std_tqdm(zip(chans, mincube_slices, weightcubes, keep),
+                                                delay=5, desc='Subweight')
+                                    if kp
+                                    ]
+                    wthdus = [cube.hdu
+                              for cube in std_tqdm(sweightcubes, delay=5, desc='WeightData')]
+
+
+                # reproject_and_coadd requires the actual arrays, so this is the convolution step
+
+                # commented out approach here: just let spectral-cube handle the convolution etc.
+                #hdus = [(cube._get_filled_data(), cube.wcs)
+                #        for cube in std_tqdm(scubes, delay=5, desc='Data/conv')]
+
+                # somewhat faster (?) version - ask the dask client to handle
+                # gathering the data
+                # (this version is capable of parallelizing over many cubes, in
+                # theory; the previous would treat each cube in serial)
+                datas = [cube._get_filled_data() for cube in scubes]
+                wcses = [cube.wcs for cube in scubes]
+                with Client() as client:
+                    datas = client.gather(datas)
+                hdus = list(zip(datas, wcses))
+
+                # project into array w/"dummy" third dimension
+                # (outputs are not used; data is written directly into the output array chunks)
+                output_array_, output_footprint_ = reproject_and_coadd(
+                    hdus,
+                    outwcs[ii:ii+1, :, :],
+                    shape_out=(1,) + output_array.shape[1:],
+                    output_array=output_array[ii:ii+1,:,:],
+                    output_footprint=output_footprint[ii:ii+1,:,:],
+                    reproject_function=reproject_interp,
+                    input_weights=wthdus,
+                    progressbar=partial(tqdm, desc='coadd') if verbose else False,
+                )
+
+            pbar.set_description(f"Channel {ii}={channel} done")
 
     # Create Cube
-    cube = cube1.__class__(data=final_array * cube1.unit, wcs=WCS(header))
+    cube = cube1.__class__(data=output_array * cube1.unit, wcs=WCS(target_header))
+
+    if output_file is not None:
+        hdu.flush()
+        hdu.close()
+
     return cube
