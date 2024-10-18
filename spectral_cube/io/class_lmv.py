@@ -1,6 +1,3 @@
-from __future__ import print_function, absolute_import, division
-
-import six
 import numpy as np
 import struct
 import warnings
@@ -252,8 +249,8 @@ def read_lmv_tofits(fileobj):
              if isinstance(v, tuple) else
              fits.header.Card(''.join(s for s in k if s in string.printable),
                               ''.join(s for s in v if s in string.printable)
-                              if isinstance(v, six.string_types) else v)
-             for k,v in six.iteritems(header)
+                              if isinstance(v, str) else v)
+             for k,v in header.items()
              if k not in bad_kws]
     Header = fits.Header(cards)
     hdu = fits.PrimaryHDU(data=data, header=Header)

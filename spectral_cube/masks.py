@@ -1,11 +1,8 @@
-from __future__ import print_function, absolute_import, division
-
 import abc
 import uuid
 import warnings
 import tempfile
 
-from six.moves import zip
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 

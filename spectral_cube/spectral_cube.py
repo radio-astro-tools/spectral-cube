@@ -2,8 +2,6 @@
 A class to represent a 3-d position-position-velocity spectral cube.
 """
 
-from __future__ import print_function, absolute_import, division
-
 import warnings
 from functools import wraps
 import operator
@@ -13,8 +11,6 @@ import copy
 import tempfile
 import textwrap
 from pathlib import PosixPath
-import six
-from six.moves import zip, range
 import dask.array as da
 
 import astropy.wcs
@@ -2048,7 +2044,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         import regions
 
-        if isinstance(ds9_region, six.string_types):
+        if isinstance(ds9_region, str):
             if hasattr(regions, 'DS9Parser'):
                 region_list = regions.DS9Parser(ds9_region).shapes.to_regions()
             else:
@@ -2072,7 +2068,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         import regions
 
-        if isinstance(crtf_region, six.string_types):
+        if isinstance(crtf_region, str):
             region_list = regions.CRTFParser(crtf_region).shapes.to_regions()
         else:
             raise TypeError("{0} should be a CRTF string".format(crtf_region))

@@ -1,5 +1,3 @@
-from __future__ import print_function, absolute_import, division
-
 import warnings
 from astropy import units as u
 from astropy.io import registry as io_registry

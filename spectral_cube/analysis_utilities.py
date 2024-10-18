@@ -1,7 +1,6 @@
 import numpy as np
 
 from astropy import units as u
-from six.moves import zip, range
 from astropy.wcs import WCS
 from astropy import log
 import warnings
