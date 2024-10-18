@@ -664,6 +664,16 @@ class TestNumpyMethods(BaseTest):
         self._check_numpy(self.c.argmin, d, np.nanargmin)
         self.c = self.d = None
 
+    def test_arg_rays(self, use_dask):
+        """
+        regression test: argmax must have integer dtype
+        """
+        if not use_dask:
+            result = self.c.argmax(how='ray')
+            assert 'int' in str(result.dtype)
+            result = self.c.argmin(how='ray')
+            assert 'int' in str(result.dtype)
+
     @pytest.mark.parametrize('iterate_rays', (True,False))
     def test_median(self, iterate_rays, use_dask):
         # Make sure that medians ignore empty/bad/NaN values
