@@ -3,11 +3,10 @@ import numpy as np
 from astropy import units as u
 from six.moves import zip, range
 from astropy.wcs import WCS
-from astropy.utils.console import ProgressBar
 from astropy import log
 import warnings
 
-from .utils import BadVelocitiesWarning
+from .utils import BadVelocitiesWarning, ProgressBar
 from .cube_utils import _map_context
 from .lower_dimensional_structures import VaryingResolutionOneDSpectrum, OneDSpectrum
 from .spectral_cube import VaryingResolutionSpectralCube, SpectralCube
@@ -284,7 +283,7 @@ def stack_spectra(cube, velocity_surface, v0=None,
     # Create chunks of spectra for read-out.
     chunks = get_chunks(len(xy_posns[0]), chunk_size)
     if progressbar:
-        iterat = ProgressBar(chunks)
+        iterat = ProgressBar(chunks, desc='Stack Spectra: ')
     else:
         iterat = chunks
 

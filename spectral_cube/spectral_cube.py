@@ -20,7 +20,6 @@ import dask.array as da
 import astropy.wcs
 from astropy import units as u
 from astropy.io.fits import PrimaryHDU, BinTableHDU, Header, Card, HDUList
-from astropy.utils.console import ProgressBar
 from astropy import log
 from astropy import wcs
 from astropy import convolution
@@ -35,6 +34,7 @@ from radio_beam import Beam, Beams
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
+from .utils import ProgressBar
 from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
                     is_broadcastable_and_smaller)
 from .ytcube import ytCube
@@ -430,7 +430,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                          includemask=includemask,
                                          progressbar=progressbar, **kwargs)
         elif how == 'ray':
-            out = self.apply_function(function, **kwargs)
+            out = self.apply_function(function, progressbar=progressbar,
+                                      **kwargs)
         elif how not in ['auto', 'cube']:
             warnings.warn("Cannot use how=%s. Using how=cube" % how,
                           UnsupportedIterationStrategyWarning)
@@ -515,7 +516,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         result = next(planes)
 
         if progressbar:
-            progressbar = ProgressBar(self.shape[iterax])
+            progressbar = ProgressBar(self.shape[iterax], desc='Slicewise: ')
             pbu = progressbar.update
         else:
             pbu = lambda: True
@@ -735,6 +736,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                              unit=self.unit,
                                              projection=projection,
                                              ignore_nan=True,
+                                             **kwargs
                                             )
         elif how == 'slice' and hasattr(axis, '__len__') and len(axis) == 2:
             return self.apply_numpy_function(stats.mad_std,
@@ -1065,7 +1067,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             out = np.empty([nz, nx, ny]) * np.nan
 
         if progressbar:
-            progressbar = ProgressBar(nx*ny)
+            progressbar = ProgressBar(nx*ny, desc='Apply: ')
             pbu = progressbar.update
         elif update_function is not None:
             pbu = update_function
@@ -1593,7 +1595,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return dspectral, dy, dx
 
-    def moment(self, order=0, axis=0, how='auto'):
+    def moment(self, order=0, axis=0, how='auto', **kwargs):
         """
         Compute moments along the spectral axis.
 
@@ -1670,7 +1672,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return ValueError("Invalid how. Must be in %s" %
                               sorted(list(dispatch.keys())))
 
-        out = dispatch[how](self, order, axis)
+        out = dispatch[how](self, order, axis, **kwargs)
 
         # apply units
         if order == 0:
@@ -1701,31 +1703,31 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return Projection(out, copy=False, wcs=new_wcs, meta=meta,
                           header=self._nowcs_header)
 
-    def moment0(self, axis=0, how='auto'):
+    def moment0(self, axis=0, how='auto', **kwargs):
         """
         Compute the zeroth moment along an axis.
 
         See :meth:`moment`.
         """
-        return self.moment(axis=axis, order=0, how=how)
+        return self.moment(axis=axis, order=0, how=how, **kwargs)
 
-    def moment1(self, axis=0, how='auto'):
+    def moment1(self, axis=0, how='auto', **kwargs):
         """
         Compute the 1st moment along an axis.
 
         For an explanation of the ``axis`` and ``how`` parameters, see :meth:`moment`.
         """
-        return self.moment(axis=axis, order=1, how=how)
+        return self.moment(axis=axis, order=1, how=how, **kwargs)
 
-    def moment2(self, axis=0, how='auto'):
+    def moment2(self, axis=0, how='auto', **kwargs):
         """
         Compute the 2nd moment along an axis.
 
         For an explanation of the ``axis`` and ``how`` parameters, see :meth:`moment`.
         """
-        return self.moment(axis=axis, order=2, how=how)
+        return self.moment(axis=axis, order=2, how=how, **kwargs)
 
-    def linewidth_sigma(self, how='auto'):
+    def linewidth_sigma(self, how='auto', **kwargs):
         """
         Compute a (sigma) linewidth map along the spectral axis.
 
@@ -1734,15 +1736,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         with np.errstate(invalid='ignore'):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", VarianceWarning)
-                return np.sqrt(self.moment2(how=how))
+                return np.sqrt(self.moment2(how=how, **kwargs))
 
-    def linewidth_fwhm(self, how='auto'):
+    def linewidth_fwhm(self, how='auto', **kwargs):
         """
         Compute a (FWHM) linewidth map along the spectral axis.
 
         For an explanation of the ``how`` parameter, see :meth:`moment`.
         """
-        return self.linewidth_sigma() * SIGMA2FWHM
+        return self.linewidth_sigma(**kwargs) * SIGMA2FWHM
 
     @property
     def spectral_axis(self):
@@ -3001,7 +3003,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if update_function is not None:
                 pbu = update_function
             elif verbose > 0:
-                progressbar = ProgressBar(self.shape[1]*self.shape[2])
+                progressbar = ProgressBar(self.shape[1]*self.shape[2], desc='Apply parallel: ')
                 pbu = progressbar.update
             else:
                 pbu = object
@@ -3264,7 +3266,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         yy,xx = np.indices(self.shape[1:])
         if update_function is None:
-            pb = ProgressBar(xx.size)
+            pb = ProgressBar(xx.size, desc='Spectral Interpolate: ')
             update_function = pb.update
 
         for ix, iy in (zip(xx.flat, yy.flat)):
@@ -3486,9 +3488,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             newshape = tuple(newshape)
 
             if progressbar:
-                progressbar = ProgressBar
+                progressbar = ProgressBar(newshape[axis], desc='Downsample: ')
+                pbu = progressbar.update
             else:
-                progressbar = lambda x: x
+                pbu = lambda: True
 
             # Create a view that will add a blank newaxis at the right spot
             view_newaxis = [slice(None) for ii in range(self.ndim)]
@@ -3499,7 +3502,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             dsarr = np.memmap(ntf, mode='w+', shape=newshape, dtype=float)
             ntf2 = tempfile.NamedTemporaryFile()
             mask = np.memmap(ntf2, mode='w+', shape=newshape, dtype=bool)
-            for ii in progressbar(range(newshape[axis])):
+            for ii in range(newshape[axis]):
                 view_fulldata = makeslice_local(ii*factor)
                 view_newdata = makeslice_local(ii, nsteps=1)
 
@@ -3508,6 +3511,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
                 dsarr[view_newdata] = estimator(to_average, axis)[view_newaxis]
                 mask[view_newdata] = np.any(to_anyfy, axis).astype('bool')[view_newaxis]
+                pbu()
 
 
         # the slice should just start at zero; we had factor//2 here earlier,
@@ -4179,7 +4183,7 @@ class VaryingResolutionSpectralCube(BaseSpectralCube, MultiBeamMixinClass):
             beam_ratio_factors = [1.] * len(convolution_kernels)
 
         if update_function is None:
-            pb = ProgressBar(self.shape[0])
+            pb = ProgressBar(self.shape[0], desc='Convolve: ')
             update_function = pb.update
 
         newdata = np.empty(self.shape)

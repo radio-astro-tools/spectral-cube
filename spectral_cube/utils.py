@@ -6,6 +6,12 @@ from astropy.utils.exceptions import AstropyUserWarning
 
 bigdataurl = "https://spectral-cube.readthedocs.io/en/latest/big_data.html"
 
+from tqdm.auto import tqdm
+
+def ProgressBar(niter, **kwargs):
+    return tqdm(total=niter, **kwargs)
+
+
 def cached(func):
     """
     Decorator to cache function calls

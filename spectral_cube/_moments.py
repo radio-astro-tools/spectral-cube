@@ -4,6 +4,7 @@ import numpy as np
 
 from .cube_utils import iterator_strategy
 from .np_compat import allbadtonan
+from .utils import ProgressBar
 
 """
 Functions to compute moment maps in a variety of ways
@@ -87,7 +88,7 @@ def _slice1(cube, axis):
     return result / weights
 
 
-def moment_slicewise(cube, order, axis):
+def moment_slicewise(cube, order, axis, progressbar=False):
     """
     Compute moments by accumulating the result 1 slice at a time
     """
@@ -108,6 +109,12 @@ def moment_slicewise(cube, order, axis):
     # possible for mom2, not sure about general case
     mom1 = _slice1(cube, axis)
 
+    if progressbar:
+        progressbar = ProgressBar(cube.shape[axis], desc='Moment raywise: ')
+        pbu = progressbar.update
+    else:
+        pbu = lambda: True
+
     for i in range(cube.shape[axis]):
         view[axis] = i
         plane = cube._get_filled_data(fill=0, view=tuple(view))
@@ -115,11 +122,12 @@ def moment_slicewise(cube, order, axis):
                    (pix_cen[tuple(view)] - mom1) ** order *
                    pix_size)
         weights += plane * pix_size
+        pbu()
 
     return (result / weights)
 
 
-def moment_raywise(cube, order, axis):
+def moment_raywise(cube, order, axis, progressbar=False):
     """
     Compute moments by accumulating the answer one ray at a time
     """
@@ -128,6 +136,12 @@ def moment_raywise(cube, order, axis):
 
     pix_cen = cube._pix_cen()[axis]
     pix_size = cube._pix_size_slice(axis)
+
+    if progressbar:
+        progressbar = ProgressBar(out.size, desc='Moment raywise: ')
+        pbu = progressbar.update
+    else:
+        pbu = lambda: True
 
     for x, y, slc in cube._iter_rays(axis):
         # the intensity, i.e. the weights
@@ -151,6 +165,8 @@ def moment_raywise(cube, order, axis):
         ordern /= data.sum()
 
         out[x, y] = ordern
+
+        pbu()
     return out
 
 def moment_cubewise(cube, order, axis):

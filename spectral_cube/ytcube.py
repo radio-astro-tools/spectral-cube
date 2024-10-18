@@ -5,7 +5,7 @@ import os
 import subprocess
 import numpy as np
 import time
-from astropy.utils.console import ProgressBar
+from .utils import ProgressBar
 from astropy import log
 import warnings
 
