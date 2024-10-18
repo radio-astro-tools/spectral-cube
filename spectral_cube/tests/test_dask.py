@@ -119,6 +119,23 @@ def test_statistics_withnans(data_adv):
                                    rtol=1e-10)
 
 
+def test_statistics_allnans(data_adv):
+    cube = DaskSpectralCube.read(data_adv).rechunk(chunks=(1, 2, 3))
+
+    # shape is 2, 3, 4
+    cube._data[:,:,:2] = np.nan
+    # ensure some chunks are all nan
+    cube.rechunk((1,2,2))
+    stats = cube.statistics()
+
+    for key in ('min', 'max', 'mean', 'sigma', 'rms'):
+        assert np.isnan(stats[key])
+
+    # Sum of NaNs is 0
+    assert stats['sum'] == 0 * cube.unit
+    assert stats['sumsq'] == (0 * cube.unit)**2
+
+
 @pytest.mark.skipif(not CASA_INSTALLED, reason='Requires CASA to be installed')
 def test_statistics_consistency_casa(data_adv, tmp_path):
 
