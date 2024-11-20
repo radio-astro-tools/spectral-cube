@@ -38,8 +38,10 @@ def warn_slow(function):
         accepts_how_keyword = 'how' in argspec.args or argspec.varkw == 'how'
 
         warn_how = accepts_how_keyword and ((kwargs.get('how') == 'cube') or 'how' not in kwargs)
-        
-        if self._is_huge and not self.allow_huge_operations:
+
+        loads_whole_cube = not (kwargs.get('how') in ('slice', 'ray'))
+
+        if self._is_huge and not self.allow_huge_operations and loads_whole_cube:
             warn_message = ("This function ({0}) requires loading the entire "
                             "cube into memory, and the cube is large ({1} "
                             "pixels), so by default we disable this operation. "
@@ -50,11 +52,11 @@ def warn_slow(function):
                 warn_message += ("Alternatively, you may want to consider using an "
                                  "approach that does not load the whole cube into "
                                  "memory by specifying how='slice' or how='ray'.  ")
-            
+
             warn_message += ("See {bigdataurl} for details.".format(bigdataurl=bigdataurl))
 
             raise ValueError(warn_message)
-        elif warn_how and not self._is_huge:
+        elif warn_how and not self._is_huge and loads_whole_cube:
             # TODO: add check for whether cube has been loaded into memory
             warnings.warn("This function ({0}) requires loading the entire cube into "
                           "memory and may therefore be slow.".format(str(function)),
