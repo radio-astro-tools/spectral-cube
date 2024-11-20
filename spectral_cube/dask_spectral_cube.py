@@ -636,7 +636,6 @@ class DaskSpectralCubeMixin:
         if axis is None:
             # da.nanmedian raises NotImplementedError since it is not possible
             # to do efficiently, so we use Numpy instead.
-            self._warn_slow('median')
             return np.nanmedian(self._compute(data), **kwargs)
         else:
             return self._compute(da.nanmedian(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
@@ -660,7 +659,6 @@ class DaskSpectralCubeMixin:
         if axis is None:
             # There is no way to compute the percentile of the whole array in
             # chunks.
-            self._warn_slow('percentile')
             return np.nanpercentile(data, q, **kwargs)
         else:
             # Rechunk so that there is only one chunk along the desired axis
@@ -694,7 +692,6 @@ class DaskSpectralCubeMixin:
         if axis is None:
             # In this case we have to load the full data - even dask's
             # nanmedian doesn't work efficiently over the whole array.
-            self._warn_slow('mad_std')
             return stats.mad_std(data, ignore_nan=ignore_nan, **kwargs)
         else:
             # Rechunk so that there is only one chunk along the desired axis

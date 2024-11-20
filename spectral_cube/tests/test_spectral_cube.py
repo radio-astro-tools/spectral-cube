@@ -113,6 +113,9 @@ def test_arithmetic_warning(data_vda_jybeam_lower, recwarn, use_dask):
     with pytest.warns(UserWarning, match='requires loading the entire'):
         cube + 5*cube.unit
 
+    with pytest.warns(UserWarning, match='requires loading the entire'):
+        cube + cube
+
 
 def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
 
@@ -133,10 +136,7 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
         with pytest.raises(ValueError, match='entire cube into memory'):
             cube + 5*cube.unit
 
-        if use_dask:
-            with pytest.raises(ValueError, match='entire cube into memory'):
-                cube.mad_std()
-        else:
+        if not use_dask:
             with pytest.raises(ValueError, match='entire cube into memory'):
                 cube.max(how='cube')
 
