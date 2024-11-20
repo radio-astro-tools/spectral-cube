@@ -1437,6 +1437,103 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
                                                     accepts_chunks=True,
                                                     **kwargs).with_beam(beam, raise_error_jybm=False)
 
+    def reproject(self, header, order='bilinear', use_memmap=False,
+                  filled=True, **kwargs):
+        """
+        Spatially reproject the cube into a new header.  Fills the data with
+        the cube's ``fill_value`` to replace bad values before reprojection.
+
+        If you want to reproject a cube both spatially and spectrally, you need
+        to use `spectral_interpolate` as well.
+
+        .. warning::
+            The current implementation of ``reproject`` requires that the whole
+            cube be loaded into memory.  Issue #506 notes that this is a
+            problem, and it is on our to-do list to fix.
+
+        Parameters
+        ----------
+        header : `astropy.io.fits.Header`
+            A header specifying a cube in valid WCS
+        order : int or str, optional
+            The order of the interpolation (if ``mode`` is set to
+            ``'interpolation'``). This can be either one of the following
+            strings:
+
+                * 'nearest-neighbor'
+                * 'bilinear'
+                * 'biquadratic'
+                * 'bicubic'
+
+            or an integer. A value of ``0`` indicates nearest neighbor
+            interpolation.
+        use_memmap : bool
+            If specified, a memory mapped temporary file on disk will be
+            written to rather than storing the intermediate spectra in memory.
+        filled : bool
+            Fill the masked values with the cube's fill value before
+            reprojection?  Note that setting ``filled=False`` will use the raw
+            data array, which can be a workaround that prevents loading large
+            data into memory.
+        kwargs : dict
+            Passed to `reproject.reproject_interp`.
+        """
+
+        try:
+            from reproject.version import version
+        except ImportError:
+            raise ImportError("Requires the reproject package to be"
+                              " installed.")
+
+        reproj_kwargs = kwargs
+        # Need version > 0.2 to work with cubes, >= 0.5 for memmap
+        from distutils.version import LooseVersion
+        if LooseVersion(version) < "0.5":
+            raise Warning("Requires version >=0.5 of reproject. The current "
+                          "version is: {}".format(version))
+        elif LooseVersion(version) >= "0.6":
+            pass # no additional kwargs, no warning either
+        else:
+            reproj_kwargs['independent_celestial_slices'] = True
+
+        from reproject import reproject_interp
+
+        # TODO: Find the minimal subcube that contains the header and only reproject that
+        # (see FITS_tools.regrid_cube for a guide on how to do this)
+
+        newwcs = wcs.WCS(header)
+        shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
+                           range(header['NAXIS'])][::-1])
+
+        # def reproject_interp_wrapper(img_slice, **kwargs):
+        #     # What exactly is the wrapper getting here?
+        #     # I think it is given a _cube_ that is a cutout?
+        #     # No, it is getting dask arrays (at least sometimes)
+        #     if filled:
+        #         data = img_slice.filled_data[:]
+        #     else:
+        #         data = img_slice._data
+        #     return reproject_interp((data, img_slice.header),
+        #                             newwcs, shape_out=shape_out, **kwargs)
+
+        # newcube, newcube_valid = self.apply_function_parallel_spatial(
+        #     reproject_interp_wrapper,
+        #     accepts_chunks=True,
+        #     order=order,
+        #     **reproj_kwargs)
+
+        newcube, newcube_valid = reproject_interp((self.filled_data[:] if filled else self._data, self.header),
+                                                  newwcs, shape_out=shape_out, **kwargs
+                                                  )
+
+        return self._new_cube_with(data=newcube,
+                                   wcs=newwcs,
+                                   mask=BooleanArrayMask(newcube_valid.astype('bool'),
+                                                         newwcs),
+                                   meta=self.meta,
+                                  )
+
+
 
 class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolutionSpectralCube):
 
@@ -1591,9 +1688,15 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                                         rechunk=('auto', -1, -1),
                                         **kwargs)
 
+        # Remove header keyword for presence of a CASA beam table post-convolution.
+        new_header = cube.header.copy()
+        if "CASAMBM" in new_header:
+            del new_header['CASAMBM']
+
         # Result above is a DaskVaryingResolutionSpectralCube, convert to DaskSpectralCube
         newcube = DaskSpectralCube(data=cube._data,
                                    beam=beam,
+                                   header=new_header,
                                    wcs=cube.wcs,
                                    mask=cube.mask,
                                    meta=cube.meta,
