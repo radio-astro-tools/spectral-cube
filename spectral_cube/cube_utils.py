@@ -151,23 +151,27 @@ def _orient(array, wcs):
         dimension.
     wcs : `~astropy.wcs.WCS`
         The input 3-d WCS with two position dimensions and one spectral
-        dimension.
+        dimension.   Any LowLevelWCS will be accepted, but only FITS WCSes
+        presently implement the reordering scheme used here.
     """
+
+    if isinstance(wcs, WCS):
+        if wcs.naxis != 3:
+            raise ValueError("Input WCS must be 3-dimensional")
+        wcs = wcs_utils.diagonal_wcs_to_cdelt(_fix_spectral(wcs))
+
+        from astropy.wcs.wcsapi import HighLevelWCSWrapper
+        wcs = HighLevelWCSWrapper(wcs)
 
     if array.ndim != 3:
         raise ValueError("Input array must be 3-dimensional")
 
-    if wcs.wcs.naxis != 3:
+    if wcs.pixel_n_dim != 3:
         raise ValueError("Input WCS must be 3-dimensional")
 
-    wcs = wcs_utils.diagonal_wcs_to_cdelt(_fix_spectral(wcs))
+    lowlev = wcs.low_level_wcs
 
-    # reverse from wcs -> numpy convention
-    axtypes = wcs.get_axis_types()[::-1]
-
-    types = [a['coordinate_type'] for a in axtypes]
-
-    n_celestial = types.count('celestial')
+    n_celestial = sum('celestial' == comp[0] for comp in lowlev.world_axis_object_components)
 
     if n_celestial == 0:
         raise ValueError('No celestial axes found in WCS')
@@ -175,7 +179,7 @@ def _orient(array, wcs):
         raise ValueError('WCS should contain 2 celestial dimensions but '
                          'contains {0}'.format(n_celestial))
 
-    n_spectral = types.count('spectral')
+    n_spectral = sum('spectral' == comp[0] for comp in lowlev.world_axis_object_components)
 
     if n_spectral == 0:
         raise ValueError('No spectral axes found in WCS')
@@ -183,19 +187,25 @@ def _orient(array, wcs):
         raise ValueError('WCS should contain one spectral dimension but '
                          'contains {0}'.format(n_spectral))
 
-    nums = [None if a['coordinate_type'] != 'celestial' else a['number']
-            for a in axtypes]
+    subcomps = [comps[:2] for comps in lowlev.world_axis_object_components]
+    # WCS target order (celestial first, then spectral)
+    # This is the _reverse_ of numpy order
+    target_order = [
+                    subcomps.index(('celestial', 0)),
+                    subcomps.index(('celestial', 1)),
+                    subcomps.index(('spectral', 0)),
+                   ]
+    target_order_numpy = target_order[::-1]
 
-    if 'stokes' in types:
+    if any('stokes' in tp for tp in lowlev.world_axis_object_components):
         raise ValueError("Input WCS should not contain stokes")
 
-    t = [types.index('spectral'), nums.index(1), nums.index(0)]
-    if t == [0, 1, 2]:
+    if target_order == [0, 1, 2]:
         result_array = array
     else:
-        result_array = array.transpose(t)
+        result_array = array.transpose(target_order_numpy)
 
-    result_wcs = wcs.sub([WCSSUB_LONGITUDE, WCSSUB_LATITUDE, WCSSUB_SPECTRAL])
+    result_wcs = lowlev.sub([WCSSUB_LONGITUDE, WCSSUB_LATITUDE, WCSSUB_SPECTRAL])
 
     return result_array, result_wcs
 
