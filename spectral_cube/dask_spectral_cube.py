@@ -25,7 +25,7 @@ from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError
+from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError, PossiblySlowWarning
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 from .np_compat import allbadtonan
