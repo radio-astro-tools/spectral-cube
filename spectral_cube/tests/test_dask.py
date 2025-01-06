@@ -106,8 +106,8 @@ def test_statistics(data_adv):
 
 def test_statistics_withnans(data_adv):
     cube = DaskSpectralCube.read(data_adv).rechunk(chunks=(1, 2, 3))
-    # shape is 2, 3, 4
-    cube._data[:,:,:2] = np.nan
+    # shape is 4, 3, 2 for adv
+    cube._data[:2,:,:] = np.nan
     # ensure some chunks are all nan
     cube.rechunk((1,2,2))
     stats = cube.statistics()
