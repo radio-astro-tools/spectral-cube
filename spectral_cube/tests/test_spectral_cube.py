@@ -1536,8 +1536,8 @@ def test_oned_collapse_beams(data_sdav_beams, use_dask):
     spec = cube.mean(axis=(1,2))
     assert isinstance(spec, VaryingResolutionOneDSpectrum)
     # data has a redundant 1st axis
-    # to avoid epsilon-level differences between nanmean and mean, use nanmean
-    np.testing.assert_equal(spec.value, np.nanmean(data, axis=(1,2,3)))
+    # we changed to assert_almost_equal in 2025 because, for no known reason, epsilon-level differences crept in
+    np.testing.assert_almost_equal(spec.value, np.nanmean(data, axis=(1,2,3)))
     assert cube.unit == spec.unit
     assert spec.header['BUNIT'] == cube.header['BUNIT']
 
