@@ -103,9 +103,9 @@ def cube_and_raw(filename, use_dask=None):
     return c, d
 
 
-def test_arithmetic_warning(data_vda_jybeam_lower, recwarn, use_dask):
+def test_arithmetic_warning(data_vda_jybeam_lower, recwarn):
 
-    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
+    cube, data = cube_and_raw(data_vda_jybeam_lower)
 
     assert not cube._is_huge
 
