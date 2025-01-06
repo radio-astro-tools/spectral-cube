@@ -105,7 +105,7 @@ def cube_and_raw(filename, use_dask=None):
 
 def test_arithmetic_warning(data_vda_jybeam_lower, recwarn):
 
-    cube, data = cube_and_raw(data_vda_jybeam_lower)
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=False)
 
     assert not cube._is_huge
 
@@ -116,7 +116,7 @@ def test_arithmetic_warning(data_vda_jybeam_lower, recwarn):
 
 def test_huge_disallowed(data_vda_jybeam_lower):
 
-    cube, data = cube_and_raw(data_vda_jybeam_lower)
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=False)
 
     assert not cube._is_huge
 
@@ -1536,7 +1536,8 @@ def test_oned_collapse_beams(data_sdav_beams, use_dask):
     spec = cube.mean(axis=(1,2))
     assert isinstance(spec, VaryingResolutionOneDSpectrum)
     # data has a redundant 1st axis
-    np.testing.assert_equal(spec.value, data.mean(axis=(1,2,3)))
+    # to avoid epsilon-level differences between nanmean and mean, use nanmean
+    np.testing.assert_equal(spec.value, np.nanmean(data, axis=(1,2,3)))
     assert cube.unit == spec.unit
     assert spec.header['BUNIT'] == cube.header['BUNIT']
 
