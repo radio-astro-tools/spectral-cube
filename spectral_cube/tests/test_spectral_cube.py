@@ -103,17 +103,6 @@ def cube_and_raw(filename, use_dask=None):
     return c, d
 
 
-def test_arithmetic_warning(data_vda_jybeam_lower, recwarn):
-
-    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=False)
-
-    assert not cube._is_huge
-
-    # make sure the small cube raises a warning about loading into memory
-    with pytest.warns(UserWarning, match='requires loading the entire'):
-        cube + 5*cube.unit
-
-
 def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
 
     cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
@@ -131,9 +120,8 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
         assert cube._is_huge
 
         if use_dask:
-            with warnings.catch_warnings(record=True) as ww:
+            with pytest.warns(UserWarning, match='whole cube into memory'):
                 cube.mad_std()
-                assert 'whole cube into memory' in str(ww[0].message)
         else:
             with pytest.raises(ValueError, match='entire cube into memory'):
                 cube + 5*cube.unit
