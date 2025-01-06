@@ -246,12 +246,12 @@ class DaskSpectralCubeMixin:
             raise TypeError('_data should be set to a dask array')
         self.__data = value
 
-    def _warn_slow(self):
+    def _warn_slow(self, functionname):
         """
         Dask has a different 'slow' warning than non-dask.
         """
-        warnings.warn("""
-        Dask requires loading the whole cube into memory for median, percentile, and mad
+        warnings.warn(f"""
+        Dask requires loading the whole cube into memory for {functionname}
         calculations.  This may result in slow computation.
         """, PossiblySlowWarning)
 
