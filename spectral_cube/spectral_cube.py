@@ -1437,7 +1437,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Astropy Quantities don't play well with dask arrays with shape ()
         if isinstance(values, da.Array) and values.shape == ():
             values = values.compute()
-        return u.Quantity(values, self.unit, copy=False)
+        try:
+            return u.Quantity(values, self.unit, copy=False)
+        except ValueError:
+            warnings.warn("The data were copied; it was not possible to create a view on the data")
+            return u.Quantity(values, self.unit)
 
     def unmasked_copy(self):
         """
