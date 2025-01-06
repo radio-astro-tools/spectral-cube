@@ -131,8 +131,9 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
         assert cube._is_huge
 
         if use_dask:
-            with pytest.raises(ValueError, match='whole cube into memory'):
+            with warnings.catch_warnings(record=True) as ww:
                 cube.mad_std()
+                assert 'whole cube into memory' in str(ww[0].message)
         else:
             with pytest.raises(ValueError, match='entire cube into memory'):
                 cube + 5*cube.unit
