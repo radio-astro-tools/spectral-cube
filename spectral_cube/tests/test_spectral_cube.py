@@ -114,9 +114,9 @@ def test_arithmetic_warning(data_vda_jybeam_lower, recwarn):
         cube + 5*cube.unit
 
 
-def test_huge_disallowed(data_vda_jybeam_lower):
+def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
 
-    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=False)
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
 
     assert not cube._is_huge
 
@@ -130,13 +130,13 @@ def test_huge_disallowed(data_vda_jybeam_lower):
 
         assert cube._is_huge
 
-        with pytest.raises(ValueError, match='entire cube into memory'):
-            cube + 5*cube.unit
-
         if use_dask:
-            with pytest.raises(ValueError, match='entire cube into memory'):
+            with pytest.raises(ValueError, match='whole cube into memory'):
                 cube.mad_std()
         else:
+            with pytest.raises(ValueError, match='entire cube into memory'):
+                cube + 5*cube.unit
+
             with pytest.raises(ValueError, match='entire cube into memory'):
                 cube.max(how='cube')
 
