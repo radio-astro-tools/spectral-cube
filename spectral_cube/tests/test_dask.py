@@ -266,7 +266,11 @@ def test_cube_on_cube(filename, request):
     # since they are not SpectralCube subclasses
     cube = DaskSpectralCube.read(dataname)
     assert isinstance(cube, (DaskSpectralCube, DaskVaryingResolutionSpectralCube))
-    cube2 = SpectralCube.read(dataname, use_dask=False)
+    if 'image' in filename:
+        # no choice - non-dask can't read casa images
+        cube2 = SpectralCube.read(dataname)
+    else:
+        cube2 = SpectralCube.read(dataname, use_dask=False)
     if 'image' not in filename:
         # 'image' would be CASA and must be dask
         assert not isinstance(cube2, (DaskSpectralCube, DaskVaryingResolutionSpectralCube))
