@@ -103,10 +103,6 @@ def load_casa_image(filename, skipdata=False, memmap=True,
     elif 'beams' in beam_:
         bdict = beam_['beams']
 
-        # NOTE: temp to check failing test
-        print(desc['_keywords_']['coords'])
-        print(list(desc['_keywords_']['coords'].keys()))
-
         # check if stokes1 or stokes 2 is present. if not assume stokes_params = ['I']
         if 'stokes1' in desc['_keywords_']['coords']:
             stokes_params = desc['_keywords_']['coords']['stokes1']['stokes']
