@@ -1,6 +1,8 @@
 0.6.6.dev (unreleased)
 ----------------------
--
+- Warning behavior changed to no longer warn about dask cubes loading into
+  memory.  Dask 'slow' warnings are now limited to the necessarily single-
+  stream examples: median, percentile, and mad_std. #929
 
 0.6.5 (2023-12-05)
 ----------------------

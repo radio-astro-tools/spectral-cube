@@ -6,6 +6,7 @@ import uuid
 import inspect
 import warnings
 import tempfile
+import textwrap
 
 from functools import wraps
 from contextlib import contextmanager
@@ -25,7 +26,7 @@ from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError
+from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError, PossiblySlowWarning
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 from .np_compat import allbadtonan
@@ -65,6 +66,18 @@ def ignore_warnings(function):
             return function(self, *args, **kwargs)
 
     return wrapper
+
+
+def _warn_slow_dask(functionname):
+    """
+    Dask has a different 'slow' warning than non-dask.  It is only expected to
+    be slow for statistics that require sorting (and possibly cube arithmetic).
+    """
+    warnings.warn(message=textwrap.dedent(f"""
+    Dask requires loading the whole cube into memory for {functionname}
+    calculations.  This may result in slow computation.
+    """).strip(),
+        category=PossiblySlowWarning)
 
 
 def add_save_to_tmp_dir_option(function):
@@ -626,7 +639,6 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nanmean(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
     @projection_if_needed
-    @ignore_warnings
     def median(self, axis=None, **kwargs):
         """
         Return the median of the cube, optionally over an axis.
@@ -636,13 +648,12 @@ class DaskSpectralCubeMixin:
         if axis is None:
             # da.nanmedian raises NotImplementedError since it is not possible
             # to do efficiently, so we use Numpy instead.
-            self._warn_slow('median')
+            _warn_slow_dask('median')
             return np.nanmedian(self._compute(data), **kwargs)
         else:
             return self._compute(da.nanmedian(self._get_filled_data(fill=np.nan), axis=axis, **kwargs))
 
     @projection_if_needed
-    @ignore_warnings
     def percentile(self, q, axis=None, **kwargs):
         """
         Return percentiles of the data.
@@ -660,7 +671,7 @@ class DaskSpectralCubeMixin:
         if axis is None:
             # There is no way to compute the percentile of the whole array in
             # chunks.
-            self._warn_slow('percentile')
+            _warn_slow_dask('percentile')
             return np.nanpercentile(data, q, **kwargs)
         else:
             # Rechunk so that there is only one chunk along the desired axis
@@ -683,7 +694,6 @@ class DaskSpectralCubeMixin:
         return self._compute(da.nanstd(self._get_filled_data(fill=np.nan), axis=axis, ddof=ddof, **kwargs))
 
     @projection_if_needed
-    @ignore_warnings
     def mad_std(self, axis=None, ignore_nan=True, **kwargs):
         """
         Use astropy's mad_std to compute the standard deviation
@@ -694,7 +704,7 @@ class DaskSpectralCubeMixin:
         if axis is None:
             # In this case we have to load the full data - even dask's
             # nanmedian doesn't work efficiently over the whole array.
-            self._warn_slow('mad_std')
+            _warn_slow_dask('mad_std')
             return stats.mad_std(data, ignore_nan=ignore_nan, **kwargs)
         else:
             # Rechunk so that there is only one chunk along the desired axis

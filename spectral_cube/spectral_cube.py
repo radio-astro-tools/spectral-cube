@@ -948,7 +948,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         return self._new_cube_with(data=data, unit=new_unit)
 
-    @warn_slow
     def _cube_on_cube_operation(self, function, cube, equivalencies=[], **kwargs):
         """
         Apply an operation between two cubes.  Inherits the metadata of the
@@ -1438,7 +1437,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # Astropy Quantities don't play well with dask arrays with shape ()
         if isinstance(values, da.Array) and values.shape == ():
             values = values.compute()
-        return u.Quantity(values, self.unit, copy=False)
+        try:
+            return u.Quantity(values, self.unit, copy=False)
+        except ValueError:
+            warnings.warn("The data were copied; it was not possible to create a view on the data")
+            return u.Quantity(values, self.unit)
 
     def unmasked_copy(self):
         """
@@ -2286,6 +2289,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         value = self._val_to_own_unit(value)
         return LazyComparisonMask(operator.ne, value, data=self._data, wcs=self._wcs)
 
+    @warn_slow
     def __add__(self, value):
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.add, value)
@@ -2294,6 +2298,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                           keepunit=False)
             return self._apply_everywhere(operator.add, value, check_units=False)
 
+    @warn_slow
     def __sub__(self, value):
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.sub, value)
@@ -2302,21 +2307,25 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                           tofrom='from', keepunit=False)
             return self._apply_everywhere(operator.sub, value, check_units=False)
 
+    @warn_slow
     def __mul__(self, value):
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.mul, value)
         else:
             return self._apply_everywhere(operator.mul, value)
 
+    @warn_slow
     def __truediv__(self, value):
         return self.__div__(value)
 
+    @warn_slow
     def __div__(self, value):
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.truediv, value)
         else:
             return self._apply_everywhere(operator.truediv, value)
 
+    @warn_slow
     def __floordiv__(self, value):
         raise NotImplementedError("Floor-division (division with truncation) "
                                   "is not supported.")
@@ -2338,6 +2347,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         #    raise NotImplementedError("Floor-division (division with truncation) "
         #                              "is not supported.")
 
+    @warn_slow
     def __pow__(self, value):
         if isinstance(value, BaseSpectralCube):
             return self._cube_on_cube_operation(operator.pow, value)
