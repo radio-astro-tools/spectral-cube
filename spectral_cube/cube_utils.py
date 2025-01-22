@@ -1171,10 +1171,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
         # workaround: some cubes exist with no mask, which breaks downstream when 'None' is passed into
         # subcube_slices_from_mask.  In theory, this operation is lazy and therefore cheap
-        for cube in cubes:
-            if cube.mask is None:
-                # cube == cube is a lazy shorthand for 'isfinite'
-                cube = cube.with_mask(cube == cube)
+        # cube == cube is a lazy shorthand for 'isfinite'
+        cubes = [cube.with_mask(cube == cube) if cube.mask is None else cube for cube in cubes]
 
         mincube_slices = [cube[cube.shape[0]//2:cube.shape[0]//2+1]
                           .subcube_slices_from_mask(cube[cube.shape[0]//2:cube.shape[0]//2+1].mask,
