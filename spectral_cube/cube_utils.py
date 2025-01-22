@@ -1173,7 +1173,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                           .subcube_slices_from_mask(cube[cube.shape[0]//2:cube.shape[0]//2+1].mask,
                                                     spatial_only=True)
                           if cube.mask is not None
-                          else cube[cube.shape[0]//2:cube.shape[0]//2+1]
+                          else (slice(cube.shape[0]//2,cube.shape[0]//2+1), slice(None), slice(None))
                           for cube in std_tqdm(cubes, desc='MinSubSlices:', delay=5)]
 
         if hasattr(channels, "__len__") and len(channels) > 1:
