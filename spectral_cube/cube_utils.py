@@ -1169,14 +1169,11 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         dx = outwcs.spectral.proj_plane_pixel_scales()[0]
         log_(f"Channel mode: dx={dx}.  Looping over {len(channels)} channels and {len(cubes)} cubes")
 
-        # workaround: some cubes exist with no mask, which breaks downstream when 'None' is passed into
-        # subcube_slices_from_mask.  In theory, this operation is lazy and therefore cheap
-        # cube == cube is a lazy shorthand for 'isfinite'
-        cubes = [cube.with_mask(cube == cube) if cube.mask is None else cube for cube in cubes]
-
         mincube_slices = [cube[cube.shape[0]//2:cube.shape[0]//2+1]
                           .subcube_slices_from_mask(cube[cube.shape[0]//2:cube.shape[0]//2+1].mask,
                                                     spatial_only=True)
+                          if cube.mask is not None
+                          else cube[cube.shape[0]//2:cube.shape[0]//2+1]
                           for cube in std_tqdm(cubes, desc='MinSubSlices:', delay=5)]
 
         if hasattr(channels, "__len__") and len(channels) > 1:
