@@ -978,11 +978,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         from tqdm import tqdm as std_tqdm
     else:
         class tqdm:
-            def __init__(self, x):
+            def __init__(self, x, **kwargs):
+                self.iterable = x
+            def __iter__(self):
+                return iter(self.iterable)
+            def __call__(self, x, **kwargs):
                 return x
-            def __call__(self, x):
-                return x
-            def set_description(self, **kwargs):
+            def set_description(self, desc, **kwargs):
                 pass
             def update(self, **kwargs):
                 pass
@@ -1219,8 +1221,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
 
                 if commonbeam is not None:
                     scubes = [(cube[ch1:ch2, slices[1], slices[2]]
-                            .convolve_to(commonbeam)
-                            .rechunk())
+                            .convolve_to(commonbeam))
                             if kp
                             else None # placeholder, will drop this below but need to retain list shape
                             for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
@@ -1229,13 +1230,15 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     if ii == 0:
                         cube1 = scubes[0]
                 else:
-                    scubes = [(cube[ch1:ch2, slices[1], slices[2]]
-                            .rechunk())
+                    scubes = [(cube[ch1:ch2, slices[1], slices[2]])
                             if kp
                             else None # placeholder, will drop this below but need to retain list shape
                             for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
                                                                     delay=5, desc='Subcubes')
                             ]
+                
+                # rechunk if needed (should be very fast?)
+                scubes = [cube.rechunk() if hasattr(cube, 'rechunk') else cube for cube in cubes]
 
 
                 # only keep2 cubes that are in range; the rest get excluded

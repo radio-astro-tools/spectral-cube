@@ -3,6 +3,7 @@ import pytest
 import tempfile
 import numpy as np
 import os
+import itertools
 
 from astropy import constants, units as u
 from astropy import convolution
@@ -668,14 +669,9 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
                                    cube.filled_data[:].value, decimal=9)
 
 
-@pytest.mark.parametrize('spectral_block_size,use_memmap', ((None, False),
-                                                            (100, False),
-                                                            (None, True),
-                                                            (100, False),
-                                                            (1, True),
-                                                            (1, False),
-                                                            ))
-def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_size):
+@pytest.mark.parametrize('spectral_block_size,use_memmap,method',
+                         itertools.product((1,100,None),(True,False),('cube','channel')))
+def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_size, method):
 
     pytest.importorskip('reproject')
 
@@ -706,7 +702,7 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
                           save_to_tmp_dir=False,
                           verbose=False,
                           use_memmap=use_memmap,
-                          method='cube')
+                          method=method)
 
     # Check that the shapes are the same
     assert result.shape == cube.shape
@@ -723,14 +719,15 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
 
 
     # Mosaic auto-solving for the mosaic header.
-    result2 = mosaic_cubes([part1, part2, part3],order='nearest-neighbor',
-                          target_header=None,
-                          roundtrip_coords=False,
-                          spectral_block_size=spectral_block_size,
-                          save_to_tmp_dir=False,
-                          verbose=False,
-                          use_memmap=use_memmap,
-                          method='cube')
+    result2 = mosaic_cubes([part1, part2, part3],
+                           order='nearest-neighbor',
+                           target_header=None,
+                           roundtrip_coords=False,
+                           spectral_block_size=spectral_block_size,
+                           save_to_tmp_dir=False,
+                           verbose=False,
+                           use_memmap=use_memmap,
+                           method=method)
 
     # Check that the shapes are the same
     assert result2.shape == cube.shape
@@ -744,3 +741,23 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
     # Check that values of original and result2 are comparable
     np.testing.assert_almost_equal(result2.filled_data[:].value,
                                    cube.filled_data[:].value, decimal=9)
+
+
+def test_cube_mosaic_complex():
+    cube1 = utilities.generate_hdu(data=np.ones([3,4,5]),
+                                   pixel_scale=0.1*u.arcsec, spec_scale=1*u.km/u.s, beamfwhm=0.2*u.arcsec,
+                                   v0=0)
+    cube2 = utilities.generate_hdu(data=np.ones([3,4,5]) * 2,
+                                   pixel_scale=0.11*u.arcsec, spec_scale=1*u.km/u.s, beamfwhm=0.3*u.arcsec,
+                                   v0=0.25)
+    # shift the cube by 1.5 pixels to ensure overlap
+    cube2.header['CRVAL1'] = 1.5 * (0.11*u.arcsec).to(u.deg).value
+    cube1 = SpectralCube.read(cube1)
+    cube2 = SpectralCube.read(cube2)
+    result = mosaic_cubes([cube1, cube2],
+                          target_header=None,
+                          roundtrip_coords=False,
+                          save_to_tmp_dir=False,
+                          verbose=False,
+                          use_memmap=True,
+                          method='cube')
