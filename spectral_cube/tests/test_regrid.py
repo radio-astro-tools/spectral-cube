@@ -747,7 +747,7 @@ def test_cube_mosaic_complex():
     from spectral_cube import SpectralCube
     from astropy.io import fits
     from astropy import units as u
-    from spectral_cube.tests import utilities; from spectral_cube.cube_utils import mosaic_cubes
+    from spectral_cube.tests import utilities; from spectral_cube.cube_utils import mosaic_cubes, combine_headers
 
     cube1 = utilities.generate_hdu(data=np.ones([3,4,5]),
                                    pixel_scale=0.1*u.arcsec, spec_scale=1*u.km/u.s, beamfwhm=0.2*u.arcsec,
@@ -759,11 +759,14 @@ def test_cube_mosaic_complex():
     cube2.header['CRVAL1'] = 1.5 * (0.11*u.arcsec).to(u.deg).value
     cube1 = SpectralCube.read(cube1)
     cube2 = SpectralCube.read(cube2)
+
+    target_header = combine_headers(cube1.header, cube2.header)
+
     result = mosaic_cubes([cube1, cube2],
                           target_header=None,
                           roundtrip_coords=False,
                           save_to_tmp_dir=False,
-                          verbose=False,
+                          verbose=True,
                           use_memmap=True,
                           method='cube')
 
@@ -771,6 +774,18 @@ def test_cube_mosaic_complex():
                           target_header=None,
                           roundtrip_coords=False,
                           save_to_tmp_dir=False,
-                          verbose=False,
+                          verbose=True,
                           use_memmap=True,
+                          using_pbar=False,
                           method='channel')
+
+    result3 = mosaic_cubes([cube1, cube2],
+                          target_header=None,
+                          roundtrip_coords=False,
+                          save_to_tmp_dir=False,
+                          verbose=False,
+                          use_memmap=False,
+                          method='channel')
+
+    assert np.all(result.filled_data[:] == result2.filled_data[:])
+    assert np.all(result.filled_data[:] == result3.filled_data[:])

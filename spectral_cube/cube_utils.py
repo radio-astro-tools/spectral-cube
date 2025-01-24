@@ -1204,8 +1204,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             chans = [two_closest_channels(cube, channel)
                      for cube in std_tqdm(cubes, delay=5, desc='ChanSel:')]
             # reversed spectral axes still break things
-            # and we want two channels width, not one
+            # and we want two channels width, not one (which is why we use +1 here)
             chans = [(ch1, ch2+1) if ch1 < ch2 else (ch2, ch1+1) for ch1, ch2 in chans]
+            print(f'chans={chans}')
 
             if not using_pbar:
                 log_(f"Using neighboring channels {chans}")
@@ -1288,11 +1289,12 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     log.warn(f"Channel {ii}={channel} has no matched data.  Skipping")
                     continue
 
-                if client is None:
-                    client = Client()
-
                 from spectral_cube.dask_spectral_cube import DaskSpectralCube
                 if any(isinstance(cube, DaskSpectralCube) for cube in cubes):
+                    # only instantiate a Dask client if there are dask cubes
+                    if client is None:
+                        client = Client()
+
                     with client:
                         datas = client.gather(datas)
 
