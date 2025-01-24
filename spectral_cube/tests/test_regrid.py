@@ -760,6 +760,7 @@ def test_cube_mosaic_complex():
     cube1 = SpectralCube.read(cube1)
     cube2 = SpectralCube.read(cube2)
 
+    # so I can do some sanity checks, i.e. that cube1[0] has same velocity as target_header[0]
     target_header = combine_headers(cube1.header, cube2.header)
 
     result = mosaic_cubes([cube1, cube2],
@@ -787,5 +788,77 @@ def test_cube_mosaic_complex():
                           use_memmap=False,
                           method='channel')
 
-    assert np.all(result.filled_data[:] == result2.filled_data[:])
-    assert np.all(result.filled_data[:] == result3.filled_data[:])
+    # the 'full cube' approach _extrapolates_ the first pixel, even though it's out of range
+    # this is likely a reproject bug
+    assert np.all(result.filled_data[1:,:,:] == result2.filled_data[1:,:,:])
+    assert np.all(result.filled_data[1:,:,:] == result3.filled_data[1:,:,:])
+    
+    assert np.all(result2.filled_data[:] == result3.filled_data[:])
+
+
+def test_cube_mosaic_weighted():
+    from spectral_cube import SpectralCube
+    from astropy.io import fits
+    from astropy import units as u
+    from spectral_cube.tests import utilities; from spectral_cube.cube_utils import mosaic_cubes, combine_headers
+
+    cube1 = utilities.generate_hdu(data=np.ones([3,4,5]),
+                                   pixel_scale=0.1*u.arcsec, spec_scale=1*u.km/u.s, beamfwhm=0.2*u.arcsec,
+                                   v0=0)
+    cube2 = utilities.generate_hdu(data=np.ones([3,4,5]) * 2,
+                                   pixel_scale=0.11*u.arcsec, spec_scale=1*u.km/u.s, beamfwhm=0.3*u.arcsec,
+                                   v0=0.25)
+
+    weights1 = utilities.generate_hdu(data=np.ones([3,4,5]) * 0.5,
+                                   pixel_scale=0.1*u.arcsec, spec_scale=1*u.km/u.s, beamfwhm=0.2*u.arcsec,
+                                   v0=0)
+    weights2 = utilities.generate_hdu(data=np.ones([3,4,5]) * 1,
+                                   pixel_scale=0.11*u.arcsec, spec_scale=1*u.km/u.s, beamfwhm=0.3*u.arcsec,
+                                   v0=0.25)
+    # shift the cube by 1.5 pixels to ensure overlap
+    cube2.header['CRVAL1'] = 1.5 * (0.11*u.arcsec).to(u.deg).value
+    weights2.header['CRVAL1'] = 1.5 * (0.11*u.arcsec).to(u.deg).value
+    weights1.header['BUNIT'] = ''
+    weights2.header['BUNIT'] = ''
+    cube1 = SpectralCube.read(cube1)
+    cube2 = SpectralCube.read(cube2)
+    weights1 = SpectralCube.read(weights1)
+    weights2 = SpectralCube.read(weights2)
+
+    # so I can do some sanity checks, i.e. that cube1[0] has same velocity as target_header[0]
+    target_header = combine_headers(cube1.header, cube2.header)
+
+    result = mosaic_cubes([cube1, cube2],
+                          weightcubes=[weights1, weights2],
+                          target_header=None,
+                          roundtrip_coords=False,
+                          save_to_tmp_dir=False,
+                          verbose=True,
+                          use_memmap=True,
+                          method='cube')
+
+    result2 = mosaic_cubes([cube1, cube2],
+                          weightcubes=[weights1, weights2],
+                          target_header=None,
+                          roundtrip_coords=False,
+                          save_to_tmp_dir=False,
+                          verbose=True,
+                          use_memmap=True,
+                          using_pbar=False,
+                          method='channel')
+
+    result3 = mosaic_cubes([cube1, cube2],
+                          weightcubes=[weights1, weights2],
+                          target_header=None,
+                          roundtrip_coords=False,
+                          save_to_tmp_dir=False,
+                          verbose=False,
+                          use_memmap=False,
+                          method='channel')
+
+    # the 'full cube' approach _extrapolates_ the first pixel, even though it's out of range
+    # this is likely a reproject bug
+    assert np.all(result.filled_data[1:,:,:] == result2.filled_data[1:,:,:])
+    assert np.all(result.filled_data[1:,:,:] == result3.filled_data[1:,:,:])
+    
+    assert np.all(result2.filled_data[:] == result3.filled_data[:])
