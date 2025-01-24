@@ -1240,12 +1240,11 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 # rechunk if needed (should be very fast?)
                 scubes = [cube.rechunk() if hasattr(cube, 'rechunk') else cube for cube in cubes]
 
-
                 # only keep2 cubes that are in range; the rest get excluded
                 keep2 = [(cube is not None) and
                          all(sh > 1 for sh in cube.shape) and
-                         (cube.spectral_axis.min() < channel) and
-                         (cube.spectral_axis.max() > channel)
+                         (cube.spectral_axis.min() <= channel) and
+                         (cube.spectral_axis.max() >= channel)
                          for cube in scubes]
                 # merge the two 'keep' arrays
                 keep = np.array(keep1) & np.array(keep2)
@@ -1292,8 +1291,11 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 if client is None:
                     client = Client()
 
-                with client:
-                    datas = client.gather(datas)
+                from spectral_cube.dask_spectral_cube import DaskSpectralCube
+                if any(isinstance(cube, DaskSpectralCube) for cube in cubes):
+                    with client:
+                        datas = client.gather(datas)
+
                 hdus = list(zip(datas, wcses))
 
                 # project into array w/"dummy" third dimension

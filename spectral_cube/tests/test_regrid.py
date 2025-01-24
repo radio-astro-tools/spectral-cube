@@ -750,6 +750,11 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
 
 
 def test_cube_mosaic_complex():
+    from spectral_cube import SpectralCube
+    from astropy.io import fits
+    from astropy import units as u
+    from spectral_cube.tests import utilities; from spectral_cube.cube_utils import mosaic_cubes
+
     cube1 = utilities.generate_hdu(data=np.ones([3,4,5]),
                                    pixel_scale=0.1*u.arcsec, spec_scale=1*u.km/u.s, beamfwhm=0.2*u.arcsec,
                                    v0=0)
@@ -767,3 +772,11 @@ def test_cube_mosaic_complex():
                           verbose=False,
                           use_memmap=True,
                           method='cube')
+
+    result2 = mosaic_cubes([cube1, cube2],
+                          target_header=None,
+                          roundtrip_coords=False,
+                          save_to_tmp_dir=False,
+                          verbose=False,
+                          use_memmap=True,
+                          method='channel')
