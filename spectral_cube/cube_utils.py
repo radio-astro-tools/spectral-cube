@@ -1221,6 +1221,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     log.warn(f"Dropping {len(keep1)-sum(keep1)} cubes out of {len(keep1)} because they have invalid (empty) slices")
 
                 if commonbeam is not None:
+                    print(f"Convolving to common beam {commonbeam} for {mincube_slices}")
                     scubes = [(cube[ch1:ch2, slices[1], slices[2]]
                             .convolve_to(commonbeam))
                             if kp
@@ -1260,12 +1261,33 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     scubes = [cube for cube, kp in zip(scubes, keep) if kp]
 
                 if weightcubes is not None:
+                    print("Handling weight cubes")
+                    # convert mincube_slices to weightcube coordinates
+                    mincube_weight_slices = []
+                    for slc, wtc, cube in zip(mincube_slices, weightcubes, scubes):
+                        ycrds, xcrds = np.transpose([(s.start, s.stop) for s in slc[1:]])
+                        skycrds = cube.wcs.celestial.pixel_to_world(xcrds, ycrds)
+                        wtxcrds, wtycrds = wtc.wcs.celestial.world_to_pixel(skycrds)
+
+                        # handle spectral cutting.  for cubes, we split this into min_cube_slices + chans,
+                        # but here we're doing it all at once
+                        ch1, ch2 = two_closest_channels(wtc, channel)
+                        ch1, ch2 = (ch1, ch2+1) if ch1 < ch2 else (ch2, ch1+1)
+                        print(f'wtchans={ch1, ch2}')
+                        zslc = slice(ch1, ch2)
+
+                        wtslc = zlsc, slice(wtycrds[0], wtycrds[1]), slice(wtxcrds[0], wtxcrds[1])
+                        mincube_weight_slices.append(wtslc)
+                    print(f"mincube_slices = {mincube_slices}")
+                    print(f"mincube_weight_slices = {mincube_weight_slices}")
+
                     sweightcubes = [cube[ch1:ch2, slices[1], slices[2]]
                                     for (ch1, ch2), slices, cube, kp
-                                    in std_tqdm(zip(chans, mincube_slices, weightcubes, keep),
+                                    in std_tqdm(zip(chans, mincube_weight_slices, weightcubes, keep),
                                                 delay=5, desc='Subweight')
                                     if kp
                                     ]
+                    print(f"Loading weight HDUs - this may load the weight cubes into memory.  Shapes={[x.shape for x in sweightcubes]}")
                     wthdus = [cube.hdu
                               for cube in std_tqdm(sweightcubes, delay=5, desc='WeightData')]
                 else:
@@ -1282,6 +1304,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 # gathering the data
                 # (this version is capable of parallelizing over many cubes, in
                 # theory; the previous would treat each cube in serial)
+                print("Loading data into memory (this step should trigger convolution for dask arrays)", flush=True)
                 datas = [cube._get_filled_data() for cube in scubes]
                 wcses = [cube.wcs for cube in scubes]
 
