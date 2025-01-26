@@ -651,7 +651,11 @@ class TestNumpyMethods(BaseTest):
         regression test: argmax must have integer dtype
         """
         d = np.where(self.d > 0.5, self.d, -10)
-        result = self.c.argmax(how='ray')
+        if use_dask:
+            # there is no 'rays' approach in dask
+            result = self.c.argmax()
+        else:
+            result = self.c.argmax(how='ray')
         assert 'int' in str(result.dtype)
 
     def test_argmin(self):

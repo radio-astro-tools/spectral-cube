@@ -1319,7 +1319,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                             assert wtycrds[1] > 0
                             log.debug(f"skycrds={skycrds}") # DEBUG
                             log.debug(f"Cube slices went from x={xcrds} to {wtxcrds} and y={ycrds} to {wtycrds}") # DEBUG
-                            log.debug("pixel scales: ", cube.wcs.celestial.proj_plane_pixel_area()**0.5, wtc.wcs.celestial.proj_plane_pixel_area()**0.5,)
+                            log.debug(f"pixel scales: {cube.wcs.celestial.proj_plane_pixel_area()**0.5} {wtc.wcs.celestial.proj_plane_pixel_area()**0.5}")
 
                         # handle spectral cutting.  for cubes, we split this into min_cube_slices + chans,
                         # but here we're doing it all at once
@@ -1366,15 +1366,6 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 if len(datas) == 0:
                     log.warn(f"Channel {ii}={channel} has no matched data.  Skipping")
                     continue
-
-                from spectral_cube.dask_spectral_cube import DaskSpectralCube
-                # if any(isinstance(cube, DaskSpectralCube) for cube in cubes):
-                #     # only instantiate a Dask client if there are dask cubes
-                #     if client is None:
-                #         client = Client()
-
-                #     with client:
-                #         datas = client.gather(datas)
 
                 hdus = list(zip(datas, wcses))
 
