@@ -1363,6 +1363,7 @@ def test_twod_numpy_twoaxes(func, how, axis, filename, use_dask):
     cube._unit = u.K
 
     with warnings.catch_warnings(record=True) as wrn:
+        warnings.simplefilter('always', UserWarning)  # this appears to get turned off somewhere else in testing
         if use_dask:
             spec = getattr(cube, func)(axis=axis)
         else:
