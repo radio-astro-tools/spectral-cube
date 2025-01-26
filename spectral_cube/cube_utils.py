@@ -922,9 +922,14 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  fail_if_channel_empty=True,
                  return_footprint=False,
                  client=None,
+                 extrapolation_tolerance=1e-6,
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
+
+    For channel mode, cubes must have at least two channels, and only spectral
+    values between two channels will be included.  i.e., spectral interpolation
+    is performed, not extrapolation.
 
     Parameters
     ----------
@@ -962,6 +967,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
     client : Client, optional
         Pass a `dask.distributed.Client <https://distributed.dask.org/en/latest/client.html>`_ to use
         Dask to parallelize operations. Default is to create the local client.
+    extrapolation_tolerance: float
+        If there is a channel in the input cube within this tolerance of the
+        output cube, keep it even though it might result in extrapolation.
 
     Outputs
     -------
@@ -1185,29 +1193,33 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
         else:
             pbar = enumerate(channels)
             using_pbar = False
+
+        # grab a 2-channel slab
+        # this is very verbose but quite simple & cheap
+        # going to spectral_slab(channel-dx, channel+dx) gives 3-pixel cubes most often,
+        # which results in a 50% overhead in smoothing, etc.
+        def two_closest_channels(cube, channel):
+            dist = np.abs(cube.spectral_axis.to(channel.unit) - channel)
+            log.debug(f'dist={dist}')
+            closest = np.argmin(dist)
+            dist[closest] = np.inf
+            next_closest = np.argmin(dist)
+            if closest < next_closest:
+                return (closest, next_closest)
+            else:
+                return (next_closest, closest)
+
         for ii, channel in pbar:
             if using_pbar:
                 pbar.set_description(f"Channel {ii}={channel}")
 
-            # grab a 2-channel slab
-            # this is very verbose but quite simple & cheap
-            # going to spectral_slab(channel-dx, channel+dx) gives 3-pixel cubes most often,
-            # which results in a 50% overhead in smoothing, etc.
-            def two_closest_channels(cube, channel):
-                dist = np.abs(cube.spectral_axis.to(channel.unit) - channel)
-                closest = np.argmin(dist)
-                dist[closest] = np.inf
-                next_closest = np.argmin(dist)
-                if closest < next_closest:
-                    return (closest, next_closest)
-                else:
-                    return (next_closest, closest)
             chans = [two_closest_channels(cube, channel)
                      for cube in std_tqdm(cubes, delay=5, desc='ChanSel:')]
+            log.debug(f'chans={chans}, channel={channel}, spax={cubes[0].spectral_axis.to(channel.unit)}')
             # reversed spectral axes still break things
             # and we want two channels width, not one (which is why we use +1 here)
             chans = [(ch1, ch2+1) if ch1 < ch2 else (ch2, ch1+1) for ch1, ch2 in chans]
-            log.debug(f'chans={chans}')
+            log.debug(f'chans={chans}, channel={channel}')
 
             if not using_pbar:
                 log_(f"Using neighboring channels {chans}")
@@ -1219,6 +1231,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 keep1 = [all(x > 1 for x in cube[ch1:ch2, slices[1], slices[2]].shape)
                         for (ch1, ch2), slices, cube in std_tqdm(zip(chans, mincube_slices, cubes), desc='keepcheck')]
                 if sum(keep1) < len(keep1):
+                    log.debug(f"keep1={keep1} chans={chans}, mincube_slices={mincube_slices}")
+                    log.debug(f"shapes={[cube[ch1:ch2, slices[1], slices[2]].shape for (ch1, ch2), slices, cube in zip(chans, mincube_slices, cubes)]}")
                     log.warn(f"Dropping {len(keep1)-sum(keep1)} cubes out of {len(keep1)} because they have invalid (empty) slices")
 
                 if commonbeam is not None:
@@ -1240,16 +1254,28 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                             for (ch1, ch2), slices, cube, kp in std_tqdm(zip(chans, mincube_slices, cubes, keep1),
                                                                     delay=5, desc='Subcubes')
                             ]
-                
+
                 # rechunk if needed (should be very fast?)
                 scubes = [cube.rechunk() if hasattr(cube, 'rechunk') else cube for cube in scubes]
 
                 # only keep2 cubes that are in range; the rest get excluded
                 keep2 = [(cube is not None) and
                          all(sh > 1 for sh in cube.shape) and
-                         (cube.spectral_axis.min() <= channel) and
-                         (cube.spectral_axis.max() >= channel)
+                         ((
+                            (np.sign(channel) == 1) and
+                            (cube.spectral_axis.min() <= channel*(1+extrapolation_tolerance)) and
+                            (cube.spectral_axis.max() >= channel*(1-extrapolation_tolerance)))
+                         or (
+                            (np.sign(channel) == -1) and
+                            (cube.spectral_axis.min() <= channel*(1-extrapolation_tolerance)) and
+                            (cube.spectral_axis.max() >= channel*(1+extrapolation_tolerance)))
+                         )
                          for cube in scubes]
+                log.debug(f"channel range: {channel.value*(1+extrapolation_tolerance), channel.value*(1-extrapolation_tolerance)}")
+                log.debug(f'keep2={keep2}, minmaxs = {[(cube.spectral_axis.min(), cube.spectral_axis.max(),
+                                                        cube.spectral_axis.min() <= channel*(1+extrapolation_tolerance),
+                                                        cube.spectral_axis.max() >= channel*(1-extrapolation_tolerance),
+                                                        ) for cube in scubes]}')
                 # merge the two 'keep' arrays
                 keep = np.array(keep1) & np.array(keep2)
                 if sum(keep) < len(keep):

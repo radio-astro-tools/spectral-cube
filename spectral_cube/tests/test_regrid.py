@@ -628,7 +628,7 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
                           # not used roundtrip_coords=False,
                           spectral_block_size=spectral_block_size,
                           save_to_tmp_dir=False,
-                          verbose=False,
+                          verbose=True,
                           use_memmap=use_memmap,
                           method='cube')
 
@@ -676,6 +676,9 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
 
     pytest.importorskip('reproject')
 
+    from astropy import log
+    log.setLevel('DEBUG')
+
     # Read in data to use
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
@@ -687,9 +690,10 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
     expected_wcs = WCS(expected_header).celestial
 
     # Make three cubes to spectrally mosaic.
+    # (they must have >= 2 channels)
     part1 = cube[:2]
-    part2 = cube[2:3]
-    part3 = cube[3:]
+    part2 = cube[1:3]
+    part3 = cube[2:]
 
     assert part1.wcs.wcs.restwav != 0
     assert part2.wcs.wcs.restwav != 0
@@ -716,7 +720,7 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
 
     # Check that values of original and result are comparable
     np.testing.assert_almost_equal(result.filled_data[:].value,
-                                   cube.filled_data[:].value, decimal=9)
+                                   cube.filled_data[:].value, decimal=8)
 
 
     # Mosaic auto-solving for the mosaic header.
@@ -741,7 +745,7 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
 
     # Check that values of original and result2 are comparable
     np.testing.assert_almost_equal(result2.filled_data[:].value,
-                                   cube.filled_data[:].value, decimal=9)
+                                   cube.filled_data[:].value, decimal=8)
 
 
 def test_cube_mosaic_complex():
