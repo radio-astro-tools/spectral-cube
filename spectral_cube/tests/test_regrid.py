@@ -628,9 +628,10 @@ def test_mosaic_cubes(use_memmap, data_adv, use_dask, spectral_block_size):
     assert part2.wcs.wcs.restwav != 0
 
     # Mosaic give the expected header.
-    result = mosaic_cubes([part1, part2], order='nearest-neighbor',
+    result = mosaic_cubes([part1, part2],
+                          # order is not a mosaic_cubes argument order='nearest-neighbor',
                           target_header=cube.header,
-                          roundtrip_coords=False,
+                          # not used roundtrip_coords=False,
                           spectral_block_size=spectral_block_size,
                           save_to_tmp_dir=False,
                           verbose=False,
@@ -833,6 +834,15 @@ def test_cube_mosaic_weighted():
 
     # so I can do some sanity checks, i.e. that cube1[0] has same velocity as target_header[0]
     target_header = combine_headers(cube1.header, cube2.header)
+
+    # go super verbose (for debugging)
+    # (saved so I can do it later)
+    # from logging import getLogger
+    # import logging
+    # logger = getLogger('reproject.mosaicking.coadd')
+    # logger.setLevel(logging.INFO)
+    # handler = logging.StreamHandler()
+    # logger.addHandler(handler)
 
     result = mosaic_cubes([cube1, cube2],
                           weightcubes=[weights1, weights2],
