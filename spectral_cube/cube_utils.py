@@ -1272,10 +1272,6 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                          )
                          for cube in scubes]
                 log.debug(f"channel range: {channel.value*(1+extrapolation_tolerance), channel.value*(1-extrapolation_tolerance)}")
-                log.debug(f'keep2={keep2}, minmaxs = {[(cube.spectral_axis.min(), cube.spectral_axis.max(),
-                                                        cube.spectral_axis.min() <= channel*(1+extrapolation_tolerance),
-                                                        cube.spectral_axis.max() >= channel*(1-extrapolation_tolerance),
-                                                        ) for cube in scubes]}')
                 # merge the two 'keep' arrays
                 keep = np.array(keep1) & np.array(keep2)
                 if sum(keep) < len(keep):
