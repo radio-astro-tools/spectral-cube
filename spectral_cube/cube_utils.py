@@ -1368,13 +1368,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     continue
 
                 from spectral_cube.dask_spectral_cube import DaskSpectralCube
-                if any(isinstance(cube, DaskSpectralCube) for cube in cubes):
-                    # only instantiate a Dask client if there are dask cubes
-                    if client is None:
-                        client = Client()
+                # if any(isinstance(cube, DaskSpectralCube) for cube in cubes):
+                #     # only instantiate a Dask client if there are dask cubes
+                #     if client is None:
+                #         client = Client()
 
-                    with client:
-                        datas = client.gather(datas)
+                #     with client:
+                #         datas = client.gather(datas)
 
                 hdus = list(zip(datas, wcses))
 
