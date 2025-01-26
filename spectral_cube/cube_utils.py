@@ -1207,7 +1207,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
             # reversed spectral axes still break things
             # and we want two channels width, not one (which is why we use +1 here)
             chans = [(ch1, ch2+1) if ch1 < ch2 else (ch2, ch1+1) for ch1, ch2 in chans]
-            print(f'chans={chans}') # DEBUG
+            #print(f'chans={chans}') # DEBUG
 
             if not using_pbar:
                 log_(f"Using neighboring channels {chans}")
@@ -1287,22 +1287,22 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                                 warnings.warn("Cube is larger than weight cube")
                             assert wtxcrds[1] > 0
                             assert wtycrds[1] > 0
-                            print(f"skycrds={skycrds}") # DEBUG
-                            print(f"Cube slices went from x={xcrds} to {wtxcrds} and y={ycrds} to {wtycrds}") # DEBUG
-                            print("pixel scales: ", cube.wcs.celestial.proj_plane_pixel_area()**0.5, wtc.wcs.celestial.proj_plane_pixel_area()**0.5,)
+                            #print(f"skycrds={skycrds}") # DEBUG
+                            #print(f"Cube slices went from x={xcrds} to {wtxcrds} and y={ycrds} to {wtycrds}") # DEBUG
+                            #print("pixel scales: ", cube.wcs.celestial.proj_plane_pixel_area()**0.5, wtc.wcs.celestial.proj_plane_pixel_area()**0.5,)
 
                         # handle spectral cutting.  for cubes, we split this into min_cube_slices + chans,
                         # but here we're doing it all at once
                         ch1, ch2 = two_closest_channels(wtc, channel)
                         ch1, ch2 = (ch1, ch2+1) if ch1 < ch2 else (ch2, ch1+1)
-                        print(f'wtchans={ch1, ch2}') # DEBUG
+                        #print(f'wtchans={ch1, ch2}') # DEBUG
                         zslc = slice(ch1, ch2)
 
                         wtslc = zslc, slice(wtycrds[0], wtycrds[1]), slice(wtxcrds[0], wtxcrds[1])
                         mincube_weight_slices.append(wtslc)
-                    print(f"mincube_slices = {mincube_slices}") # DEBUG
-                    print(f"mincube_weight_slices = {mincube_weight_slices}") # DEBUG
-                    print(f"weightcube shapes: {[wtcube.shape for wtcube in weightcubes]}") # DEBUG
+                    #print(f"mincube_slices = {mincube_slices}") # DEBUG
+                    #print(f"mincube_weight_slices = {mincube_weight_slices}") # DEBUG
+                    #print(f"weightcube shapes: {[wtcube.shape for wtcube in weightcubes]}") # DEBUG
 
                     sweightcubes = [wtcube[slices]
                                     for slices, wtcube, kp
