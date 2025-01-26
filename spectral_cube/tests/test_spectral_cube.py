@@ -646,7 +646,7 @@ class TestNumpyMethods(BaseTest):
         self._check_numpy(self.c.argmax, d, np.nanargmax)
         self.c = self.d = None
 
-    def test_argmax_rays(self):
+    def test_argmax_rays(self, use_dask):
         """
         regression test: argmax must have integer dtype
         """
