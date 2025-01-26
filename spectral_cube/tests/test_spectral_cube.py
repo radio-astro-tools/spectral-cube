@@ -1361,6 +1361,7 @@ def test_twod_numpy_twoaxes(func, how, axis, filename, use_dask):
             spec = getattr(cube, func)(axis=axis, how=how)
 
     if func == 'mean' and axis != (1,2):
+        print(func, how, axis, filename, use_dask) # pytest is reporting weird things, this is a hack
         assert 'Averaging over a spatial and a spectral' in str(wrn[-1].message)
 
     # data has a redundant 1st axis
