@@ -676,9 +676,6 @@ def test_mosaic_cubes_spectral(use_memmap, data_adv, use_dask, spectral_block_si
 
     pytest.importorskip('reproject')
 
-    from astropy import log
-    log.setLevel('DEBUG')
-
     # Read in data to use
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
