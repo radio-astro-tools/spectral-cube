@@ -1175,7 +1175,8 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                           .subcube_slices_from_mask(cube[cube.shape[0]//2:cube.shape[0]//2+1].mask,
                                                     spatial_only=True)
                           if cube.mask is not None
-                          else (slice(cube.shape[0]//2,cube.shape[0]//2+1), slice(None), slice(None))
+                          # if there's no mask, we can't and don't want to attempt a mincube
+                          else (slice(None), slice(None), slice(None))
                           for cube in std_tqdm(cubes, desc='MinSubSlices:', delay=5)]
 
         if hasattr(channels, "__len__") and len(channels) > 1:
@@ -1267,22 +1268,28 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     # convert mincube_slices to weightcube coordinates
                     mincube_weight_slices = []
                     # need to use cubes, not scubes, because mincube_slices are in cube units
-                    for slc, wtc, cube in zip(mincube_slices, weightcubes, cubes):
+                    for slc, wtc, cube, scube in zip(mincube_slices, weightcubes, cubes, scubes):
                         ycrds = slc[1].start, slc[1].stop
                         xcrds = slc[2].start, slc[2].stop
-                        skycrds = cube.wcs.celestial.pixel_to_world(xcrds, ycrds)
-                        wtxcrds, wtycrds = wtc.wcs.celestial.world_to_pixel(skycrds)
-                        wtxcrds = [int(np.round(x)) for x in wtxcrds]
-                        wtycrds = [int(np.round(y)) for y in wtycrds]
+                        if ycrds[0] is None or xcrds[0] is None:
+                            wtxcrds = wtycrds = [None, None]
+                        else:
+                            skycrds = cube.wcs.celestial.pixel_to_world(xcrds, ycrds)
+                            wtxcrds, wtycrds = wtc.wcs.celestial.world_to_pixel(skycrds)
+                            wtxcrds = [int(np.round(x)) for x in wtxcrds]
+                            wtycrds = [int(np.round(y)) for y in wtycrds]
 
-                        if wtxcrds[0] < 0:
-                            wtxcrds[0] = 0
-                            warnings.warn("Cube is larger than weight cube")
-                        if wtycrds[0] < 0:
-                            wtycrds[0] = 0
-                            warnings.warn("Cube is larger than weight cube")
-                        assert wtxcrds[1] > 0
-                        assert wtycrds[1] > 0
+                            if wtxcrds[0] < 0:
+                                wtxcrds[0] = 0
+                                warnings.warn("Cube is larger than weight cube")
+                            if wtycrds[0] < 0:
+                                wtycrds[0] = 0
+                                warnings.warn("Cube is larger than weight cube")
+                            assert wtxcrds[1] > 0
+                            assert wtycrds[1] > 0
+                            print(f"skycrds={skycrds}") # DEBUG
+                            print(f"Cube slices went from x={xcrds} to {wtxcrds} and y={ycrds} to {wtycrds}") # DEBUG
+                            print("pixel scales: ", cube.wcs.celestial.proj_plane_pixel_area()**0.5, wtc.wcs.celestial.proj_plane_pixel_area()**0.5,)
 
                         # handle spectral cutting.  for cubes, we split this into min_cube_slices + chans,
                         # but here we're doing it all at once
@@ -1295,6 +1302,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                         mincube_weight_slices.append(wtslc)
                     print(f"mincube_slices = {mincube_slices}") # DEBUG
                     print(f"mincube_weight_slices = {mincube_weight_slices}") # DEBUG
+                    print(f"weightcube shapes: {[wtcube.shape for wtcube in weightcubes]}") # DEBUG
 
                     sweightcubes = [wtcube[slices]
                                     for slices, wtcube, kp
