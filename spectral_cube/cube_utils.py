@@ -1281,6 +1281,9 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     dropped_indices = list(np.where(~keep)[0])
                     log.warn(f"Dropped cube indices are {dropped_indices}.  For keep1={dropped1}, for keep2={dropped2}")
                     if fail_if_cube_dropped:
+                        log.warn(f"Channel={channel} dropped all the cubes.  Cube shapes: {[cube.shape for cube in scubes]}")
+                        for kk, cube in enumerate(scubes):
+                            log.info(f"Cube {kk} has vmin={cube.spectral_axis.min()} vmax={cube.spectral_axis.max()} and channel={channel}")
                         raise ValueError(f"There were {len(keep)-sum(keep)} dropped cubes and fail_if_cube_dropped was set.  Indices: {dropped_indices}")
                     scubes = [cube for cube, kp in zip(scubes, keep) if kp]
 
