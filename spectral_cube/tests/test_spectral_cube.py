@@ -646,6 +646,18 @@ class TestNumpyMethods(BaseTest):
         self._check_numpy(self.c.argmax, d, np.nanargmax)
         self.c = self.d = None
 
+    def test_argmax_rays(self, use_dask):
+        """
+        regression test: argmax must have integer dtype
+        """
+        d = np.where(self.d > 0.5, self.d, -10)
+        if use_dask:
+            # there is no 'rays' approach in dask
+            result = self.c.argmax()
+        else:
+            result = self.c.argmax(how='ray')
+        assert 'int' in str(result.dtype)
+
     def test_argmin(self):
         d = np.where(self.d > 0.5, self.d, 10)
         self._check_numpy(self.c.argmin, d, np.nanargmin)
@@ -1355,12 +1367,14 @@ def test_twod_numpy_twoaxes(func, how, axis, filename, use_dask):
     cube._unit = u.K
 
     with warnings.catch_warnings(record=True) as wrn:
+        warnings.simplefilter('always', UserWarning)  # this appears to get turned off somewhere else in testing
         if use_dask:
             spec = getattr(cube, func)(axis=axis)
         else:
             spec = getattr(cube, func)(axis=axis, how=how)
 
     if func == 'mean' and axis != (1,2):
+        print(func, how, axis, filename, use_dask) # pytest is reporting weird things, this is a hack
         assert 'Averaging over a spatial and a spectral' in str(wrn[-1].message)
 
     # data has a redundant 1st axis

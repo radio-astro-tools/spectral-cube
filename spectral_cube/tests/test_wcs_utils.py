@@ -171,6 +171,8 @@ def test_wcs_slice_unmatched_celestial():
     wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
     wcs.wcs.crpix = [50., 45., 30.]
 
+    warnings.simplefilter('always', UserWarning)
+
     # drop RA
     with warnings.catch_warnings(record=True) as wrn:
         wcs_new = drop_axis(wcs, 0)
