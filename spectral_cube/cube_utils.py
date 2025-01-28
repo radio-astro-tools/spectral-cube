@@ -923,6 +923,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                  return_footprint=False,
                  client=None,
                  extrapolation_tolerance=1e-6,
+                 reproject_kwargs={},
                  **kwargs):
     '''
     This function reprojects cubes onto a common grid and combines them to a single field.
@@ -1151,6 +1152,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 block_sizes=(None if spectral_block_size is None else
                              [(spectral_block_size, cube.shape[1], cube.shape[2])
                               for cube in cubes]),
+                **reproject_kwargs
             )
         except TypeError as ex:
             # print the exception in case we caught a different TypeError than expected
@@ -1164,6 +1166,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 output_footprint=output_footprint,
                 reproject_function=reproject_interp,
                 #progressbar=tqdm(desc='reproject_and_coadd') if verbose else False,
+                **reproject_kwargs
             )
     elif method == 'channel':
         log_("Using Channel method")
@@ -1262,7 +1265,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 keep2 = [(cube is not None) and
                          all(sh > 1 for sh in cube.shape) and
                          ((
-                            (np.sign(channel) == 1) and
+                            (np.sign(channel) >= 0) and
                             (cube.spectral_axis.min() <= channel*(1+extrapolation_tolerance)) and
                             (cube.spectral_axis.max() >= channel*(1-extrapolation_tolerance)))
                          or (
@@ -1381,6 +1384,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     #block_size=[2,-1,-1],
                     #progressbar=partial(tqdm, desc=f'coadd ch{ii}') if verbose else False,
                     match_background=False,
+                    **reproject_kwargs
                 )
 
                 if np.all(output_array_[np.isfinite(output_array_)] == 0) or np.all(output_array[ii:ii+1,:,:][np.isfinite(output_array[ii:ii+1,:,:])] == 0):
