@@ -2997,7 +2997,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                         def callback(self, result):
                             update_function()
 
-                        # Overload apply_async and set callback=self.callback
+                        # Overload submit and set callback=self.callback
+                        def submit(self, func, callback=None):
+                            cbs = MultiCallback(callback, self.callback)
+                            return super().submit(func, cbs)
+
+                        # Prior to joblib 1.5, submit was called apply_async. The
+                        # following can be removed once we no longer support joblib<1.5
                         def apply_async(self, func, callback=None):
                             cbs = MultiCallback(callback, self.callback)
                             return super().apply_async(func, cbs)
