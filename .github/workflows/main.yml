@@ -13,11 +13,6 @@ jobs:
     with:
       envs: |
         - linux: build_docs
-        - linux: py38-test
-        - linux: py38-test-casa
-        - linux: py38-test-noviz
-        - linux: py39-test-noviz
-        - linux: py39-test-viz-noviz
         - linux: py310-test
         - linux: py310-test-casa
         - linux: py311-test
@@ -29,7 +24,7 @@ jobs:
         - linux: py312-test
         - linux: py313-test
         - linux: py313-test-viz-noviz-dev
-        - macos: py39-test-noviz
+        - macos: py310-test-noviz
         - macos: py313-test-viz-noviz-dev
         - windows: py311-test-viz
         - windows: py313-test-viz-noviz-dev
