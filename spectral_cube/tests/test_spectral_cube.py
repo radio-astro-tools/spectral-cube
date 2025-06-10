@@ -442,7 +442,7 @@ class TestArithmetic(object):
 
     # FIXME: in the tests below we need to manually do self.c1 = self.d1 = None
     # because if we try and do this in a teardown method, the open-files check
-    # gets done first. This is an issue that should be resolved in pytest-openfiles.
+    # gets done first.
 
     @pytest.fixture(autouse=True)
     def setup_method_fixture(self, request, data_adv_simple, use_dask):
@@ -1669,7 +1669,6 @@ def test_multibeam_custom(data_vda_beams, use_dask):
         assert new_beams == newcube.beams
 
 
-@pytest.mark.openfiles_ignore
 @pytest.mark.xfail(raises=ValueError, strict=True)
 def test_multibeam_custom_wrongshape(data_vda_beams, use_dask):
 
@@ -1682,7 +1681,6 @@ def test_multibeam_custom_wrongshape(data_vda_beams, use_dask):
     cube.with_beams(new_beams[:1], raise_error_jybm=False)
 
 
-@pytest.mark.openfiles_ignore
 @pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
 def test_multibeam_jybm_error(data_vda_beams, use_dask):
 
@@ -2431,7 +2429,6 @@ def test_spatial_smooth_t2d(data_adv, use_dask):
     np.testing.assert_almost_equal(cube_t2d[2].value, result2)
 
 
-@pytest.mark.openfiles_ignore
 @pytest.mark.parametrize('filename', ['point_source_5_one_beam', 'point_source_5_spectral_beams'],
                          indirect=['filename'])
 @pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
@@ -2445,7 +2442,6 @@ def test_spatial_smooth_jybm_error(filename, use_dask):
     cube_t2d = cube.spatial_smooth(t2d)
 
 
-@pytest.mark.openfiles_ignore
 @pytest.mark.parametrize('filename', ['point_source_5_one_beam', 'point_source_5_spectral_beams'],
                          indirect=['filename'])
 @pytest.mark.xfail(raises=utils.BeamUnitsError, strict=True)
