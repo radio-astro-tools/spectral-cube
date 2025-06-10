@@ -1930,6 +1930,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if not include.any():
             return (slice(0),)*3
 
+        include = include.astype(int, copy=False)
+
         slices = ndimage.find_objects(np.broadcast_arrays(include,
                                                           self._data)[0])[0]
 
@@ -2971,6 +2973,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                              "options.  Either specify num_cores=1 or "
                              "parallel=True")
 
+        print("HERE", parallel, use_memmap)
+
         if parallel and use_memmap:
 
             # it is not possible to run joblib parallelization without memmap
@@ -2997,6 +3001,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
                         # Overload apply_async and set callback=self.callback
                         def apply_async(self, func, callback=None):
+                            print("APPLY ASYNC")
                             cbs = MultiCallback(callback, self.callback)
                             return super().apply_async(func, cbs)
 
@@ -3015,6 +3020,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     warnings.warn("Could not import joblib.  Will run in serial.",
                                   warnings.ImportWarning)
                 parallel = False
+
+        print("FINALLY HERE")
 
         # this isn't an else statement because we want to catch the case where
         # the above clause fails on ImportError
