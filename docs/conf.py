@@ -28,7 +28,7 @@
 import os
 import sys
 import datetime
-from importlib import import_module
+from importlib import import_module, metadata
 
 try:
     from sphinx_astropy.conf.v1 import *  # noqa
@@ -36,12 +36,7 @@ except ImportError:
     print('ERROR: the documentation requires the sphinx-astropy package to be installed')
     sys.exit(1)
 
-# Get configuration information from setup.cfg
-from configparser import ConfigParser
-conf = ConfigParser()
-
-conf.read([os.path.join(os.path.dirname(__file__), '..', 'setup.cfg')])
-setup_cfg = dict(conf.items('metadata'))
+package_info = metadata.metadata("spectral-cube")
 
 # -- General configuration ----------------------------------------------------
 
@@ -67,17 +62,18 @@ rst_epilog += """
 # -- Project information ------------------------------------------------------
 
 # This does not *have* to match the package name, but typically does
-project = setup_cfg['name']
-author = setup_cfg['author']
-copyright = '{0}, {1}'.format(
-    datetime.datetime.now().year, setup_cfg['author'])
+project = package_info["Name"]
+author = package_info["Author"]
+copyright = "{}, {}".format(datetime.datetime.now().year, package_info["Author"])
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-from pkg_resources import get_distribution
-version = release = get_distribution(setup_cfg['name']).version
+# The short X.Y version.
+version = package_info["Version"].split("-", 1)[0]
+# The full version, including alpha/beta/rc tags.
+release = package_info["Version"]
 
 # -- Options for HTML output --------------------------------------------------
 
@@ -148,25 +144,6 @@ latex_documents = [('index', project + '.tex', project + u' Documentation',
 # (source start file, name, description, authors, manual section).
 man_pages = [('index', project.lower(), project + u' Documentation',
               [author], 1)]
-
-
-# -- Options for the edit_on_github extension ---------------------------------
-
-if eval(setup_cfg.get('edit_on_github')):
-    extensions += ['sphinx_astropy.ext.edit_on_github']
-
-    versionmod = __import__(setup_cfg['package_name'] + '.version')
-    edit_on_github_project = setup_cfg['github_project']
-    if versionmod.version.release:
-        edit_on_github_branch = "v" + versionmod.version.version
-    else:
-        edit_on_github_branch = "master"
-
-    edit_on_github_source_root = ""
-    edit_on_github_doc_root = "docs"
-
-# -- Resolving issue number to links in changelog -----------------------------
-github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_project'])
 
 # -- Turn on nitpicky mode for sphinx (to warn about references not found) ----
 #
