@@ -25,8 +25,11 @@ jobs:
         - linux: py311-test-noviz-cov
         - linux: py311-test-noviz-dev
         - linux: py311-test-viz
-        - linux: py311-test-viz-noviz-dev
+        - linux: py311-test-viz-noviz
         - linux: py312-test
+        - linux: py313-test
+        - linux: py313-test-viz-noviz-dev
         - macos: py39-test-noviz
-        - windows: py311-test-noviz-dev
-
+        - macos: py313-test-viz-noviz-dev
+        - windows: py311-test-viz
+        - windows: py313-test-viz-noviz-dev
