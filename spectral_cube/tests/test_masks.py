@@ -539,10 +539,7 @@ def test_numpy_ma_tools(data_adv, use_dask):
     assert np.ma.core.getmask(mcube[:,0,0]) is not None
 
 
-@pytest.mark.xfail
 def test_numpy_ma_tools_2d(data_adv, use_dask):
-    """ This depends on 2D objects keeping masks, which depends on #395.
-    so, TODO: un-xfail this """
 
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
