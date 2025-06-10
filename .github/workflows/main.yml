@@ -8,102 +8,25 @@ on:
     - cron: '0 5 * * 2'
 
 jobs:
-  tests:
-    name: ${{ matrix.name}}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            python-version: '3.10'
-            name: Py3.10 mindeps
-            toxenv: py310-test
-          - os: ubuntu-latest
-            python-version: 3.11
-            name: Py3.11 mindeps
-            toxenv: py311-test
-          - os: ubuntu-latest
-            python-version: 3.12
-            name: Py3.12 mindeps
-            toxenv: py312-test
-          - os: ubuntu-latest
-            python-version: 3.11
-            name: Py3.11 no visualization + coverage
-            toxenv: py311-test-noviz-cov
-          - os: ubuntu-latest
-            python-version: 3.8
-            name: Py3.8 mindeps
-            toxenv: py38-test
-          - os: ubuntu-latest
-            python-version: 3.9
-            name: Py3.9 noviz
-            toxenv: py39-test-noviz
-          - os: ubuntu-latest
-            python-version: 3.9
-            name: Py3.9 all
-            toxenv: py39-test-viz-noviz
-          - os: ubuntu-latest
-            python-version: 3.11
-            name: Py3.11 dev
-            toxenv: py311-test-dev
-          - os: ubuntu-latest
-            python-version: 3.11
-            name: Py3.11 viz
-            toxenv: py311-test-viz
-              #- os: ubuntu-latest
-              #  python-version: 3.9
-              #  name: Py3.9 viz w/yt & glue
-              #  toxenv: py39-test-viz-viz_extra
-          - os: ubuntu-latest
-            python-version: 3.11
-            name: Py3.11 all dev
-            toxenv: py311-test-viz-noviz-dev
-          - os: ubuntu-latest
-            python-version: 3.8
-            name: Py3.8 mindeps and CASA
-            toxenv: py38-test-casa
-          - os: ubuntu-latest
-            python-version: '3.10'
-            name: Py3.10 mindeps and CASA
-            toxenv: py310-test-casa
-          - os: ubuntu-latest
-            python-version: 3.11
-            name: Py3.11, noviz, dev
-            toxenv: py311-test-noviz-dev
-          - os: ubuntu-latest
-            python-version: 3.8
-            name: Py3.8 noviz (except CASA)
-            toxenv: py38-test-noviz
-          - os: macos-latest
-            python-version: 3.11
-            name: Py3.11 noviz (except CASA) MacOS X
-            toxenv: py39-test-noviz
-          - os: windows-latest
-            python-version: 3.11
-            name: Py3.11, noviz Windows
-            toxenv: py311-test-noviz-dev
-          - os: windows-latest
-            python-version: 3.11
-            name: Py3.11, noviz, dev; Windows
-            toxenv: py311-test-noviz-dev
-          - os: ubuntu-latest
-            python-version: 3.11
-            name: Documentation
-            toxenv: build_docs
+  test:
+    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@v1
+    with:
+      envs: |
+        - linux: build_docs
+        - linux: py38-test
+        - linux: py38-test-casa
+        - linux: py38-test-noviz
+        - linux: py39-test-noviz
+        - linux: py39-test-viz-noviz
+        - linux: py310-test
+        - linux: py310-test-casa
+        - linux: py311-test
+        - linux: py311-test-dev
+        - linux: py311-test-noviz-cov
+        - linux: py311-test-noviz-dev
+        - linux: py311-test-viz
+        - linux: py311-test-viz-noviz-dev
+        - linux: py312-test
+        - macos: py39-test-noviz
+        - windows: py311-test-noviz-dev
 
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install testing dependencies
-      run: python -m pip install tox codecov
-    - name: Run tests with ${{ matrix.name }} (optionally with CASA)
-      run: tox -v -e ${{ matrix.toxenv }}
-    - name: Upload coverage to codecov
-      if: ${{ contains(matrix.toxenv,'-cov') }}
-      uses: codecov/codecov-action@v5
-      with:
-        file: ./coverage.xml
