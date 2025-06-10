@@ -22,7 +22,10 @@ from astropy import convolution
 from astropy import stats
 from astropy.constants import si
 from astropy.io.registry import UnifiedReadWriteMethod
-from astropy.utils.compat import COPY_IF_NEEDED
+try:
+    from astropy.utils.compat import COPY_IF_NEEDED
+except ImportError:
+    COPY_IF_NEEDED = False
 
 import numpy as np
 

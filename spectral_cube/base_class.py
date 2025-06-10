@@ -8,7 +8,10 @@ import astropy
 from astropy.io.fits import Card
 from radio_beam import Beam, Beams
 import dask.array as da
-from astropy.utils.compat import COPY_IF_NEEDED
+try:
+    from astropy.utils.compat import COPY_IF_NEEDED
+except ImportError:
+    COPY_IF_NEEDED = False
 
 from . import wcs_utils
 from . import cube_utils
