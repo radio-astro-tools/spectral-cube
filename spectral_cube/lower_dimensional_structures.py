@@ -609,6 +609,9 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         if wcs is not None and wcs.wcs.naxis != 1:
             raise ValueError("wcs should have one dimension")
 
+        if isinstance(value, da.Array):
+            value = value.compute()
+
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
         self._wcs = wcs

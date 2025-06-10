@@ -11,7 +11,7 @@ import dask.array as da
 
 from . import wcs_utils
 from . import cube_utils
-from .utils import BeamWarning, cached, WCSCelestialError, BeamAverageWarning, NoBeamError, BeamUnitsError
+from .utils import BeamWarning, cached, WCSCelestialError, BeamAverageWarning, NoBeamError, BeamUnitsError, computed_quantity
 from .masks import BooleanArrayMask
 
 
@@ -423,13 +423,13 @@ class MaskableArrayMixinClass(object):
         data : Quantity
             The masked data.
         """
-        return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
-                          self.unit, copy=False)
+        value = self._get_filled_data(view, fill=self._fill_value)
+        return computed_quantity(value, self.unit, copy=False)
 
     def filled(self, fill_value=None):
         if fill_value is not None:
-            return u.Quantity(self._get_filled_data(fill=fill_value),
-                              self.unit, copy=False)
+            return computed_quantity(self._get_filled_data(fill=fill_value),
+                                     self.unit, copy=False)
         return self.filled_data[:]
 
     @cube_utils.slice_syntax

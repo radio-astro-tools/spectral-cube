@@ -3,6 +3,9 @@ import inspect
 
 from functools import wraps
 
+import dask.array as da
+
+from astropy.units import Quantity
 from astropy.utils.exceptions import AstropyUserWarning
 
 bigdataurl = "https://spectral-cube.readthedocs.io/en/latest/big_data.html"
@@ -11,6 +14,12 @@ from tqdm.auto import tqdm
 
 def ProgressBar(niter, **kwargs):
     return tqdm(total=niter, **kwargs)
+
+
+def computed_quantity(value, *args, **kwargs):
+    if isinstance(value, da.Array):
+        value = value.compute()
+    return Quantity(value, *args, **kwargs)
 
 
 def cached(func):
