@@ -22,6 +22,7 @@ from astropy import convolution
 from astropy import stats
 from astropy.constants import si
 from astropy.io.registry import UnifiedReadWriteMethod
+from astropy.utils.compat import COPY_IF_NEEDED
 
 import numpy as np
 
@@ -30,7 +31,7 @@ from radio_beam import Beam, Beams
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .utils import ProgressBar
+from .utils import ProgressBar, computed_quantity
 from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
                     is_broadcastable_and_smaller)
 from .ytcube import ytCube
@@ -1434,7 +1435,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             The unmasked data
         """
         values = self._data[view]
-        return computed_quantity(values, self.unit, copy=False)
+        return computed_quantity(values, self.unit, copy=COPY_IF_NEEDED)
 
     def unmasked_copy(self):
         """
