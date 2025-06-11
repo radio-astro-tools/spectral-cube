@@ -16,12 +16,6 @@ try:
 except ImportError:
     tracemallocOK = False
 
-# The comparison of Quantities in test_memory_usage
-# fail with older versions of numpy
-from packaging.version import Version, parse
-
-NPY_VERSION_CHECK = parse(np.version.version) >= Version("1.13")
-
 from .test_moments import moment_cube
 from .helpers import assert_allclose
 from ..spectral_cube import SpectralCube
@@ -131,8 +125,7 @@ def test_parallel_performance_smoothing():
             print("memmap=True shape={0}".format(shape))
             print(rslt)
 
-# python 2.7 doesn't have tracemalloc
-@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK or WINDOWS')
+@pytest.mark.skipif('not tracemallocOK or WINDOWS')
 def test_memory_usage():
     """
     Make sure that using memmaps happens where expected, for the most part, and
@@ -208,9 +201,7 @@ def test_memory_usage():
     assert diff[0].size_diff*u.B > 10*u.MB
 
 
-
-# python 2.7 doesn't have tracemalloc
-@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK')
+@pytest.mark.skipif('not tracemallocOK')
 def test_memory_usage_coordinates():
     """
     Watch out for high memory usage on huge spatial files

@@ -12,8 +12,6 @@ from .. import (BooleanArrayMask, LazyMask, LazyComparisonMask,
                 FunctionMask, CompositeMask)
 from ..masks import is_broadcastable_and_smaller, dims_to_skip, view_of_subset
 
-from packaging.version import Version, parse
-
 
 def test_spectral_cube_mask():
 
@@ -390,8 +388,6 @@ def test_flat_mask(data_adv, use_dask):
     assert np.all(np.isnan(mcube.sum(axis=0)[~mask_array]))
 
 
-@pytest.mark.skipif(parse(np.__version__) < Version('1.7'),
-                    reason='Numpy <1.7 does not support multi-slice indexing.')
 def test_flat_mask_spectral(data_adv, use_dask):
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 

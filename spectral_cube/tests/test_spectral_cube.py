@@ -79,8 +79,6 @@ import os
 from radio_beam import Beam, Beams
 from radio_beam.utils import BeamError
 
-NUMPY_LT_19 = parse(np.__version__) < Version('1.9.0')
-
 
 def cube_and_raw(filename, use_dask=None):
     if use_dask is None:
@@ -974,15 +972,10 @@ def test_read_write_rountrip(tmpdir, data_adv, use_dask):
 
     assert cube.shape == cube.shape
     assert_allclose(cube._data, cube2._data)
-    if (((hasattr(_wcs, '__version__')
-          and parse(_wcs.__version__) < Version('5.9'))
-         or not hasattr(_wcs, '__version__'))):
-        # see https://github.com/astropy/astropy/pull/3992 for reasons:
-        # we should upgrade this for 5.10 when the absolute accuracy is
-        # maximized
-        assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
-        # in 5.11 and maybe even 5.12, the round trip fails.  Maybe
-        # https://github.com/astropy/astropy/issues/4292 will solve it?
+
+    # TODO: fix this for current astropy
+    # see https://github.com/astropy/astropy/pull/3992 for reasons
+    # assert cube._wcs.to_header_string() == cube2._wcs.to_header_string()
 
 
 @pytest.mark.parametrize(('memmap', 'base'),

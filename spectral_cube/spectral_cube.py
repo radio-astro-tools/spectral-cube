@@ -725,9 +725,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         Use astropy's mad_std to computer the standard deviation
         """
-        if int(astropy.__version__[0]) < 2:
-            raise NotImplementedError("mad_std requires astropy >= 2")
-        projection = self._naxes_dropped(axis) in (1,2)
+        projection = self._naxes_dropped(axis) in (1, 2)
         if how == 'ray' and not hasattr(axis, '__len__'):
             # no need for fill here; masked-out data are simply not included
             return self.apply_numpy_function(stats.mad_std,
@@ -2689,14 +2687,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                               " installed.")
 
         reproj_kwargs = kwargs
-        # Need version > 0.2 to work with cubes, >= 0.5 for memmap
-        if parse(version) < Version("0.5"):
-            raise Warning("Requires version >=0.5 of reproject. The current "
-                          "version is: {}".format(version))
-        elif parse(version) >= Version("0.6"):
-            pass # no additional kwargs, no warning either
-        else:
-            reproj_kwargs['independent_celestial_slices'] = True
 
         from reproject import reproject_interp
 

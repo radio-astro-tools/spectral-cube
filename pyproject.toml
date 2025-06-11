@@ -54,7 +54,6 @@ noviz = [
   "zarr>=2.12,<3",       # Unpin if updated. See issue #936
 ]
 test = [
-  "astropy>=5.2.1",
   "numpy>=1.24",
   "pytest-astropy>=0.10",
   "pytest-cov>=3",
