@@ -22,6 +22,10 @@ from astropy import convolution
 from astropy import stats
 from astropy.constants import si
 from astropy.io.registry import UnifiedReadWriteMethod
+try:
+    from astropy.utils.compat import COPY_IF_NEEDED
+except ImportError:
+    COPY_IF_NEEDED = False
 
 import numpy as np
 
@@ -30,7 +34,7 @@ from radio_beam import Beam, Beams
 from . import cube_utils
 from . import wcs_utils
 from . import spectral_axis
-from .utils import ProgressBar
+from .utils import ProgressBar, computed_quantity
 from .masks import (LazyMask, LazyComparisonMask, BooleanArrayMask, MaskBase,
                     is_broadcastable_and_smaller)
 from .ytcube import ytCube
@@ -1434,14 +1438,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             The unmasked data
         """
         values = self._data[view]
-        # Astropy Quantities don't play well with dask arrays with shape ()
-        if isinstance(values, da.Array) and values.shape == ():
-            values = values.compute()
-        try:
-            return u.Quantity(values, self.unit, copy=False)
-        except ValueError:
-            warnings.warn("The data were copied; it was not possible to create a view on the data")
-            return u.Quantity(values, self.unit)
+        return computed_quantity(values, self.unit, copy=COPY_IF_NEEDED)
 
     def unmasked_copy(self):
         """
@@ -1932,6 +1929,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         if not include.any():
             return (slice(0),)*3
+
+        include = include.astype(int, copy=False)
 
         slices = ndimage.find_objects(np.broadcast_arrays(include,
                                                           self._data)[0])[0]
@@ -2998,7 +2997,13 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                         def callback(self, result):
                             update_function()
 
-                        # Overload apply_async and set callback=self.callback
+                        # Overload submit and set callback=self.callback
+                        def submit(self, func, callback=None):
+                            cbs = MultiCallback(callback, self.callback)
+                            return super().submit(func, cbs)
+
+                        # Prior to joblib 1.5, submit was called apply_async. The
+                        # following can be removed once we no longer support joblib<1.5
                         def apply_async(self, func, callback=None):
                             cbs = MultiCallback(callback, self.callback)
                             return super().apply_async(func, cbs)

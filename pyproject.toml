@@ -1,5 +1,152 @@
+[project]
+name = "spectral-cube"
+dynamic = [
+    "version"
+]
+description = "A package for interaction with spectral cubes"
+readme = "README.rst"
+authors = [
+    { name = "Adam Ginsburg", email = "adam.g.ginsburg@gmail.com" },
+    { name = "Tom Robitaille" },
+    { name = "Chris Beaumont" },
+    { name = "Adam Leroy" },
+    { name = "Erik Rosolowsky" },
+    { name = "Eric Koch" }
+]
+license = "BSD-3-Clause"
+requires-python = ">=3.10"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+  "astropy>=6.1",
+  "casa-formats-io>=0.1",
+  "dask[array]>=2025.1.1",
+  "joblib>=1.1",
+  "numpy>=1.24",
+  "packaging>=19",
+  "radio-beam>=0.3.5",
+  "setuptools>=62.3.3",
+  "tqdm>=4.64",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pvextractor",
+  "radio-beam>=0.3.5",
+  "regions",
+  "reproject",
+]
+docs = [
+  "matplotlib",
+  "sphinx-astropy",
+]
+noviz = [
+  "distributed>=2022.5",
+  "fsspec>=2022.5",
+  "pvextractor>=0.3",
+  "reproject>=0.9.1",
+  "scipy>=1.8.1",
+  "zarr>=2.12,<3",       # Unpin if updated. See issue #936
+]
+test = [
+  "astropy>=5.2.1",
+  "numpy>=1.24",
+  "pytest-astropy>=0.10",
+  "pytest-cov>=3",
+  "regions>=0.7",
+  "zarr>=2.12,<3",        # Unpin if updated. See issue #936
+]
+viz = [
+  "aplpy>=2.1",
+  "matplotlib>=3.5.2",
+  "pvextractor>=0.3",
+  "reproject>=0.9.1",
+]
+viz_extra = [
+  "glue-qt>=0.1",
+  "yt; python_version<'3.8'",
+]
+
+[project.urls]
+homepage = "https://spectral-cube.readthedocs.org"
+documentation = "https://spectral-cube.readthedocs.org"
+repository = "https://github.com/radio-astro-tools/spectral-cube"
+
 [build-system]
-requires = ["setuptools",
-            "setuptools_scm",
-            "wheel"]
-build-backend = 'setuptools.build_meta'
+build-backend = "setuptools.build_meta"
+requires = [
+            "setuptools>=61.2",
+            "setuptools_scm"
+           ]
+
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = false
+
+[tool.setuptools.packages]
+find = { namespaces = false }
+
+[tool.setuptools.package-data]
+"spectral_cube.tests" = [
+  "data/*",
+  "data/*/*",
+]
+"spectral_cube.io.tests" = [ "data/*/*" ]
+
+[tool.pytest.ini_options]
+minversion = "3.0"
+norecursedirs = [ "build", "docs/_build" ]
+doctest_plus = "enabled"
+addopts = "-p no:warnings"
+doctest_subpackage_requires = "spectral_cube/vis*.py = aplpy"
+
+[tool.coverage.run]
+omit = [
+  "spectral-cube/__init__*",
+  "spectral-cube/conftest.py",
+  "spectral-cube/*setup*",
+  "spectral-cube/*/tests/*",
+  "spectral-cube/tests/test_*",
+  "spectral-cube/extern/*",
+  "spectral-cube/utils/compat/*",
+  "spectral-cube/version*",
+  "spectral-cube/wcs/docstrings*",
+  "spectral-cube/_erfa/*",
+  "*/spectral-cube/__init__*",
+  "*/spectral-cube/conftest.py",
+  "*/spectral-cube/*setup*",
+  "*/spectral-cube/*/tests/*",
+  "*/spectral-cube/tests/test_*",
+  "*/spectral-cube/extern/*",
+  "*/spectral-cube/utils/compat/*",
+  "*/spectral-cube/version*",
+  "*/spectral-cube/wcs/docstrings*",
+  "*/spectral-cube/_erfa/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  # Have to re-enable the standard pragma
+  "pragma: no cover",
+  # Don't complain about packages we have installed
+  "except ImportError",
+  # Don't complain if tests don't hit assertions
+  "raise AssertionError",
+  "raise NotImplementedError",
+  # Don't complain about script hooks
+  'def main\(.*\):',
+  # Ignore branches that don't pertain to this version of Python
+  "pragma: py{ignore_python_version}",
+  # Don't complain about IPython completion helper
+  "def _ipython_key_completions_",
+]
+
+[tool.upload_docs]
+upload-dir = "docs/_build/html"
+show-response = "1"

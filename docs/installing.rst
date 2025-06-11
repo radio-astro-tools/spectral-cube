@@ -6,21 +6,21 @@ Requirements
 
 This package has the following dependencies:
 
-* `Python <http://www.python.org>`_ Python 3.x
-* `Numpy <http://www.numpy.org>`_ 1.8 or later
-* `Astropy <http://www.astropy.org>`__ 4.0 or later
-* `radio_beam <https://github.com/radio-astro-tools/radio_beam>`_, used when
+* `Python <http://www.python.org>`_ Python 3.10 or later
+* `Numpy <http://www.numpy.org>`_ 1.24 or later
+* `Astropy <http://www.astropy.org>`__ 6.1 or later
+* `radio_beam <https://github.com/radio-astro-tools/radio_beam>`_ 0.3.5 or later, used when
   reading in spectral cubes that use the BMAJ/BMIN convention for specifying the beam size.
 * `Bottleneck <http://berkeleyanalytics.com/bottleneck/>`_, optional (speeds
   up median and percentile operations on cubes with missing data)
-* `Regions <https://astropy-regions.readthedocs.io/en/latest>`_ >=0.3dev, optional
+* `Regions <https://astropy-regions.readthedocs.io/en/latest>`_ >=0.7, optional
   (Serialises/Deserialises DS9/CRTF region files and handles them. Used when
   extracting a subcube from region)
-* `scipy <https://www.scipy.org/>`_, optional (used for subcube creation)
-* `dask <https://dask.org/>`_, used for the :class:`~spectral_cube.DaskSpectralCube` class
-* `zarr <https://zarr.readthedocs.io/en/stable/>`_ and `fsspec <https://pypi.org/project/fsspec/>`_,
+* `scipy <https://www.scipy.org/>`_ 1.8.1 or later, optional (used for subcube creation)
+* `dask <https://dask.org/>`_ 2025.1.1 or later, used for the :class:`~spectral_cube.DaskSpectralCube` class
+* `zarr <https://zarr.readthedocs.io/en/stable/>`_ 2.12 or later and `fsspec <https://pypi.org/project/fsspec/>`_ 2022.5.0 or later,
   used for storing computations to disk when using the dask-enabled classes.
-* `casa-formats-io <https://pypi.org/project/casa-formats-io>`_
+* `casa-formats-io <https://pypi.org/project/casa-formats-io>`_ 0.1 or later
 
 Installation
 ------------
@@ -29,7 +29,7 @@ To install the latest stable release, you can type::
 
     pip install spectral-cube
 
-(you may need to add ``--upgrade`` if you already have an older version installed) 
+(you may need to add ``--upgrade`` if you already have an older version installed)
 or you can download the latest tar file from
 `PyPI <https://pypi.python.org/pypi/spectral-cube>`_ and install it using::
 

@@ -22,13 +22,13 @@ def test_cube_wcs_freqtovel():
     newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD',
                                    rest_value=w1.wcs.restfrq*u.Hz)
     assert newwcs.wcs.ctype[2] == 'VRAD'
-    assert newwcs.wcs.crval[2] == 305.2461585938794
+    assert_allclose(newwcs.wcs.crval[2], 305.2461585938794)
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
 
     newwcs = convert_spectral_axis(w1, 'km/s', 'VRAD')
 
     assert newwcs.wcs.ctype[2] == 'VRAD'
-    assert newwcs.wcs.crval[2] == 305.2461585938794
+    assert_allclose(newwcs.wcs.crval[2], 305.2461585938794)
     assert newwcs.wcs.cunit[2] == u.Unit('km/s')
 
 

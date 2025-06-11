@@ -609,6 +609,11 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         if wcs is not None and wcs.wcs.naxis != 1:
             raise ValueError("wcs should have one dimension")
 
+        # NOTE: this avoids test failures with dask>=2025.2.0 (see #943). Revisit if there are 
+        # cases where delayed compute is preferred or when we add da.Array support for LDOs
+        if isinstance(value, da.Array):
+            value = value.compute()
+
         self = u.Quantity.__new__(cls, value, unit=unit, dtype=dtype,
                                   copy=copy).view(cls)
         self._wcs = wcs

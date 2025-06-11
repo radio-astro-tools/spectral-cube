@@ -8,10 +8,14 @@ import astropy
 from astropy.io.fits import Card
 from radio_beam import Beam, Beams
 import dask.array as da
+try:
+    from astropy.utils.compat import COPY_IF_NEEDED
+except ImportError:
+    COPY_IF_NEEDED = False
 
 from . import wcs_utils
 from . import cube_utils
-from .utils import BeamWarning, cached, WCSCelestialError, BeamAverageWarning, NoBeamError, BeamUnitsError
+from .utils import BeamWarning, cached, WCSCelestialError, BeamAverageWarning, NoBeamError, BeamUnitsError, computed_quantity
 from .masks import BooleanArrayMask
 
 
@@ -423,13 +427,13 @@ class MaskableArrayMixinClass(object):
         data : Quantity
             The masked data.
         """
-        return u.Quantity(self._get_filled_data(view, fill=self._fill_value),
-                          self.unit, copy=False)
+        value = self._get_filled_data(view, fill=self._fill_value)
+        return computed_quantity(value, self.unit, copy=COPY_IF_NEEDED)
 
     def filled(self, fill_value=None):
         if fill_value is not None:
-            return u.Quantity(self._get_filled_data(fill=fill_value),
-                              self.unit, copy=False)
+            return computed_quantity(self._get_filled_data(fill=fill_value),
+                                     self.unit, copy=COPY_IF_NEEDED)
         return self.filled_data[:]
 
     @cube_utils.slice_syntax
