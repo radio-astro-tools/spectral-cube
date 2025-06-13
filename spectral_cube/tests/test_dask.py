@@ -1,7 +1,6 @@
 # Tests specific to the dask class
 
 import os
-from numpy.core.shape_base import block
 import pytest
 import numpy as np
 from unittest.mock import patch
