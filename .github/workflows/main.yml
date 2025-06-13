@@ -7,11 +7,10 @@ on:
     tags:
     - '*'
   pull_request:
-    branches:
-    - main
   schedule:
     # run every Tuesday at 5am UTC
     - cron: '0 5 * * 2'
+  workflow_dispatch:
 
 jobs:
   test:
