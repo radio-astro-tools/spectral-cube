@@ -106,6 +106,8 @@ doctest_subpackage_requires = "spectral_cube/vis*.py = aplpy"
 filterwarnings = [
     "error::ResourceWarning",
     "error::DeprecationWarning",
+    # Triggered in radio-beam as a DeprecationWarning or with newer Python as a SyntaxWarning
+    "ignore:invalid escape sequence",
 ]
 
 [tool.coverage.run]
