@@ -1,6 +1,11 @@
 name: Build and upload to PyPI
 
-on: [push, pull_request]
+on:
+  push:
+    tags:
+    - '*'
+  workflow_dispatch:
+
 
 jobs:
   build_sdist_and_wheel:
