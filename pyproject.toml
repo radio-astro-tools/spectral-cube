@@ -37,7 +37,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pvextractor",
-  "radio-beam>=0.3.5",
   "regions",
   "reproject",
 ]
