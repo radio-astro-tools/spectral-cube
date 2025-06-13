@@ -16,12 +16,6 @@ try:
 except ImportError:
     tracemallocOK = False
 
-# The comparison of Quantities in test_memory_usage
-# fail with older versions of numpy
-from packaging.version import Version, parse
-
-NPY_VERSION_CHECK = parse(np.version.version) >= Version("1.13")
-
 from radio_beam import beam, Beam
 
 from .. import SpectralCube
@@ -513,7 +507,7 @@ def test_downsample_wcs(use_memmap, data_255):
     np.testing.assert_almost_equal(xpixnew_ypixnew, (0.75, 0.75))
 
 
-@pytest.mark.skipif('not tracemallocOK or (sys.version_info.major==3 and sys.version_info.minor<6) or not NPY_VERSION_CHECK')
+@pytest.mark.skipif('not tracemallocOK')
 def test_reproject_3D_memory():
 
     pytest.importorskip('reproject')

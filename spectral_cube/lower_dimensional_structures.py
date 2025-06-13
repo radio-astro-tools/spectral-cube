@@ -517,18 +517,6 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
 
         self._raise_wcs_no_celestial()
 
-        try:
-            from reproject.version import version
-        except ImportError:
-            raise ImportError("Requires the reproject package to be"
-                              " installed.")
-
-        # Need version > 0.2 to work with cubes
-        from packaging.version import Version, parse
-        if parse(version) < Version("0.3"):
-            raise Warning("Requires version >=0.3 of reproject. The current "
-                          "version is: {}".format(version))
-
         from reproject import reproject_interp
 
         # TODO: Find the minimal footprint that contains the header and only reproject that
@@ -609,7 +597,7 @@ class BaseOneDSpectrum(LowerDimensionalObject, MaskableArrayMixinClass,
         if wcs is not None and wcs.wcs.naxis != 1:
             raise ValueError("wcs should have one dimension")
 
-        # NOTE: this avoids test failures with dask>=2025.2.0 (see #943). Revisit if there are 
+        # NOTE: this avoids test failures with dask>=2025.2.0 (see #943). Revisit if there are
         # cases where delayed compute is preferred or when we add da.Array support for LDOs
         if isinstance(value, da.Array):
             value = value.compute()

@@ -1,10 +1,8 @@
 import warnings
-from packaging.version import Version, parse
 
 import pytest
 import numpy as np
 
-import astropy
 from astropy.wcs import WCS
 from astropy import units as u
 from astropy.io import fits
@@ -76,14 +74,8 @@ axis_order = pytest.mark.parametrize(('axis', 'order'),
                                      (1, 0), (1, 1), (1, 2),
                                      (2, 0), (2, 1), (2, 2)))
 
-if parse(astropy.__version__[:3]) >= Version('1.0'):
-    # The relative error is slightly larger on astropy-dev
-    # There is no obvious reason for this.
-    rtol = 2e-7
-    atol = 1e-30
-else:
-    rtol = 1e-7
-    atol = 0.0
+rtol = 2e-7
+atol = 1e-30
 
 
 @axis_order
