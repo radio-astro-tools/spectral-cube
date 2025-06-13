@@ -105,6 +105,7 @@ doctest_plus = "enabled"
 doctest_subpackage_requires = "spectral_cube/vis*.py = aplpy"
 filterwarnings = [
     "error::ResourceWarning",
+    "error::DeprecationWarning",
 ]
 
 [tool.coverage.run]
