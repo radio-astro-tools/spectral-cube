@@ -682,7 +682,6 @@ class TestNumpyMethods(BaseTest):
         assert scmed.unit == self.c.unit
         self.c = self.d = None
 
-    @pytest.mark.skipif('NUMPY_LT_19')
     def test_bad_median_apply(self):
         # this is a test for manually-applied numpy medians, which are different
         # from the cube.median method that does "the right thing"
