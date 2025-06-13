@@ -102,8 +102,10 @@ find = { namespaces = false }
 minversion = "3.0"
 norecursedirs = [ "build", "docs/_build" ]
 doctest_plus = "enabled"
-addopts = "-p no:warnings"
 doctest_subpackage_requires = "spectral_cube/vis*.py = aplpy"
+filterwarnings = [
+    "error::ResourceWarning",
+]
 
 [tool.coverage.run]
 omit = [
