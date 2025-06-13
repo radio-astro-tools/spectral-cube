@@ -16,6 +16,11 @@ del class_lmv
 from .io import fits
 del fits
 
+try:
+    from .version import version as __version__
+except ImportError:
+    __version__ = ''
+
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube',
            'DaskSpectralCube', 'DaskVaryingResolutionSpectralCube',
             'StokesSpectralCube', 'CompositeMask', 'LazyComparisonMask',
