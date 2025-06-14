@@ -1,7 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-from ._astropy_init import __version__, test
-
 from .spectral_cube import (SpectralCube, VaryingResolutionSpectralCube)
 from .dask_spectral_cube import (DaskSpectralCube, DaskVaryingResolutionSpectralCube)
 from .stokes_spectral_cube import StokesSpectralCube
@@ -17,6 +15,11 @@ from .io import class_lmv
 del class_lmv
 from .io import fits
 del fits
+
+try:
+    from .version import version as __version__
+except ImportError:
+    __version__ = ''
 
 __all__ = ['SpectralCube', 'VaryingResolutionSpectralCube',
            'DaskSpectralCube', 'DaskVaryingResolutionSpectralCube',
