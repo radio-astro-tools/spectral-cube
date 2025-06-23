@@ -10,8 +10,6 @@ Features
 - **Multiple Stokes Axes:** Store and access cubes for each Stokes component in a unified object.
 - **Astropy Integration:** Uses `astropy.coordinates.StokesCoord` for validation and mapping of Stokes axes, including support for custom symbols.
 - **Basis Transformations:** Convert between sky (I, Q, U, V), linear feed (XX, XY, YX, YY), and circular feed (RR, RL, LR, LL) representations using `transform_basis`.
-- **Masking:** Supports global and per-component masks, with robust logic for combining masks.
-- **Tested:** Comprehensive test suite covers all major features and edge cases.
 
 Basic Usage
 -----------
