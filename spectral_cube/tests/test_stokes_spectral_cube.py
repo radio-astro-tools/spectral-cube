@@ -241,3 +241,92 @@ class TestStokesSpectralCube():
         assert_equal(cube['Q'],cube._stokes_data['Q'])
         assert_equal(cube['U'],cube._stokes_data['U'])
         assert_equal(cube['V'],cube._stokes_data['V'])
+
+class TestStokesSpectralCubeTransformBasis:
+    def setup_class(self):
+        from astropy.wcs import WCS
+        self.wcs = WCS(naxis=3)
+        self.wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
+        # Simple data for easy checking, shape (4, 5, 5)
+        self.data = np.zeros((4, 5, 5))
+        self.data[0] = 10  # I or RR or XX
+        self.data[1] = 2   # Q or RL or XY
+        self.data[2] = 3   # U or LR or YX
+        self.data[3] = 4   # V or LL or YY
+
+    def test_linear_to_sky(self):
+        stokes_data = dict(
+            XX=SpectralCube(self.data[0][None, ...], wcs=self.wcs),
+            XY=SpectralCube(self.data[1][None, ...], wcs=self.wcs),
+            YX=SpectralCube(self.data[2][None, ...], wcs=self.wcs),
+            YY=SpectralCube(self.data[3][None, ...], wcs=self.wcs),
+        )
+        cube = StokesSpectralCube(stokes_data)
+        sky_cube = cube.transform_basis('Sky')
+        assert_allclose(sky_cube['I'].unmasked_data[...], 7)
+        assert_allclose(sky_cube['Q'].unmasked_data[...], 3)
+        assert_allclose(sky_cube['U'].unmasked_data[...], 2.5)
+        assert_allclose(sky_cube['V'].unmasked_data[...], -0.5j)
+
+    def test_circular_to_sky(self):
+        stokes_data = dict(
+            RR=SpectralCube(self.data[0][None, ...], wcs=self.wcs),
+            RL=SpectralCube(self.data[1][None, ...], wcs=self.wcs),
+            LR=SpectralCube(self.data[2][None, ...], wcs=self.wcs),
+            LL=SpectralCube(self.data[3][None, ...], wcs=self.wcs),
+        )
+        cube = StokesSpectralCube(stokes_data)
+        sky_cube = cube.transform_basis('Sky')
+        assert_allclose(sky_cube['I'].unmasked_data[...], 7)
+        assert_allclose(sky_cube['Q'].unmasked_data[...], 2.5)
+        assert_allclose(sky_cube['U'].unmasked_data[...], -0.5j)
+        assert_allclose(sky_cube['V'].unmasked_data[...], 3)
+
+    def test_sky_to_linear(self):
+        stokes_data = dict(
+            I=SpectralCube(self.data[0][None, ...], wcs=self.wcs),
+            Q=SpectralCube(self.data[1][None, ...], wcs=self.wcs),
+            U=SpectralCube(self.data[2][None, ...], wcs=self.wcs),
+            V=SpectralCube(self.data[3][None, ...], wcs=self.wcs),
+        )
+        cube = StokesSpectralCube(stokes_data)
+        lin_cube = cube.transform_basis('Linear')
+        assert_allclose(lin_cube['XX'].unmasked_data[...], 6)
+        assert_allclose(lin_cube['XY'].unmasked_data[...], 1.5 + 2j)
+        assert_allclose(lin_cube['YX'].unmasked_data[...], 1.5 - 2j)
+        assert_allclose(lin_cube['YY'].unmasked_data[...], 4)
+
+    def test_sky_to_circular(self):
+        stokes_data = dict(
+            I=SpectralCube(self.data[0][None, ...], wcs=self.wcs),
+            Q=SpectralCube(self.data[1][None, ...], wcs=self.wcs),
+            U=SpectralCube(self.data[2][None, ...], wcs=self.wcs),
+            V=SpectralCube(self.data[3][None, ...], wcs=self.wcs),
+        )
+        cube = StokesSpectralCube(stokes_data)
+        circ_cube = cube.transform_basis('Circular')
+        assert_allclose(circ_cube['RR'].unmasked_data[...], 7)
+        assert_allclose(circ_cube['RL'].unmasked_data[...], 1 + 1.5j)
+        assert_allclose(circ_cube['LR'].unmasked_data[...], 1 - 1.5j)
+        assert_allclose(circ_cube['LL'].unmasked_data[...], 3)
+
+    def test_transform_basis_incomplete(self):
+        stokes_data = dict(
+            XX=SpectralCube(self.data[0][None, ...], wcs=self.wcs),
+            YY=SpectralCube(self.data[1][None, ...], wcs=self.wcs),
+        )
+        cube = StokesSpectralCube(stokes_data)
+        with pytest.raises(NotImplementedError):
+            cube.transform_basis('Sky')
+
+    def test_transform_basis_noop(self):
+        stokes_data = dict(
+            I=SpectralCube(self.data[0][None, ...], wcs=self.wcs),
+            Q=SpectralCube(self.data[1][None, ...], wcs=self.wcs),
+            U=SpectralCube(self.data[2][None, ...], wcs=self.wcs),
+            V=SpectralCube(self.data[3][None, ...], wcs=self.wcs),
+        )
+        cube = StokesSpectralCube(stokes_data)
+        sky_cube = cube.transform_basis('Sky')
+        for k in stokes_data:
+            assert_allclose(sky_cube[k].unmasked_data[...], self.data["IQUV".index(k)][None, ...])
