@@ -50,7 +50,7 @@ Basic Usage
 
     # Combine with a mask
     from spectral_cube.masks import BooleanArrayMask
-    mask = BooleanArrayMask(np.random.rand(5, 5, 5) > 0.5, wcs=wcs)
+    mask = BooleanArrayMask(np.random.rand(1, 5, 5) > 0.5, wcs=wcs)
     masked_cube = cube.with_mask(mask)
 
 Supported Stokes Axes
