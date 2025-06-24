@@ -121,3 +121,4 @@ Advanced
    big_data.rst
    developing_with_spectralcube.rst
    api.rst
+   stokes.rst
