@@ -258,7 +258,7 @@ class TestStokesSpectralCubeTransformBasis:
         sky_cube = cube.transform_basis('Sky')
         assert_allclose(sky_cube['I'].unmasked_data[...], 7)
         assert_allclose(sky_cube['Q'].unmasked_data[...], 2.5)
-        assert_allclose(sky_cube['U'].unmasked_data[...], -0.5j)
+        assert_allclose(sky_cube['U'].unmasked_data[...], 0.5j)
         assert_allclose(sky_cube['V'].unmasked_data[...], 3)
 
     def test_sky_to_linear(self):
