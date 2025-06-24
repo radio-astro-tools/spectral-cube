@@ -54,30 +54,9 @@ class TestStokesSpectralCube():
     @pytest.mark.parametrize('component', VALID_STOKES_LIST)
     def test_valid_component_name(self, component, use_dask):
         # Register custom symbols if needed
-        custom_map = {
-            -9: StokesSymbol('RX', 'Custom RX'),
-            -10: StokesSymbol('RY', 'Custom RY'),
-            -11: StokesSymbol('LX', 'Custom LX'),
-            -12: StokesSymbol('LY', 'Custom LY'),
-            -13: StokesSymbol('XR', 'Custom XR'),
-            -14: StokesSymbol('XL', 'Custom XL'),
-            -15: StokesSymbol('YR', 'Custom YR'),
-            -16: StokesSymbol('YL', 'Custom YL'),
-            -17: StokesSymbol('PP', 'Custom PP'),
-            -18: StokesSymbol('PQ', 'Custom PQ'),
-            -19: StokesSymbol('QP', 'Custom QP'),
-            -20: StokesSymbol('QQ', 'Custom QQ'),
-            -21: StokesSymbol('RCircular', 'Custom RCircular'),
-            -22: StokesSymbol('LCircular', 'Custom LCircular'),
-            -23: StokesSymbol('Linear', 'Custom Linear'),
-            -24: StokesSymbol('Ptotal', 'Custom Ptotal'),
-            -25: StokesSymbol('Plinear', 'Custom Plinear'),
-            -26: StokesSymbol('PFtotal', 'Custom PFtotal'),
-            -27: StokesSymbol('PFlinear', 'Custom PFlinear'),
-            -28: StokesSymbol('Pangle', 'Custom Pangle'),
-        }
-        if component in [s.symbol for s in custom_map.values()]:
-            with custom_stokes_symbol_mapping(custom_map):
+        custom_stokes_map = getattr(StokesSpectralCube, '_custom_stokes_map', {})
+        if component in [s.symbol for s in custom_stokes_map.values()]:
+            with custom_stokes_symbol_mapping(custom_stokes_map):
                 stokes_data = {component: SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask)}
                 cube = StokesSpectralCube(stokes_data)
                 assert cube.components == [component]
