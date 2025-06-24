@@ -1,5 +1,6 @@
 import numpy as np
 
+from astropy.coordinates import StokesCoord, custom_stokes_symbol_mapping, StokesSymbol
 from astropy.io.registry import UnifiedReadWriteMethod
 from .io.core import StokesSpectralCubeRead, StokesSpectralCubeWrite
 from .spectral_cube import SpectralCube, BaseSpectralCube
@@ -7,15 +8,6 @@ from . import wcs_utils
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 
 __all__ = ['StokesSpectralCube']
-
-VALID_STOKES = ['I', 'Q', 'U', 'V', 'RR', 'LL', 'RL', 'LR', 'XX', 'XY', 'YX', 'YY', 
-                'RX', 'RY', 'LX', 'LY', 'XR', 'XL', 'YR', 'YL', 'PP', 'PQ', 'QP', 'QQ', 
-                'RCircular', 'LCircular', 'Linear', 'Ptotal', 'Plinear', 'PFtotal', 
-                'PFlinear', 'Pangle']
-STOKES_SKY = ['I','Q','U','V']
-STOKES_FEED_LINEAR = ['XX', 'XY', 'YX', 'YY']
-STOKES_FEED_CIRCULAR = ['RR', 'RL', 'LR', 'LL']
-STOKES_FEED_GENERIC = ['PP', 'PQ', 'QP', 'QQ']
 
 
 class StokesSpectralCube(object):
@@ -26,6 +18,29 @@ class StokesSpectralCube(object):
     component-specific masks.
     """
 
+    _custom_stokes_map = {
+        -9: StokesSymbol('RX', 'Custom RX'),
+        -10: StokesSymbol('RY', 'Custom RY'),
+        -11: StokesSymbol('LX', 'Custom LX'),
+        -12: StokesSymbol('LY', 'Custom LY'),
+        -13: StokesSymbol('XR', 'Custom XR'),
+        -14: StokesSymbol('XL', 'Custom XL'),
+        -15: StokesSymbol('YR', 'Custom YR'),
+        -16: StokesSymbol('YL', 'Custom YL'),
+        -17: StokesSymbol('PP', 'Custom PP'),
+        -18: StokesSymbol('PQ', 'Custom PQ'),
+        -19: StokesSymbol('QP', 'Custom QP'),
+        -20: StokesSymbol('QQ', 'Custom QQ'),
+        -21: StokesSymbol('RCircular', 'Custom RCircular'),
+        -22: StokesSymbol('LCircular', 'Custom LCircular'),
+        -23: StokesSymbol('Linear', 'Custom Linear'),
+        -24: StokesSymbol('Ptotal', 'Custom Ptotal'),
+        -25: StokesSymbol('Plinear', 'Custom Plinear'),
+        -26: StokesSymbol('PFtotal', 'Custom PFtotal'),
+        -27: StokesSymbol('PFlinear', 'Custom PFlinear'),
+        -28: StokesSymbol('Pangle', 'Custom Pangle'),
+    }
+
     def __init__(self, stokes_data, mask=None, meta=None, fill_value=None):
 
         self._stokes_data = stokes_data
@@ -34,8 +49,11 @@ class StokesSpectralCube(object):
 
         reference = tuple(stokes_data.keys())[0]
 
-        for component in stokes_data:
+        with custom_stokes_symbol_mapping(self._custom_stokes_map):
+            stokes_coord = StokesCoord(list(stokes_data.keys()))
+        
 
+        for component in stokes_data:
             if not isinstance(stokes_data[component], BaseSpectralCube):
                 raise TypeError("stokes_data should be a dictionary of "
                                 "SpectralCube objects")
@@ -45,31 +63,30 @@ class StokesSpectralCube(object):
                 raise ValueError("All spectral cubes in stokes_data "
                                  "should have the same WCS")
 
-            if component not in VALID_STOKES:
-                raise ValueError("Invalid Stokes component: {0} - should be one of I, Q, U, V, RR, LL, RL, LR, XX, XY, YX, YY, \
-                                 RX, RY, LX, LY, XR, XL, YR, YL, PP, PQ, QP, QQ, \
-                                 RCircular, LCircular, Linear, Ptotal, Plinear, PFtotal, PFlinear, Pangle".format(component))
 
             if stokes_data[component].shape != stokes_data[reference].shape:
                 raise ValueError("All spectral cubes should have the same shape")
 
         self._wcs = stokes_data[reference].wcs
         self._shape = stokes_data[reference].shape
+        self._stokes_coord = stokes_coord  
 
         if isinstance(mask, BooleanArrayMask):
             if not is_broadcastable_and_smaller(mask.shape, self._shape):
                 raise ValueError("Mask shape is not broadcastable to data shape:"
                                  " {0} vs {1}".format(mask.shape, self._shape))
 
-        if set(stokes_data).issubset(set(STOKES_SKY)):
+        # Use StokesCoord to determine stokes_type
+        stokes_symbols = set(self._stokes_coord.symbol)
+        if stokes_symbols.issubset({'I','Q','U','V'}):
             self._stokes_type = 'SKY_STOKES'
-        elif set(stokes_data).issubset(set(STOKES_FEED_LINEAR)):
+        elif stokes_symbols.issubset({'XX', 'XY', 'YX', 'YY'}):
             self._stokes_type = 'FEED_LINEAR'
-        elif set(stokes_data).issubset(set(STOKES_FEED_CIRCULAR)):
+        elif stokes_symbols.issubset({'RR', 'RL', 'LR', 'LL'}):
             self._stokes_type = 'FEED_CIRCULAR'
-        elif set(stokes_data).issubset(set(STOKES_FEED_GENERIC)):
+        elif stokes_symbols.issubset({'PP', 'PQ', 'QP', 'QQ'}):
             self._stokes_type = 'FEED_GENERIC'
-        elif set(stokes_data).issubset(set(VALID_STOKES)):
+        else:
             self._stokes_type = 'VALID_STOKES'
 
         self._mask = mask
@@ -110,11 +127,11 @@ class StokesSpectralCube(object):
         return self._wcs
 
     def __dir__(self):
-        return self.components + super(StokesSpectralCube, self).__dir__()
+        return self.components + list(super(StokesSpectralCube, self).__dir__())
 
     @property
     def components(self):
-        return list(self._stokes_data.keys())
+        return list(self._stokes_coord.symbol)
 
     @property
     def stokes_type(self):
@@ -170,8 +187,16 @@ class StokesSpectralCube(object):
                                  "%s vs %s" % (mask.shape, self.shape))
             mask = BooleanArrayMask(mask, self.wcs)
 
-        if self._mask is not None:
-            return self._new_cube_with(mask=self.mask & mask if inherit_mask else mask)
+        if inherit_mask:
+            if self.mask is not None and mask is not None:
+                combined_mask = self.mask & mask
+            elif self.mask is not None:
+                combined_mask = self.mask
+            elif mask is not None:
+                combined_mask = mask
+            else:
+                combined_mask = None
+            return self._new_cube_with(mask=combined_mask)
         else:
             return self._new_cube_with(mask=mask)
 
@@ -193,70 +218,93 @@ class StokesSpectralCube(object):
 
     def transform_basis(self, stokes_basis=''):
         """
-        The goal of this function is to transform the stokes basis of the cube to
-        the one specified if possible. In principle one needs at least two related
-        stokes of a given basis for the transformation to be possible. At this moment
-        we are limiting it to the cases where all four stokes parameters in a given
-        basis be available within the cube. The transformations are as follows
-        Linear to Sky
-        I = (XX + YY) / 2
-        Q = (XX - YY) / 2
-        U = (XY + YX) / 2
-        V = 1j(XY - YX) / 2
-
-        Circular to Sky
-        I = (RR + LL) / 2
-        Q = (RL + LR) / 2
-        U = 1j*(RL - LR) / 2
-        V = (RR - LL) / 2
+        Transform the Stokes basis of the cube to the one specified if possible.
+        Operates on the underlying data arrays, not SpectralCube objects.
+        This makes the operation very expensive, so it should be used with care.
         """
-        if self.shape[0] < 4:
+        if len(self._stokes_data) < 4:
             errmsg = "Transformation of a subset of Stokes axes is not yet supported."
-            errmsg_template = "Transformation from {} to {} is not yet supported."
-
             raise NotImplementedError(errmsg)
+
+        def get_data(key):
+            return self._stokes_data[key].unmasked_data[:]
+
+        def make_cube(array, template_key):
+            return SpectralCube(array, wcs=self._wcs, mask=self._stokes_data[template_key].mask)
+
+        if self.stokes_type == "FEED_LINEAR" and stokes_basis == "Sky":
+            XX = get_data('XX')
+            YY = get_data('YY')
+            XY = get_data('XY')
+            YX = get_data('YX')
+            I = (XX + YY) / 2
+            Q = (XX - YY) / 2
+            U = (XY + YX) / 2
+            V = -1j * (XY - YX) / 2
+            data = {
+                'I': make_cube(I, 'XX'),
+                'Q': make_cube(Q, 'XX'),
+                'U': make_cube(U, 'XX'),
+                'V': make_cube(V, 'XX'),
+            }
+        elif self.stokes_type == "FEED_CIRCULAR" and stokes_basis == "Sky":
+            RR = get_data('RR')
+            LL = get_data('LL')
+            RL = get_data('RL')
+            LR = get_data('LR')
+            I = (RR + LL) / 2
+            Q = (RL + LR) / 2
+            U = -1j * (RL - LR) / 2
+            V = (RR - LL) / 2
+            data = {
+                'I': make_cube(I, 'RR'),
+                'Q': make_cube(Q, 'RR'),
+                'U': make_cube(U, 'RR'),
+                'V': make_cube(V, 'RR'),
+            }
+        elif self.stokes_type == "SKY_STOKES" and stokes_basis == "Linear":
+            I = get_data('I')
+            Q = get_data('Q')
+            U = get_data('U')
+            V = get_data('V')
+            XX = (I + Q) / 2
+            YY = (I - Q) / 2
+            XY = (U + 1j * V) / 2  
+            YX = (U - 1j * V) / 2  
+            data = {
+                'XX': make_cube(XX, 'I'),
+                'XY': make_cube(XY, 'I'),
+                'YX': make_cube(YX, 'I'),
+                'YY': make_cube(YY, 'I'),
+            }
+        elif self.stokes_type == "SKY_STOKES" and stokes_basis == "Circular":
+            I = get_data('I')
+            Q = get_data('Q')
+            U = get_data('U')
+            V = get_data('V')
+            RR = (I + V) / 2
+            LL = (I - V) / 2
+            RL = (Q + 1j * U) / 2  
+            LR = (Q - 1j * U) / 2 
+            data = {
+                'RR': make_cube(RR, 'I'),
+                'RL': make_cube(RL, 'I'),
+                'LR': make_cube(LR, 'I'),
+                'LL': make_cube(LL, 'I'),
+            }
+        elif stokes_basis == "Sky" and self.stokes_type == "SKY_STOKES":
+            data = self._stokes_data
+        elif stokes_basis == "Linear" and self.stokes_type == "FEED_LINEAR":
+            data = self._stokes_data
+        elif stokes_basis == "Circular" and self.stokes_type == "FEED_CIRCULAR":
+            data = self._stokes_data
         elif stokes_basis == "Generic":
-            data =  self._stokes_data
-        elif self.stokes_type == "Linear":
-            if stokes_basis == "Circular":
-                errmsg = errmsg_template.format("Linear", "Circular")
-                raise NotImplementedError(errmsg)
-            elif stokes_basis == "Sky":
-                data = dict(I = self.__class__(self._stokes_data['XX'] + self._stokes_data['YY'], wcs = self.wcs, mask=self._mask['XX']&self._mask['YY']),
-                            Q = self.__class__(self._stokes_data['XX'] - self._stokes_data['YY'], wcs = self.wcs, mask=self._mask['XX']&self._mask['YY']),
-                            U = self.__class__(self._stokes_data['XY'] + self._stokes_data['YX'], wcs = self.wcs, mask=self._mask['XY']&self._mask['YX']),
-                            V = self.__class__(1j*(self._stokes_data['XY'] - self._stokes_data['YX']), wcs = self.wcs, mask=self._mask['XY']&self._mask['YX']))
-            elif stokes_basis == "Linear":
-                data = self._stokes_data
+            data = self._stokes_data
+        else:
+            errmsg = f"Transformation from {self.stokes_type} to {stokes_basis} is not yet supported."
+            raise NotImplementedError(errmsg)
 
-        elif self.stokes_type == "Circular":
-            if stokes_basis == "Linear":
-                errmsg = errmsg_template.format("Circular", "Linear")
-                raise NotImplementedError(errmsg)
-            elif stokes_basis == "Sky":
-                data = dict(I = self.__class__(self._stokes_data['RR'] + self._stokes_data['LL'], wcs = self.wcs, mask=self._mask['RR']&self._mask['LL']),
-                            Q = self.__class__(self._stokes_data['RL'] + self._stokes_data['RL'], wcs = self.wcs, mask=self._mask['RL']&self._mask['LR']),
-                            U = self.__class__(1j*(self._stokes_data['RL'] - self._stokes_data['LR']), wcs = self.wcs, mask=self._mask['RL']&self._mask['LR']),
-                            V = self.__class__(self._stokes_data['RR'] - self._stokes_data['LL'], wcs = self.wcs, mask=self._mask['RR']&self._mask['LL']))
-            elif stokes_basis == "Circular":
-                data = self._stokes_data
-
-        elif self.stokes_type == "Sky":
-            if stokes_basis == "Linear":
-                data = dict(XX = self.__class__(0.5*(self._stokes_data['I'] + self._stokes_data['Q']), wcs = self.wcs, mask=self._mask['I']&self._mask['Q']),
-                            XY = self.__class__(0.5*(self._stokes_data['U'] + 1j*self._stokes_data['V']), wcs = self.wcs, mask=self._mask['U']&self._mask['V']),
-                            YX = self.__class__(0.5*(self._stokes_data['U'] - 1j*self._stokes_data['V']), wcs = self.wcs, mask=self._mask['U']&self._mask['V']),
-                            YY = self.__class__(0.5*(self._stokes_data['I'] - self._stokes_data['Q']), wcs = self.wcs, mask=self._mask['I']&self._mask['Q']))
-            elif stokes_basis == "Circular":
-                data = dict(RR = self.__class__(0.5*(self._stokes_data['I'] + self._stokes_data['V']), wcs = self.wcs, mask=self._mask['I']&self._mask['V']),
-                            RL = self.__class__(0.5*(self._stokes_data['Q'] + 1j*self._stokes_data['U']), wcs = self.wcs, mask=self._mask['Q']&self._mask['U']),
-                            LR = self.__class__(0.5*(self._stokes_data['Q'] - 1j*self._stokes_data['U']), wcs = self.wcs, mask=self._mask['Q']&self._mask['U']),
-                            LL = self.__class__(0.5*(self._stokes_data['I'] - self._stokes_data['V']), wcs = self.wcs, mask=self._mask['I']&self._mask['V']))
-            elif stokes_basis == "Sky":
-                data = self._stokes_data        
-        return self._new_cube_with(stokes_data=data)
-        
-
+        return StokesSpectralCube(stokes_data=data, mask=self._mask, meta=self._meta, fill_value=self._fill_value)
     def with_spectral_unit(self, unit, **kwargs):
 
         stokes_data = {k: self._stokes_data[k].with_spectral_unit(unit, **kwargs)
