@@ -294,7 +294,7 @@ class StokesSpectralCube(object):
             RR = (I + V) / 2
             LL = (I - V) / 2
             RL = (Q + 1j * U) / 2  
-            LR = (Q - 1j * U) / 2  p
+            LR = (Q - 1j * U) / 2 
             data = {
                 'RR': make_cube(RR, 'I'),
                 'RL': make_cube(RL, 'I'),
