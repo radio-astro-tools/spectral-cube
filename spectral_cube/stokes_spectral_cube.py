@@ -52,11 +52,9 @@ class StokesSpectralCube(object):
 
         # Validate and map Stokes components using StokesCoord, with custom mapping
         # Only catch ValueError from StokesCoord, not all exceptions
-        try:
-            with custom_stokes_symbol_mapping(self._custom_stokes_map):
-                stokes_coord = StokesCoord(list(stokes_data.keys()))
-        except ValueError as e:
-            raise ValueError(f"Invalid Stokes components: {e}")
+        with custom_stokes_symbol_mapping(self._custom_stokes_map):
+            stokes_coord = StokesCoord(list(stokes_data.keys()))
+        
 
         for component in stokes_data:
             if not isinstance(stokes_data[component], BaseSpectralCube):
