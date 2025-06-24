@@ -18,7 +18,6 @@ class StokesSpectralCube(object):
     component-specific masks.
     """
 
-    # Custom stokes symbol mapping for non-standard symbols
     _custom_stokes_map = {
         -9: StokesSymbol('RX', 'Custom RX'),
         -10: StokesSymbol('RY', 'Custom RY'),
@@ -50,8 +49,6 @@ class StokesSpectralCube(object):
 
         reference = tuple(stokes_data.keys())[0]
 
-        # Validate and map Stokes components using StokesCoord, with custom mapping
-        # Only catch ValueError from StokesCoord, not all exceptions
         with custom_stokes_symbol_mapping(self._custom_stokes_map):
             stokes_coord = StokesCoord(list(stokes_data.keys()))
         
@@ -134,7 +131,6 @@ class StokesSpectralCube(object):
 
     @property
     def components(self):
-        # Return the Stokes symbols using StokesCoord
         return list(self._stokes_coord.symbol)
 
     @property
@@ -230,15 +226,12 @@ class StokesSpectralCube(object):
             errmsg = "Transformation of a subset of Stokes axes is not yet supported."
             raise NotImplementedError(errmsg)
 
-        # Helper to extract data arrays
         def get_data(key):
             return self._stokes_data[key].unmasked_data[:]
 
-        # Helper to create SpectralCube from array
         def make_cube(array, template_key):
             return SpectralCube(array, wcs=self._wcs, mask=self._stokes_data[template_key].mask)
 
-        # Transformations
         if self.stokes_type == "FEED_LINEAR" and stokes_basis == "Sky":
             XX = get_data('XX')
             YY = get_data('YY')
