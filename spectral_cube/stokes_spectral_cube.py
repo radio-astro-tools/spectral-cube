@@ -51,10 +51,11 @@ class StokesSpectralCube(object):
         reference = tuple(stokes_data.keys())[0]
 
         # Validate and map Stokes components using StokesCoord, with custom mapping
+        # Only catch ValueError from StokesCoord, not all exceptions
         try:
             with custom_stokes_symbol_mapping(self._custom_stokes_map):
                 stokes_coord = StokesCoord(list(stokes_data.keys()))
-        except Exception as e:
+        except ValueError as e:
             raise ValueError(f"Invalid Stokes components: {e}")
 
         for component in stokes_data:
@@ -67,14 +68,13 @@ class StokesSpectralCube(object):
                 raise ValueError("All spectral cubes in stokes_data "
                                  "should have the same WCS")
 
-            # Validation is now handled by StokesCoord above
 
             if stokes_data[component].shape != stokes_data[reference].shape:
                 raise ValueError("All spectral cubes should have the same shape")
 
         self._wcs = stokes_data[reference].wcs
         self._shape = stokes_data[reference].shape
-        self._stokes_coord = stokes_coord  # Store StokesCoord instance
+        self._stokes_coord = stokes_coord  
 
         if isinstance(mask, BooleanArrayMask):
             if not is_broadcastable_and_smaller(mask.shape, self._shape):
@@ -132,7 +132,6 @@ class StokesSpectralCube(object):
         return self._wcs
 
     def __dir__(self):
-        # Fix: super().__dir__() returns an iterable, convert to list
         return self.components + list(super(StokesSpectralCube, self).__dir__())
 
     @property
@@ -227,6 +226,7 @@ class StokesSpectralCube(object):
         """
         Transform the Stokes basis of the cube to the one specified if possible.
         Operates on the underlying data arrays, not SpectralCube objects.
+        This makes the operation very expensive, so it should be used with care.
         """
         if len(self._stokes_data) < 4:
             errmsg = "Transformation of a subset of Stokes axes is not yet supported."
@@ -272,15 +272,14 @@ class StokesSpectralCube(object):
                 'V': make_cube(V, 'RR'),
             }
         elif self.stokes_type == "SKY_STOKES" and stokes_basis == "Linear":
-            # Sky (I,Q,U,V) to Linear (XX, XY, YX, YY) with 1/2 factor and correct sign
             I = get_data('I')
             Q = get_data('Q')
             U = get_data('U')
             V = get_data('V')
             XX = (I + Q) / 2
             YY = (I - Q) / 2
-            XY = (U + 1j * V) / 2  # sign flip
-            YX = (U - 1j * V) / 2  # sign flip
+            XY = (U + 1j * V) / 2  
+            YX = (U - 1j * V) / 2  
             data = {
                 'XX': make_cube(XX, 'I'),
                 'XY': make_cube(XY, 'I'),
@@ -288,15 +287,14 @@ class StokesSpectralCube(object):
                 'YY': make_cube(YY, 'I'),
             }
         elif self.stokes_type == "SKY_STOKES" and stokes_basis == "Circular":
-            # Sky (I,Q,U,V) to Circular (RR, RL, LR, LL) with 1/2 factor and correct sign
             I = get_data('I')
             Q = get_data('Q')
             U = get_data('U')
             V = get_data('V')
             RR = (I + V) / 2
             LL = (I - V) / 2
-            RL = (Q + 1j * U) / 2  # sign flip
-            LR = (Q - 1j * U) / 2  # sign flip
+            RL = (Q + 1j * U) / 2  
+            LR = (Q - 1j * U) / 2  p
             data = {
                 'RR': make_cube(RR, 'I'),
                 'RL': make_cube(RL, 'I'),
