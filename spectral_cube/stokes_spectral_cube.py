@@ -240,7 +240,7 @@ class StokesSpectralCube(object):
             I = (XX + YY) / 2
             Q = (XX - YY) / 2
             U = (XY + YX) / 2
-            V = 1j * (XY - YX) / 2
+            V = -1j * (XY - YX) / 2
             data = {
                 'I': make_cube(I, 'XX'),
                 'Q': make_cube(Q, 'XX'),
