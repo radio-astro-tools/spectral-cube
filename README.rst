@@ -11,8 +11,6 @@ readthedocs.org <http://spectral-cube.rtfd.org>`__.
 .. figure:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
    :alt: Powered by Astropy Badge
 
-   Powered by Astropy Badge
-
 Credits
 =======
 
