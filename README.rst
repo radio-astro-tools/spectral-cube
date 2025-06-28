@@ -8,8 +8,7 @@ analysis of spectral data cubes. More information is available in the
 documentation, avaliable `online at
 readthedocs.org <http://spectral-cube.rtfd.org>`__.
 
-.. figure:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
-   :alt: Powered by Astropy Badge
+
 
 Credits
 =======
@@ -28,11 +27,13 @@ Original development included substantial contributions from:
 Build and coverage status
 =========================
 
-|Coverage Status| |DOI|
+|Build Status| |Coverage Status| |DOI| |Powered by Astropy|
 
-.. |Join the chat at https://gitter.im/radio-astro-tools/spectral-cube| image:: https://badges.gitter.im/Join%20Chat.svg
-   :target: https://gitter.im/radio-astro-tools/spectral-cube?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 .. |Coverage Status| image:: https://coveralls.io/repos/radio-astro-tools/spectral-cube/badge.svg?branch=master
    :target: https://coveralls.io/r/radio-astro-tools/spectral-cube?branch=master
 .. |DOI| image:: https://zenodo.org/badge/doi/10.5281/zenodo.11485.svg
    :target: http://dx.doi.org/10.5281/zenodo.11485
+.. |Powered by Astropy| image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
+   :target: https://www.astropy.org/
+.. |Build Status| image:: https://github.com/radio-astro-tools/spectral-cube/actions/workflows/main.yml/badge.svg
+   :target: https://github.com/radio-astro-tools/spectral-cube/actions/workflows/main.yml
