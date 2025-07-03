@@ -133,3 +133,20 @@ class NoBeamError(Exception):
 
 class BeamUnitsError(Exception):
     pass
+
+
+class ArrayWrapper:
+
+    # If dask's asarray or from_array are given a Numpy array, including a
+    # memory-mapped one, it will copy the data since dask 2024.12.0. To get
+    # around this, we create a thin wrapper which hides the nature of the
+    # underlying array.
+
+    def __init__(self, array):
+        self._array = array
+        self.ndim = array.ndim
+        self.shape = array.shape
+        self.dtype = array.dtype
+
+    def __getitem__(self, item):
+        return self._array[item]

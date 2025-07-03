@@ -26,7 +26,7 @@ from astropy import wcs
 
 from . import wcs_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
-from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError, PossiblySlowWarning
+from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError, PossiblySlowWarning, ArrayWrapper
 from .lower_dimensional_structures import Projection
 from .masks import BooleanArrayMask, is_broadcastable_and_smaller
 from .np_compat import allbadtonan
@@ -1206,7 +1206,7 @@ class DaskSpectralCubeMixin:
                       'is incorrect, so use the result with caution', UserWarning)
 
         data = self._get_filled_data(fill=self._fill_value)
-        mask = da.asarray(self.mask.include(), name=str(uuid.uuid4()))
+        mask = da.from_array(ArrayWrapper(self.mask.include()), name=str(uuid.uuid4()))
 
         if not truncate and data.shape[axis] % factor != 0:
             padding_shape = list(data.shape)
@@ -1357,23 +1357,6 @@ class DaskSpectralCubeMixin:
         return newcube
 
 
-class ArrayWrapper:
-
-    # If dask's asarray or from_array are given a Numpy array, including a
-    # memory-mapped one, it will copy the data since dask 2024.12.0. To get
-    # around this, we create a thin wrapper which hides the nature of the
-    # underlying array.
-
-    def __init__(self, array):
-        self._array = array
-        self.ndim = array.ndim
-        self.shape = array.shape
-        self.dtype = array.dtype
-
-    def __getitem__(self, item):
-        return self._array[item]
-
-
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
     def __init__(self, data, *args, **kwargs):
@@ -1474,7 +1457,7 @@ class DaskVaryingResolutionSpectralCube(DaskSpectralCubeMixin, VaryingResolution
                 data, unit = data.value, data.unit
             # NOTE: don't be tempted to chunk this image-wise (following the
             # data storage) because spectral operations will take forever.
-            data = da.asarray(data, name=str(uuid.uuid4()))
+            data = da.from_array(ArrayWrapper(data), name=str(uuid.uuid4()))
         super().__init__(data, *args, **kwargs)
         if self._unit is None and unit is not None:
             self._unit = unit

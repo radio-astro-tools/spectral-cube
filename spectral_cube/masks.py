@@ -12,7 +12,7 @@ from astropy.wcs import InconsistentAxisTypesError
 from astropy.io import fits
 
 from . import wcs_utils
-from .utils import WCSWarning
+from .utils import WCSWarning, ArrayWrapper
 
 
 __all__ = ['MaskBase', 'InvertedMask', 'CompositeMask', 'BooleanArrayMask',
@@ -187,7 +187,7 @@ class MaskBase(object):
 
         # Workaround for https://github.com/dask/dask/issues/6089
         if isinstance(data, da.Array) and not isinstance(mask, da.Array):
-            mask = da.asarray(mask, name=str(uuid.uuid4()))
+            mask = da.from_array(ArrayWrapper(mask), name=str(uuid.uuid4()))
 
         # if not isinstance(data, da.Array) and isinstance(mask, da.Array):
         #     mask = mask.compute()
