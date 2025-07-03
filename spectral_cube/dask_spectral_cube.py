@@ -1357,6 +1357,23 @@ class DaskSpectralCubeMixin:
         return newcube
 
 
+class ArrayWrapper:
+
+    # If dask's asarray or from_array are given a Numpy array, including a
+    # memory-mapped one, it will copy the data since dask 2024.12.0. To get
+    # around this, we create a thin wrapper which hides the nature of the
+    # underlying array.
+
+    def __init__(self, array):
+        self._array = array
+        self.ndim = array.ndim
+        self.shape = array.shape
+        self.dtype = array.dtype
+
+    def __getitem__(self, item):
+        return self._array[item]
+
+
 class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
 
     def __init__(self, data, *args, **kwargs):
@@ -1366,7 +1383,7 @@ class DaskSpectralCube(DaskSpectralCubeMixin, SpectralCube):
                 data, unit = data.value, data.unit
             # NOTE: don't be tempted to chunk this image-wise (following the
             # data storage) because spectral operations will take forever.
-            data = da.asarray(data, name=str(uuid.uuid4()))
+            data = da.from_array(ArrayWrapper(data), name=str(uuid.uuid4()))
         super().__init__(data, *args, **kwargs)
         if self._unit is None and unit is not None:
             self._unit = unit
