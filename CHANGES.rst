@@ -4,6 +4,8 @@
   memory.  Dask 'slow' warnings are now limited to the necessarily single-
   stream examples: median, percentile, and mad_std. #929
 
+- Fixed compatibility with dask>=2024.12.0 #968
+
 0.6.5 (2023-12-05)
 ----------------------
 - Fixed issue with fix from #893 not getting included in the 0.6.4 tag
