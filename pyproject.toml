@@ -107,6 +107,8 @@ filterwarnings = [
     "error::DeprecationWarning",
     # Triggered in radio-beam as a DeprecationWarning or with newer Python as a SyntaxWarning
     "ignore:invalid escape sequence",
+    # Triggered because Matplotlib uses deprecated PIL API
+    "ignore:'mode' parameter is deprecated"
 ]
 
 [tool.coverage.run]
