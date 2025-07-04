@@ -335,11 +335,16 @@ LARGE_HEADER = (
 )
 
 
-@pytest.mark.limit_memory("3 GB")
 def test_lazy_data_loading(tmp_path):
 
     # Regression test to make sure that DaskSpectralCube does not load all
-    # the data into memory.
+    # the data into memory. Measuring memory usage is difficult however since
+    # dask will have some cache and Numpy might allocate memory for memory-mapped
+    # arrays in some cases, so instead we check that the cube reading is fast,
+    # since when it copies the memory it is also usually slow. At the time of
+    # writing, if dask does not copy the data, reading takes around 10-20ms
+    # on average hardware, versus more than a second if the data is actually
+    # loaded.
 
     data_chunk = b'?\xf0\x00\x00\x00\x00\x00\x00' * 1024**2
 
@@ -356,11 +361,8 @@ def test_lazy_data_loading(tmp_path):
         c = SpectralCube.read(tmp_path / 'cube.fits', use_dask=True)
         time2 = time.time()
 
-        # Loading a FITS cube should be very fast since we shouldn't be loading
-        # the data into memory. If we do, then this slows things down a bit, so
-        # we can check that the reading is happening fast.
         if time2 - time1 > 0.1:
-            raise Exception(f"Reading large spectral cube took too long ({time2-time1:.1f}s)")
+            raise Exception(f"Reading large spectral cube took too long ({time2-time1:.3f}s)")
 
         assert str(c).splitlines()[0] == "DaskSpectralCube with shape=(1024, 1024, 1024) and chunk size (255, 255, 255):"
 
