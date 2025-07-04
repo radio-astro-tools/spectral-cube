@@ -1,14 +1,18 @@
 # Tests specific to the dask class
 
 import os
+import time
 import pytest
 import numpy as np
 from unittest.mock import patch
 
+from dask import array as da
 from numpy.testing import assert_allclose
 from astropy.tests.helper import assert_quantity_allclose
 from astropy import units as u
 from astropy.utils import data
+from astropy.wcs import WCS
+from astropy.io import fits
 
 try:
     from distributed.utils_test import client, loop, cluster_fixture, cleanup, loop_in_thread  # noqa
@@ -298,3 +302,68 @@ if DISTRIBUTED_INSTALLED:
         cube.use_dask_scheduler(client)
 
         cube.sigma_clip_spectrally(2, save_to_tmp_dir=tmpdir.strpath)
+
+
+LARGE_HEADER = (
+    b"SIMPLE  =                    T / conforms to FITS standard                      "
+    b"BITPIX  =                  -64 / array data type                                "
+    b"NAXIS   =                    3 / number of array dimensions                     "
+    b"NAXIS1  =                 1024                                                  "
+    b"NAXIS2  =                 1024                                                  "
+    b"NAXIS3  =                 1024                                                  "
+    b"WCSAXES =                    3 / Number of coordinate axes                      "
+    b"CRPIX1  =               5520.0 / Pixel coordinate of reference point            "
+    b"CRPIX2  =               2247.6 / Pixel coordinate of reference point            "
+    b"CDELT1  =    -1.3888888888E-04 / [deg] Coordinate increment at reference point  "
+    b"CDELT2  =     1.3888888888E-04 / [deg] Coordinate increment at reference point  "
+    b"CUNIT1  = 'deg'                / Units of coordinate increment and value        "
+    b"CUNIT2  = 'deg'                / Units of coordinate increment and value        "
+    b"CTYPE1  = 'GLON-TAN'           / galactic longitude, gnomonic projection        "
+    b"CTYPE2  = 'GLAT-TAN'           / galactic latitude, gnomonic projection         "
+    b"CRVAL1  =     0.14269592527521 / [deg] Coordinate value at reference point      "
+    b"CRVAL2  =                  0.0 / [deg] Coordinate value at reference point      "
+    b"LONPOLE =                180.0 / [deg] Native longitude of celestial pole       "
+    b"LATPOLE =                  0.0 / [deg] Native latitude of celestial pole        "
+    b"CDELT3  =            1.4844932                                                  "
+    b"CUNIT3  = 'km/s    '                                                            "
+    b"CRVAL3  =                    0                                                  "
+    b"CRPIX3  =                  175                                                  "
+    b"CTYPE3  = 'VRAD    '                                                            "
+    b"RESTFRQ =        97980953300.0                                                  "
+    b"SPECSYS = 'LSRK    '                                                            "
+    b"END"
+)
+
+
+@pytest.mark.limit_memory("3 GB")
+def test_lazy_data_loading(tmp_path):
+
+    # Regression test to make sure that DaskSpectralCube does not load all
+    # the data into memory.
+
+    data_chunk = b'?\xf0\x00\x00\x00\x00\x00\x00' * 1024**2
+
+    header = LARGE_HEADER + b' ' * (2880 - len(LARGE_HEADER))
+
+    with open(tmp_path / 'cube.fits', 'wb') as f:
+        f.write(header)
+        for i in range(1024):
+            f.write(data_chunk)
+
+    try:
+
+        time1 = time.time()
+        c = SpectralCube.read(tmp_path / 'cube.fits', use_dask=True)
+        time2 = time.time()
+
+        # Loading a FITS cube should be very fast since we shouldn't be loading
+        # the data into memory. If we do, then this slows things down a bit, so
+        # we can check that the reading is happening fast.
+        if time2 - time1 > 0.1:
+            raise Exception(f"Reading large spectral cube took too long ({time2-time1:.1f}s)")
+
+        assert str(c).splitlines()[0] == "DaskSpectralCube with shape=(1024, 1024, 1024) and chunk size (255, 255, 255):"
+
+    finally:
+
+        os.remove(tmp_path / 'cube.fits')

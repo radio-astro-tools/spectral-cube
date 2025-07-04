@@ -56,6 +56,7 @@ test = [
   "numpy>=1.24",
   "pytest-astropy>=0.10",
   "pytest-cov>=3",
+  "pytest-memray>=1.4.0",
   "regions>=0.7",
   "zarr>=2.12,<3",        # Unpin if updated. See issue #936
 ]
