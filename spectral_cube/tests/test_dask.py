@@ -368,4 +368,7 @@ def test_lazy_data_loading(tmp_path):
 
     finally:
 
-        os.remove(tmp_path / 'cube.fits')
+        try:
+            os.remove(tmp_path / 'cube.fits')
+        except Exception:
+            pass
