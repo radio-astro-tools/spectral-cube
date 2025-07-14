@@ -3327,11 +3327,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         Convolve each channel in the cube to a specified beam
 
-        .. warning::
-            The current implementation of ``convolve_to`` creates an in-memory
-            copy of the whole cube to store the convolved data.  Issue #506
-            notes that this is a problem, and it is on our to-do list to fix.
-
         Parameters
         ----------
         beam : `radio_beam.Beam`
@@ -3344,7 +3339,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
-            Keyword arguments to pass to the convolution function
+            Keyword arguments to pass to `~SpectralCube.apply_function_parallel_spatial` and
+            the convolution function.
 
         Returns
         -------

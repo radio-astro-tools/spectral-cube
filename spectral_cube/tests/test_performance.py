@@ -22,6 +22,7 @@ from ..spectral_cube import SpectralCube
 from . import utilities
 
 from astropy import convolution, units as u
+from radio_beam import Beam
 
 WINDOWS = sys.platform == "win32"
 
@@ -73,9 +74,13 @@ def test_pix_cen():
     assert find_base_nbytes(x) == sc.shape[1]*sc.shape[2]*bytes_per_pix
 
 
-@pytest.mark.skipif('True')
+# @pytest.mark.skipif('True')
 def test_parallel_performance_smoothing():
 
+    """
+    Test parallel performance of spectral_smooth by timing different
+    num_cores options with memmap=False and memmap=True.
+    """
     import timeit
 
     setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,64,64))'
@@ -124,6 +129,45 @@ def test_parallel_performance_smoothing():
             print()
             print("memmap=True shape={0}".format(shape))
             print(rslt)
+
+
+# @pytest.mark.skipif('True')
+def test_parallel_performance_spatial_smoothing():
+
+    """
+    Test parallel performance of spectral_smooth by timing different
+    num_cores options with memmap=False and memmap=True.
+    """
+    import timeit
+    from radio_beam import Beam
+
+    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,64,64))'
+    stmt = 'result = cube.convolve_to(Beam(cube.beam.major * 1.1), num_cores={0}, use_memmap=False)'
+
+    rslt = {}
+    for ncores in (1,2,3,4):
+        time = timeit.timeit(stmt=stmt.format(ncores), setup=setup, number=5, globals=globals())
+        rslt[ncores] = time
+
+    print()
+    print("memmap=False")
+    print(rslt)
+
+    setup = 'cube,_ = utilities.generate_gaussian_cube(shape=(300,64,64))'
+    stmt = 'result = cube.convolve_to(Beam(cube.beam.major * 1.1), num_cores={0}, use_memmap=True)'
+
+    rslt = {}
+    for ncores in (1,2,3,4):
+        time = timeit.timeit(stmt=stmt.format(ncores), setup=setup, number=5, globals=globals())
+        rslt[ncores] = time
+
+    stmt = 'result = cube.convolve_to(Beam(cube.beam.major * 1.1), num_cores={0}, use_memmap=True, parallel=False)'
+    rslt[0] = timeit.timeit(stmt=stmt.format(1), setup=setup, number=5, globals=globals())
+
+    print()
+    print("memmap=True")
+    print(rslt)
+
 
 @pytest.mark.skipif('not tracemallocOK or WINDOWS')
 def test_memory_usage():
