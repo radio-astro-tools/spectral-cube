@@ -2179,8 +2179,7 @@ def test_convolve_to_equal_parallel(data_vda):
     for ncores in (1,2,3,4):
         convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
                                      num_cores=ncores,
-                                     use_memmap=True,
-                                     verbose=2)
+                                     use_memmap=True)
 
         convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
                                      num_cores=ncores,
