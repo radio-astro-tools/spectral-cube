@@ -2898,6 +2898,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       parallel=False,
                                       memmap_dir=None,
                                       update_function=None,
+                                      update_size=None,
                                       **kwargs
                                      ):
         """
@@ -2935,6 +2936,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             It should not accept any arguments.  For example, this can be
             ``Progressbar.update`` or some function that prints a status
             report.  The function *must* be picklable if ``parallel==True``.
+        update_size : int, str or None
+            The number of iterations between calls to ``update_function``. If 'spatial', defaults to ``self.shape[0]``.
+            If 'spectral', defaults to ``self.shape[1]*self.shape[2]``.
         kwargs : dict
             Passed to ``function``
         """
@@ -3020,7 +3024,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if update_function is not None:
                 pbu = update_function
             elif verbose > 0:
-                progressbar = ProgressBar(self.shape[1]*self.shape[2], desc='Apply parallel: ')
+                if update_size == 'spatial':
+                    progressbar = ProgressBar(self.shape[0], desc='Apply parallel: ')
+                    pbu = progressbar.update
+                elif update_size == 'spectral':
+                    progressbar = ProgressBar(self.shape[1]*self.shape[2], desc='Apply parallel: ')
+                elif isinstance(update_size, int):
+                    progressbar = ProgressBar(update_size, desc='Apply parallel: ')
+                elif update_size is None:
+                    # TODO: make this smarter. Defaults to the max which is the spectral case.
+                    progressbar = ProgressBar(self.shape[1]*self.shape[2], desc='Apply parallel: ')
+                else:
+                    raise ValueError("update_size must be 'spatial', 'spectral', or an integer")
                 pbu = progressbar.update
             else:
                 pbu = object
@@ -3089,6 +3104,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   parallel=parallel,
                                                   num_cores=num_cores,
                                                   use_memmap=use_memmap,
+                                                  update_size='spatial',
                                                   **kwargs)
 
     def apply_function_parallel_spectral(self,
@@ -3146,6 +3162,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   parallel=parallel,
                                                   verbose=verbose,
                                                   num_cores=num_cores,
+                                                  update_size='spectral',
                                                   **kwargs
                                                  )
 
