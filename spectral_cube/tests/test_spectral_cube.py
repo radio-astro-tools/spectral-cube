@@ -2168,6 +2168,25 @@ def test_convolve_to_equal(data_vda, use_dask):
     convolved = plane.convolve_to(cube.beam, nan_treatment='fill')
 
 
+def test_convolve_to_equal_parallel(data_vda):
+
+    pytest.importorskip('joblib')
+
+    from radio_beam import Beam
+
+    cube, data = cube_and_raw(data_vda, use_dask=False)
+
+    for ncores in (1,2,3,4):
+        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                     num_cores=ncores,
+                                     use_memmap=True,
+                                     verbose=2)
+
+        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                     num_cores=ncores,
+                                     use_memmap=False)
+
+
 def test_convolve_to(data_vda_beams, use_dask):
     cube, data = cube_and_raw(data_vda_beams, use_dask=use_dask)
 
