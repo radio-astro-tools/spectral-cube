@@ -2931,6 +2931,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         parallel : bool
             If set to ``False``, will force the use of a single thread instead
             of using ``joblib``.
+        memmap_dir : str
+            The directory to use for memory mapped files.
         update_function : function
             A callback function to call on each iteration of the application.
             It should not accept any arguments.  For example, this can be
@@ -3025,8 +3027,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     warnings.warn("Could not import joblib.  Will run in serial.",
                                   warnings.ImportWarning)
                 parallel = False
-
-        print(f"Parallel: {parallel}, Memmap: {use_memmap}")
 
         # this isn't an else statement because we want to catch the case where
         # the above clause fails on ImportError
