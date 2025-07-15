@@ -131,7 +131,7 @@ in memory.::
 
 
 Specifying temporary file directory
-----------------------------------
+-----------------------------------
 
 By default, spectral-cube uses memory-mapped arrays to store intermediate results, which are saved
 in the system's temporary directory. Some systems may have limited space for temporary files, however.
