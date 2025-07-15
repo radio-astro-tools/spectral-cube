@@ -2148,6 +2148,9 @@ def test_mask_bad_beams(filename, use_dask):
 
 
 def test_convolve_to_equal(data_vda, use_dask):
+    '''
+    No convolution should be applied when the beams are the same.
+    '''
 
     cube, data = cube_and_raw(data_vda, use_dask=use_dask)
 
@@ -2168,7 +2171,7 @@ def test_convolve_to_equal(data_vda, use_dask):
     convolved = plane.convolve_to(cube.beam, nan_treatment='fill')
 
 
-def test_convolve_to_equal_parallel(data_vda):
+def test_convolve_to_parallel(data_vda):
 
     pytest.importorskip('joblib')
 
@@ -2181,9 +2184,12 @@ def test_convolve_to_equal_parallel(data_vda):
                                      num_cores=ncores,
                                      use_memmap=True)
 
-        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
-                                     num_cores=ncores,
-                                     use_memmap=False)
+    # No parallel without memmap
+    ncores = 2
+    with pytest.warns(UserWarning, match="parallel=True and use_memmap=False was specified"):
+            convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                         num_cores=ncores,
+                                         use_memmap=False)
 
 
 def test_convolve_to(data_vda_beams, use_dask):

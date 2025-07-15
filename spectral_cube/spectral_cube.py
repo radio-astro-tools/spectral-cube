@@ -2967,6 +2967,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                              "options.  Either specify num_cores=1 or "
                              "parallel=True")
 
+        if parallel and not use_memmap:
+            # it is not possible to run joblib parallelization without memmap
+            warnings.warn("parallel=True and use_memmap=False was specified "
+                          "but joblib parallelization cannot be used without memmap. "
+                          "Task will be run without parallelization. Please use the dask "
+                          "backend for parallelization.")
+            parallel = False
+
         if parallel and use_memmap:
 
             # it is not possible to run joblib parallelization without memmap
@@ -3017,6 +3025,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                     warnings.warn("Could not import joblib.  Will run in serial.",
                                   warnings.ImportWarning)
                 parallel = False
+
+        print(f"Parallel: {parallel}, Memmap: {use_memmap}")
 
         # this isn't an else statement because we want to catch the case where
         # the above clause fails on ImportError
