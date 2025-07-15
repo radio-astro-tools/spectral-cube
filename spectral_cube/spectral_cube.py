@@ -119,6 +119,15 @@ num_cores : int or None
 use_memmap : bool
     If specified, a memory mapped temporary file on disk will be
     written to rather than storing the intermediate spectra in memory.
+memmap_dir : str or None
+    If specified, a memory mapped temporary file on disk will be
+    written to this directory.
+verbose : int
+    Verbosity level to pass to joblib
+
+
+See ``~BaseSpectralCube.apply_function_parallel_base`` for more information.
+
 """
 
 
@@ -2888,7 +2897,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                      use_memmap=use_memmap,
                                                      **kwargs)
 
-    def _apply_function_parallel_base(self,
+    def apply_function_parallel_base(self,
                                       iteration_data,
                                       function,
                                       applicator,
@@ -2905,6 +2914,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         Apply a function in parallel using the ``applicator`` function.  The
         function will be performed on data with masked values replaced with the
         cube's fill value.
+
+        .. note::
+            This function should not be called directly and is included for documentation purposes.
+            See ``apply_function_parallel_spatial`` and ``apply_function_parallel_spectral``.
 
         Parameters
         ----------
@@ -3016,9 +3029,17 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                      Callback_Backend,
                                                      make_default=True)
 
+                # import sys
+                # for i, arg in enumerate(iteration_data):
+                #     print(f"Channel {i}")
+                #     for this_arg in arg:
+                #         print(sys.getsizeof(this_arg))
+
+                # print(argh)
+
                 Parallel(n_jobs=num_cores,
                          verbose=verbose,
-                         max_nbytes=None)(delayed(applicator)(arg, outcube,
+                         max_nbytes='1M')(delayed(applicator)(arg, outcube,
                                                               function,
                                                               **kwargs)
                                           for arg in iteration_data)
@@ -3094,7 +3115,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             If set to ``False``, will force the use of a single core without
             using ``joblib``.
         kwargs : dict
-            Passed to ``function``
+            Passed to ``function`` and ``apply_function_parallel_base``
         """
         shape = self.shape
 
@@ -3108,7 +3129,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                    )
                   for ii in range(shape[0]))
 
-        return self._apply_function_parallel_base(images, function,
+        return self.apply_function_parallel_base(images, function,
                                                   applicator=_apply_spatial_function,
                                                   verbose=verbose,
                                                   parallel=parallel,
@@ -3165,7 +3186,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                    for jj in range(shape[1])
                    for ii in range(shape[2]))
 
-        return self._apply_function_parallel_base(iteration_data=spectra,
+        return self.apply_function_parallel_base(iteration_data=spectra,
                                                   function=function,
                                                   applicator=_apply_spectral_function,
                                                   use_memmap=use_memmap,
