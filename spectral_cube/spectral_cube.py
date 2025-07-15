@@ -3029,14 +3029,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                      Callback_Backend,
                                                      make_default=True)
 
-                # import sys
-                # for i, arg in enumerate(iteration_data):
-                #     print(f"Channel {i}")
-                #     for this_arg in arg:
-                #         print(sys.getsizeof(this_arg))
-
-                # print(argh)
-
                 Parallel(n_jobs=num_cores,
                          verbose=verbose,
                          max_nbytes='1M')(delayed(applicator)(arg, outcube,
