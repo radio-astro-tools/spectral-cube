@@ -3124,7 +3124,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # the huge flag. See Issue #971.
         orig_huge_flag = copy.copy(self.disable_huge_flag)
 
-        self.disable_huge_flag = False
+        self.disable_huge_flag = True
 
         # 'images' is a generator
         # the boolean check will skip the function for bad spectra
@@ -3189,7 +3189,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # the huge flag. See Issue #971.
         orig_huge_flag = copy.copy(self.disable_huge_flag)
 
-        self.disable_huge_flag = False
+        self.disable_huge_flag = True
 
         # 'spectra' is a generator
         # the boolean check will skip the function for bad spectra
