@@ -197,6 +197,46 @@ def test_restore_huge_flag(data_vda_jybeam_lower, use_dask):
         del cube
 
 
+
+def test_regression_971(data_vda, use_dask):
+    """
+    Issue 971: ensure joblib does not use huge flag
+
+    Note that dask should be independent of this issue. We include it here to
+    make sure it doesn't cause other issues.
+    """
+
+    pytest.importorskip('joblib')
+
+    from radio_beam import Beam
+
+    cube, data = cube_and_raw(data_vda, use_dask=False)
+
+    cube.allow_huge_operations = True
+
+    convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                    num_cores=2,
+                                    use_memmap=True)
+
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+    cube_utils.MEMORY_THRESHOLD = 10
+
+    convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                    num_cores=2,
+                                    use_memmap=True)
+
+    assert cube._is_huge
+
+    cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+    del cube
+
+
+
+
 class BaseTest(object):
 
     @pytest.fixture(autouse=True)
@@ -2895,39 +2935,3 @@ def test_unitless_comparison(data_adv, use_dask):
 
     # do a comparison to verify that no error occurs
     mask = cube > 1
-
-
-def test_regression_971(data_vda, use_dask):
-    """
-    Issue 971: ensure joblib does not use huge flag
-
-    Note that dask should be independent of this issue. We include it here to
-    make sure it doesn't cause other issues.
-    """
-
-    pytest.importorskip('joblib')
-
-    from radio_beam import Beam
-
-    cube, data = cube_and_raw(data_vda, use_dask=False)
-
-    cube.allow_huge_operations = True
-
-    # We need to reduce the memory threshold rather than use a large cube to
-    # make sure we don't use too much memory during testing.
-    from .. import cube_utils
-    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
-
-    try:
-        cube_utils.MEMORY_THRESHOLD = 10
-
-        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
-                                     num_cores=2,
-                                     use_memmap=True)
-
-        assert cube._is_huge
-
-    finally:
-        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
-        del cube
-
