@@ -3143,7 +3143,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   update_size='spatial',
                                                   **kwargs)
 
-        newcube.disable_huge_flag = orig_huge_flag
+
+        self.disable_huge_flag = orig_huge_flag
 
         return newcube
 
@@ -3212,7 +3213,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   **kwargs
                                                  )
 
-        newcube.disable_huge_flag = orig_huge_flag
+        self.disable_huge_flag = orig_huge_flag
 
         return newcube
 

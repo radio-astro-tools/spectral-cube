@@ -183,11 +183,13 @@ def test_restore_huge_flag(data_vda_jybeam_lower, use_dask):
         out = cube.spatial_smooth_median(2, num_cores=1,
                                          raise_error_jybm=False)
 
+        assert not cube.disable_huge_flag
         assert cube._is_huge
 
         # Uses apply_function_parallel_spectral
         out = cube.sigma_clip_spectrally(1., num_cores=1)
 
+        assert not cube.disable_huge_flag
         assert cube._is_huge
 
     finally:
@@ -2893,3 +2895,46 @@ def test_unitless_comparison(data_adv, use_dask):
 
     # do a comparison to verify that no error occurs
     mask = cube > 1
+
+
+def test_regression_971(data_vda, use_dask):
+    """
+    Issue 971: ensure joblib does not use huge flag
+
+    Note that dask should be independent of this issue. We include it here to
+    make sure it doesn't cause other issues.
+    """
+
+    pytest.importorskip('joblib')
+
+    from radio_beam import Beam
+
+    cube, data = cube_and_raw(data_vda, use_dask=False)
+
+    cube.allow_huge_operations = True
+
+    # No parallel without memmap
+    ncores = 2
+    with pytest.warns(UserWarning, match="parallel=True and use_memmap=False was specified"):
+            convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                         num_cores=ncores,
+                                         use_memmap=False)
+
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+    try:
+        cube_utils.MEMORY_THRESHOLD = 10
+
+        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                     num_cores=2,
+                                     use_memmap=True)
+
+        assert cube._is_huge
+
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
+
