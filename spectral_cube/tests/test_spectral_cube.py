@@ -105,6 +105,8 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
 
     cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
 
+    assert not cube.disable_huge_flag
+
     assert not cube._is_huge
 
     # We need to reduce the memory threshold rather than use a large cube to
@@ -131,6 +133,31 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
 
         # just make sure it doesn't fail
         cube + 5*cube.unit
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
+
+def test_huge_force_allowed(data_vda_jybeam_lower, use_dask):
+
+    cube, data = cube_and_raw(data_vda_jybeam_lower,
+    use_dask=use_dask)
+
+    cube.disable_huge_flag = True
+
+    assert cube.disable_huge_flag
+
+    assert not cube._is_huge
+
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+    try:
+        cube_utils.MEMORY_THRESHOLD = 1e15
+
+        assert not cube._is_huge
+
     finally:
         cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
         del cube
