@@ -218,22 +218,22 @@ def test_regression_971(data_vda, use_dask):
                                     num_cores=2,
                                     use_memmap=True)
 
-    # We need to reduce the memory threshold rather than use a large cube to
-    # make sure we don't use too much memory during testing.
-    from .. import cube_utils
-    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+    try:
+        # We need to reduce the memory threshold rather than use a large cube to
+        # make sure we don't use too much memory during testing.
+        from .. import cube_utils
+        OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
 
-    cube_utils.MEMORY_THRESHOLD = 10
+        cube_utils.MEMORY_THRESHOLD = 10
 
-    convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
-                                    num_cores=2,
-                                    use_memmap=True)
+        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                        num_cores=2,
+                                        use_memmap=True)
 
-    assert cube._is_huge
-
-    cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
-    del cube
-
+        assert cube._is_huge
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
 
 
 
