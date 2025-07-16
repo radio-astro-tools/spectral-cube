@@ -180,7 +180,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                        HeaderMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, wcs_tolerance=0.0):
+                 header=None,
+                 allow_huge_operations=False,
+                 disable_huge_flag=False,
+                 wcs_tolerance=0.0):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
@@ -236,8 +239,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         self._cache = {}
 
+        self.disable_huge_flag = disable_huge_flag
+
     @property
     def _is_huge(self):
+        if self.disable_huge_flag:
+            return False
         return cube_utils.is_huge(self)
 
     @property
@@ -3031,7 +3038,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
                 Parallel(n_jobs=num_cores,
                          verbose=verbose,
-                         max_nbytes='1M')(delayed(applicator)(arg, outcube,
+                         max_nbytes=None)(delayed(applicator)(arg, outcube,
                                                               function,
                                                               **kwargs)
                                           for arg in iteration_data)
