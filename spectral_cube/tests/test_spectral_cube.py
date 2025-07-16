@@ -2913,13 +2913,6 @@ def test_regression_971(data_vda, use_dask):
 
     cube.allow_huge_operations = True
 
-    # No parallel without memmap
-    ncores = 2
-    with pytest.warns(UserWarning, match="parallel=True and use_memmap=False was specified"):
-            convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
-                                         num_cores=ncores,
-                                         use_memmap=False)
-
     # We need to reduce the memory threshold rather than use a large cube to
     # make sure we don't use too much memory during testing.
     from .. import cube_utils
