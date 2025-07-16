@@ -3120,6 +3120,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         data = self.unitless_filled_data
 
+        # Since we know the format of the slicing per job, disable
+        # the huge flag. See Issue #971.
+        orig_huge_flag = copy.copy(self.disable_huge_flag)
+
+        self.disable_huge_flag = False
+
         # 'images' is a generator
         # the boolean check will skip the function for bad spectra
         images = ((data[ii,:,:],
@@ -3128,7 +3134,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                    )
                   for ii in range(shape[0]))
 
-        return self.apply_function_parallel_base(images, function,
+        newcube = self.apply_function_parallel_base(images, function,
                                                   applicator=_apply_spatial_function,
                                                   verbose=verbose,
                                                   parallel=parallel,
@@ -3136,6 +3142,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   use_memmap=use_memmap,
                                                   update_size='spatial',
                                                   **kwargs)
+
+        newcube.disable_huge_flag = orig_huge_flag
+
+        return newcube
 
     def apply_function_parallel_spectral(self,
                                          function,
@@ -3175,6 +3185,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         data = self.unitless_filled_data
 
+        # Since we know the format of the slicing per job, disable
+        # the huge flag. See Issue #971.
+        orig_huge_flag = copy.copy(self.disable_huge_flag)
+
+        self.disable_huge_flag = False
+
         # 'spectra' is a generator
         # the boolean check will skip the function for bad spectra
         # TODO: should spatial good/bad be cached?
@@ -3185,7 +3201,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                    for jj in range(shape[1])
                    for ii in range(shape[2]))
 
-        return self.apply_function_parallel_base(iteration_data=spectra,
+        newcube = self.apply_function_parallel_base(iteration_data=spectra,
                                                   function=function,
                                                   applicator=_apply_spectral_function,
                                                   use_memmap=use_memmap,
@@ -3195,6 +3211,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                   update_size='spectral',
                                                   **kwargs
                                                  )
+
+        newcube.disable_huge_flag = orig_huge_flag
+
+        return newcube
+
 
     @parallel_docstring
     def sigma_clip_spectrally(self, threshold, verbose=0, use_memmap=True,
