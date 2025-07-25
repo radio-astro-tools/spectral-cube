@@ -6,7 +6,7 @@ dynamic = [
 description = "A package for interaction with spectral cubes"
 readme = "README.rst"
 authors = [
-    { name = "Adam Ginsburg", email = "adam.g.ginsburg@gmail.com" },
+    { name = "Adam Ginsburg" },
     { name = "Tom Robitaille" },
     { name = "Chris Beaumont" },
     { name = "Adam Leroy" },
