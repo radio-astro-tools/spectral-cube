@@ -133,7 +133,6 @@ def test_parallel_performance_smoothing():
 
 # @pytest.mark.skipif('True')
 def test_parallel_performance_spatial_smoothing():
-
     """
     Test parallel performance of spectral_smooth by timing different
     num_cores options with memmap=False and memmap=True.
