@@ -111,6 +111,10 @@ class HeaderMixinClass(object):
                 header.insert(3+ind, Card(keyword='NAXIS{0:1d}'.format(ind+1),
                                           value=sh))
 
+        if self._history is not None:
+            for row in self._history:
+                header.add_history(row)
+
         return header
 
     def check_jybeam_smoothing(self, raise_error_jybm=True):
