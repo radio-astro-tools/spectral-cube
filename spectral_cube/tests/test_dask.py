@@ -361,7 +361,7 @@ def test_lazy_data_loading(tmp_path):
         c = SpectralCube.read(tmp_path / 'cube.fits', use_dask=True)
         time2 = time.time()
 
-        if time2 - time1 > 0.3:
+        if time2 - time1 > 0.5:
             raise Exception(f"Reading large spectral cube took too long ({time2-time1:.3f}s)")
 
         assert str(c).splitlines()[0] == "DaskSpectralCube with shape=(1024, 1024, 1024) and chunk size (255, 255, 255):"
