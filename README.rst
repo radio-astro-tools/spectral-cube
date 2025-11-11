@@ -1,8 +1,6 @@
 About
 =====
 
-|Join the chat at https://gitter.im/radio-astro-tools/spectral-cube|
-
 This package aims to facilitate the reading, writing, manipulation, and
 analysis of spectral data cubes. More information is available in the
 documentation, avaliable `online at
