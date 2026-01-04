@@ -105,6 +105,8 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
 
     cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
 
+    assert not cube.disable_huge_flag
+
     assert not cube._is_huge
 
     # We need to reduce the memory threshold rather than use a large cube to
@@ -134,6 +136,105 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
     finally:
         cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
         del cube
+
+def test_huge_force_allowed(data_vda_jybeam_lower, use_dask):
+
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
+
+    cube.disable_huge_flag = True
+
+    assert cube.disable_huge_flag
+    assert not cube._is_huge
+
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+    try:
+        cube_utils.MEMORY_THRESHOLD = 1e15
+
+        assert not cube._is_huge
+
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
+
+def test_restore_huge_flag(data_vda_jybeam_lower, use_dask):
+
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
+
+    assert not cube.disable_huge_flag
+    assert not cube._is_huge
+
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+    try:
+        cube_utils.MEMORY_THRESHOLD = 10
+
+        assert cube._is_huge
+
+        # apply_parallel_operations should disable then restore the flag
+
+        # Uses apply_function_parallel_spatial
+        out = cube.spatial_smooth_median(2, num_cores=1,
+                                         raise_error_jybm=False)
+
+        assert not cube.disable_huge_flag
+        assert cube._is_huge
+
+        # Uses apply_function_parallel_spectral
+        out = cube.sigma_clip_spectrally(1., num_cores=1)
+
+        assert not cube.disable_huge_flag
+        assert cube._is_huge
+
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
+
+
+
+def test_regression_971(data_vda, use_dask):
+    """
+    Issue 971: ensure joblib does not use huge flag
+
+    Note that dask should be independent of this issue. We include it here to
+    make sure it doesn't cause other issues.
+    """
+
+    pytest.importorskip('joblib')
+
+    from radio_beam import Beam
+
+    cube, data = cube_and_raw(data_vda, use_dask=False)
+
+    cube.allow_huge_operations = True
+
+    convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                    num_cores=2,
+                                    use_memmap=True)
+
+    try:
+        # We need to reduce the memory threshold rather than use a large cube to
+        # make sure we don't use too much memory during testing.
+        from .. import cube_utils
+        OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+        cube_utils.MEMORY_THRESHOLD = 10
+
+        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                        num_cores=2,
+                                        use_memmap=True)
+
+        assert cube._is_huge
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
+
 
 
 class BaseTest(object):
@@ -2148,6 +2249,9 @@ def test_mask_bad_beams(filename, use_dask):
 
 
 def test_convolve_to_equal(data_vda, use_dask):
+    '''
+    No convolution should be applied when the beams are the same.
+    '''
 
     cube, data = cube_and_raw(data_vda, use_dask=use_dask)
 
@@ -2166,6 +2270,27 @@ def test_convolve_to_equal(data_vda, use_dask):
     # Pass a kwarg to the convolution function
 
     convolved = plane.convolve_to(cube.beam, nan_treatment='fill')
+
+
+def test_convolve_to_parallel(data_vda):
+
+    pytest.importorskip('joblib')
+
+    from radio_beam import Beam
+
+    cube, data = cube_and_raw(data_vda, use_dask=False)
+
+    for ncores in (1,2,3,4):
+        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                     num_cores=ncores,
+                                     use_memmap=True)
+
+    # No parallel without memmap
+    ncores = 2
+    with pytest.warns(UserWarning, match="parallel=True and use_memmap=False was specified"):
+            convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                         num_cores=ncores,
+                                         use_memmap=False)
 
 
 def test_convolve_to(data_vda_beams, use_dask):
