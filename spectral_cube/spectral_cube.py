@@ -22,10 +22,16 @@ from astropy import convolution
 from astropy import stats
 from astropy.constants import si
 from astropy.io.registry import UnifiedReadWriteMethod
-try:
-    from astropy.utils.compat import COPY_IF_NEEDED
-except ImportError:
-    COPY_IF_NEEDED = False
+from astropy.utils import minversion
+if not minversion('astropy', '8.0.0.dev'):
+    # Astropy 8.0 pins numpy >=2, so this is no longer needed and will raise a
+    # deprecation warning
+    try:
+        from astropy.utils.compat import COPY_IF_NEEDED
+    except ImportError:
+        COPY_IF_NEEDED = False
+else:
+    COPY_IF_NEEDED = None
 
 import numpy as np
 
