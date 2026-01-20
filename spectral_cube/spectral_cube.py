@@ -2459,11 +2459,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if name is None:
             name = 'SpectralCube'
 
-        from glue.app.qt import GlueApplication
+        try:
+            from glue.app.qt import GlueApplication
+        except ImportError: 
+            from glue_qt.app.application import GlueApplication
         from glue.core import DataCollection, Data
         from glue.core.coordinates import coordinates_from_header
         try:
             from glue.viewers.image.qt.data_viewer import ImageViewer
+        except ImportError:
+            from glue_qt.viewers.image import ImageViewer
         except ImportError:
             from glue.viewers.image.qt.viewer_widget import ImageWidget as ImageViewer
 
