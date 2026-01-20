@@ -8,7 +8,7 @@ import warnings
 from .utils import ExperimentalImplementationWarning
 
 def _parse_velocity_convention(vc):
-    if vc in (u.doppler_radio, 'radio', 'RADIO', 'VRAD', 'F', 'FREQ'):
+    if vc in (u.doppler_radio, 'radio', 'RADIO', 'VRAD', 'F', 'FREQ', 'ENER', 'WAVN'):
         return u.doppler_radio
     elif vc in (u.doppler_optical, 'optical', 'OPTICAL', 'VOPT', 'W', 'WAVE'):
         return u.doppler_optical
@@ -33,6 +33,8 @@ CTYPE_TO_PHYSICALTYPE = {'WAVE': 'length',
                          'VELO': 'speed',
                          'VRAD': 'speed',
                          'VOPT': 'speed',
+                         'WAVN': 'frequency',
+                         'ENER': 'frequency',
                          }
 
 CTYPE_CHAR_TO_PHYSICALTYPE = {'W': 'length',
