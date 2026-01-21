@@ -2660,8 +2660,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         Parameters
         ----------
-        header : `astropy.io.fits.Header`
-            A header specifying a cube in valid WCS
+        header : `astropy.io.fits.Header` or `~astropy.wcs.wcsapi.HighLevelWCS`
+            A header specifying a cube in valid WCS, or a
+            `~astropy.wcs.wcsapi.HighLevelWCS` object that has an `array_shape`
         order : int or str, optional
             The order of the interpolation (if ``mode`` is set to
             ``'interpolation'``). This can be either one of the following
@@ -2695,13 +2696,20 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         reproj_kwargs = kwargs
 
         from reproject import reproject_interp
+        from astropy.wcs.wcsapi import HighLevelWCSWrapper
 
         # TODO: Find the minimal subcube that contains the header and only reproject that
         # (see FITS_tools.regrid_cube for a guide on how to do this)
 
-        newwcs = wcs.WCS(header)
-        shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
-                           range(header['NAXIS'])][::-1])
+        if isinstance(header, HighLevelWCSWrapper):
+            newwcs = header
+        else:
+            # try this; if it fails, the user should get the error
+            newwcs = HighLevelWCSWrapper(wcs.WCS(header))
+
+        shape_out = newwcs.array_shape
+        if shape_out is None:
+            raise ValueError("The WCS must have a shape defined")
 
         if filled:
             data = self.unitless_filled_data[:]
