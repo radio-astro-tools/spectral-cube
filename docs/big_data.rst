@@ -14,6 +14,7 @@ three ideas in mind:
 - Work with small subsets of data at a time.
 - Minimize data copying.
 - Minimize the number of passes over the data.
+- Specifying temporary file directory.
 
 Work with small subsets of data at a time
 -----------------------------------------
@@ -127,3 +128,20 @@ in memory.::
     ...     outfh.flush() # write the data to disk # doctest: +SKIP
     >>> outfh[0].header['BUNIT'] = 'K' # doctest: +SKIP
     >>> outfh.flush() # doctest: +SKIP
+
+
+Specifying temporary file directory
+-----------------------------------
+
+By default, spectral-cube uses memory-mapped arrays to store intermediate results, which are saved
+in the system's temporary directory. Some systems may have limited space for temporary files, however.
+
+To specify a different directory, you can set the environment variable ``TMPDIR`` to the desired path::
+
+    >>> TMPDIR='/path/to/directory' python spectral_cube_script.py # doctest: +SKIP
+
+Within a python environment, you can instead set the ``memmap_dir`` keyword for calls to individual methods::
+
+    >>> cube = SpectralCube.read('file.fits') # doctest: +SKIP
+    >>> convolved_cube = cube.convolve_to(common_beam, memmap_dir='/path/to/directory') # doctest: +SKIP
+
