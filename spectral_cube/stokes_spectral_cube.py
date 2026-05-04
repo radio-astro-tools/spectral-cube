@@ -91,11 +91,18 @@ class StokesSpectralCube(object):
 
         self._mask = mask
 
-    def __getitem__(self, key):
-        if key in self._stokes_data:
-            return self._stokes_data[key]
+    def __getitem__(self, view):
+        if isinstance(view, str):
+            if view in self._stokes_data:
+                return self._stokes_data[view]
+            else:
+                raise KeyError("Key {0} does not exist in this cube.".format(view))
         else:
-            raise KeyError("Key {0} does not exist in this cube.".format(key))
+            # Treat as a spatial/spectral slice and apply to all components
+            return self._new_cube_with(
+                stokes_data={k: self._stokes_data[k][view] for k in self._stokes_data},
+                mask=None,
+            )
 
     def __setitem__(self, key, item):
         if key in self._stokes_data:
@@ -305,6 +312,154 @@ class StokesSpectralCube(object):
             raise NotImplementedError(errmsg)
 
         return StokesSpectralCube(stokes_data=data, mask=self._mask, meta=self._meta, fill_value=self._fill_value)
+    def spectral_slab(self, lo, hi):
+        """
+        Extract a new cube between two spectral coordinates.
+
+        Parameters
+        ----------
+        lo, hi : :class:`~astropy.units.Quantity`
+            The lower and upper spectral coordinate for the slab range.
+        """
+        return self._new_cube_with(
+            stokes_data={k: self._stokes_data[k].spectral_slab(lo, hi)
+                         for k in self._stokes_data},
+            mask=None,
+        )
+
+    def subcube(self, xlo='min', xhi='max', ylo='min', yhi='max',
+                zlo='min', zhi='max', rest_value=None):
+        """
+        Extract a sub-cube spatially and spectrally.
+
+        Parameters
+        ----------
+        xlo, xhi, ylo, yhi, zlo, zhi : int or :class:`~astropy.units.Quantity` or ``min``/``max``
+            The endpoints to extract. Quantity values are interpreted as world
+            coordinates; plain ints or ``'min'``/``'max'`` strings as pixel
+            coordinates.
+        rest_value : :class:`~astropy.units.Quantity`, optional
+            The rest frequency/wavelength for spectral conversions.
+        """
+        return self._new_cube_with(
+            stokes_data={k: self._stokes_data[k].subcube(
+                             xlo=xlo, xhi=xhi, ylo=ylo, yhi=yhi,
+                             zlo=zlo, zhi=zhi, rest_value=rest_value)
+                         for k in self._stokes_data},
+            mask=None,
+        )
+
+    def subcube_slices_from_mask(self, region_mask, spatial_only=False):
+        """
+        Given a mask, return the slices corresponding to the minimum subcube
+        that encloses the mask.
+
+        Parameters
+        ----------
+        region_mask : :class:`~spectral_cube.masks.MaskBase` or boolean `numpy.ndarray`
+            The mask with appropriate WCS or an ndarray with matched coordinates.
+        spatial_only : bool
+            Return only slices that affect the spatial dimensions; the spectral
+            dimension will be left unchanged.
+        """
+        reference = self._stokes_data[self.components[0]]
+        return reference.subcube_slices_from_mask(region_mask, spatial_only=spatial_only)
+
+    def subcube_from_mask(self, region_mask):
+        """
+        Given a mask, return the minimal subcube that encloses the mask.
+
+        Parameters
+        ----------
+        region_mask : :class:`~spectral_cube.masks.MaskBase` or boolean `numpy.ndarray`
+            The mask with appropriate WCS or an ndarray with matched coordinates.
+        """
+        return self._new_cube_with(
+            stokes_data={k: self._stokes_data[k].subcube_from_mask(region_mask)
+                         for k in self._stokes_data},
+            mask=None,
+        )
+
+    def minimal_subcube(self, spatial_only=False):
+        """
+        Return the minimum enclosing subcube where the mask is valid.
+
+        Parameters
+        ----------
+        spatial_only : bool
+            Only compute the minimal subcube in the spatial dimensions.
+        """
+        return self._new_cube_with(
+            stokes_data={k: self._stokes_data[k].minimal_subcube(
+                             spatial_only=spatial_only)
+                         for k in self._stokes_data},
+            mask=None,
+        )
+
+    def subcube_from_regions(self, region_list, allow_empty=False, minimize=True):
+        """
+        Extract a masked subcube from a list of ``regions.Region`` objects
+        (only functions on celestial dimensions).
+
+        Parameters
+        ----------
+        region_list : list of ``regions.Region``
+            The region(s) to extract.
+        allow_empty : bool, optional
+            If False, raise an exception when the region has no overlap with
+            the cube. Default is False.
+        minimize : bool, optional
+            Run :meth:`~SpectralCube.minimal_subcube` after masking. Default
+            is True.
+        """
+        return self._new_cube_with(
+            stokes_data={k: self._stokes_data[k].subcube_from_regions(
+                             region_list, allow_empty=allow_empty,
+                             minimize=minimize)
+                         for k in self._stokes_data},
+            mask=None,
+        )
+
+    def subcube_from_ds9region(self, ds9_region, allow_empty=False):
+        """
+        Extract a masked subcube from a DS9 region string
+        (only functions on celestial dimensions).
+
+        Parameters
+        ----------
+        ds9_region : str
+            The DS9 region(s) to extract.
+        allow_empty : bool, optional
+            If False, raise an exception when the region has no overlap with
+            the cube. Default is False.
+        """
+        return self._new_cube_with(
+            stokes_data={k: self._stokes_data[k].subcube_from_ds9region(
+                             ds9_region, allow_empty=allow_empty)
+                         for k in self._stokes_data},
+            mask=None,
+        )
+
+    def subcube_from_crtfregion(self, crtf_region, allow_empty=False):
+        """
+        Extract a masked subcube from a CRTF region string
+        (only functions on celestial dimensions).
+
+        Parameters
+        ----------
+        crtf_region : str
+            The CRTF region(s) string to extract.
+        allow_empty : bool, optional
+            If False, raise an exception when the region has no overlap with
+            the cube. Default is False.
+        """
+        return self._new_cube_with(
+            stokes_data={k: self._stokes_data[k].subcube_from_crtfregion(
+                             crtf_region, allow_empty=allow_empty)
+                         for k in self._stokes_data},
+            mask=None,
+        )
+
     def with_spectral_unit(self, unit, **kwargs):
 
         stokes_data = {k: self._stokes_data[k].with_spectral_unit(unit, **kwargs)

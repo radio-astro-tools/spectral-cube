@@ -309,3 +309,93 @@ class TestStokesSpectralCubeTransformBasis:
         sky_cube = cube.transform_basis('Sky')
         for k in stokes_data:
             assert_allclose(sky_cube[k].unmasked_data[...], self.data["IQUV".index(k)][None, ...])
+
+
+class TestStokesSubcube():
+    """Tests for spatial/spectral slicing on StokesSpectralCube."""
+
+    def setup_method(self, method):
+        import astropy.units as u
+
+        self.wcs = WCS(naxis=3)
+        self.wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
+        self.wcs.wcs.crval = [0, 0, 1.4e9]
+        self.wcs.wcs.cdelt = [1, 1, 1e6]
+        self.wcs.wcs.crpix = [1, 1, 1]
+
+        # shape: (spectral=5, y=20, x=30); each component has a distinct fill
+        self.data = np.arange(1, 5)[:, None, None, None] * np.ones((5, 20, 30))
+
+    def _make_cube(self, use_dask):
+        return StokesSpectralCube(dict(
+            I=SpectralCube(self.data[0], wcs=self.wcs, use_dask=use_dask),
+            Q=SpectralCube(self.data[1], wcs=self.wcs, use_dask=use_dask),
+            U=SpectralCube(self.data[2], wcs=self.wcs, use_dask=use_dask),
+            V=SpectralCube(self.data[3], wcs=self.wcs, use_dask=use_dask),
+        ))
+
+    def test_getitem_slice(self, use_dask):
+        cube = self._make_cube(use_dask)
+        sub = cube[1:3, 5:10, 8:15]
+        assert isinstance(sub, StokesSpectralCube)
+        assert sub.shape == (2, 5, 7)
+        assert set(sub.components) == {'I', 'Q', 'U', 'V'}
+
+    def test_getitem_slice_preserves_data(self, use_dask):
+        cube = self._make_cube(use_dask)
+        sub = cube[1:3, :, :]
+        assert_allclose(sub['I'].unmasked_data[:], self.data[0, 1:3])
+        assert_allclose(sub['Q'].unmasked_data[:], self.data[1, 1:3])
+
+    def test_getitem_string_still_works(self, use_dask):
+        # Ensure Stokes component access via string key is not broken
+        cube = self._make_cube(use_dask)
+        comp = cube['I']
+        assert comp.shape == (5, 20, 30)
+
+    def test_spectral_slab(self, use_dask):
+        import astropy.units as u
+        cube = self._make_cube(use_dask)
+        sub = cube.spectral_slab(1.401e9 * u.Hz, 1.403e9 * u.Hz)
+        assert isinstance(sub, StokesSpectralCube)
+        assert sub.shape[0] == 3
+        assert sub.shape[1:] == (20, 30)
+        assert set(sub.components) == {'I', 'Q', 'U', 'V'}
+
+    def test_spectral_slab_preserves_data(self, use_dask):
+        import astropy.units as u
+        cube = self._make_cube(use_dask)
+        sub = cube.spectral_slab(1.401e9 * u.Hz, 1.403e9 * u.Hz)
+        assert_allclose(sub['I'].unmasked_data[:], self.data[0, 1:4])
+        assert_allclose(sub['V'].unmasked_data[:], self.data[3, 1:4])
+
+    def test_subcube_pixel(self, use_dask):
+        cube = self._make_cube(use_dask)
+        sub = cube.subcube(xlo=5, xhi=15, ylo=2, yhi=12)
+        assert isinstance(sub, StokesSpectralCube)
+        assert sub.shape == (5, 10, 10)
+
+    def test_subcube_all_components_consistent(self, use_dask):
+        # All components must share shape and WCS after subcube
+        cube = self._make_cube(use_dask)
+        sub = cube.subcube(xlo=5, xhi=15, ylo=2, yhi=12)
+        shapes = [sub[k].shape for k in sub.components]
+        assert len(set(shapes)) == 1
+
+    def test_subcube_from_mask(self, use_dask):
+        cube = self._make_cube(use_dask)
+        region_mask = np.zeros((5, 20, 30), dtype=bool)
+        region_mask[:, 5:10, 8:15] = True
+        mask = BooleanArrayMask(region_mask, self.wcs)
+        sub = cube.subcube_from_mask(mask)
+        assert isinstance(sub, StokesSpectralCube)
+        assert sub.shape == (5, 5, 7)
+
+    def test_minimal_subcube(self, use_dask):
+        cube = self._make_cube(use_dask)
+        # Apply a mask that is True only in a small region
+        region_mask = np.zeros((5, 20, 30), dtype=bool)
+        region_mask[1:4, 3:8, 10:18] = True
+        masked = cube.with_mask(BooleanArrayMask(region_mask, self.wcs))
+        sub = masked.I.minimal_subcube()
+        assert sub.shape == (3, 5, 8)
