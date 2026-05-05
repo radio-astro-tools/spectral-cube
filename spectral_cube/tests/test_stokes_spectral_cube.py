@@ -4,7 +4,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
 from astropy.wcs import WCS
-from astropy.units import units as u
+from astropy import units as u
 from astropy.tests.helper import pytest
 from astropy.utils import NumpyRNGContext
 from astropy.coordinates import custom_stokes_symbol_mapping, StokesSymbol
