@@ -101,7 +101,6 @@ class StokesSpectralCube(object):
             # Treat as a spatial/spectral slice and apply to all components
             return self._new_cube_with(
                 stokes_data={k: self._stokes_data[k][view] for k in self._stokes_data},
-                mask=None,
             )
 
     def __setitem__(self, key, item):
@@ -324,7 +323,6 @@ class StokesSpectralCube(object):
         return self._new_cube_with(
             stokes_data={k: self._stokes_data[k].spectral_slab(lo, hi)
                          for k in self._stokes_data},
-            mask=None,
         )
 
     def subcube(self, xlo='min', xhi='max', ylo='min', yhi='max',
@@ -346,7 +344,6 @@ class StokesSpectralCube(object):
                              xlo=xlo, xhi=xhi, ylo=ylo, yhi=yhi,
                              zlo=zlo, zhi=zhi, rest_value=rest_value)
                          for k in self._stokes_data},
-            mask=None,
         )
 
     def subcube_slices_from_mask(self, region_mask, spatial_only=False):
@@ -377,7 +374,6 @@ class StokesSpectralCube(object):
         return self._new_cube_with(
             stokes_data={k: self._stokes_data[k].subcube_from_mask(region_mask)
                          for k in self._stokes_data},
-            mask=None,
         )
 
     def minimal_subcube(self, spatial_only=False):
@@ -393,7 +389,6 @@ class StokesSpectralCube(object):
             stokes_data={k: self._stokes_data[k].minimal_subcube(
                              spatial_only=spatial_only)
                          for k in self._stokes_data},
-            mask=None,
         )
 
     def subcube_from_regions(self, region_list, allow_empty=False, minimize=True):
@@ -417,7 +412,6 @@ class StokesSpectralCube(object):
                              region_list, allow_empty=allow_empty,
                              minimize=minimize)
                          for k in self._stokes_data},
-            mask=None,
         )
 
     def subcube_from_ds9region(self, ds9_region, allow_empty=False):
@@ -437,7 +431,6 @@ class StokesSpectralCube(object):
             stokes_data={k: self._stokes_data[k].subcube_from_ds9region(
                              ds9_region, allow_empty=allow_empty)
                          for k in self._stokes_data},
-            mask=None,
         )
 
     def subcube_from_crtfregion(self, crtf_region, allow_empty=False):
@@ -457,7 +450,6 @@ class StokesSpectralCube(object):
             stokes_data={k: self._stokes_data[k].subcube_from_crtfregion(
                              crtf_region, allow_empty=allow_empty)
                          for k in self._stokes_data},
-            mask=None,
         )
 
     def with_spectral_unit(self, unit, **kwargs):

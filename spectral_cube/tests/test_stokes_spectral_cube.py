@@ -4,6 +4,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
 from astropy.wcs import WCS
+from astropy.units import units as u
 from astropy.tests.helper import pytest
 from astropy.utils import NumpyRNGContext
 from astropy.coordinates import custom_stokes_symbol_mapping, StokesSymbol
@@ -223,7 +224,6 @@ class TestStokesSpectralCube():
 
 class TestStokesSpectralCubeTransformBasis:
     def setup_class(self):
-        from astropy.wcs import WCS
         self.wcs = WCS(naxis=3)
         self.wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
         # Simple data for easy checking, shape (4, 5, 5)
@@ -315,8 +315,6 @@ class TestStokesSubcube():
     """Tests for spatial/spectral slicing on StokesSpectralCube."""
 
     def setup_method(self, method):
-        import astropy.units as u
-
         self.wcs = WCS(naxis=3)
         self.wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'FREQ']
         self.wcs.wcs.crval = [0, 0, 1.4e9]
@@ -354,7 +352,7 @@ class TestStokesSubcube():
         assert comp.shape == (5, 20, 30)
 
     def test_spectral_slab(self, use_dask):
-        import astropy.units as u
+
         cube = self._make_cube(use_dask)
         sub = cube.spectral_slab(1.401e9 * u.Hz, 1.403e9 * u.Hz)
         assert isinstance(sub, StokesSpectralCube)
@@ -363,7 +361,6 @@ class TestStokesSubcube():
         assert set(sub.components) == {'I', 'Q', 'U', 'V'}
 
     def test_spectral_slab_preserves_data(self, use_dask):
-        import astropy.units as u
         cube = self._make_cube(use_dask)
         sub = cube.spectral_slab(1.401e9 * u.Hz, 1.403e9 * u.Hz)
         assert_allclose(sub['I'].unmasked_data[:], self.data[0, 1:4])
