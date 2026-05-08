@@ -69,6 +69,31 @@ def test_add_stokes():
         assert outwcs.wcs.naxis == 4
 
 
+def test_pixel_shape_preserved_on_reindex():
+    # Regression test for #1000: drop_axis / wcs_swapaxes / add_stokes_axis_to_wcs
+    # used to silently reset pixel_shape (NAXISj) to zeros, so e.g. a moment's
+    # WCS reported NAXIS: 0 0 instead of the cube's spatial shape.
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['GLON-CAR', 'GLAT-CAR', 'VRAD']
+    wcs.pixel_shape = (4321, 2161, 118)
+
+    dropped = drop_axis(wcs, 2)
+    assert dropped.pixel_shape == (4321, 2161)
+
+    dropped = drop_axis(wcs, 0)
+    assert dropped.pixel_shape == (2161, 118)
+
+    swapped = wcs_swapaxes(wcs, 0, 2)
+    assert swapped.pixel_shape == (118, 2161, 4321)
+
+    stokes = add_stokes_axis_to_wcs(wcs, 0)
+    assert stokes.pixel_shape == (1, 4321, 2161, 118)
+
+    # If the source has no pixel_shape, the result shouldn't either.
+    bare = WCS(naxis=3)
+    assert drop_axis(bare, 2).pixel_shape is None
+
+
 def test_axis_names(data_adv, data_vad):
     wcs = WCS(str(data_adv))
     assert axis_names(wcs) == ['RA', 'DEC', 'VOPT']
