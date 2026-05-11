@@ -125,6 +125,15 @@ num_cores : int or None
 use_memmap : bool
     If specified, a memory mapped temporary file on disk will be
     written to rather than storing the intermediate spectra in memory.
+memmap_dir : str or None
+    If specified, a memory mapped temporary file on disk will be
+    written to this directory.
+verbose : int
+    Verbosity level to pass to joblib
+
+
+See ``~BaseSpectralCube.apply_function_parallel_base`` for more information.
+
 """
 
 
@@ -177,7 +186,10 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                        HeaderMixinClass):
 
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
-                 header=None, allow_huge_operations=False, wcs_tolerance=0.0):
+                 header=None,
+                 allow_huge_operations=False,
+                 disable_huge_flag=False,
+                 wcs_tolerance=0.0):
 
         # Deal with metadata first because it can affect data reading
         self._meta = meta or {}
@@ -233,8 +245,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         self._cache = {}
 
+        self.disable_huge_flag = disable_huge_flag
+
     @property
     def _is_huge(self):
+        if self.disable_huge_flag:
+            return False
         return cube_utils.is_huge(self)
 
     @property
@@ -2894,7 +2910,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                                      use_memmap=use_memmap,
                                                      **kwargs)
 
-    def _apply_function_parallel_base(self,
+    def apply_function_parallel_base(self,
                                       iteration_data,
                                       function,
                                       applicator,
@@ -2904,12 +2920,17 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                       parallel=False,
                                       memmap_dir=None,
                                       update_function=None,
+                                      update_size=None,
                                       **kwargs
                                      ):
         """
         Apply a function in parallel using the ``applicator`` function.  The
         function will be performed on data with masked values replaced with the
         cube's fill value.
+
+        .. note::
+            This function should not be called directly and is included for documentation purposes.
+            See ``apply_function_parallel_spatial`` and ``apply_function_parallel_spectral``.
 
         Parameters
         ----------
@@ -2936,11 +2957,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         parallel : bool
             If set to ``False``, will force the use of a single thread instead
             of using ``joblib``.
+        memmap_dir : str
+            The directory to use for memory mapped files.
         update_function : function
             A callback function to call on each iteration of the application.
             It should not accept any arguments.  For example, this can be
             ``Progressbar.update`` or some function that prints a status
             report.  The function *must* be picklable if ``parallel==True``.
+        update_size : int, str or None
+            The number of iterations between calls to ``update_function``. If 'spatial', defaults to ``self.shape[0]``.
+            If 'spectral', defaults to ``self.shape[1]*self.shape[2]``.
         kwargs : dict
             Passed to ``function``
         """
@@ -2968,6 +2994,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                              "multiple cores were: these are incompatible "
                              "options.  Either specify num_cores=1 or "
                              "parallel=True")
+
+        if parallel and not use_memmap:
+            # it is not possible to run joblib parallelization without memmap
+            warnings.warn("parallel=True and use_memmap=False was specified "
+                          "but joblib parallelization cannot be used without memmap. "
+                          "Task will be run without parallelization. Please use the dask "
+                          "backend for parallelization.")
+            parallel = False
 
         if parallel and use_memmap:
 
@@ -3017,7 +3051,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             except ImportError:
                 if num_cores is not None and num_cores > 1:
                     warnings.warn("Could not import joblib.  Will run in serial.",
-                                  warnings.ImportWarning)
+                                  ImportWarning)
                 parallel = False
 
         # this isn't an else statement because we want to catch the case where
@@ -3026,7 +3060,18 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             if update_function is not None:
                 pbu = update_function
             elif verbose > 0:
-                progressbar = ProgressBar(self.shape[1]*self.shape[2], desc='Apply parallel: ')
+                if update_size == 'spatial':
+                    progressbar = ProgressBar(self.shape[0], desc='Apply parallel: ')
+                    pbu = progressbar.update
+                elif update_size == 'spectral':
+                    progressbar = ProgressBar(self.shape[1]*self.shape[2], desc='Apply parallel: ')
+                elif isinstance(update_size, int):
+                    progressbar = ProgressBar(update_size, desc='Apply parallel: ')
+                elif update_size is None:
+                    # TODO: make this smarter. Defaults to the max which is the spectral case.
+                    progressbar = ProgressBar(self.shape[1]*self.shape[2], desc='Apply parallel: ')
+                else:
+                    raise ValueError("update_size must be 'spatial', 'spectral', or an integer")
                 pbu = progressbar.update
             else:
                 pbu = object
@@ -3075,11 +3120,17 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             If set to ``False``, will force the use of a single core without
             using ``joblib``.
         kwargs : dict
-            Passed to ``function``
+            Passed to ``function`` and ``apply_function_parallel_base``
         """
         shape = self.shape
 
         data = self.unitless_filled_data
+
+        # Since we know the format of the slicing per job, disable
+        # the huge flag. See Issue #971.
+        orig_huge_flag = copy.copy(self.disable_huge_flag)
+
+        self.disable_huge_flag = True
 
         # 'images' is a generator
         # the boolean check will skip the function for bad spectra
@@ -3089,13 +3140,19 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                    )
                   for ii in range(shape[0]))
 
-        return self._apply_function_parallel_base(images, function,
+        newcube = self.apply_function_parallel_base(images, function,
                                                   applicator=_apply_spatial_function,
                                                   verbose=verbose,
                                                   parallel=parallel,
                                                   num_cores=num_cores,
                                                   use_memmap=use_memmap,
+                                                  update_size='spatial',
                                                   **kwargs)
+
+
+        self.disable_huge_flag = orig_huge_flag
+
+        return newcube
 
     def apply_function_parallel_spectral(self,
                                          function,
@@ -3135,6 +3192,12 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
         data = self.unitless_filled_data
 
+        # Since we know the format of the slicing per job, disable
+        # the huge flag. See Issue #971.
+        orig_huge_flag = copy.copy(self.disable_huge_flag)
+
+        self.disable_huge_flag = True
+
         # 'spectra' is a generator
         # the boolean check will skip the function for bad spectra
         # TODO: should spatial good/bad be cached?
@@ -3145,15 +3208,21 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                    for jj in range(shape[1])
                    for ii in range(shape[2]))
 
-        return self._apply_function_parallel_base(iteration_data=spectra,
+        newcube = self.apply_function_parallel_base(iteration_data=spectra,
                                                   function=function,
                                                   applicator=_apply_spectral_function,
                                                   use_memmap=use_memmap,
                                                   parallel=parallel,
                                                   verbose=verbose,
                                                   num_cores=num_cores,
+                                                  update_size='spectral',
                                                   **kwargs
                                                  )
+
+        self.disable_huge_flag = orig_huge_flag
+
+        return newcube
+
 
     @parallel_docstring
     def sigma_clip_spectrally(self, threshold, verbose=0, use_memmap=True,
@@ -3333,11 +3402,6 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         """
         Convolve each channel in the cube to a specified beam
 
-        .. warning::
-            The current implementation of ``convolve_to`` creates an in-memory
-            copy of the whole cube to store the convolved data.  Issue #506
-            notes that this is a problem, and it is on our to-do list to fix.
-
         Parameters
         ----------
         beam : `radio_beam.Beam`
@@ -3350,7 +3414,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             Method that is called to update an external progressbar
             If provided, it disables the default `astropy.utils.console.ProgressBar`
         kwargs : dict
-            Keyword arguments to pass to the convolution function
+            Keyword arguments to pass to `~SpectralCube.apply_function_parallel_spatial` and
+            the convolution function.
 
         Returns
         -------
