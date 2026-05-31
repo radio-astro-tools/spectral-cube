@@ -52,8 +52,12 @@ import numpy as np
 
 from astropy.convolution import (Gaussian1DKernel, convolve as ap_convolve,
                                  convolve_fft as ap_convolve_fft)
+from astropy.wcs import WCS
 from scipy.ndimage import convolve1d
 from scipy.signal import fftconvolve, oaconvolve
+
+from spectral_cube import SpectralCube, DaskSpectralCube
+from spectral_cube.masks import BooleanArrayMask
 
 
 def make_cube(shape, nan_fraction=0.0, seed=0, dtype=np.float64):
@@ -138,6 +142,85 @@ def whole_cube_scipy_oaconvolve(data, kernel):
     return oaconvolve(data, k3d, mode='same', axes=0)
 
 
+# ---------- spectral-cube paths -------------------------------------------
+
+def _make_wcs():
+    w = WCS(naxis=3)
+    w.wcs.ctype = ['RA---CAR', 'DEC--CAR', 'VRAD']
+    w.wcs.crpix = [1.0, 1.0, 1.0]
+    w.wcs.cdelt = [-0.025, 0.025, 200.0]
+    w.wcs.cunit = ['deg', 'deg', 'm/s']
+    w.wcs.crval = [113.0, -13.0, 1.0e5]
+    return w
+
+
+def _make_spectral_cube(data, dask=False, spatial_chunk=None):
+    w = _make_wcs()
+    hdr = w.to_header()
+    hdr['BUNIT'] = 'K'
+    mask = BooleanArrayMask(np.isfinite(data), wcs=w)
+    if dask:
+        import dask.array as da
+        if spatial_chunk is None:
+            # 'auto' tends to pick a single chunk for cubes this size,
+            # which gives no parallelism.
+            spatial = ('auto', 'auto')
+        else:
+            spatial = (spatial_chunk, spatial_chunk)
+        darr = da.from_array(data, chunks=(data.shape[0],) + spatial)
+        return DaskSpectralCube(data=darr, wcs=w, header=hdr, mask=mask)
+    return SpectralCube(data=data, wcs=w, header=hdr, mask=mask)
+
+
+def cube_vectorize(data, kernel):
+    """``SpectralCube.spectral_smooth(..., vectorize=True)`` end-to-end,
+    going through the auto-routed ndimage/oaconvolve fast path."""
+    cube = _make_spectral_cube(data)
+    out = cube.spectral_smooth(kernel, vectorize=True)
+    return np.asarray(out.unitless_filled_data[:])
+
+
+def dask_cube_smooth(data, kernel):
+    """``DaskSpectralCube.spectral_smooth`` with default ('auto') chunking
+    and default convolve (astropy.convolution.convolve)."""
+    cube = _make_spectral_cube(data, dask=True)
+    out = cube.spectral_smooth(kernel)
+    return np.asarray(out.unitless_filled_data[:])
+
+
+def dask_cube_smooth_small_chunks(data, kernel, spatial_chunk=64):
+    """Same DaskSpectralCube path but with small spatial chunks so dask
+    actually has work to parallelise across. Each chunk is convolved with
+    astropy.convolution.convolve."""
+    cube = _make_spectral_cube(data, dask=True, spatial_chunk=spatial_chunk)
+    out = cube.spectral_smooth(kernel)
+    return np.asarray(out.unitless_filled_data[:])
+
+
+def dask_cube_smooth_scipy(data, kernel, spatial_chunk=64):
+    """DaskSpectralCube with small spatial chunks and a custom per-chunk
+    convolve that drops to scipy.ndimage.convolve1d. This is the closest
+    dask analog of the non-dask ``vectorize=True`` fast path."""
+    cube = _make_spectral_cube(data, dask=True, spatial_chunk=spatial_chunk)
+
+    def _scipy_chunk_convolve(arr, kernel, **kwargs):
+        # ``arr`` is a 3D chunk shaped (n_spec, ny_chunk, nx_chunk).
+        k1 = np.asarray(kernel[:, 0, 0], dtype=np.float64)
+        k1 = k1 / k1.sum()
+        return convolve1d(arr, k1, axis=0, mode='constant', cval=0.0)
+
+    out = cube.spectral_smooth(kernel, convolve=_scipy_chunk_convolve)
+    return np.asarray(out.unitless_filled_data[:])
+
+
+def dask_cube_vectorize(data, kernel, spatial_chunk=64):
+    """``DaskSpectralCube.spectral_smooth(vectorize=True)`` — the in-package
+    auto-routed scipy fast path on dask cubes."""
+    cube = _make_spectral_cube(data, dask=True, spatial_chunk=spatial_chunk)
+    out = cube.spectral_smooth(kernel, vectorize=True)
+    return np.asarray(out.unitless_filled_data[:])
+
+
 # ---------- driver --------------------------------------------------------
 
 def run_one_kernel(data, sigma, sub_shape=(995, 50, 50),
@@ -158,6 +241,20 @@ def run_one_kernel(data, sigma, sub_shape=(995, 50, 50),
                                 lambda: whole_cube_scipy_fftconvolve(data, kernel))
     out_oa, _ = time_call("scipy.signal.oaconvolve (axes=0)",
                              lambda: whole_cube_scipy_oaconvolve(data, kernel))
+    out_vec, _ = time_call("SpectralCube.spectral_smooth(vectorize=True)",
+                            lambda: cube_vectorize(data, kernel))
+    out_dask, _ = time_call("DaskSpectralCube.spectral_smooth (default chunks)",
+                             lambda: dask_cube_smooth(data, kernel))
+    out_dask_small, _ = time_call(
+        "DaskSpectralCube.spectral_smooth (64x64 spatial chunks)",
+        lambda: dask_cube_smooth_small_chunks(data, kernel,
+                                               spatial_chunk=64))
+    out_dask_scipy, _ = time_call(
+        "DaskSpectralCube.spectral_smooth + scipy.ndimage per chunk",
+        lambda: dask_cube_smooth_scipy(data, kernel, spatial_chunk=64))
+    out_dask_vec, _ = time_call(
+        "DaskSpectralCube.spectral_smooth(vectorize=True)",
+        lambda: dask_cube_vectorize(data, kernel, spatial_chunk=64))
     if not skip_per_spectrum:
         sub = data[:, :sub_shape[1], :sub_shape[2]].copy()
         _, t_sub = time_call(
@@ -177,6 +274,26 @@ def run_one_kernel(data, sigma, sub_shape=(995, 50, 50),
     if mask.any():
         d = np.abs(ref - out_fft)[mask].max()
         print(f"    astropy.convolve_fft   : max|Δ| = {d:.3e}")
+    mask = ~(np.isnan(ref) | np.isnan(out_vec))
+    if mask.any():
+        d = np.abs(ref - out_vec)[mask].max()
+        print(f"    SpectralCube vectorize : max|Δ| = {d:.3e}")
+    mask = ~(np.isnan(ref) | np.isnan(out_dask))
+    if mask.any():
+        d = np.abs(ref - out_dask)[mask].max()
+        print(f"    DaskSpectralCube       : max|Δ| = {d:.3e}")
+    mask = ~(np.isnan(ref) | np.isnan(out_dask_small))
+    if mask.any():
+        d = np.abs(ref - out_dask_small)[mask].max()
+        print(f"    Dask 64x64 chunks      : max|Δ| = {d:.3e}")
+    mask = ~(np.isnan(ref) | np.isnan(out_dask_scipy))
+    if mask.any():
+        d = np.abs(ref - out_dask_scipy)[mask].max()
+        print(f"    Dask + scipy per-chunk : max|Δ| = {d:.3e}")
+    mask = ~(np.isnan(ref) | np.isnan(out_dask_vec))
+    if mask.any():
+        d = np.abs(ref - out_dask_vec)[mask].max()
+        print(f"    Dask vectorize=True    : max|Δ| = {d:.3e}")
     # scipy.signal.{fft,oa}convolve don't renormalize NaNs/edges -- skip
     # equivalence on NaN cubes.
     if not np.isnan(data).any():
