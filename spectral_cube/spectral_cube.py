@@ -3186,6 +3186,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                         verbose=0,
                         use_memmap=True,
                         num_cores=None,
+                        vectorize=False,
                         **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -3202,6 +3203,21 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             `astropy.convolution.convolve_fft`
         verbose : int
             Verbosity level to pass to joblib
+        vectorize : bool
+            If True, skip the per-spectrum Python loop and call ``convolve``
+            once on the whole cube with a 1D-reshaped-to-3D kernel. This is
+            the same approach :class:`DaskSpectralCube` already uses and
+            gives the largest speedup for cubes that fit in memory: the
+            per-pixel Python overhead in
+            ``apply_function_parallel_spectral`` typically dominates the
+            actual convolution by 100x or more.
+            When ``convolve`` is the default ``astropy.convolution.convolve``
+            and no extra kwargs are passed, an additional bit-equivalent
+            scipy fast path is selected automatically:
+            ``scipy.ndimage.convolve1d`` for small kernels and
+            ``scipy.signal.oaconvolve`` (overlap-add FFT) for wider ones,
+            giving another ~3-10x on top. See
+            ``benchmarks/spectral_smooth_results.md`` for the crossover.
         kwargs : dict
             Passed to the convolve function
         """
@@ -3209,6 +3225,35 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         if isinstance(kernel.array, u.Quantity):
             raise u.UnitsError("The convolution kernel should be defined "
                                "without a unit.")
+
+        if vectorize:
+            if convolve is convolution.convolve and not kwargs:
+                # Fast path: scipy backends reproduce astropy's defaults
+                # (boundary='fill', fill_value=0, nan_treatment='interpolate')
+                # bit-for-bit. Pick the better one based on kernel size:
+                # direct convolution (ndimage) wins on small kernels;
+                # overlap-add FFT (oaconvolve) is near-constant time and
+                # wins decisively once the kernel is wider than a few
+                # tens of samples.
+                data = self.filled_data[:].astype(np.float64, copy=False)
+                if (kernel.array.size
+                        > cube_utils._OACONVOLVE_KERNEL_THRESHOLD):
+                    outdata = cube_utils.spectral_convolve_oaconvolve(
+                        data, kernel.array)
+                else:
+                    outdata = cube_utils.spectral_convolve_vectorized(
+                        data, kernel.array)
+            else:
+                # General vectorized path: single whole-cube call so
+                # ``convolve`` can be any astropy convolver
+                # (``convolve``/``convolve_fft``) with any kwargs.
+                data = self.filled_data[:]
+                kernel_3d = kernel.array.reshape((-1, 1, 1))
+                outdata = convolve(data, kernel_3d,
+                                   normalize_kernel=True, **kwargs)
+            return self._new_cube_with(data=outdata, wcs=self.wcs,
+                                       mask=self.mask, meta=self.meta,
+                                       fill_value=self.fill_value)
 
         return self.apply_function_parallel_spectral(convolve,
                                                      kernel=kernel,
