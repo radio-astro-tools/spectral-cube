@@ -50,7 +50,7 @@ def load_projection(filename):
 
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs_2d, data_two_2d))
+                         list(zip(LDOs_2d, data_two_2d)))
 def test_slices_of_projections_not_projections(LDO, data):
     # slices of projections that have <2 dimensions should not be projections
     p = LDO(data, copy=False)
@@ -59,7 +59,7 @@ def test_slices_of_projections_not_projections(LDO, data):
     assert not isinstance(p[0], LDO)
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs_2d, data_twelve_2d))
+                         list(zip(LDOs_2d, data_twelve_2d)))
 def test_copy_false(LDO, data):
     # copy the data so we can manipulate inplace without affecting other tests
     image = data.copy()
@@ -69,13 +69,13 @@ def test_copy_false(LDO, data):
     assert_allclose(p[3,4], 2 * u.Jy)
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs, data_twelve))
+                         list(zip(LDOs, data_twelve)))
 def test_write(LDO, data, tmpdir):
     p = LDO(data)
     p.write(tmpdir.join('test.fits').strpath)
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs_2d, data_twelve_2d))
+                         list(zip(LDOs_2d, data_twelve_2d)))
 def test_preserve_wcs_to(LDO, data):
     # regression for #256
     image = data.copy()
@@ -89,7 +89,7 @@ def test_preserve_wcs_to(LDO, data):
     assert p2.wcs == p.wcs
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs, data_twelve))
+                         list(zip(LDOs, data_twelve)))
 def test_multiplication(LDO, data):
     # regression: 265
 
@@ -103,7 +103,7 @@ def test_multiplication(LDO, data):
     assert np.all(p2.value == 5)
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs, data_twelve))
+                         list(zip(LDOs, data_twelve)))
 def test_unit_division(LDO, data):
     # regression: 265
 
@@ -117,7 +117,7 @@ def test_unit_division(LDO, data):
     assert p2.wcs == p.wcs
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs_2d, data_twelve_2d))
+                         list(zip(LDOs_2d, data_twelve_2d)))
 def test_isnan(LDO, data):
     # Check that np.isnan strips units
 
@@ -131,7 +131,7 @@ def test_isnan(LDO, data):
     assert not hasattr(mask, 'unit')
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs, data_twelve))
+                         list(zip(LDOs, data_twelve)))
 def test_self_arith(LDO, data):
 
     image = data
@@ -153,7 +153,7 @@ def test_self_arith(LDO, data):
 
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs, data_twelve))
+                         list(zip(LDOs, data_twelve)))
 def test_self_arith_with_beam(LDO, data):
 
     exp_beam = Beam(1.0 * u.arcsec)
@@ -424,7 +424,7 @@ def test_ondespectrum_with_beam():
 
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs, data_twelve))
+                         list(zip(LDOs, data_twelve)))
 def test_ldo_attach_beam(LDO, data):
 
     exp_beam = Beam(1.0 * u.arcsec)
@@ -444,7 +444,7 @@ def test_ldo_attach_beam(LDO, data):
 
 @pytest.mark.xfail(raises=BeamUnitsError, strict=True)
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs, data_twelve))
+                         list(zip(LDOs, data_twelve)))
 def test_ldo_attach_beam_jybm_error(LDO, data):
 
     exp_beam = Beam(1.0 * u.arcsec)
@@ -462,7 +462,7 @@ def test_ldo_attach_beam_jybm_error(LDO, data):
 
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs_2d, data_two_2d))
+                         list(zip(LDOs_2d, data_two_2d)))
 def test_projection_from_hdu(LDO, data):
 
     p = LDO(data, copy=False)
@@ -938,7 +938,7 @@ def test_spatial_world(view, data_adv, use_dask):
         assert_allclose(result, expected.flatten())
 
 @pytest.mark.parametrize(('LDO', 'data'),
-                         zip(LDOs, data_twelve))
+                         list(zip(LDOs, data_twelve)))
 def test_unit_division(LDO, data):
     # regression: 871
 

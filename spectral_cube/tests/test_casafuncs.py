@@ -109,7 +109,7 @@ def filename(request):
     return request.getfixturevalue(request.param)
 
 
-@pytest.mark.parametrize(('memmap', 'bigendian'), product((False, True), (False, True)))
+@pytest.mark.parametrize(('memmap', 'bigendian'), list(product((False, True), (False, True))))
 def test_casa_read_basic(memmap, bigendian):
 
     # Check that SpectralCube.read works for an example CASA dataset stored
