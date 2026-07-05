@@ -357,18 +357,23 @@ def test_lazy_data_loading(tmp_path):
 
     try:
 
-        # A slow CI filesystem can push a single read over the threshold, so
-        # take the fastest of three attempts before declaring failure.
+        # Eagerly loading the 8 GiB cube would take many seconds, so 1s
+        # cleanly separates lazy from eager. Windows CI runners have a
+        # systematic ~0.3s floor just to open the file, so the threshold
+        # cannot be much tighter. A slow CI filesystem can still push a
+        # single read over the threshold, so take the fastest of three
+        # attempts before declaring failure.
+        threshold = 1.0
         times = []
         for _ in range(3):
             time1 = time.time()
             c = SpectralCube.read(tmp_path / 'cube.fits', use_dask=True)
             time2 = time.time()
             times.append(time2 - time1)
-            if times[-1] <= 0.3:
+            if times[-1] <= threshold:
                 break
 
-        if min(times) > 0.3:
+        if min(times) > threshold:
             raise Exception(f"Reading large spectral cube took too long ({min(times):.3f}s)")
 
         assert str(c).splitlines()[0] == "DaskSpectralCube with shape=(1024, 1024, 1024) and chunk size (255, 255, 255):"
