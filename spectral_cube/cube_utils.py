@@ -991,9 +991,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 input_weights=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
                 output_array=output_array,
                 output_footprint=output_footprint,
-                reproject_function=reproject_interp,
-                progressbar=tqdm if verbose else False,
-                block_size=(None if spectral_block_size is None else
+                reproject_function=reproject_interp,                block_size=(None if spectral_block_size is None else
                             [(spectral_block_size, cube.shape[1], cube.shape[2])
                              for cube in cubes]),
             )
@@ -1007,9 +1005,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                 input_weights=[cube.hdu for cube in weightcubes] if weightcubes is None else None,
                 output_array=output_array,
                 output_footprint=output_footprint,
-                reproject_function=reproject_interp,
-                progressbar=tqdm if verbose else False,
-            )
+                reproject_function=reproject_interp,            )
     elif method == 'channel':
         log_("Using Channel method")
         # Channel method: manually downselect to go channel-by-channel in the
@@ -1119,9 +1115,7 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     output_array=output_array[ii:ii+1,:,:],
                     output_footprint=output_footprint[ii:ii+1,:,:],
                     reproject_function=reproject_interp,
-                    input_weights=wthdus,
-                    progressbar=partial(tqdm, desc='coadd') if verbose else False,
-                )
+                    input_weights=wthdus,                )
 
             pbar.set_description(f"Channel {ii}={channel} done")
 
