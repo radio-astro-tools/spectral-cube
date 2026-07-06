@@ -246,11 +246,11 @@ class TestSpectralCube(object):
 
 
     @pytest.mark.parametrize(('filename','masktype','unit','suffix'),
-                             itertools.product(('data_advs', 'data_dvsa', 'data_sdav', 'data_sadv', 'data_vsad', 'data_vad', 'data_adv',),
+                             list(itertools.product(('data_advs', 'data_dvsa', 'data_sdav', 'data_sadv', 'data_vsad', 'data_vad', 'data_adv',),
                                                (BooleanArrayMask, LazyMask, FunctionMask, CompositeMask),
                                                ('Hz', u.Hz),
                                                ('.fits', '.image') if casaOK else ('.fits',)
-                                               ),
+                                               )),
                              indirect=['filename'])
     def test_with_spectral_unit(self, filename, masktype, unit, suffix, use_dask):
 
@@ -728,7 +728,7 @@ class TestNumpyMethods(BaseTest):
         self.c = self.d = None
 
     @pytest.mark.parametrize(('pct', 'iterate_rays'),
-                             (zip((3,25,50,75,97)*2,(True,)*5 + (False,)*5)))
+                             (list(zip((3,25,50,75,97)*2,(True,)*5 + (False,)*5))))
     def test_percentile(self, pct, iterate_rays, use_dask):
         m = np.empty(self.d.sum(axis=0).shape)
         for y in range(m.shape[0]):
@@ -1300,11 +1300,11 @@ def test_airwave_to_wave(data_advs, use_dask):
 
 
 @pytest.mark.parametrize(('func','how','axis','filename'),
-                         itertools.product(('sum','std','max','min','mean'),
+                         list(itertools.product(('sum','std','max','min','mean'),
                                            ('slice','cube','auto'),
                                            (0,1,2),
                                            ('data_advs', 'data_advs_nobeam'),
-                                          ), indirect=['filename'])
+                                          )), indirect=['filename'])
 def test_twod_numpy(func, how, axis, filename, use_dask):
     # Check that a numpy function returns the correct result when applied along
     # one axis
@@ -1329,11 +1329,11 @@ def test_twod_numpy(func, how, axis, filename, use_dask):
     assert cube.unit == proj.unit
 
 @pytest.mark.parametrize(('func','how','axis','filename'),
-                         itertools.product(('sum','std','max','min','mean'),
+                         list(itertools.product(('sum','std','max','min','mean'),
                                            ('slice','cube','auto'),
                                            ((0,1),(1,2),(0,2)),
                                            ('data_advs', 'data_advs_nobeam'),
-                                          ), indirect=['filename'])
+                                          )), indirect=['filename'])
 def test_twod_numpy_twoaxes(func, how, axis, filename, use_dask):
     # Check that a numpy function returns the correct result when applied along
     # one axis
@@ -1416,9 +1416,9 @@ def test_preserves_header_meta_values(data_advs, use_dask):
 
 
 @pytest.mark.parametrize(('func', 'filename'),
-                         itertools.product(('sum','std','max','min','mean'),
+                         list(itertools.product(('sum','std','max','min','mean'),
                                            ('data_advs', 'data_advs_nobeam',),
-                                          ), indirect=['filename'])
+                                          )), indirect=['filename'])
 def test_oned_numpy(func, filename, use_dask):
     # Check that a numpy function returns an appropriate spectrum
 

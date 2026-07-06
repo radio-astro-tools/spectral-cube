@@ -85,6 +85,10 @@ def add_stokes_axis_to_wcs(wcs, add_before_ind):
     outwcs.wcs.cname = append_to_posn("STOKES", add_before_ind, wcs.wcs.cname)
     outwcs.wcs.pc = pc
 
+    if wcs.pixel_shape is not None:
+        outwcs.pixel_shape = tuple(append_to_posn(1, add_before_ind,
+                                                  wcs.pixel_shape))
+
     return outwcs
 
 
@@ -172,6 +176,11 @@ def reindex_wcs(wcs, inds):
                 ps_cards.append((i, m, v))
     outwcs.wcs.set_ps(ps_cards)
 
+    # Propagate pixel_shape (NAXISj). astropy initializes _naxis to all-zeros
+    # for a WCS constructed via WCS(naxis=N), so without this the resulting
+    # WCS reports NAXIS: 0 ... 0 even when the source had it set (#1000).
+    if wcs.pixel_shape is not None:
+        outwcs.pixel_shape = tuple(wcs.pixel_shape[i] for i in inds)
 
     outwcs.wcs.set()
 
