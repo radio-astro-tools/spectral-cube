@@ -2085,24 +2085,46 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         return self.subcube_from_regions(region_list, allow_empty)
 
     def subcube_from_regions(self, region_list, allow_empty=False,
-                             minimize=True):
+                             minimize=False):
         """
-        Extract a masked subcube from a list of ``regions.Region`` object
-        (only functions on celestial dimensions)
+        Extract a masked subcube from a list of ``regions.Region`` objects.
+
+        The result is cropped to the bounding box of all regions combined, with
+        pixels outside the region boundaries set to NaN. Only the celestial axes
+        are affected. The full spectral axis is kept unless the regions carry
+        ``range``, ``veltype``, and ``restfreq`` metadata (e.g. from CASA CRTF
+        files), in which case the spectral axis is also sliced to the union of
+        those ranges.
+
+        Both ``regions.SkyRegion`` and ``regions.PixelRegion`` objects are
+        accepted and may be mixed. Multiple regions are combined with a logical
+        OR, so the subcube covers their union.
 
         Parameters
         ----------
-        region_list: ``regions.Region`` list
-            The region(s) to extract
-        allow_empty: bool, optional
-            If this is False, an exception will be raised if the region
-            contains no overlap with the cube. Default is False.
-        minimize : bool
-            Run :meth:`~SpectralCube.minimal_subcube`.  This is mostly redundant, since the
-            bounding box of the region is already used, but it will sometimes
-            slice off a one-pixel rind depending on the details of the region
-            shape.  If minimize is disabled, there will potentially be a ring
-            of NaN values around the outside.
+        region_list : list of ``regions.Region``
+            Sky or pixel regions defining the area to extract.
+        allow_empty : bool, optional
+            If ``False`` (default), raises ``ValueError`` when the region has
+            no overlap with the cube. If ``True``, emits a warning instead.
+        minimize : bool, optional
+            If ``True``, run :meth:`~SpectralCube.minimal_subcube` after
+            masking to trim any one-pixel NaN border left at region edges.
+            Default is ``False``.
+
+        Returns
+        -------
+        masked_subcube : `SpectralCube`
+            Subcube cropped to the region bounding box with out-of-region
+            pixels masked.
+
+        Raises
+        ------
+        TypeError
+            If any element of ``region_list`` is not a ``regions.Region``.
+        ValueError
+            If the region has no overlap with the cube and ``allow_empty=False``.
+
         """
         import regions
 
@@ -2128,10 +2150,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         veltypes = [x.meta.get('veltype', None) for x in regs]
         restfreqs = [x.meta.get('restfreq', None) for x in regs]
 
+        # Spatial pixel bounds from the compound region bounding box.
         xlo, xhi, ylo, yhi = mask.bbox.ixmin, mask.bbox.ixmax, mask.bbox.iymin, mask.bbox.iymax
 
-        # Negative indices will do bad things, like wrap around the cube
-        # If xhi/yhi are negative, there is not overlap
+        # Negative indices will do bad things, like wrap around the cube.
+        # If xhi/yhi are negative, there is not overlap.
         if (xhi < 0) or (yhi < 0):
             raise ValueError("Region is outside of cube.")
 
@@ -2145,6 +2168,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             subcube = self.subcube(xlo=xlo, ylo=ylo, xhi=xhi, yhi=yhi)
         else:
             ranges = self._velocity_freq_conversion_regions(ranges, veltypes, restfreqs)
+            # Take the union of all spectral ranges.
             zlo = min([x[0] for x in ranges])
             zhi = max([x[1] for x in ranges])
             slab = self.spectral_slab(zlo, zhi)
@@ -2158,16 +2182,19 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                 raise ValueError("The derived subset is empty: the region does not"
                                  " overlap with the cube.")
 
+        # Only the spatial axes (shape[1:]) are relevant here.
         shp = self.shape[1:]
+        # slices_small indexes into mask.data for the overlapping area.
         _, slices_small = mask.get_overlap_slices(shp)
 
+        # 2D spatial mask broadcast across all spectral planes.
         maskarray = np.zeros(subcube.shape[1:], dtype='bool')
         maskarray[:] = mask.data[slices_small]
 
         BAM = BooleanArrayMask(maskarray, subcube.wcs, shape=subcube.shape)
         masked_subcube = subcube.with_mask(BAM)
         # by using ceil / floor above, we potentially introduced a NaN buffer
-        # that we can now crop out
+        # that we can now crop out.
         if minimize:
             return masked_subcube.minimal_subcube(spatial_only=True)
         else:
