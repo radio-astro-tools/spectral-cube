@@ -27,6 +27,7 @@ from astropy import convolution
 from astropy import wcs
 
 from . import wcs_utils
+from . import cube_utils
 from .spectral_cube import SpectralCube, VaryingResolutionSpectralCube, SIGMA2FWHM, np2wcs
 from .utils import cached, VarianceWarning, SliceWarning, BeamWarning, SmoothingWarning, BeamUnitsError, PossiblySlowWarning, ArrayWrapper
 from .lower_dimensional_structures import Projection
@@ -881,6 +882,7 @@ class DaskSpectralCubeMixin:
     def spectral_smooth(self,
                         kernel,
                         convolve=convolution.convolve,
+                        vectorize=False,
                         **kwargs):
         """
         Smooth the cube along the spectral dimension
@@ -895,6 +897,17 @@ class DaskSpectralCubeMixin:
             The astropy convolution function to use, either
             `astropy.convolution.convolve` or
             `astropy.convolution.convolve_fft`
+        vectorize : bool
+            If True and ``convolve`` is the default
+            ``astropy.convolution.convolve`` with no extra kwargs, drop to
+            a scipy-backed per-chunk convolution (``scipy.ndimage`` or
+            ``scipy.signal.oaconvolve``, auto-routed by kernel size). The
+            scipy backends release the GIL, so dask's threaded scheduler
+            actually parallelises across chunks; the default
+            ``astropy.convolve`` path holds the GIL for the whole call
+            and serialises despite the threads. Bit-equivalent to the
+            per-spectrum ``astropy.convolve`` reference. See
+            ``benchmarks/spectral_smooth_results.md`` for numbers.
         save_to_tmp_dir : bool
             If `True`, the computation will be carried out straight away and
             saved to a temporary directory. This can improve performance,
@@ -908,6 +921,27 @@ class DaskSpectralCubeMixin:
         if isinstance(kernel.array, u.Quantity):
             raise u.UnitsError("The convolution kernel should be defined "
                                "without a unit.")
+
+        if (vectorize
+                and convolve is convolution.convolve
+                and not kwargs):
+            kernel_array = kernel.array
+            use_oa = (kernel_array.size
+                      > cube_utils._OACONVOLVE_KERNEL_THRESHOLD)
+
+            if use_oa:
+                def _per_chunk(array):
+                    return cube_utils.spectral_convolve_oaconvolve(
+                        array.astype(np.float64, copy=False),
+                        kernel_array)
+            else:
+                def _per_chunk(array):
+                    return cube_utils.spectral_convolve_vectorized(
+                        array.astype(np.float64, copy=False),
+                        kernel_array)
+
+            return self.apply_function_parallel_spectral(
+                _per_chunk, accepts_chunks=True)
 
         def spectral_smooth(array):
             kernel_3d = kernel.array.reshape((len(kernel.array), 1, 1))
