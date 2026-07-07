@@ -3,7 +3,9 @@ A class to represent a 3-d position-position-velocity spectral cube.
 """
 
 import uuid
+import shutil
 import inspect
+import weakref
 import warnings
 import tempfile
 import textwrap
@@ -91,10 +93,24 @@ def add_save_to_tmp_dir_option(function):
                 raise ImportError("saving the cube to a temporary directory "
                                   "requires the zarr and fsspec packages to "
                                   "be installed.")
-            filename = tempfile.mktemp()
+            # zarr writes a directory store, so we need a temporary
+            # directory, not a file.  (The previous tempfile.mktemp() call
+            # returned a bare path that zarr filled in as a directory; the
+            # unsafe-API deprecation must be resolved with mkdtemp, not
+            # mkstemp, since mkstemp pre-creates a *file* and to_zarr then
+            # fails with FSPathExistNotDir.)
+            dirname = tempfile.mkdtemp()
             with dask.config.set(**cube._scheduler_kwargs):
-                cube._data.to_zarr(filename)
-            cube._data = da.from_zarr(filename)
+                cube._data.to_zarr(dirname)
+            cube._data = da.from_zarr(dirname)
+            # The zarr store must outlive this function since the dask array
+            # lazily reads from it, so we tie its lifetime to the cube rather
+            # than cleaning it up here.  A weakref.finalize keyed on the cube
+            # removes the store when the cube is garbage collected.  (We avoid
+            # tempfile.TemporaryDirectory because its implicit GC-time cleanup
+            # emits a ResourceWarning, which the test suite escalates to an
+            # error.)
+            weakref.finalize(cube, shutil.rmtree, dirname, ignore_errors=True)
         return cube
 
     return wrapper
