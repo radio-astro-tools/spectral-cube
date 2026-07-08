@@ -1080,12 +1080,22 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={},
                     scubes = [cube for cube, kp in zip(scubes, keep) if kp]
 
                 if weightcubes is not None:
-                    sweightcubes = [cube[ch1:ch2, slices[1], slices[2]]
-                                    for (ch1, ch2), slices, cube, kp
-                                    in std_tqdm(zip(chans, mincube_slices, weightcubes, keep),
-                                                delay=5, desc='Subweight')
-                                    if kp
-                                    ]
+                    # Slice each weight cube by ITS OWN two closest channels to
+                    # the target velocity, not the data cube's channel indices.
+                    # A weight cube can be on a different spectral (and spatial)
+                    # grid than its data cube (e.g. a different nchan / reference);
+                    # reusing the data cube's indices then yields a weight slab
+                    # that does not bracket the target velocity, so reprojecting
+                    # the weight HDU extrapolates to 0 and the pixel is dropped
+                    # (footprint 0), producing spurious NaN stripes that beat with
+                    # the data-vs-weight grid offset.
+                    sweightcubes = []
+                    for wcube, kp in zip(weightcubes, keep):
+                        if not kp:
+                            continue
+                        wc1, wc2 = two_closest_channels(wcube, channel)
+                        wc1, wc2 = (wc1, wc2 + 1) if wc1 < wc2 else (wc2, wc1 + 1)
+                        sweightcubes.append(wcube[wc1:wc2])
                     wthdus = [cube.hdu
                               for cube in std_tqdm(sweightcubes, delay=5, desc='WeightData')]
 
