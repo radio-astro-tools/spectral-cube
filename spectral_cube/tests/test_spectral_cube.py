@@ -2876,6 +2876,13 @@ def test_mask_none(use_dask):
     assert_quantity_allclose(cube[:, 0, 0],
                              [0, 12] * u.Jy / u.beam)
 
+    # Regression test for issue #1014: get_mask_array() used to raise
+    # AttributeError when no mask was attached to the cube.
+    mask = cube.get_mask_array()
+    assert mask.shape == data.shape
+    assert mask.dtype == bool
+    assert np.all(np.asarray(mask))
+
 
 @pytest.mark.parametrize('filename', ['data_vda', 'data_vda_beams'],
                          indirect=['filename'])

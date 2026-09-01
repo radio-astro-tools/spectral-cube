@@ -25,6 +25,10 @@
   silently omitting the ``Jy/beam`` scaling by the change in beam area that
   ``SpectralCube.convolve_to`` already applies, which could produce
   incorrect values. #1016
+- Fixed ``get_mask_array()`` raising ``AttributeError`` on a cube with no
+  mask attached (e.g. one with no blanked/NaN values on read); it now
+  returns an all-``True`` array, consistent with "no mask" meaning every
+  element is included. #1014
 
 0.6.5 (2023-12-05)
 ----------------------

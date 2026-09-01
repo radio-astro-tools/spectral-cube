@@ -552,7 +552,16 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def get_mask_array(self):
         """
         Convert the mask to a boolean numpy array
+
+        If no mask is attached to the cube, this returns a read-only
+        array of all `True` (i.e., every element is included) rather
+        than materializing a new writable array, so that the memory
+        footprint stays constant even for large (dask-backed) cubes.
         """
+        if self._mask is None:
+            if isinstance(self._data, da.Array):
+                return da.broadcast_to(True, self._data.shape).rechunk(self._data.chunksize)
+            return np.broadcast_to(True, self._data.shape)
         return self._mask.include(data=self._data, wcs=self._wcs,
                                   wcs_tolerance=self._wcs_tolerance)
 
