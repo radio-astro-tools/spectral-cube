@@ -347,6 +347,53 @@ def test_spectral_interpolate_with_mask(data_522_delta, use_dask):
     hdul.close()
 
 
+def test_spectral_interpolate_with_mask_reversed_output(data_522_delta, use_dask):
+    # Ascending input axis, descending output grid, so the output is reversed
+    # while a mask is present. The mask must stay aligned with the data.
+
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
+
+    mask = np.ones(cube.shape, dtype=bool)
+    mask[:2] = False
+
+    masked_cube = cube.with_mask(mask)
+
+    # midpoint between each position, taken in decreasing order
+    sg = (cube.spectral_axis[1:] + cube.spectral_axis[:-1]) / 2.
+
+    result = masked_cube.spectral_interpolate(spectral_grid=sg[::-1])
+
+    assert result.spectral_axis[0] > result.spectral_axis[-1]
+
+    included = np.asarray(result.mask.include()[:, 0, 0])
+    values = np.asarray(result.unmasked_data[:, 0, 0].value)
+
+    # nothing that carries a value may be masked out
+    assert np.all(included[np.isfinite(values)])
+    # the last channel has no valid input on either side
+    assert not included[-1]
+
+    # the delta is at input channel 2 and channels 0 and 1 are masked out, so
+    # in decreasing spectral order the interpolated values are 0, 0.5 and then
+    # two channels with no valid input
+    np.testing.assert_almost_equal(np.asarray(result.filled_data[:, 0, 0].value),
+                                   [0.0, 0.5, np.nan, np.nan])
+
+    # the same grid in increasing order is the mirror image of the above
+    result = masked_cube.spectral_interpolate(spectral_grid=sg)
+
+    assert result.spectral_axis[0] < result.spectral_axis[-1]
+
+    included = np.asarray(result.mask.include()[:, 0, 0])
+    values = np.asarray(result.unmasked_data[:, 0, 0].value)
+
+    assert np.all(included[np.isfinite(values)])
+    assert not included[0]
+
+    np.testing.assert_almost_equal(np.asarray(result.filled_data[:, 0, 0].value),
+                                   [np.nan, np.nan, 0.5, 0.0])
+
+
 def test_spectral_interpolate_reversed(data_522_delta, use_dask):
 
     cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
