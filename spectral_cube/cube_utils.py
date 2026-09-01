@@ -274,6 +274,152 @@ def is_huge(cube):
         return True
 
 
+def spectral_convolve_vectorized(data, kernel_array, chunk_size=None):
+    """
+    Convolve ``data`` along axis 0 with a 1D normalized ``kernel_array``,
+    producing output bit-for-bit equivalent (within machine precision) to
+
+        astropy.convolution.convolve(
+            data, kernel, normalize_kernel=True,
+            boundary='fill', fill_value=0.0, nan_treatment='interpolate'
+        )
+
+    applied to each 1D ray along axis 0, but vectorized over all spatial
+    pixels via ``scipy.ndimage.convolve1d``. NaNs are interpolated over by
+    renormalising the kernel using only the valid samples (matching astropy's
+    ``nan_treatment='interpolate'``). Off-edge samples are treated as valid
+    zeros (matching astropy's ``boundary='fill'`` with default ``fill_value``).
+
+    Parameters
+    ----------
+    data : ndarray
+        N-dimensional array; convolution runs along axis 0.
+    kernel_array : 1D ndarray
+        Kernel values. Will be normalised to sum to 1 internally.
+    chunk_size : int, optional
+        If given, process ``chunk_size`` spatial pixels at a time (using a
+        flattened view of the trailing axes) to bound peak memory. The default
+        processes the whole array at once.
+
+    Returns
+    -------
+    out : ndarray
+        Smoothed array, same shape and dtype as ``data``.
+    """
+    # Local import: scipy is already a hard dep, but keep it lazy for parity
+    # with the rest of cube_utils
+    from scipy.ndimage import convolve1d
+
+    karr = np.asarray(kernel_array, dtype=np.float64)
+    ksum = karr.sum()
+    if ksum == 0:
+        raise ValueError("kernel must have non-zero sum for normalisation")
+    karr = karr / ksum
+
+    if chunk_size is None:
+        return _spectral_convolve_chunk(data, karr, convolve1d)
+
+    nspec = data.shape[0]
+    spatial_shape = data.shape[1:]
+    flat = data.reshape(nspec, -1)
+    out_flat = np.empty_like(flat)
+    npix = flat.shape[1]
+    for start in range(0, npix, chunk_size):
+        stop = min(start + chunk_size, npix)
+        out_flat[:, start:stop] = _spectral_convolve_chunk(
+            flat[:, start:stop], karr, convolve1d
+        )
+    return out_flat.reshape((nspec,) + spatial_shape)
+
+
+def _spectral_convolve_chunk(data, karr, convolve1d):
+    nanmask = np.isnan(data)
+    if nanmask.any():
+        filled = np.where(nanmask, 0.0, data)
+        weight = (~nanmask).astype(data.dtype, copy=False)
+        num = convolve1d(filled, karr, axis=0, mode='constant', cval=0.0)
+        # cval=1.0 here is what makes the math match astropy: off-edge samples
+        # are 'valid' (they're the fill value, treated as real data) so they
+        # contribute weight 1, not 0. Edges therefore see NO renormalisation,
+        # only NaN positions do.
+        den = convolve1d(weight, karr, axis=0, mode='constant', cval=1.0)
+        with np.errstate(invalid='ignore', divide='ignore'):
+            out = num / den
+        # No valid neighbours within kernel reach -> astropy returns 0 there
+        # (rather than NaN) when nan_treatment='interpolate' and the kernel
+        # is fully blocked.
+        zero_den = den == 0
+        if zero_den.any():
+            out[zero_den] = 0.0
+        return out
+    return convolve1d(data, karr, axis=0, mode='constant', cval=0.0)
+
+
+# Threshold (spectral-kernel size in samples) above which the FFT-based
+# spectral convolution (scipy.signal.oaconvolve along axis 0) outperforms
+# the direct scipy.ndimage.convolve1d path. Crossover measured on an
+# Apple M-series cube of shape (995, 221, 481): ndimage wins at k=41,
+# oaconvolve wins decisively from k>~100 onward (see
+# ``benchmarks/spectral_smooth_results.md``). 64 is a conservative
+# default; the constant factor depends on cube shape, so this is a
+# heuristic, not a sharp cutover.
+_OACONVOLVE_KERNEL_THRESHOLD = 64
+
+
+def spectral_convolve_oaconvolve(data, kernel_array):
+    """
+    Convolve ``data`` along axis 0 with a 1D ``kernel_array`` using
+    ``scipy.signal.oaconvolve`` (overlap-add FFT, ~constant runtime in
+    kernel size for long signals). Bit-equivalent to
+
+        astropy.convolution.convolve(
+            data, kernel, normalize_kernel=True,
+            boundary='fill', fill_value=0.0,
+            nan_treatment='interpolate'
+        )
+
+    applied per ray, including NaN renormalisation.
+
+    Use this in preference to :func:`spectral_convolve_vectorized` when the
+    kernel is wider than a few tens of channels; see
+    ``benchmarks/spectral_smooth_results.md`` for the crossover.
+    """
+    from scipy.signal import oaconvolve
+
+    karr = np.asarray(kernel_array, dtype=np.float64)
+    ksum = karr.sum()
+    if ksum == 0:
+        raise ValueError("kernel must have non-zero sum for normalisation")
+    karr = karr / ksum
+    k3 = karr.reshape(-1, 1, 1)
+
+    nanmask = np.isnan(data)
+    if not nanmask.any():
+        # No NaNs: a single oaconvolve along axis 0 reproduces astropy's
+        # default boundary='fill', fill_value=0 (no edge renorm needed).
+        return oaconvolve(data, k3, mode='same', axes=0)
+
+    filled = np.where(nanmask, 0.0, data)
+    weight = (~nanmask).astype(data.dtype, copy=False)
+    num = oaconvolve(filled, k3, mode='same', axes=0)
+    # oaconvolve only supports zero-padded boundaries, so we can't pass
+    # cval=1.0 to the weight convolution the way we do with
+    # scipy.ndimage.convolve1d. Synthesise it: the would-be-cval-1.0
+    # convolution of the weight equals the zero-padded convolution plus
+    # the kernel coverage that lies outside [0, N). The latter is
+    # ``1 - convolve(ones, k)`` along axis 0, broadcast across (y, x).
+    ones = np.ones(data.shape[0], dtype=np.float64)
+    edge = oaconvolve(ones, karr, mode='same')
+    shortfall = (1.0 - edge).reshape(-1, 1, 1)
+    den = oaconvolve(weight, k3, mode='same', axes=0) + shortfall
+    with np.errstate(invalid='ignore', divide='ignore'):
+        out = num / den
+    zero_den = den == 0
+    if zero_den.any():
+        out[zero_den] = 0.0
+    return out
+
+
 def iterator_strategy(cube, axis=None):
     """
     Guess the most efficient iteration strategy
