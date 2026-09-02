@@ -552,7 +552,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def get_mask_array(self):
         """
         Convert the mask to a boolean numpy array
+
+        Returns `None` if no mask is attached to the cube, consistent
+        with how the rest of the class treats a missing mask (i.e., as
+        "nothing to restrict") rather than materializing an all-`True`
+        array, which would use memory unnecessarily.
         """
+        if self._mask is None:
+            return None
         return self._mask.include(data=self._data, wcs=self._wcs,
                                   wcs_tolerance=self._wcs_tolerance)
 
