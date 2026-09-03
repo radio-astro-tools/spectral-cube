@@ -552,7 +552,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
     def get_mask_array(self):
         """
         Convert the mask to a boolean numpy array
+
+        Returns
+        -------
+        mask : `~numpy.ndarray` or None
+            Boolean array, or `None` if no mask is attached to the cube
         """
+        if self._mask is None:
+            return None
         return self._mask.include(data=self._data, wcs=self._wcs,
                                   wcs_tolerance=self._wcs_tolerance)
 

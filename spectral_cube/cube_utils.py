@@ -866,9 +866,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwa
                           "A more recent version may be needed.")
             cube_repr = cube.reproject(header, **kwargs)
 
-        # Create weighting mask (2D)
-        mask = (cube_repr[0:1].get_mask_array()[0])
-        mask_opt += mask.astype(float)
+        # Create weighting mask (2D). get_mask_array() returns None if no
+        # mask is attached to the cube, meaning every pixel is included.
+        mask = cube_repr[0:1].get_mask_array()
+        if mask is None:
+            mask_opt += 1.
+        else:
+            mask_opt += mask[0].astype(float)
 
         # Go through each slice of the cube, add it to the final array
         for ii in range(final_array.shape[0]):
