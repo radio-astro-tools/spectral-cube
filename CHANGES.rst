@@ -32,9 +32,11 @@
 
 - Fixed the ``-dev`` tox test factor silently installing released
   astropy/numpy/pyerfa from PyPI instead of the intended dev/nightly
-  builds, because uv's default index-strategy stops at the first index
-  (PyPI) that satisfies a dependency and never checks the nightly-wheel
-  index. #994
+  builds: uv does not read the pip-style ``PIP_EXTRA_INDEX_URL`` env var
+  the nightly indexes were configured through, and even once pointed at
+  the right indexes (via ``UV_INDEX``), uv does not implicitly allow
+  pre-release versions the way pip does, so it kept selecting the latest
+  released version. #994
 
 0.6.5 (2023-12-05)
 ----------------------
