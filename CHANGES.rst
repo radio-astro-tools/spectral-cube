@@ -28,9 +28,7 @@
 - Fixed ``get_mask_array()`` raising ``AttributeError`` on a cube with no
   mask attached (e.g. one with no blanked/NaN values on read); it now
   returns ``None``, consistent with how a missing mask is already handled
-  elsewhere in the class, rather than materializing an all-``True`` array.
-  ``mosaic_cubes()`` (the only in-tree caller) is updated to handle a
-  ``None`` result. #1014
+  elsewhere.  #1014
 
 0.6.5 (2023-12-05)
 ----------------------
