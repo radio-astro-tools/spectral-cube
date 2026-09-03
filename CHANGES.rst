@@ -30,6 +30,12 @@
   returns ``None``, consistent with how a missing mask is already handled
   elsewhere.  #1014
 
+- Fixed the ``-dev`` tox test factor silently installing released
+  astropy/numpy/pyerfa from PyPI instead of the intended dev/nightly
+  builds, because uv's default index-strategy stops at the first index
+  (PyPI) that satisfies a dependency and never checks the nightly-wheel
+  index. #994
+
 0.6.5 (2023-12-05)
 ----------------------
 - Fixed issue with fix from #893 not getting included in the 0.6.4 tag
