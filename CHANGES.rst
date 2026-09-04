@@ -30,6 +30,14 @@
   returns ``None``, consistent with how a missing mask is already handled
   elsewhere.  #1014
 
+- Fixed the ``-dev`` tox test factor silently installing released
+  astropy/numpy/pyerfa from PyPI instead of the intended dev/nightly
+  builds: uv does not read the pip-style ``PIP_EXTRA_INDEX_URL`` env var
+  the nightly indexes were configured through, and even once pointed at
+  the right indexes (via ``UV_INDEX``), uv does not implicitly allow
+  pre-release versions the way pip does, so it kept selecting the latest
+  released version. #994
+
 0.6.5 (2023-12-05)
 ----------------------
 - Fixed issue with fix from #893 not getting included in the 0.6.4 tag
