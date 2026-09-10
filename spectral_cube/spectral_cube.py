@@ -2498,17 +2498,14 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             name = 'SpectralCube'
 
         try:
-            from glue.app.qt import GlueApplication
-        except ImportError: 
-            from glue_qt.app.application import GlueApplication
-        from glue.core import DataCollection, Data
-        from glue.core.coordinates import coordinates_from_header
-        try:
-            from glue.viewers.image.qt.data_viewer import ImageViewer
-        except ImportError:
+            from glue_qt.app import GlueApplication
             from glue_qt.viewers.image import ImageViewer
         except ImportError:
-            from glue.viewers.image.qt.viewer_widget import ImageWidget as ImageViewer
+            # Older glue versions bundled the Qt interface
+            from glue.app.qt import GlueApplication
+            from glue.viewers.image.qt.data_viewer import ImageViewer
+        from glue.core import DataCollection, Data
+        from glue.core.coordinates import coordinates_from_header
 
         if dataset is not None:
             if name in [d.label for d in dataset.components]:
@@ -2540,7 +2537,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
                     return self._glue_app
 
-            glue_app.add_datasets(self._glue_app.data_collection, result)
+            glue_app.add_datasets(result)
 
 
     def to_pvextractor(self):

@@ -63,6 +63,10 @@
   ``Beam.pixels_per_beam``, requiring ``radio-beam>=0.3.10``.
   (radio-astro-tools/radio_beam#109) #1015
 
+- Fixed ``to_glue`` with glue-qt, and when passing ``glue_app`` for a cube
+  not previously sent to glue. The ``viz_extra`` tox environment now
+  installs glue-qt and runs in CI. #927
+
 0.6.5 (2023-12-05)
 ----------------------
 - Fixed issue with fix from #893 not getting included in the 0.6.4 tag

@@ -65,7 +65,9 @@ viz = [
   "pvextractor>=0.3",
   "reproject>=0.9.1",
 ]
-viz_extra = [
+# Normalized (hyphenated) name: tox skips extras whose pyproject.toml name
+# differs from the normalized form, so "viz_extra" installed nothing.
+viz-extra = [
   "glue-qt>=0.1",
   "yt; python_version<'3.8'",
 ]
