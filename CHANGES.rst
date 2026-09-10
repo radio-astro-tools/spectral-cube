@@ -38,6 +38,9 @@
   pre-release versions the way pip does, so it kept selecting the latest
   released version. #994
 
+- Fixed: ``DaskSpectralCube.spectral_interpolate`` was building the output mask
+  in opposite spectral order from the data when the spectrum was reversed #1018
+
 0.6.5 (2023-12-05)
 ----------------------
 - Fixed issue with fix from #893 not getting included in the 0.6.4 tag

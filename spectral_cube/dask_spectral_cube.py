@@ -1362,10 +1362,10 @@ class DaskSpectralCubeMixin:
             else -outdiff.value
         newwcs.wcs.set()
 
-        newbmask = BooleanArrayMask(~np.isnan(newcube), wcs=newwcs)
-
         if reverse_out:
             newcube = newcube[::-1, :, :]
+
+        newbmask = BooleanArrayMask(~np.isnan(newcube), wcs=newwcs)
 
         newcube = self._new_cube_with(data=newcube, wcs=newwcs, mask=newbmask,
                                       meta=self.meta,
