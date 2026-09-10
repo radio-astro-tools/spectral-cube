@@ -17,9 +17,8 @@
   ``SpectralCube.convolve_to`` already applies, which could produce
   incorrect values. #1016
 
-- Fixed ``DaskSpectralCube.spectral_interpolate`` building the output mask
-  before reversing the data, so a decreasing output grid returned a mask in
-  the opposite spectral order to the cube it described. #1018
+- Fixed: ``DaskSpectralCube.spectral_interpolate`` was building the output mask
+  in opposite spectral order from the data when the spectrum was reversed #1018
 
 0.6.5 (2023-12-05)
 ----------------------
