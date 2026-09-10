@@ -2,6 +2,7 @@ import abc
 import uuid
 import warnings
 import tempfile
+import weakref
 
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
@@ -12,6 +13,7 @@ from astropy.wcs import InconsistentAxisTypesError
 from astropy.io import fits
 
 from . import wcs_utils
+from . import cube_utils
 from .utils import WCSWarning, ArrayWrapper
 
 
@@ -225,15 +227,24 @@ class MaskBase(object):
         dt = np.result_type(data.dtype, 0.0)
 
         if use_memmap and data.size > 0:
-            ntf = tempfile.NamedTemporaryFile()
-            sliced_data = np.memmap(ntf, mode='w+', shape=data[view].shape,
+            ntf = tempfile.NamedTemporaryFile(delete=False)
+            ntf_path = ntf.name
+            ntf.close()
+            sliced_data = np.memmap(ntf_path, mode='w+', shape=data[view].shape,
                                     dtype=dt)
             sliced_data[:] = data[view]
+            weakref.finalize(sliced_data, cube_utils.remove_tempfile_if_exists,
+                             ntf_path)
         else:
             sliced_data = data[view].astype(dt)
 
         ex = self.exclude(data=data, wcs=wcs, view=view, **kwargs)
 
+        # When nothing is masked, .filled() returns a view of sliced_data
+        # rather than a copy (result.base is sliced_data), so the memmap
+        # backing file must not be removed until the returned array (and
+        # any view of it) is no longer reachable -- hence the finalizer
+        # above rather than an eager cleanup here.
         return np.ma.masked_array(sliced_data, mask=ex).filled(fill)
 
     def __and__(self, other):

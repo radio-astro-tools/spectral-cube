@@ -1,4 +1,6 @@
 import contextlib
+import os
+import time
 import warnings
 from copy import deepcopy
 
@@ -19,6 +21,29 @@ from astropy import units as u
 import itertools
 import re
 from radio_beam import Beam
+
+
+def remove_tempfile_if_exists(path, attempts=5, delay=0.1):
+    """
+    Best-effort removal of a memmap's backing temporary file once the
+    array referencing it has been garbage collected (or otherwise once the
+    caller is done with it).
+
+    On Windows, the OS can briefly hold on to a just-unmapped file even
+    after the owning Python object (and its memory mapping) has already
+    been deallocated, so an immediate ``os.remove`` can transiently fail
+    with a ``PermissionError``; retry a few times before giving up.
+    """
+    for attempt in range(attempts):
+        try:
+            os.remove(path)
+            return
+        except FileNotFoundError:
+            return
+        except OSError:
+            if attempt == attempts - 1:
+                return
+            time.sleep(delay)
 
 
 def _fix_spectral(wcs):
@@ -748,6 +773,37 @@ def bunit_converters(obj, unit, equivalencies=(), freq=None):
         # Slice along first axis to return a 1D array.
         return factors[0]
 
+
+def convolve_fft_singleprecision_kwargs(dtype, kwargs):
+    """
+    Return kwargs for `astropy.convolution.convolve_fft` that keep the FFT
+    computation itself at single precision when the input data are
+    float32, instead of implicitly promoting to double precision.
+
+    `numpy.fft` always computes (and returns) complex128 internally,
+    regardless of the input array's dtype, so passing ``complex_dtype``
+    alone is not enough to avoid the precision (and associated memory)
+    promotion; `scipy.fft` respects the input precision, so it is
+    substituted in as well.  This roughly halves the peak memory used
+    during the FFT-based convolution for float32 cubes.  Any of these
+    settings the caller already specified in ``kwargs`` take precedence.
+    """
+    dtype = np.dtype(dtype)
+    # compare kind/itemsize rather than dtype identity: FITS data is often
+    # read in as big-endian ('>f4'), which is still single precision but
+    # would not match a strict ``== np.float32`` (native-endian) check
+    if dtype.kind != 'f' or dtype.itemsize != 4:
+        return kwargs
+
+    import scipy.fft
+
+    defaults = {'complex_dtype': np.complex64,
+                'fftn': scipy.fft.fftn,
+                'ifftn': scipy.fft.ifftn}
+    defaults.update(kwargs)
+    return defaults
+
+
 def combine_headers(header1, header2, **kwargs):
     '''
     Given two Header objects, this function returns a fits Header of the optimal wcs.
@@ -835,9 +891,13 @@ def mosaic_cubes(cubes, spectral_block_size=100, combine_header_kwargs={}, **kwa
                           "A more recent version may be needed.")
             cube_repr = cube.reproject(header, **kwargs)
 
-        # Create weighting mask (2D)
-        mask = (cube_repr[0:1].get_mask_array()[0])
-        mask_opt += mask.astype(float)
+        # Create weighting mask (2D). get_mask_array() returns None if no
+        # mask is attached to the cube, meaning every pixel is included.
+        mask = cube_repr[0:1].get_mask_array()
+        if mask is None:
+            mask_opt += 1.
+        else:
+            mask_opt += mask[0].astype(float)
 
         # Go through each slice of the cube, add it to the final array
         for ii in range(final_array.shape[0]):

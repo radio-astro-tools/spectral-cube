@@ -12,6 +12,53 @@
   non-equivalent units, e.g. a ``Jy/beam`` cube and a dimensionless
   (unitless) cube.  Additive operations still require equivalent units. #1011
 
+- Fixed several cases where operations silently upcast float32 cubes to
+  float64, doubling their memory footprint: ``to()`` (unit conversion) on
+  ``SpectralCube``, ``VaryingResolutionSpectralCube``, and
+  ``LowerDimensionalObject``, and any operation built on
+  ``apply_function_parallel_spatial``/``apply_function_parallel_spectral``
+  (e.g. ``convolve_to``, ``spatial_smooth``, ``spectral_smooth``), which
+  always allocated a float64 output buffer regardless of the input dtype.
+  ``VaryingResolutionSpectralCube.convolve_to`` had the same issue in its
+  own output buffer allocation. #995
+- Fixed ``Projection.convolve_to`` (i.e. convolving a single cube slice/plane)
+  silently omitting the ``Jy/beam`` scaling by the change in beam area that
+  ``SpectralCube.convolve_to`` already applies, which could produce
+  incorrect values. #1016
+- Fixed ``get_mask_array()`` raising ``AttributeError`` on a cube with no
+  mask attached (e.g. one with no blanked/NaN values on read); it now
+  returns ``None``, consistent with how a missing mask is already handled
+  elsewhere.  #1014
+
+- Fixed the ``-dev`` tox test factor silently installing released
+  astropy/numpy/pyerfa from PyPI instead of the intended dev/nightly
+  builds: uv does not read the pip-style ``PIP_EXTRA_INDEX_URL`` env var
+  the nightly indexes were configured through, and even once pointed at
+  the right indexes (via ``UV_INDEX``), uv does not implicitly allow
+  pre-release versions the way pip does, so it kept selecting the latest
+  released version. #994
+
+- Fixed: ``DaskSpectralCube.spectral_interpolate`` was building the output mask
+  in opposite spectral order from the data when the spectrum was reversed #1018
+
+- Fixed the progress bar being hardwired for ray-wise spectral operations,
+  fixed and tested ``use_memmap=False`` for parallel ``convolve_to`` (now
+  warns instead of silently running serially), added a ``disable_huge_flag``
+  to prevent multiple memmaps from being used in parallel with joblib, and
+  documented selecting the memmap directory via ``memmap_dir`` in
+  ``big_data.rst``. #973
+
+- Added a ``backend`` keyword to ``apply_function_parallel_base``/
+  ``apply_function_parallel_spatial``/``apply_function_parallel_spectral``
+  (and therefore ``convolve_to``, ``spectral_smooth``, etc.) to choose the
+  ``joblib`` ``Parallel`` backend (``'loky'``, ``'threading'``,
+  ``'multiprocessing'``). #973
+
+- Fixed a Windows-only bug where a ``use_memmap=True`` output array's
+  backing temporary file could not be reopened from a separate joblib
+  worker process, affecting ``apply_function_parallel_base``,
+  ``downsample_axis``, and ``MaskBase._filled``. #973
+
 - ``pixels_per_beam`` now delegates to the ``radio_beam`` builtin
   (``Beam.pixels_per_beam`` / ``Beams.pixels_per_beam``), requiring
   ``radio-beam>=0.3.8``. (radio-astro-tools/radio_beam#109)

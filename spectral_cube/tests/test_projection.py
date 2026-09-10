@@ -840,6 +840,33 @@ def test_unit_conversions_general_1D(data_advs, use_dask, init_unit):
             np.testing.assert_almost_equal(roundtrip_spec.value,
                                            spec.value)
 
+def test_unit_conversion_preserves_dtype_2D(data_advs, use_dask):
+    # regression test for #995: LowerDimensionalObject.to() (as used by
+    # Projection/Slice) should not silently upcast float32 data to
+    # float64, which effectively doubles the memory footprint
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
+    cube = cube._new_cube_with(data=cube._data.astype('float32'))
+
+    plane = cube[0]
+    assert plane.dtype == np.float32
+
+    mKplane = plane.to(u.mK)
+    assert mKplane.dtype == np.float32
+    np.testing.assert_almost_equal(mKplane.value, plane.value * 1e3)
+
+def test_unit_conversion_preserves_dtype_1D(data_advs, use_dask):
+    # regression test for #995: LowerDimensionalObject.to() (as used by
+    # OneDSpectrum) should not silently upcast float32 data to float64
+    cube, data = cube_and_raw(data_advs, use_dask=use_dask)
+    cube = cube._new_cube_with(data=cube._data.astype('float32'))
+
+    spec = cube[:, 0, 0]
+    assert spec.dtype == np.float32
+
+    mKspec = spec.to(u.mK)
+    assert mKspec.dtype == np.float32
+    np.testing.assert_almost_equal(mKspec.value, spec.value * 1e3)
+
 @pytest.mark.parametrize(('init_unit'), bunits_list_1D)
 def test_multibeams_unit_conversions_general_1D(data_vda_beams, use_dask, init_unit):
 

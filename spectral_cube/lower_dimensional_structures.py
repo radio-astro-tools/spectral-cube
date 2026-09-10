@@ -179,7 +179,13 @@ class LowerDimensionalObject(u.Quantity, BaseNDClass, HeaderMixinClass):
         factor = cube_utils.bunit_converters(self, unit, equivalencies=equivalencies,
                                              freq=freq)
 
-        converted_array = (self.quantity * factor).value
+        # the unit conversion factor may be float64 by default, so if needed
+        # demote (or promote) it first to avoid a transient double-precision
+        # copy of the full array (see #995)
+        factor = np.asarray(factor, dtype=self.dtype)
+
+        # possibly redundant: coerce data back into its original dtype
+        converted_array = (self.quantity * factor).value.astype(self.dtype, copy=False)
 
         # use private versions of variables, not the generated property
         # versions
@@ -483,10 +489,25 @@ class Projection(LowerDimensionalObject, SpatialCoordMixinClass,
         convolution_kernel = \
             beam.deconvolve(self.beam).as_kernel(pixscale)
 
+        if convolve is convolution.convolve_fft:
+            # avoid the implicit float64 promotion (and associated memory
+            # cost) that convolve_fft otherwise performs on float32 data
+            kwargs = cube_utils.convolve_fft_singleprecision_kwargs(self.dtype, kwargs)
+
+        if self.unit.is_equivalent(u.Jy / u.beam):
+            beam_ratio_factor = (beam.sr / self.beam.sr).value
+        else:
+            beam_ratio_factor = 1.
+            
         newdata = convolve(self.value, convolution_kernel,
                            normalize_kernel=True,
-                           **kwargs)
+                           **kwargs) * beam_ratio_factor
 
+        # belt-and-braces: convolve_fft's dtype/precision are steered via
+        # kwargs above, but guarantee the output dtype matches the input
+        # regardless (see #995)
+        newdata = newdata.astype(self.dtype, copy=False)
+        
         self = Projection(newdata, unit=self.unit, wcs=self.wcs,
                           meta=self.meta, header=self.header,
                           beam=beam)

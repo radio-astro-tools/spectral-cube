@@ -35,6 +35,16 @@ def use_dask(request):
     return request.param
 
 
+@pytest.fixture(params=[None, 'threading'])
+def joblib_backend(request):
+    # Fixture to run joblib-parallelized tests with both the default
+    # ('loky', via None) and 'threading' backends. 'threading' avoids a
+    # Windows-specific memmap-reopening failure (see issue #971) since
+    # workers share the parent process's memory instead of reopening the
+    # memmap's backing file from a separate process.
+    return request.param
+
+
 def pytest_configure(config):
 
     config.option.astropy_header = True
