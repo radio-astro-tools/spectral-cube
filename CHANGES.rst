@@ -59,6 +59,10 @@
   worker process, affecting ``apply_function_parallel_base``,
   ``downsample_axis``, and ``MaskBase._filled``. #973
 
+- ``pixels_per_beam`` now delegates to the ``radio_beam`` builtin
+  ``Beam.pixels_per_beam``, requiring ``radio-beam>=0.3.10``.
+  (radio-astro-tools/radio_beam#109) #1015
+
 0.6.5 (2023-12-05)
 ----------------------
 - Fixed issue with fix from #893 not getting included in the 0.6.4 tag
