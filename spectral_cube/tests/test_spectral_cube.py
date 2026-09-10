@@ -5,6 +5,9 @@ import itertools
 import warnings
 import mmap
 import sys
+import gc
+import platform
+import weakref
 from packaging.version import Version, parse
 
 import pytest
@@ -105,6 +108,8 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
 
     cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
 
+    assert not cube.disable_huge_flag
+
     assert not cube._is_huge
 
     # We need to reduce the memory threshold rather than use a large cube to
@@ -134,6 +139,107 @@ def test_huge_disallowed(data_vda_jybeam_lower, use_dask):
     finally:
         cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
         del cube
+
+def test_huge_force_allowed(data_vda_jybeam_lower, use_dask):
+
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
+
+    cube.disable_huge_flag = True
+
+    assert cube.disable_huge_flag
+    assert not cube._is_huge
+
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+    try:
+        cube_utils.MEMORY_THRESHOLD = 1e15
+
+        assert not cube._is_huge
+
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
+
+def test_restore_huge_flag(data_vda_jybeam_lower, use_dask):
+
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
+
+    assert not cube.disable_huge_flag
+    assert not cube._is_huge
+
+    # We need to reduce the memory threshold rather than use a large cube to
+    # make sure we don't use too much memory during testing.
+    from .. import cube_utils
+    OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+    try:
+        cube_utils.MEMORY_THRESHOLD = 10
+
+        assert cube._is_huge
+
+        # apply_parallel_operations should disable then restore the flag
+
+        # Uses apply_function_parallel_spatial
+        out = cube.spatial_smooth_median(2, num_cores=1,
+                                         raise_error_jybm=False)
+
+        assert not cube.disable_huge_flag
+        assert cube._is_huge
+
+        # Uses apply_function_parallel_spectral
+        out = cube.sigma_clip_spectrally(1., num_cores=1)
+
+        assert not cube.disable_huge_flag
+        assert cube._is_huge
+
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
+
+
+
+def test_regression_971(data_vda, use_dask, joblib_backend):
+    """
+    Issue 971: ensure joblib does not use huge flag
+
+    Note that dask should be independent of this issue. We include it here to
+    make sure it doesn't cause other issues.
+    """
+
+    pytest.importorskip('joblib')
+
+    from radio_beam import Beam
+
+    cube, data = cube_and_raw(data_vda, use_dask=False)
+
+    cube.allow_huge_operations = True
+
+    convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                    num_cores=2,
+                                    use_memmap=True,
+                                    backend=joblib_backend)
+
+    try:
+        # We need to reduce the memory threshold rather than use a large cube to
+        # make sure we don't use too much memory during testing.
+        from .. import cube_utils
+        OLD_MEMORY_THRESHOLD = cube_utils.MEMORY_THRESHOLD
+
+        cube_utils.MEMORY_THRESHOLD = 10
+
+        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                        num_cores=2,
+                                        use_memmap=True,
+                                        backend=joblib_backend)
+
+        assert cube._is_huge
+    finally:
+        cube_utils.MEMORY_THRESHOLD = OLD_MEMORY_THRESHOLD
+        del cube
+
 
 
 class BaseTest(object):
@@ -2203,6 +2309,9 @@ def test_mask_bad_beams(filename, use_dask):
 
 
 def test_convolve_to_equal(data_vda, use_dask):
+    '''
+    No convolution should be applied when the beams are the same.
+    '''
 
     cube, data = cube_and_raw(data_vda, use_dask=use_dask)
 
@@ -2221,6 +2330,87 @@ def test_convolve_to_equal(data_vda, use_dask):
     # Pass a kwarg to the convolution function
 
     convolved = plane.convolve_to(cube.beam, nan_treatment='fill')
+
+
+def test_convolve_to_parallel(data_vda, joblib_backend):
+
+    pytest.importorskip('joblib')
+
+    from radio_beam import Beam
+
+    cube, data = cube_and_raw(data_vda, use_dask=False)
+
+    for ncores in (1,2,3,4):
+        convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                     num_cores=ncores,
+                                     use_memmap=True,
+                                     backend=joblib_backend)
+
+    # No parallel without memmap
+    ncores = 2
+    with pytest.warns(UserWarning, match="parallel=True and use_memmap=False was specified"):
+            convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                         num_cores=ncores,
+                                         use_memmap=False)
+
+
+@pytest.mark.parametrize('backend', ('loky', 'threading'))
+def test_convolve_to_parallel_memmap_tempfile_cleanup(data_vda, backend):
+    """
+    Regression test for the memmap backing-file handling fixed alongside
+    #971: the temporary file created for ``use_memmap=True`` should be
+    removed once the resulting cube's data array is garbage collected,
+    regardless of which joblib backend produced it.
+
+    .. warning::
+        Skipped on Windows with Python 3.11: that combination caps numpy
+        at the 2.4.x series (numpy dropped Python 3.11 support at 2.5.0),
+        and that series' ``np.memmap`` does not release its backing file's
+        OS-level handle promptly enough for this test's immediate
+        ``os.path.exists`` check to pass reliably, even though the array
+        has genuinely been garbage collected (confirmed reproducible
+        across 3 consecutive CI runs). The same job on the same Windows
+        runner with numpy>=2.5 (e.g. Python 3.12/3.13) passes cleanly, so
+        this looks like a numpy<2.5-specific behavior rather than a
+        spectral-cube bug. Remove this skip once this project drops
+        Python 3.11, matching astropy's own minimum supported version.
+    """
+
+    pytest.importorskip('joblib')
+
+    if platform.system() == 'Windows' and sys.version_info < (3, 12):
+        pytest.skip("memmap tempfile cleanup timing is unreliable on "
+                    "Windows + Python 3.11 (numpy<2.5); see docstring")
+
+    if backend == 'loky' and platform.system() == 'Windows':
+        # loky workers reopening the memmap's backing file by path from a
+        # separate process is the failure mode #971 is about; skip until
+        # this has been verified fixed on real Windows CI.
+        pytest.skip("loky backend memmap reopening is not yet verified "
+                    "fixed on Windows")
+
+    from radio_beam import Beam
+
+    cube, data = cube_and_raw(data_vda, use_dask=False)
+
+    convolved = cube.convolve_to(Beam(cube.beam.major * 1.1),
+                                 num_cores=2,
+                                 use_memmap=True,
+                                 backend=backend)
+
+    backing_array = convolved._data
+    assert isinstance(backing_array, np.memmap)
+    backing_path = backing_array.filename
+    assert os.path.exists(backing_path)
+
+    ref = weakref.ref(backing_array)
+    del backing_array
+    del convolved
+    del cube
+    gc.collect()
+
+    assert ref() is None
+    assert not os.path.exists(backing_path)
 
 
 def test_convolve_to(data_vda_beams, use_dask):
@@ -2778,6 +2968,14 @@ def test_parallel_bad_params(data_adv):
     assert ("parallel=True was specified but num_cores=1. "
             "Joblib will be used to run the task with a "
             "single thread.") in str(wrn[-1].message)
+
+    with pytest.raises(ValueError,
+                       match=("backend must be one of None, 'loky', "
+                              "'threading', or 'multiprocessing'")):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', AstropyWarning)
+            cube.spectral_smooth_median(3, num_cores=1, parallel=True,
+                                        backend='bogus')
 
 
 def test_initialization_from_units(data_adv, use_dask):

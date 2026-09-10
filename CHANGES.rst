@@ -41,6 +41,24 @@
 - Fixed: ``DaskSpectralCube.spectral_interpolate`` was building the output mask
   in opposite spectral order from the data when the spectrum was reversed #1018
 
+- Fixed the progress bar being hardwired for ray-wise spectral operations,
+  fixed and tested ``use_memmap=False`` for parallel ``convolve_to`` (now
+  warns instead of silently running serially), added a ``disable_huge_flag``
+  to prevent multiple memmaps from being used in parallel with joblib, and
+  documented selecting the memmap directory via ``memmap_dir`` in
+  ``big_data.rst``. #973
+
+- Added a ``backend`` keyword to ``apply_function_parallel_base``/
+  ``apply_function_parallel_spatial``/``apply_function_parallel_spectral``
+  (and therefore ``convolve_to``, ``spectral_smooth``, etc.) to choose the
+  ``joblib`` ``Parallel`` backend (``'loky'``, ``'threading'``,
+  ``'multiprocessing'``). #973
+
+- Fixed a Windows-only bug where a ``use_memmap=True`` output array's
+  backing temporary file could not be reopened from a separate joblib
+  worker process, affecting ``apply_function_parallel_base``,
+  ``downsample_axis``, and ``MaskBase._filled``. #973
+
 0.6.5 (2023-12-05)
 ----------------------
 - Fixed issue with fix from #893 not getting included in the 0.6.4 tag

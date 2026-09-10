@@ -33,4 +33,5 @@ jobs:
         - macos: py310-test-noviz
         - macos: py313-test-viz-noviz-dev
         - windows: py311-test-viz
+        - windows: py312-test-viz
         - windows: py313-test-viz-noviz-dev
