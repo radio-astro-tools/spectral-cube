@@ -65,7 +65,7 @@
 
 - Fixed ``to_glue`` with glue-qt, and when passing ``glue_app`` for a cube
   not previously sent to glue. The ``viz_extra`` tox environment now
-  installs glue-qt and runs in CI. #927
+  installs glue-qt and runs in CI. #927, #1022
 
 0.6.5 (2023-12-05)
 ----------------------
