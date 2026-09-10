@@ -515,7 +515,10 @@ class MultiBeamMixinClass(object):
     @property
     @cached
     def pixels_per_beam(self):
-        return self.beams.pixels_per_beam(self.wcs)
+        # Delegate per beam rather than via ``Beams.pixels_per_beam``: with
+        # numpy<2, the vectorized area of a float32 beam table stays float32
+        # and no longer matches the per-beam factors used by ``to()``.
+        return [beam.pixels_per_beam(self.wcs) for beam in self.beams]
 
     @property
     def unmasked_beams(self):
