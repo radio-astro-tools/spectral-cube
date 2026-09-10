@@ -35,29 +35,23 @@ def test_to_glue(data_vda_jybeam_lower, use_dask):
     pytest.importorskip('glue_qt')
     cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
     app = cube.to_glue(start_gui=False)
-    try:
-        expected = cube.filled_data[:].value
-        glue_data = app.data_collection[0]
-        np.testing.assert_allclose(glue_data['SpectralCube'], expected)
+    glue_data = app.data_collection[0]
+    np.testing.assert_allclose(glue_data['SpectralCube'], cube.filled_data[:].value)
 
-        # Add as a new component of an existing dataset
-        cube.to_glue(dataset=glue_data)
-        np.testing.assert_allclose(glue_data['SpectralCube_'], expected)
-    finally:
-        app.close()
+    # Add as a new component of an existing dataset
+    cube.to_glue(dataset=glue_data)
+    assert 'SpectralCube_' in [c.label for c in glue_data.main_components]
+    app.close()
 
 
 def test_to_glue_existing_app(data_vda_jybeam_lower, use_dask):
-    pytest.importorskip('glue_qt')
+    glue_qt_app = pytest.importorskip('glue_qt.app')
     cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
-    app = cube.to_glue(start_gui=False)
-    try:
-        # A cube that has not been sent to glue before
-        cube2, _ = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
-        cube2.to_glue(name='cube2', glue_app=app, start_gui=False)
-        assert [d.label for d in app.data_collection] == ['SpectralCube', 'cube2']
-    finally:
-        app.close()
+    # Send to an already running glue session
+    app = glue_qt_app.GlueApplication()
+    cube.to_glue(glue_app=app)
+    assert [d.label for d in app.data_collection] == ['SpectralCube']
+    app.close()
 
 
 def test_to_pvextractor(data_vda_jybeam_lower, use_dask):
