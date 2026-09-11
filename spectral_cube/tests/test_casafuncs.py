@@ -350,3 +350,53 @@ def test_casa_beams_stokes(data_advs_beams_fullstokes, tmp_path):
         assert casacube_component.beams == cube_component.beams
 
         assert isinstance(casacube_component, VaryingResolutionSpectralCube)
+
+
+@pytest.mark.skipif(not CASA_INSTALLED, reason='CASA tests must be run in a CASA environment.')
+@pytest.mark.parametrize('memmap', (False, True))
+def test_casa_read_multiple_chunks(tmp_path, memmap):
+
+    # Regression test for casa-formats-io#70. Reading a CASA mask with
+    # memmap=False returned an empty array for every chunk after the first.
+    # The other tests here all use the 3x4x5 basic.image, which CASA stores as
+    # a single tile and so can never be split into more than one chunk. 64^3 is
+    # the smallest cube CASA splits into multiple tiles.
+
+    from astropy.io import fits
+    from astropy.wcs import WCS
+
+    reference = np.random.random((64, 64, 64)).astype(np.float32)
+    reference[np.isclose(reference, 0.5)] += 0.05
+
+    w = WCS(naxis=3)
+    w.wcs.ctype = ['RA---SIN', 'DEC--SIN', 'FREQ']
+    w.wcs.cdelt = [-1e-4, 1e-4, 1e6]
+    w.wcs.crpix = [1, 1, 1]
+    w.wcs.crval = [24.0, 30.0, 1.4e9]
+    w.wcs.cunit = ['deg', 'deg', 'Hz']
+
+    hdu = fits.PrimaryHDU(reference, header=w.to_header())
+    hdu.header['BUNIT'] = 'Jy/beam'
+    hdu.header['BMAJ'] = 1e-3
+    hdu.header['BMIN'] = 1e-3
+    hdu.header['BPA'] = 0.0
+
+    fits_name = str(tmp_path / 'multichunk.fits')
+    casa_name = str(tmp_path / 'multichunk.image')
+    hdu.writeto(fits_name, overwrite=True)
+
+    ia = image()
+    ia.fromfits(infile=fits_name, outfile=casa_name, overwrite=True)
+    ia.calcmask(mask=f'"{casa_name}">0.5')
+    ia.unlock()
+    ia.close()
+    ia.done()
+
+    # target_chunksize is small enough here to give more than one chunk
+    cube = SpectralCube.read(casa_name, format='casa_image', memmap=memmap,
+                             target_chunksize=50000)
+
+    assert np.prod(cube._data.numblocks) > 1
+
+    assert_allclose(cube.unmasked_data[:].value, reference)
+    assert_allclose(np.asarray(cube.mask.include()), reference > 0.5)
