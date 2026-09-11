@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from .test_spectral_cube import cube_and_raw
@@ -31,9 +32,26 @@ def test_mask_quicklook(data_vda_jybeam_lower, use_dask):
 
 
 def test_to_glue(data_vda_jybeam_lower, use_dask):
-    pytest.importorskip('glue')
+    pytest.importorskip('glue_qt')
     cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
-    cube.to_glue(start_gui=False)
+    app = cube.to_glue(start_gui=False)
+    glue_data = app.data_collection[0]
+    np.testing.assert_allclose(glue_data['SpectralCube'], cube.filled_data[:].value)
+
+    # Add as a new component of an existing dataset
+    cube.to_glue(dataset=glue_data)
+    assert 'SpectralCube_' in [c.label for c in glue_data.main_components]
+    app.close()
+
+
+def test_to_glue_existing_app(data_vda_jybeam_lower, use_dask):
+    glue_qt_app = pytest.importorskip('glue_qt.app')
+    cube, data = cube_and_raw(data_vda_jybeam_lower, use_dask=use_dask)
+    # Send to an already running glue session
+    app = glue_qt_app.GlueApplication()
+    cube.to_glue(glue_app=app)
+    assert [d.label for d in app.data_collection] == ['SpectralCube']
+    app.close()
 
 
 def test_to_pvextractor(data_vda_jybeam_lower, use_dask):

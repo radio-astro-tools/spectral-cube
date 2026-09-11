@@ -49,3 +49,8 @@ See :doc:`yt_example` for using yt as a visualization tool.
 The `spectral_cube.SpectralCube.to_glue` and
 `spectral_cube.SpectralCube.to_ds9` methods will send the whole cube to glue
 and ds9.  This approach generally requires loading the whole cube into memory.
+
+`spectral_cube.SpectralCube.to_glue` requires glue-qt and a Qt binding such as
+PyQt6, which glue-qt does not install::
+
+    pip install "spectral-cube[viz-extra]" PyQt6

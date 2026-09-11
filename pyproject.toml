@@ -65,7 +65,7 @@ viz = [
   "pvextractor>=0.3",
   "reproject>=0.9.1",
 ]
-viz_extra = [
+viz-extra = [
   "glue-qt>=0.1",
   "yt; python_version<'3.8'",
 ]
