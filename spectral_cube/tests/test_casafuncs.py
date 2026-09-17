@@ -56,9 +56,10 @@ def make_casa_testimage(infile, outname):
                            )
         # populate each beam (hard assumption of 1 poln)
         for channum, beam in enumerate(cube.beams):
-            casabdict = {'major': {'value':beam.major.to(u.deg).value, 'unit':'deg'},
-                         'minor': {'value':beam.minor.to(u.deg).value, 'unit':'deg'},
-                         'positionangle': {'value':beam.pa.to(u.deg).value, 'unit':'deg'}
+            # casatools on py313 rejects numpy scalars in beam records
+            casabdict = {'major': {'value':float(beam.major.to(u.deg).value), 'unit':'deg'},
+                         'minor': {'value':float(beam.minor.to(u.deg).value), 'unit':'deg'},
+                         'positionangle': {'value':float(beam.pa.to(u.deg).value), 'unit':'deg'}
                         }
             ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=0)
 
@@ -92,9 +93,10 @@ def make_casa_stokes_testimage(infile, outname):
         for polnum, comp in enumerate(cube.components):
 
             for channum, beam in enumerate(cube[comp].beams):
-                casabdict = {'major': {'value':beam.major.to(u.deg).value, 'unit':'deg'},
-                            'minor': {'value':beam.minor.to(u.deg).value, 'unit':'deg'},
-                            'positionangle': {'value':beam.pa.to(u.deg).value, 'unit':'deg'}
+                # casatools on py313 rejects numpy scalars in beam records
+                casabdict = {'major': {'value':float(beam.major.to(u.deg).value), 'unit':'deg'},
+                            'minor': {'value':float(beam.minor.to(u.deg).value), 'unit':'deg'},
+                            'positionangle': {'value':float(beam.pa.to(u.deg).value), 'unit':'deg'}
                             }
 
                 ia.setrestoringbeam(beam=casabdict, channel=channum, polarization=polnum)
