@@ -67,6 +67,9 @@
   not previously sent to glue. The ``viz_extra`` tox environment now
   installs glue-qt and runs in CI. #927, #1022
 
+- CASA tests now also run on Python 3.12 and 3.13; ``numpy<2`` is only
+  pinned for the py310 CASA job. #1024
+
 0.6.5 (2023-12-05)
 ----------------------
 - Fixed issue with fix from #893 not getting included in the 0.6.4 tag

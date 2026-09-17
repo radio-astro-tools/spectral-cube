@@ -28,6 +28,7 @@ jobs:
         - linux: py311-test-viz
         - linux: py311-test-viz-noviz
         - linux: py312-test
+        - linux: py312-test-casa
         # glue tests; Qt needs EGL/xkbcommon system libraries on Linux
         - linux: py312-test-viz_extra
           libraries:
@@ -35,6 +36,7 @@ jobs:
               - libegl1
               - libxkbcommon0
         - linux: py313-test
+        - linux: py313-test-casa
         - linux: py313-test-viz-noviz-dev
         - macos: py310-test-noviz
         - macos: py313-test-viz-noviz-dev
