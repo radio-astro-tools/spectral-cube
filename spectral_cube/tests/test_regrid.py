@@ -171,6 +171,103 @@ def test_spectral_smooth(data_522_delta, use_dask):
                                    kernel.array[2:-2],
                                    4)
 
+
+def test_spectral_smooth_vectorize_matches_default(data_522_delta, use_dask):
+    """The vectorized fast path must match the per-spectrum astropy path
+    bit-for-bit (within machine precision) on representative inputs."""
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
+
+    for sigma in (0.7, 1.0, 2.3):
+        kernel = convolution.Gaussian1DKernel(sigma)
+        slow = cube.spectral_smooth(kernel=kernel, use_memmap=False)
+        fast = cube.spectral_smooth(kernel=kernel, vectorize=True)
+        np.testing.assert_allclose(fast.unitless_filled_data[:],
+                                   slow.unitless_filled_data[:],
+                                   rtol=0, atol=1e-12)
+
+
+def test_spectral_smooth_vectorize_handles_nans(data_522_delta, use_dask):
+    """With NaN-containing data the vectorized path should still match
+    astropy's nan_treatment='interpolate' renormalization."""
+    pytest.importorskip('scipy.ndimage')
+
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
+
+    # Inject NaNs via masking — filled_data turns these into NaN
+    mask_arr = np.ones(cube.shape, dtype=bool)
+    mask_arr[1, 0, 0] = False
+    masked_cube = cube.with_mask(BooleanArrayMask(mask_arr, wcs=cube.wcs))
+
+    kernel = convolution.Gaussian1DKernel(1.0)
+    slow = masked_cube.spectral_smooth(kernel=kernel, use_memmap=False)
+    fast = masked_cube.spectral_smooth(kernel=kernel, vectorize=True)
+    np.testing.assert_allclose(fast.unitless_filled_data[:],
+                               slow.unitless_filled_data[:],
+                               rtol=0, atol=1e-12)
+
+
+def test_spectral_smooth_vectorize_routes_to_oaconvolve(data_522_delta,
+                                                        use_dask):
+    """When the kernel is wider than the auto-routing threshold, the
+    vectorized path should switch to the FFT-based oaconvolve backend
+    while still matching the per-spectrum reference."""
+    pytest.importorskip('scipy.signal')
+
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
+
+    # Cube along the spectral axis has only 5 channels in this fixture,
+    # so we can't use a giant sigma. Force the oaconvolve branch by
+    # temporarily lowering the threshold instead.
+    from .. import cube_utils
+    saved = cube_utils._OACONVOLVE_KERNEL_THRESHOLD
+    try:
+        cube_utils._OACONVOLVE_KERNEL_THRESHOLD = 0  # always pick oaconvolve
+        kernel = convolution.Gaussian1DKernel(1.0)
+        slow = cube.spectral_smooth(kernel=kernel, use_memmap=False)
+        fast = cube.spectral_smooth(kernel=kernel, vectorize=True)
+    finally:
+        cube_utils._OACONVOLVE_KERNEL_THRESHOLD = saved
+
+    np.testing.assert_allclose(fast.unitless_filled_data[:],
+                               slow.unitless_filled_data[:],
+                               rtol=0, atol=1e-12)
+
+
+def test_spectral_smooth_vectorize_general_path(data_522_delta, use_dask):
+    """The general vectorize path (when extra kwargs are passed) routes
+    through astropy.convolution.convolve on the whole cube. It should
+    still match the per-spectrum call with the same kwargs."""
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
+
+    kernel = convolution.Gaussian1DKernel(1.0)
+    # Pass a non-default boundary so we exit the scipy fast path and hit
+    # the general astropy whole-cube branch.
+    slow = cube.spectral_smooth(kernel=kernel, use_memmap=False,
+                                boundary='extend')
+    fast = cube.spectral_smooth(kernel=kernel, vectorize=True,
+                                boundary='extend')
+    np.testing.assert_allclose(fast.unitless_filled_data[:],
+                               slow.unitless_filled_data[:],
+                               rtol=0, atol=1e-12)
+
+
+def test_spectral_smooth_vectorize_convolve_fft(data_522_delta, use_dask):
+    """vectorize=True must work with convolve=convolve_fft (the second
+    documented option)."""
+    cube, data = cube_and_raw(data_522_delta, use_dask=use_dask)
+
+    kernel = convolution.Gaussian1DKernel(1.0)
+    slow = cube.spectral_smooth(kernel=kernel,
+                                convolve=convolution.convolve_fft,
+                                use_memmap=False)
+    fast = cube.spectral_smooth(kernel=kernel,
+                                convolve=convolution.convolve_fft,
+                                vectorize=True)
+    np.testing.assert_allclose(fast.unitless_filled_data[:],
+                               slow.unitless_filled_data[:],
+                               rtol=0, atol=1e-10)
+
+
 def test_catch_kernel_with_units(data_522_delta, use_dask):
     # Passing a kernel with a unit should raise a u.UnitsError
 
