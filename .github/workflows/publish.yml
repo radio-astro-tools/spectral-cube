@@ -30,6 +30,11 @@ jobs:
     needs: [build_sdist_and_wheel]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/spectral-cube
+    permissions:
+      id-token: write  # required for PyPI trusted publishing (OIDC)
     steps:
       - uses: actions/download-artifact@v8
         with:
