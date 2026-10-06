@@ -1,10 +1,5 @@
-0.6.6.dev (unreleased)
-----------------------
-- Warning behavior changed to no longer warn about dask cubes loading into
-  memory.  Dask 'slow' warnings are now limited to the necessarily single-
-  stream examples: median, percentile, and mad_std. #929
-
-- Fixed compatibility with dask>=2024.12.0 #968
+0.7.0 (2026-10-06)
+------------------
 
 - Avoid deprecation warning with astropy>=8 #991
 
@@ -69,6 +64,32 @@
 
 - CASA tests now also run on Python 3.12 and 3.13; ``numpy<2`` is only
   pinned for the py310 CASA job. #1024
+
+- Added ``subcube``, ``spectral_slab``, ``subcube_from_regions`` and related
+  subcube methods, and slicing, to ``StokesSpectralCube``. #999
+
+- Fixed ``reindex_wcs`` and ``add_stokes_axis_to_wcs`` dropping the WCS
+  ``NAXIS`` (``pixel_shape``) when subsetting. #1001
+
+- Replaced the deprecated ``tempfile.mktemp`` when saving dask cubes to a
+  temporary zarr store. #789
+
+- Added ``WAVN`` and ``ENER`` spectral axis types. #882
+
+- Fixed ``subcube_from_crtfregion`` for ``regions`` versions without
+  ``CRTFParser``. #890
+
+0.6.7 (2025-11-11)
+------------------
+
+- Fixed compatibility with dask>=2024.12.0 #968
+
+0.6.6 (2025-01-17)
+------------------
+
+- Warning behavior changed to no longer warn about dask cubes loading into
+  memory.  Dask 'slow' warnings are now limited to the necessarily single-
+  stream examples: median, percentile, and mad_std. #929
 
 0.6.5 (2023-12-05)
 ----------------------
