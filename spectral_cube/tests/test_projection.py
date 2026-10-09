@@ -966,7 +966,7 @@ def test_spatial_world(view, data_adv, use_dask):
 
 @pytest.mark.parametrize(('LDO', 'data'),
                          list(zip(LDOs, data_twelve)))
-def test_unit_division(LDO, data):
+def test_hdu_with_no_meta(LDO, data):
     # regression: 871
 
     image = data
