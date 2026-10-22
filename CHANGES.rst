@@ -1,3 +1,9 @@
+0.7.1 (unreleased)
+------------------
+
+- Normalize negative start indices when slicing a WCS with a known shape,
+  preserving spectral coordinates for slices such as ``spectrum[-20:]``. #523
+
 0.7.0 (2026-10-06)
 ------------------
 
