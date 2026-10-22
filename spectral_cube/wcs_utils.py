@@ -4,6 +4,7 @@ import warnings
 from astropy import units as u
 from astropy import log
 from astropy.wcs import InconsistentAxisTypesError
+from astropy.utils.shapes import simplify_basic_index
 
 from .utils import WCSWarning
 
@@ -242,12 +243,7 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True,
         view = [view]
 
     if shape is not None:
-        view = list(view)
-        for i, iview in enumerate(view):
-            if (isinstance(iview, slice) and iview.start is not None
-                    and iview.start < 0 and (iview.step is None or iview.step > 0)):
-                # Normalize before dropping axes so shape still matches view.
-                view[i] = slice(max(0, shape[i] + iview.start), iview.stop, iview.step)
+        view = simplify_basic_index(view, shape=tuple(map(int, shape)))
 
     if not all([isinstance(x, slice) for x in view]):
         if drop_degenerate:
