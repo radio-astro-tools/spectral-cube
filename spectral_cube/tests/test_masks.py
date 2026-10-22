@@ -484,7 +484,8 @@ def test_2dcomparison_mask_1d_index(data_adv, use_dask):
     (slice(-3, -1), slice(None), slice(None)),
     (slice(None, None, -1), slice(None), slice(None)),
 ])
-def test_comparison_mask_negative_slice(data_adv, use_dask, array_threshold, view):
+def test_comparison_mask_negative_slice(data_adv, use_dask, array_threshold,
+                                        view):
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
     threshold = cube.median(axis=0) if array_threshold else cube.median()
     masked = cube.with_mask(cube > threshold)
