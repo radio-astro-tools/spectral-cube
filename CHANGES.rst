@@ -1,3 +1,9 @@
+0.7.1 (unreleased)
+------------------
+
+- Preserve the cube, units, mask, WCS, and beam when multiplying a scalar,
+  NumPy array, or Quantity on the left of a cube. #839
+
 0.7.0 (2026-10-06)
 ------------------
 
