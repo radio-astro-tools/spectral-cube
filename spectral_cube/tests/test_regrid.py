@@ -248,6 +248,33 @@ def test_spectral_interpolate(data_522_delta, use_dask):
     assert cube.wcs.wcs.compare(orig_wcs.wcs)
 
 
+@pytest.mark.parametrize('reverse', (False, True))
+@pytest.mark.parametrize('unit', (u.m / u.s, u.km / u.s))
+def test_spectral_interpolate_single_channel(data_255_delta, use_dask,
+                                             reverse, unit, tmp_path):
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
+    if reverse:
+        cube = cube[::-1]
+    if use_dask:
+        cube = cube.rechunk((-1, 2, 2))
+    axis = cube.spectral_axis.to(unit)
+    grid = (axis[:1] + axis[-1:]) / 2
+    expected = (cube.unmasked_data[0].value + cube.unmasked_data[-1].value) / 2
+
+    result = cube.spectral_interpolate(grid)
+
+    assert np.all(np.isfinite(result.wcs.wcs.cdelt))
+    np.testing.assert_allclose(result.spectral_axis.to_value(unit), grid.value)
+    step = result.wcs.wcs.cdelt[2] * u.Unit(result.wcs.wcs.cunit[2])
+    np.testing.assert_allclose(step.to_value(unit), abs(axis[1] - axis[0]).value)
+    np.testing.assert_allclose(result[:, 2, 2].value, expected[2, 2])
+    filename = tmp_path / 'single-channel.fits'
+    result.write(filename)
+    restored = SpectralCube.read(filename)
+    np.testing.assert_allclose(restored.filled_data[0].value, expected)
+    np.testing.assert_allclose(restored.spectral_axis.to_value(unit), grid.value)
+
+
 def test_spectral_interpolate_varying_chunksize(data_255_delta):
 
     cube, data = cube_and_raw(data_255_delta, use_dask=True)
