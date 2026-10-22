@@ -619,7 +619,7 @@ class TestArithmetic(object):
         self.c1 = self.d1 = None
 
     @pytest.mark.parametrize('kind', ['scalar', 'numpy_scalar', 'array',
-                                     'quantity', 'quantity_array'])
+                                      'quantity', 'quantity_array'])
     @pytest.mark.parametrize('masked', [False, True])
     def test_reflected_mul(self, kind, masked):
         cube = self.c1.with_beam(Beam(1 * u.arcsec))
@@ -631,7 +631,8 @@ class TestArithmetic(object):
         expected = cube * factor
         result = factor * cube
         assert type(result) is type(cube)
-        assert_quantity_allclose(result.filled_data[:], expected.filled_data[:])
+        assert_quantity_allclose(result.filled_data[:],
+                                 expected.filled_data[:])
         assert_array_equal(result.mask.include(), cube.mask.include())
         assert result.wcs.to_header_string() == cube.wcs.to_header_string()
         assert result.beam == cube.beam
