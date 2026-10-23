@@ -749,13 +749,17 @@ class LazyComparisonMask(LazyMask):
                                      self._data.shape, view)
             return LazyComparisonMask(self._function, data=self._data[view],
                                       comparison_value=self._comparison_value[cv_view],
-                                      wcs=wcs_utils.slice_wcs(self._wcs, view,
-                                                              drop_degenerate=True))
+                                      wcs=wcs_utils.slice_wcs(
+                                          self._wcs, view,
+                                          shape=self._data.shape,
+                                          drop_degenerate=True))
         else:
             return LazyComparisonMask(self._function, data=self._data[view],
                                       comparison_value=self._comparison_value,
-                                      wcs=wcs_utils.slice_wcs(self._wcs, view,
-                                                              drop_degenerate=True))
+                                      wcs=wcs_utils.slice_wcs(
+                                          self._wcs, view,
+                                          shape=self._data.shape,
+                                          drop_degenerate=True))
 
     def with_spectral_unit(self, unit, velocity_convention=None, rest_value=None):
         """

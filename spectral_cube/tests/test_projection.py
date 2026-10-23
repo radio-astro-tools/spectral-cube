@@ -711,6 +711,15 @@ def test_1d_slices(data_255_delta, use_dask):
     assert not isinstance(sp.max(), OneDSpectrum)
 
 
+@pytest.mark.parametrize('start', [-20, -255, -300])
+def test_1d_negative_start_spectral_axis(data_255_delta, use_dask, start):
+    cube, data = cube_and_raw(data_255_delta, use_dask=use_dask)
+    spectrum = cube[:, 0, 0]
+    sliced = spectrum[start:]
+    assert_allclose(sliced.spectral_axis, spectrum.spectral_axis[start:])
+    assert_allclose(sliced.filled_data[:], spectrum.filled_data[:][start:])
+
+
 # TODO: Unpin when Numpy bug is resolved.
 @pytest.mark.skipif(not NUMPY_LT_1_22 and sys.platform == 'win32',
                     reason='https://github.com/numpy/numpy/issues/20699')

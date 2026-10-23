@@ -107,6 +107,39 @@ def test_wcs_slice():
     wcs_new = slice_wcs(wcs, (slice(10,20), slice(None), slice(20,30)))
     np.testing.assert_allclose(wcs_new.wcs.crpix, [30., 45., 20.])
 
+
+@pytest.mark.parametrize('start', [-2, -10, -20])
+def test_wcs_slice_negative_start(start):
+    wcs = WCS(naxis=1)
+    wcs.wcs.ctype = ['FREQ']
+    wcs.wcs.crpix = [2.5]
+    wcs.wcs.crval = [115e9]
+    wcs.wcs.cdelt = [1e6]
+    pixels = np.arange(10)
+    expected = wcs.wcs_pix2world(pixels, 0)[0][start:]
+    sliced = slice_wcs(wcs, slice(start, None), shape=(10,))
+    actual = sliced.wcs_pix2world(np.arange(len(expected)), 0)[0]
+    np.testing.assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize('axis', [0, 1, 2])
+@pytest.mark.parametrize('start', [-2, -40])
+def test_wcs_slice_negative_start_drop_axes(axis, start):
+    wcs = WCS(naxis=3)
+    wcs.wcs.crpix = [2.5, 3.5, 4.5]
+    wcs.wcs.crval = [100., 200., 300.]
+    wcs.wcs.cdelt = [1., 2., 3.]
+    shape = (10, 20, 30)
+    view = [0, 0, 0]
+    view[axis] = slice(start, None)
+    pixels = np.arange(shape[axis])[start:]
+    coordinates = np.zeros((len(pixels), 3))
+    coordinates[:, 2-axis] = pixels
+    expected = wcs.wcs_pix2world(coordinates, 0)[:, 2-axis]
+    sliced = slice_wcs(wcs, view, shape=shape, drop_degenerate=True)
+    actual = sliced.wcs_pix2world(np.arange(len(pixels)), 0)[0]
+    np.testing.assert_allclose(actual, expected)
+
 def test_wcs_slice_reversal():
     wcs = WCS(naxis=3)
     wcs.wcs.crpix = [50., 45., 30.]

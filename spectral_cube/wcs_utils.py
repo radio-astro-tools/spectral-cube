@@ -4,6 +4,7 @@ import warnings
 from astropy import units as u
 from astropy import log
 from astropy.wcs import InconsistentAxisTypesError
+from astropy.utils.shapes import simplify_basic_index
 
 from .utils import WCSWarning
 
@@ -240,6 +241,9 @@ def slice_wcs(mywcs, view, shape=None, numpy_order=True,
         raise ValueError("Must have # of slices <= # of WCS axes")
     elif not hasattr(view, '__len__'): # view MUST be an iterable
         view = [view]
+
+    if shape is not None:
+        view = simplify_basic_index(view, shape=tuple(map(int, shape)))
 
     if not all([isinstance(x, slice) for x in view]):
         if drop_degenerate:

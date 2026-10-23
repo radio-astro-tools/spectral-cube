@@ -476,6 +476,30 @@ def test_2dcomparison_mask_1d_index(data_adv, use_dask):
     assert isinstance(spec[0], u.Quantity)
 
 
+@pytest.mark.parametrize('array_threshold', [False, True])
+@pytest.mark.parametrize('view', [
+    (slice(-2, None), slice(None), slice(None)),
+    (slice(-20, None), slice(None), slice(None)),
+    (slice(-2, None), slice(-2, None), slice(-1, None)),
+    (slice(-3, -1), slice(None), slice(None)),
+    (slice(None, None, -1), slice(None), slice(None)),
+])
+def test_comparison_mask_negative_slice(data_adv, use_dask, array_threshold,
+                                        view):
+    cube, data = cube_and_raw(data_adv, use_dask=use_dask)
+    threshold = cube.median(axis=0) if array_threshold else cube.median()
+    masked = cube.with_mask(cube > threshold)
+    included = masked.mask.include()
+    expected = masked.filled_data[:].value
+
+    sliced = masked[view]
+
+    np.testing.assert_array_equal(sliced.mask.include(), included[view])
+    np.testing.assert_array_equal(sliced.filled_data[:].value, expected[view])
+    np.testing.assert_allclose(sliced.spectral_axis.value,
+                               cube.spectral_axis.value[view[0]])
+
+
 def test_1dcomparison_mask_1d_index(data_adv, use_dask):
     cube, data = cube_and_raw(data_adv, use_dask=use_dask)
 
