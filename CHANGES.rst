@@ -1,6 +1,8 @@
 0.7.1 (unreleased)
 ------------------
 
+- Preserve the cube, units, mask, WCS, and beam when multiplying a scalar,
+  NumPy array, or Quantity on the left of a cube. #839
 - Normalize negative start indices when slicing a WCS with a known shape,
   preserving spectral coordinates for slices such as ``spectrum[-20:]``. #523
 

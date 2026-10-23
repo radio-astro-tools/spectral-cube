@@ -186,6 +186,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                        SpectralAxisMixinClass, SpatialCoordMixinClass,
                        HeaderMixinClass):
 
+    # Let NumPy arrays and Quantities defer to the reflected cube operations.
+    __array_priority__ = u.Quantity.__array_priority__ + 1
+
     def __init__(self, data, wcs, mask=None, meta=None, fill_value=np.nan,
                  header=None,
                  allow_huge_operations=False,
@@ -2354,6 +2357,9 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
             return self._cube_on_cube_operation(operator.mul, value)
         else:
             return self._apply_everywhere(operator.mul, value)
+
+    def __rmul__(self, value):
+        return self.__mul__(value)
 
     @warn_slow
     def __truediv__(self, value):

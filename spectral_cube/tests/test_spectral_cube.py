@@ -618,6 +618,27 @@ class TestArithmetic(object):
         assert c2.unit == u.K**2
         self.c1 = self.d1 = None
 
+    @pytest.mark.parametrize('kind', ['scalar', 'numpy_scalar', 'array',
+                                      'quantity', 'quantity_array'])
+    @pytest.mark.parametrize('masked', [False, True])
+    def test_reflected_mul(self, kind, masked):
+        cube = self.c1.with_beam(Beam(1 * u.arcsec))
+        if masked:
+            cube = cube.with_mask(self.d1 % 2 == 0)
+        weights = np.arange(cube.shape[0])[:, None, None] + 1
+        factor = {'scalar': 2, 'numpy_scalar': np.float32(2), 'array': weights,
+                  'quantity': 2 * u.s, 'quantity_array': weights * u.s}[kind]
+        expected = cube * factor
+        result = factor * cube
+        assert type(result) is type(cube)
+        assert_quantity_allclose(result.filled_data[:],
+                                 expected.filled_data[:])
+        assert_array_equal(result.mask.include(), cube.mask.include())
+        assert result.wcs.to_header_string() == cube.wcs.to_header_string()
+        assert result.beam == cube.beam
+        assert result._data.dtype == expected._data.dtype
+        self.c1 = self.d1 = None
+
     @pytest.mark.parametrize(('value'),(1,1.0,2,2.0))
     def test_div(self, value):
         d2 = self.d1 / value
