@@ -152,12 +152,18 @@ def test_reproject_different_line_rest_value(ctype, rest_keyword, use_dask):
     else:
         input_wcs.wcs.restwav = (230.538 * u.GHz).to_value(u.m, u.spectral())
         target_rest = (220.3986842 * u.GHz).to_value(u.m, u.spectral())
+    # Older Astropy needs RESTWAV explicitly for optical velocity, even when
+    # a consistent RESTFRQ is present (as in test_reproject above).
+    if ctype == 'VOPT':
+        input_wcs.wcs.restwav = (230.538 * u.GHz).to_value(u.m, u.spectral())
 
     data = np.arange(125, dtype=float).reshape(5, 5, 5)
     cls = DaskSpectralCube if use_dask else SpectralCube
     cube = cls(data=data * u.K, wcs=input_wcs)
     header = cube.header.copy()
     header[rest_keyword] = target_rest
+    if ctype == 'VOPT':
+        header['RESTWAV'] = (220.3986842 * u.GHz).to_value(u.m, u.spectral())
     original_header = header.copy()
 
     result = cube.reproject(header)
