@@ -1105,7 +1105,7 @@ def test_read_write_rountrip(tmpdir, data_adv, use_dask):
     cube.write(tmp_file)
     cube2 = SpectralCube.read(tmp_file, use_dask=use_dask)
 
-    assert cube.shape == cube.shape
+    assert cube.shape == cube2.shape
     assert_allclose(cube._data, cube2._data)
 
     # TODO: fix this for current astropy
