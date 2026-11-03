@@ -18,7 +18,7 @@ except ImportError:
 
 from radio_beam import beam, Beam
 
-from .. import SpectralCube
+from .. import SpectralCube, DaskSpectralCube
 from ..masks import BooleanArrayMask
 from ..utils import WCSCelestialError
 from ..cube_utils import mosaic_cubes, combine_headers
@@ -133,6 +133,46 @@ def test_reproject(use_memmap, data_adv, use_dask):
     # And that the headers have equivalent WCS info.
     result_wcs_from_header = WCS(result.header)
     assert result_wcs_from_header.wcs.compare(wcs_out.wcs, tolerance=tolerance)
+
+
+@pytest.mark.parametrize('ctype', ('VRAD', 'VOPT', 'VELO'))
+@pytest.mark.parametrize('rest_keyword', ('RESTFRQ', 'RESTWAV'))
+def test_reproject_different_line_rest_value(ctype, rest_keyword, use_dask):
+    pytest.importorskip('reproject')
+
+    input_wcs = WCS(naxis=3)
+    input_wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', ctype]
+    input_wcs.wcs.cunit = ['deg', 'deg', 'm/s']
+    input_wcs.wcs.crpix = [3, 3, 1]
+    input_wcs.wcs.cdelt = [-1 / 3600, 1 / 3600, 1000]
+    input_wcs.wcs.crval = [266.54, -28.7, 0]
+    if rest_keyword == 'RESTFRQ':
+        input_wcs.wcs.restfrq = 230.538e9
+        target_rest = 220.3986842e9
+    else:
+        input_wcs.wcs.restwav = (230.538 * u.GHz).to_value(u.m, u.spectral())
+        target_rest = (220.3986842 * u.GHz).to_value(u.m, u.spectral())
+
+    data = np.arange(125, dtype=float).reshape(5, 5, 5)
+    cls = DaskSpectralCube if use_dask else SpectralCube
+    cube = cls(data=data * u.K, wcs=input_wcs)
+    header = cube.header.copy()
+    header[rest_keyword] = target_rest
+    original_header = header.copy()
+
+    result = cube.reproject(header)
+    control = cube.reproject(cube.header)
+
+    np.testing.assert_array_equal(result.filled_data[:].value, control.filled_data[:].value)
+    # FITS serialization of RESTWAV and the spectral round trip also affect
+    # reprojection to the input header itself.
+    np.testing.assert_allclose(result.filled_data[:].value, data, rtol=0, atol=1e-6)
+    assert result.unit == cube.unit
+    assert result.header[rest_keyword] == cube.header[rest_keyword]
+    assert header == original_header
+    np.testing.assert_allclose(result.spectral_axis, cube.spectral_axis)
+    np.testing.assert_allclose(result.with_spectral_unit(u.Hz).spectral_axis,
+                               cube.with_spectral_unit(u.Hz).spectral_axis)
 
 
 def test_spectral_smooth(data_522_delta, use_dask):
