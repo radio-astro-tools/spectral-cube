@@ -6,6 +6,11 @@
 
 - Python 3.11 or later is now required. #1032
 
+- Fixed ``wcs_utils.drop_axis`` discarding the projection parameters (``PV``)
+  of the remaining axes, which could result in incorrect celestial
+  coordinates, for example for moment maps of cubes with a ``SIN``
+  projection.
+
 0.7.0 (2026-10-06)
 ------------------
 

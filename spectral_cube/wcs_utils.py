@@ -3,7 +3,8 @@ from astropy.wcs import WCS
 import warnings
 from astropy import units as u
 from astropy import log
-from astropy.wcs import InconsistentAxisTypesError
+from astropy.wcs import (InconsistentAxisTypesError,
+                         NonseparableSubimageCoordinateSystemError)
 from astropy.utils.shapes import simplify_basic_index
 
 from .utils import WCSWarning
@@ -26,6 +27,27 @@ bad_spectypes_mapping = {'VELOCITY':'VELO',
                          'WAVELENG':'WAVE',
                          }
 
+
+def _strip_celestial_projection(wcs, context):
+    """
+    Return a copy of the WCS with the projection code removed from the
+    celestial axes, which turns them into linear axes so that one of them
+    can be dropped.
+    """
+    wcs = wcs.deepcopy()
+    prj = wcs.wcs.ctype[wcs.wcs.lng].split("-")[-1]
+    for ind in wcs.wcs.lng, wcs.wcs.lat:
+        wcs.wcs.ctype[ind] = wcs.wcs.ctype[ind].split("-")[0]
+    warnings.warn("Slicing across a celestial axis results "
+                  "in an invalid WCS, so the celestial "
+                  "projection ({0}) is being removed.  "
+                  "{1}".format(prj, context),
+                  WCSWarning)
+    wcs.wcs.set_pv([])
+    wcs.wcs.set()
+    return wcs
+
+
 def drop_axis(wcs, dropax):
     """
     Drop the ax on axis dropax
@@ -39,11 +61,37 @@ def drop_axis(wcs, dropax):
         The index of the WCS to drop, counting from 0 (i.e., python convention,
         not FITS convention)
     """
-    inds = list(range(wcs.wcs.naxis))
-    inds.pop(dropax)
-    inds = np.array(inds)
+    # Negative indices count from the last axis
+    dropax = range(wcs.wcs.naxis)[dropax]
 
-    return reindex_wcs(wcs, inds)
+    try:
+        return wcs.dropaxis(dropax)
+    except (InconsistentAxisTypesError,
+            NonseparableSubimageCoordinateSystemError):
+        pass
+
+    if dropax in (wcs.wcs.lng, wcs.wcs.lat):
+        wcs = _strip_celestial_projection(
+            wcs, "The WCS index being dropped was {0}.".format(dropax))
+    else:
+        wcs = wcs.deepcopy()
+
+    # Remove any coupling between the dropped axis and the remaining axes so
+    # that the remaining axes keep their diagonal and mutual terms.
+    if wcs.wcs.has_cd():
+        matrix = wcs.wcs.cd.copy()
+    else:
+        matrix = wcs.wcs.get_pc().copy()
+    keep = np.arange(wcs.wcs.naxis) != dropax
+    matrix[dropax, keep] = 0
+    matrix[keep, dropax] = 0
+    if wcs.wcs.has_cd():
+        wcs.wcs.cd = matrix
+    else:
+        wcs.wcs.pc = matrix
+    wcs.wcs.set()
+
+    return wcs.dropaxis(dropax)
 
 
 def add_stokes_axis_to_wcs(wcs, add_before_ind):
