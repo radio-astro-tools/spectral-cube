@@ -80,6 +80,15 @@ except ImportError:
 
 warnings.filterwarnings('ignore', category=wcs.FITSFixedWarning, append=True)
 
+
+def _median_filter(*args, **kwargs):
+    # The public scipy.ndimage.median_filter cannot be pickled with the
+    # development version of scipy 2.0, which is needed to pass it to parallel
+    # workers, so we wrap it in a function defined in this module, which can
+    # be pickled.
+    return ndimage.median_filter(*args, **kwargs)
+
+
 SIGMA2FWHM = 2. * np.sqrt(2. * np.log(2.))
 
 # convenience structures to keep track of the reversed index
@@ -2797,7 +2806,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
 
     @parallel_docstring
     def spatial_smooth_median(self, ksize, update_function=None, raise_error_jybm=True,
-                              filter=ndimage.median_filter, **kwargs):
+                              filter=_median_filter, **kwargs):
         """
         Smooth the image in each spatial-spatial plane of the cube using a median filter.
 
@@ -2921,7 +2930,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
                                use_memmap=True,
                                verbose=0,
                                num_cores=None,
-                               filter=ndimage.median_filter,
+                               filter=_median_filter,
                                **kwargs):
         """
         Smooth the cube along the spectral dimension
