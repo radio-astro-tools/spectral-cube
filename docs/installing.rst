@@ -6,7 +6,7 @@ Requirements
 
 This package has the following dependencies:
 
-* `Python <http://www.python.org>`_ Python 3.10 or later
+* `Python <http://www.python.org>`_ Python 3.11 or later
 * `Numpy <http://www.numpy.org>`_ 1.24 or later
 * `Astropy <http://www.astropy.org>`__ 6.1 or later
 * `radio_beam <https://github.com/radio-astro-tools/radio_beam>`_ 0.3.10 or later, used when

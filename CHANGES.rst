@@ -4,6 +4,8 @@
 - Normalize negative start indices when slicing a WCS with a known shape,
   preserving spectral coordinates for slices such as ``spectrum[-20:]``. #523
 
+- Python 3.11 or later is now required. #1032
+
 0.7.0 (2026-10-06)
 ------------------
 

@@ -14,10 +14,9 @@ authors = [
     { name = "Eric Koch" }
 ]
 license = "BSD-3-Clause"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -50,14 +49,14 @@ noviz = [
   "pvextractor>=0.3",
   "reproject>=0.9.1",
   "scipy>=1.8.1",
-  "zarr>=2.12,<3",       # Unpin if updated. See issue #936
+  "zarr>=2.18.7,<3",     # Unpin if updated. See issue #936
 ]
 test = [
   "numpy>=1.24",
   "pytest-astropy>=0.10",
   "pytest-cov>=3",
   "regions>=0.7",
-  "zarr>=2.12,<3",        # Unpin if updated. See issue #936
+  "zarr>=2.18.7,<3",      # Unpin if updated. See issue #936
 ]
 viz = [
   "aplpy>=2.1",
