@@ -5,7 +5,9 @@ from astropy import units as u
 from astropy import log
 from astropy.wcs import (InconsistentAxisTypesError,
                          NonseparableSubimageCoordinateSystemError)
+from astropy.utils.decorators import deprecated
 from astropy.utils.shapes import simplify_basic_index
+from astropy.wcs.utils import add_stokes_axis_to_wcs as _add_stokes_axis_to_wcs
 
 from .utils import WCSWarning
 
@@ -78,6 +80,98 @@ def drop_axis(wcs, dropax):
     wcs.wcs.set()
 
     return wcs.dropaxis(dropax)
+
+
+@deprecated('0.7.1', alternative='astropy.wcs.utils.add_stokes_axis_to_wcs')
+def add_stokes_axis_to_wcs(wcs, add_before_ind):
+    """
+    Add a new Stokes axis that is uncorrelated with any other axes
+
+    Parameters
+    ----------
+    wcs: astropy.wcs.WCS
+        The WCS to add to
+    add_before_ind: int
+        Index of the WCS to insert the new Stokes axis in front of.
+        To add at the end, do add_before_ind = wcs.wcs.naxis
+    """
+    outwcs = _add_stokes_axis_to_wcs(wcs, add_before_ind)
+    # Reference the Stokes axis to the first pixel, where the value is 1
+    # (Stokes I), rather than to pixel 0 as astropy does.
+    outwcs.wcs.crpix[add_before_ind] = 1
+    outwcs.wcs.crval[add_before_ind] = 1
+    if wcs.pixel_shape is not None:
+        shape = list(wcs.pixel_shape)
+        shape.insert(add_before_ind, 1)
+        outwcs.pixel_shape = tuple(shape)
+    return outwcs
+
+
+@deprecated('0.7.1', alternative='astropy.wcs.WCS.swapaxes')
+def wcs_swapaxes(wcs, ax0, ax1):
+    """
+    Swap axes in a WCS
+
+    Parameters
+    ----------
+    wcs: astropy.wcs.WCS
+        The WCS to have its axes swapped
+    ax0: int
+    ax1: int
+        The indices of the WCS to be swapped, counting from 0 (i.e., python
+        convention, not FITS convention)
+    """
+    return wcs.swapaxes(ax0, ax1)
+
+
+@deprecated('0.7.1', alternative='astropy.wcs.WCS.sub')
+def reindex_wcs(wcs, inds):
+    """
+    Re-index a WCS given indices.  The number of axes may be reduced.
+
+    Parameters
+    ----------
+    wcs: astropy.wcs.WCS
+        The WCS to be manipulated
+    inds: np.array(dtype='int')
+        The indices of the array to keep in the output.
+        e.g. swapaxes: [0,2,1,3]
+        dropaxes: [0,1,3]
+    """
+
+    if not isinstance(inds, np.ndarray):
+        raise TypeError("Indices must be an ndarray")
+
+    if inds.dtype.kind != 'i':
+        raise TypeError('Indices must be integers')
+
+    naxis = wcs.wcs.naxis
+    keep = [range(naxis)[ind] for ind in inds]
+
+    # Drop the axes that are not kept, starting from the last one so that the
+    # indices of the axes still to be dropped do not change.
+    for dropax in sorted(set(range(naxis)) - set(keep), reverse=True):
+        wcs = drop_axis(wcs, dropax)
+        keep = [ind - 1 if ind > dropax else ind for ind in keep]
+
+    return wcs.sub([ind + 1 for ind in keep])
+
+
+@deprecated('0.7.1', alternative='astropy.wcs.WCS.axis_type_names')
+def axis_names(wcs):
+    """
+    Extract world names for each coordinate axis
+
+    Parameters
+    ----------
+    wcs : astropy.wcs.WCS
+        The WCS object to extract names from
+
+    Returns
+    -------
+    A list of names along each axis
+    """
+    return list(wcs.axis_type_names)
 
 
 def slice_wcs(mywcs, view, shape=None, numpy_order=True,
