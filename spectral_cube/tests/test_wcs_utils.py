@@ -4,8 +4,8 @@ import warnings
 from astropy.io import fits
 import numpy as np
 
-from ..wcs_utils import (WCS, drop_axis, wcs_swapaxes, add_stokes_axis_to_wcs,
-                         axis_names, slice_wcs, check_equality, strip_wcs_from_header)
+from ..wcs_utils import (WCS, drop_axis, slice_wcs, check_equality,
+                         strip_wcs_from_header)
 from ..utils import WCSWarning
 from . import path
 
@@ -38,42 +38,10 @@ def test_wcs_dropping():
     assert np.all(dropped.wcs.get_pc().diagonal() == np.array([1, 2, 3]))
 
 
-def test_wcs_swapping():
-    wcs = WCS(naxis=4)
-    wcs.wcs.pc = np.zeros([4, 4])
-    np.fill_diagonal(wcs.wcs.pc, np.arange(1, 5))
-    pc = wcs.wcs.pc  # for later use below
-
-    swapped = wcs_swapaxes(wcs, 0, 1)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([2, 1, 3, 4]))
-    swapped = wcs_swapaxes(wcs, 0, 3)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([4, 2, 3, 1]))
-    swapped = wcs_swapaxes(wcs, 2, 3)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([1, 2, 4, 3]))
-
-    wcs = WCS(naxis=4)
-    wcs.wcs.cd = pc
-
-    swapped = wcs_swapaxes(wcs, 0, 1)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([2, 1, 3, 4]))
-    swapped = wcs_swapaxes(wcs, 0, 3)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([4, 2, 3, 1]))
-    swapped = wcs_swapaxes(wcs, 2, 3)
-    assert np.all(swapped.wcs.get_pc().diagonal() == np.array([1, 2, 4, 3]))
-
-
-def test_add_stokes():
-    wcs = WCS(naxis=3)
-
-    for ii in range(4):
-        outwcs = add_stokes_axis_to_wcs(wcs, ii)
-        assert outwcs.wcs.naxis == 4
-
-
 def test_pixel_shape_preserved_on_reindex():
-    # Regression test for #1000: drop_axis / wcs_swapaxes / add_stokes_axis_to_wcs
-    # used to silently reset pixel_shape (NAXISj) to zeros, so e.g. a moment's
-    # WCS reported NAXIS: 0 0 instead of the cube's spatial shape.
+    # Regression test for #1000: drop_axis used to silently reset pixel_shape
+    # (NAXISj) to zeros, so e.g. a moment's WCS reported NAXIS: 0 0 instead of
+    # the cube's spatial shape.
     wcs = WCS(naxis=3)
     wcs.wcs.ctype = ['GLON-CAR', 'GLAT-CAR', 'VRAD']
     wcs.pixel_shape = (4321, 2161, 118)
@@ -84,22 +52,9 @@ def test_pixel_shape_preserved_on_reindex():
     dropped = drop_axis(wcs, 0)
     assert dropped.pixel_shape == (2161, 118)
 
-    swapped = wcs_swapaxes(wcs, 0, 2)
-    assert swapped.pixel_shape == (118, 2161, 4321)
-
-    stokes = add_stokes_axis_to_wcs(wcs, 0)
-    assert stokes.pixel_shape == (1, 4321, 2161, 118)
-
     # If the source has no pixel_shape, the result shouldn't either.
     bare = WCS(naxis=3)
     assert drop_axis(bare, 2).pixel_shape is None
-
-
-def test_axis_names(data_adv, data_vad):
-    wcs = WCS(str(data_adv))
-    assert axis_names(wcs) == ['RA', 'DEC', 'VOPT']
-    wcs = WCS(str(data_vad))
-    assert axis_names(wcs) == ['VOPT', 'RA', 'DEC']
 
 
 def test_drop_axis_preserves_pv():

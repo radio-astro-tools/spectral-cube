@@ -3,7 +3,7 @@ from astropy.io import fits
 import tempfile
 import os
 
-from ..wcs_utils import add_stokes_axis_to_wcs
+from astropy.wcs.utils import add_stokes_axis_to_wcs
 
 __all__ = ['make_casa_mask']
 
@@ -63,6 +63,10 @@ def make_casa_mask(SpecCube, outname, append_to_image=True,
             stokes_posn = my_wcs.wcs.naxis
 
         new_wcs = add_stokes_axis_to_wcs(my_wcs, stokes_posn)
+        # Reference the Stokes axis to the first pixel, where the value is 1
+        # (Stokes I), rather than to pixel 0.
+        new_wcs.wcs.crpix[stokes_posn] = 1
+        new_wcs.wcs.crval[stokes_posn] = 1
         header = new_wcs.to_header()
         # Transpose the shape so we're adding the axis at the place CASA will
         # recognize. Then transpose back.

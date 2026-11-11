@@ -11,6 +11,11 @@
   coordinates, for example for moment maps of cubes with a ``SIN``
   projection.
 
+- Removed ``add_stokes_axis_to_wcs``, ``wcs_swapaxes``, ``axis_names`` and
+  ``reindex_wcs`` from ``wcs_utils``. The equivalent functionality in astropy
+  should be used instead: ``astropy.wcs.utils.add_stokes_axis_to_wcs``,
+  ``WCS.swapaxes``, ``WCS.axis_type_names`` and ``WCS.sub``.
+
 0.7.0 (2026-10-06)
 ------------------
 
