@@ -6,6 +6,7 @@ import numpy as np
 
 from ..wcs_utils import (WCS, drop_axis, wcs_swapaxes, add_stokes_axis_to_wcs,
                          axis_names, slice_wcs, check_equality, strip_wcs_from_header)
+from ..utils import WCSWarning
 from . import path
 
 
@@ -99,6 +100,74 @@ def test_axis_names(data_adv, data_vad):
     assert axis_names(wcs) == ['RA', 'DEC', 'VOPT']
     wcs = WCS(str(data_vad))
     assert axis_names(wcs) == ['VOPT', 'RA', 'DEC']
+
+
+def test_drop_axis_preserves_pv():
+    # Projection parameters on the celestial axes must survive dropping the
+    # spectral axis, otherwise e.g. moment maps of NCP-like SIN cubes get
+    # incorrect celestial coordinates.
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---SIN', 'DEC--SIN', 'VRAD']
+    wcs.wcs.crval = [10., 60., 0.]
+    wcs.wcs.cdelt = [-0.1, 0.1, 1.]
+    wcs.wcs.set_pv([(2, 1, 0.), (2, 2, 1 / np.tan(np.radians(60)))])
+    wcs.wcs.set()
+
+    dropped = drop_axis(wcs, 2)
+    assert dropped.wcs.get_pv() == wcs.wcs.get_pv()
+    np.testing.assert_allclose(dropped.pixel_to_world_values(3, 4),
+                               wcs.pixel_to_world_values(3, 4, 0)[:2])
+
+
+@pytest.mark.parametrize('matrix', ['pc', 'cd'])
+@pytest.mark.parametrize('dropax', [0, 1])
+def test_drop_celestial_axis_rotated(matrix, dropax):
+    # Dropping a single celestial axis strips the projection with a warning,
+    # and the coupling between the dropped and the remaining axes is ignored.
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VRAD']
+    wcs.wcs.crval = [10., 20., 5.]
+    rotated = np.array([[-0.9, 0.3, 0.], [0.3, 0.9, 0.], [0., 0., 0.5]])
+    if matrix == 'pc':
+        wcs.wcs.pc = rotated
+    else:
+        wcs.wcs.cd = rotated
+    wcs.wcs.set()
+
+    with pytest.warns(WCSWarning, match='celestial projection'):
+        dropped = drop_axis(wcs, dropax)
+
+    keep = [ii for ii in range(3) if ii != dropax]
+    assert list(dropped.wcs.ctype) == [wcs.wcs.ctype[ii].split('-')[0]
+                                       for ii in keep]
+    pixel_scale = wcs.pixel_scale_matrix[np.ix_(keep, keep)]
+    np.testing.assert_allclose(dropped.pixel_scale_matrix, pixel_scale)
+
+
+def test_drop_axis_negative_index():
+    # Negative indices count from the last axis, including when the dropped
+    # axis is coupled to the remaining ones or is a single celestial axis.
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['LINEAR', 'FREQ', 'STOKES']
+    wcs.wcs.pc = [[1., 0.2, 0.], [0.2, 1., 0.3], [0., 0.3, 1.]]
+    wcs.wcs.set()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        dropped = drop_axis(wcs, -1)
+
+    assert list(dropped.wcs.ctype) == ['LINEAR', 'FREQ']
+    np.testing.assert_allclose(dropped.pixel_scale_matrix,
+                               drop_axis(wcs, 2).pixel_scale_matrix)
+
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ['RA---TAN', 'DEC--TAN', 'VRAD']
+    wcs.wcs.set()
+
+    with pytest.warns(WCSWarning, match='celestial projection'):
+        dropped = drop_axis(wcs, -3)
+
+    assert list(dropped.wcs.ctype) == ['DEC', 'VRAD']
 
 
 def test_wcs_slice():
