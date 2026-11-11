@@ -3394,6 +3394,7 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         ----------
         spectral_grid : array
             An array of the spectral positions to regrid onto
+            A single output channel uses the magnitude of the input channel spacing.
         suppress_smooth_warning : bool
             If disabled, a warning will be raised when interpolating onto a
             grid that does not nyquist sample the existing grid.  Disable this
@@ -3416,7 +3417,8 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         inaxis = self.spectral_axis.to(spectral_grid.unit)
 
         indiff = np.mean(np.diff(inaxis))
-        outdiff = np.mean(np.diff(spectral_grid))
+        outdiff = (np.mean(np.diff(spectral_grid)) if spectral_grid.size > 1
+                   else abs(indiff))
 
         # account for reversed axes
         if outdiff < 0:
