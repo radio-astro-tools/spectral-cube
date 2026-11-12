@@ -5,23 +5,11 @@ from astropy import units as u
 from astropy import log
 from astropy.wcs import (InconsistentAxisTypesError,
                          NonseparableSubimageCoordinateSystemError)
+from astropy.utils.decorators import deprecated
 from astropy.utils.shapes import simplify_basic_index
+from astropy.wcs.utils import add_stokes_axis_to_wcs as _add_stokes_axis_to_wcs
 
 from .utils import WCSWarning
-
-wcs_parameters_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
-                              'latpole', 'lonpole', 'mjdavg', 'mjdobs', 'name',
-                              'obsgeo', 'phi0', 'radesys', 'restfrq',
-                              'restwav', 'specsys', 'ssysobs', 'ssyssrc',
-                              'theta0', 'velangl', 'velosys', 'zsource']
-
-wcs_projections = {"AZP", "SZP", "TAN", "STG", "SIN", "ARC", "ZPN", "ZEA",
-                   "AIR", "CYP", "CEA", "CAR", "MER", "COP", "COE", "COD",
-                   "COO", "SFL", "PAR", "MOL", "AIT", "BON", "PCO", "TSC",
-                   "CSC", "QSC", "HPX", "XPH"}
-
-# not writable:
-# 'lat', 'lng', 'lattyp', 'lngtyp',
 
 bad_spectypes_mapping = {'VELOCITY':'VELO',
                          'WAVELENG':'WAVE',
@@ -94,6 +82,7 @@ def drop_axis(wcs, dropax):
     return wcs.dropaxis(dropax)
 
 
+@deprecated('0.7.1', alternative='astropy.wcs.utils.add_stokes_axis_to_wcs')
 def add_stokes_axis_to_wcs(wcs, add_before_ind):
     """
     Add a new Stokes axis that is uncorrelated with any other axes
@@ -106,41 +95,19 @@ def add_stokes_axis_to_wcs(wcs, add_before_ind):
         Index of the WCS to insert the new Stokes axis in front of.
         To add at the end, do add_before_ind = wcs.wcs.naxis
     """
-
-    naxin = wcs.wcs.naxis
-    naxout = naxin + 1
-
-    inds = list(range(naxout))
-    inds.pop(add_before_ind)
-    inds = np.array(inds)
-
-    outwcs = WCS(naxis=naxout)
-    for par in wcs_parameters_to_preserve:
-        setattr(outwcs.wcs, par, getattr(wcs.wcs, par))
-
-    pc = np.zeros([naxout, naxout])
-    pc[inds[:, np.newaxis], inds[np.newaxis, :]] = wcs.wcs.get_pc()
-    pc[add_before_ind, add_before_ind] = 1
-
-    def append_to_posn(val, posn, lst):
-        """ insert a value at index into a list """
-        return list(lst)[:posn] + [val] + list(lst)[posn:]
-
-    outwcs.wcs.crpix = append_to_posn(1, add_before_ind, wcs.wcs.crpix)
-    outwcs.wcs.cdelt = append_to_posn(1, add_before_ind, wcs.wcs.get_cdelt())
-    outwcs.wcs.crval = append_to_posn(1, add_before_ind, wcs.wcs.crval)
-    outwcs.wcs.cunit = append_to_posn("", add_before_ind, wcs.wcs.cunit)
-    outwcs.wcs.ctype = append_to_posn("STOKES", add_before_ind, wcs.wcs.ctype)
-    outwcs.wcs.cname = append_to_posn("STOKES", add_before_ind, wcs.wcs.cname)
-    outwcs.wcs.pc = pc
-
+    outwcs = _add_stokes_axis_to_wcs(wcs, add_before_ind)
+    # Reference the Stokes axis to the first pixel, where the value is 1
+    # (Stokes I), rather than to pixel 0 as astropy does.
+    outwcs.wcs.crpix[add_before_ind] = 1
+    outwcs.wcs.crval[add_before_ind] = 1
     if wcs.pixel_shape is not None:
-        outwcs.pixel_shape = tuple(append_to_posn(1, add_before_ind,
-                                                  wcs.pixel_shape))
-
+        shape = list(wcs.pixel_shape)
+        shape.insert(add_before_ind, 1)
+        outwcs.pixel_shape = tuple(shape)
     return outwcs
 
 
+@deprecated('0.7.1', alternative='astropy.wcs.WCS.swapaxes')
 def wcs_swapaxes(wcs, ax0, ax1):
     """
     Swap axes in a WCS
@@ -154,13 +121,10 @@ def wcs_swapaxes(wcs, ax0, ax1):
         The indices of the WCS to be swapped, counting from 0 (i.e., python
         convention, not FITS convention)
     """
-    inds = list(range(wcs.wcs.naxis))
-    inds[ax0], inds[ax1] = inds[ax1], inds[ax0]
-    inds = np.array(inds)
-
-    return reindex_wcs(wcs, inds)
+    return wcs.swapaxes(ax0, ax1)
 
 
+@deprecated('0.7.1', alternative='astropy.wcs.WCS.sub')
 def reindex_wcs(wcs, inds):
     """
     Re-index a WCS given indices.  The number of axes may be reduced.
@@ -181,61 +145,19 @@ def reindex_wcs(wcs, inds):
     if inds.dtype.kind != 'i':
         raise TypeError('Indices must be integers')
 
-    outwcs = WCS(naxis=len(inds))
-    for par in wcs_parameters_to_preserve:
-        setattr(outwcs.wcs, par, getattr(wcs.wcs, par))
+    naxis = wcs.wcs.naxis
+    keep = [range(naxis)[ind] for ind in inds]
 
-    cdelt = wcs.wcs.get_cdelt()
-    pc = wcs.wcs.get_pc()
+    # Drop the axes that are not kept, starting from the last one so that the
+    # indices of the axes still to be dropped do not change.
+    for dropax in sorted(set(range(naxis)) - set(keep), reverse=True):
+        wcs = drop_axis(wcs, dropax)
+        keep = [ind - 1 if ind > dropax else ind for ind in keep]
 
-    outwcs.wcs.crpix = wcs.wcs.crpix[inds]
-    outwcs.wcs.cdelt = cdelt[inds]
-    outwcs.wcs.crval = wcs.wcs.crval[inds]
-    outwcs.wcs.cunit = [wcs.wcs.cunit[i] for i in inds]
-    outwcs.wcs.ctype = [wcs.wcs.ctype[i] for i in inds]
-    outwcs.wcs.cname = [wcs.wcs.cname[i] for i in inds]
-    outwcs.wcs.pc = pc[inds[:, None], inds[None, :]]
+    return wcs.sub([ind + 1 for ind in keep])
 
 
-    matched_projections = [prj for prj in wcs_projections if any(prj in x for x in outwcs.wcs.ctype)]
-    matchproj_count = [sum(prj in x for x in outwcs.wcs.ctype) for prj in matched_projections]
-    if any(n == 1 for n in matchproj_count):
-        # unmatched celestial axes = there is only one of them
-        for prj in matched_projections:
-            match = [prj in ct for ct in outwcs.wcs.ctype].index(True)
-            outwcs.wcs.ctype[match] = outwcs.wcs.ctype[match].split("-")[0]
-            warnings.warn("Slicing across a celestial axis results "
-                          "in an invalid WCS, so the celestial "
-                          "projection ({0}) is being removed.  "
-                          "The WCS indices being kept were {1}."
-                          .format(prj, inds),
-                          WCSWarning)
-
-    pv_cards = []
-    for i, j in enumerate(inds):
-        for k, m, v in wcs.wcs.get_pv():
-            if k == j:
-                pv_cards.append((i, m, v))
-    outwcs.wcs.set_pv(pv_cards)
-
-    ps_cards = []
-    for i, j in enumerate(inds):
-        for k, m, v in wcs.wcs.get_ps():
-            if k == j:
-                ps_cards.append((i, m, v))
-    outwcs.wcs.set_ps(ps_cards)
-
-    # Propagate pixel_shape (NAXISj). astropy initializes _naxis to all-zeros
-    # for a WCS constructed via WCS(naxis=N), so without this the resulting
-    # WCS reports NAXIS: 0 ... 0 even when the source had it set (#1000).
-    if wcs.pixel_shape is not None:
-        outwcs.pixel_shape = tuple(wcs.pixel_shape[i] for i in inds)
-
-    outwcs.wcs.set()
-
-    return outwcs
-
-
+@deprecated('0.7.1', alternative='astropy.wcs.WCS.axis_type_names')
 def axis_names(wcs):
     """
     Extract world names for each coordinate axis
@@ -247,15 +169,9 @@ def axis_names(wcs):
 
     Returns
     -------
-    A tuple of names along each axis
+    A list of names along each axis
     """
-    names = list(wcs.wcs.cname)
-    types = wcs.wcs.ctype
-    for i in range(len(names)):
-        if len(names[i]) > 0:
-            continue
-        names[i] = types[i].split('-')[0]
-    return names
+    return list(wcs.axis_type_names)
 
 
 def slice_wcs(mywcs, view, shape=None, numpy_order=True,
