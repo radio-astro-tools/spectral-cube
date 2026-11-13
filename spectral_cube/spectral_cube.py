@@ -2714,6 +2714,11 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         If you want to reproject a cube both spatially and spectrally, you need
         to use `spectral_interpolate` as well.
 
+        When both cubes use the same linear velocity convention (``VRAD``,
+        ``VOPT``, or ``VELO``), the source cube's rest frequency or wavelength
+        is retained. This aligns velocities across different spectral lines
+        without converting them back to a common frequency.
+
         .. warning::
             The current implementation of ``reproject`` requires that the whole
             cube be loaded into memory.  Issue #506 notes that this is a
@@ -2761,6 +2766,15 @@ class BaseSpectralCube(BaseNDClass, MaskableArrayMixinClass,
         # (see FITS_tools.regrid_cube for a guide on how to do this)
 
         newwcs = wcs.WCS(header)
+        spectral_type = self.wcs.wcs.ctype[self.wcs.wcs.spec]
+        if (spectral_type in ('VRAD', 'VOPT', 'VELO')
+                and newwcs.wcs.spec >= 0
+                and newwcs.wcs.ctype[newwcs.wcs.spec] == spectral_type
+                and (self.wcs.wcs.restfrq or self.wcs.wcs.restwav)):
+            # The data still describe the source line. Otherwise SpectralCoord
+            # converts matching velocities through different rest frequencies.
+            newwcs.wcs.restfrq = self.wcs.wcs.restfrq
+            newwcs.wcs.restwav = self.wcs.wcs.restwav
         shape_out = tuple([header['NAXIS{0}'.format(i + 1)] for i in
                            range(header['NAXIS'])][::-1])
 
